@@ -10,6 +10,10 @@ export default function PayPage() {
   const amount = String(params.amount || '')
   const description = searchParams.get('desc') || 'Payment'
 
+  const bankName = 'Ryt Bank'
+  const accountName = 'Maizhakim Bin Mazlan'
+  const accountNumber = '60163352087'
+
   if (!amount) {
     return (
       <main
@@ -61,6 +65,13 @@ export default function PayPage() {
   const message = `Hi, saya dah buat bayaran RM ${amount} untuk ${description}. Saya akan hantar bukti pembayaran.`
   const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
 
+  const bankDetails = `Bank: ${bankName}\nAccount Name: ${accountName}\nAccount Number: ${accountNumber}\nAmount: RM ${amount}\nDescription: ${description}`
+
+  const copyBankDetails = async () => {
+    await navigator.clipboard.writeText(bankDetails)
+    alert('Bank details copied')
+  }
+
   return (
     <main
       style={{
@@ -75,7 +86,7 @@ export default function PayPage() {
       <div
         style={{
           width: '100%',
-          maxWidth: '520px',
+          maxWidth: '540px',
           background: '#ffffff',
           borderRadius: '16px',
           padding: '32px',
@@ -111,8 +122,8 @@ export default function PayPage() {
             marginTop: 0,
             marginBottom: '8px',
             color: '#111827',
-            fontSize: '18px',
-            fontWeight: 600,
+            fontSize: '20px',
+            fontWeight: 700,
           }}
         >
           {description}
@@ -148,7 +159,7 @@ export default function PayPage() {
               fontWeight: 600,
             }}
           >
-            Step 1: Make payment using the QR code.
+            Step 1: Make payment using the QR code or bank details below.
           </p>
 
           <p
@@ -191,16 +202,17 @@ export default function PayPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
             gap: '12px',
-            marginBottom: '16px',
+            marginBottom: '22px',
           }}
         >
           <a
             href="/qr.png"
             download
             style={{
-              display: 'inline-block',
+              display: 'block',
+              width: '100%',
+              boxSizing: 'border-box',
               padding: '14px 16px',
               borderRadius: '12px',
               background: '#111827',
@@ -217,7 +229,9 @@ export default function PayPage() {
             href={whatsappLink}
             target="_blank"
             style={{
-              display: 'inline-block',
+              display: 'block',
+              width: '100%',
+              boxSizing: 'border-box',
               padding: '14px 16px',
               borderRadius: '12px',
               background: '#16a34a',
@@ -229,6 +243,113 @@ export default function PayPage() {
           >
             Send Receipt via WhatsApp
           </a>
+        </div>
+
+        <div
+          style={{
+            marginBottom: '18px',
+            textAlign: 'left',
+            background: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+          }}
+        >
+          <p
+            style={{
+              margin: '0 0 14px 0',
+              color: '#111827',
+              fontSize: '15px',
+              fontWeight: 700,
+            }}
+          >
+            Bank Details
+          </p>
+
+          <div style={{ display: 'grid', gap: '10px' }}>
+            <div>
+              <p
+                style={{
+                  margin: '0 0 4px 0',
+                  color: '#6b7280',
+                  fontSize: '13px',
+                }}
+              >
+                Bank
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#111827',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                }}
+              >
+                {bankName}
+              </p>
+            </div>
+
+            <div>
+              <p
+                style={{
+                  margin: '0 0 4px 0',
+                  color: '#6b7280',
+                  fontSize: '13px',
+                }}
+              >
+                Account Name
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#111827',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                }}
+              >
+                {accountName}
+              </p>
+            </div>
+
+            <div>
+              <p
+                style={{
+                  margin: '0 0 4px 0',
+                  color: '#6b7280',
+                  fontSize: '13px',
+                }}
+              >
+                Account Number
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#111827',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                }}
+              >
+                {accountNumber}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={copyBankDetails}
+            style={{
+              width: '100%',
+              marginTop: '16px',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: '#ffffff',
+              color: '#111827',
+              border: '1px solid #d1d5db',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Copy Bank Details
+          </button>
         </div>
 
         <p
