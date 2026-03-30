@@ -60,12 +60,6 @@ export default function PayPage() {
 
   const message = `Hi, saya dah buat bayaran RM ${amount} untuk ${description}. Saya akan hantar bukti pembayaran.`
   const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-  const paymentDetails = `Bayaran RM ${amount} untuk ${description}`
-
-  const copyDetails = async () => {
-    await navigator.clipboard.writeText(paymentDetails)
-    alert('Payment details copied')
-  }
 
   return (
     <main
@@ -127,24 +121,47 @@ export default function PayPage() {
         <p
           style={{
             marginTop: 0,
-            marginBottom: '10px',
+            marginBottom: '18px',
             color: '#6b7280',
             fontSize: '16px',
+            lineHeight: 1.6,
           }}
         >
-          Choose your preferred payment method below.
+          Please follow the steps below to complete your payment.
         </p>
 
-        <p
+        <div
           style={{
-            marginTop: 0,
-            marginBottom: '20px',
-            color: '#6b7280',
-            fontSize: '14px',
+            marginBottom: '22px',
+            textAlign: 'left',
+            background: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
           }}
         >
-          1. Pay using QR or your banking app. 2. Then continue on WhatsApp and send your proof of payment.
-        </p>
+          <p
+            style={{
+              margin: '0 0 10px 0',
+              color: '#111827',
+              fontSize: '15px',
+              fontWeight: 600,
+            }}
+          >
+            Step 1: Make payment using the QR code.
+          </p>
+
+          <p
+            style={{
+              margin: 0,
+              color: '#6b7280',
+              fontSize: '14px',
+              lineHeight: 1.6,
+            }}
+          >
+            Step 2: After payment, send your receipt via WhatsApp.
+          </p>
+        </div>
 
         <img
           src="/qr.png"
@@ -168,73 +185,50 @@ export default function PayPage() {
             lineHeight: 1.6,
           }}
         >
-          Scan this QR, or download it and scan from your gallery in your banking or e-wallet app.
+          Scan this QR or download it and scan from your gallery.
         </p>
 
         <div
           style={{
             display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
             gap: '12px',
             marginBottom: '16px',
           }}
         >
-          <div
+          <a
+            href="/qr.png"
+            download
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '12px',
-            }}
-          >
-            <a
-              href="/qr.png"
-              download
-              style={{
-                display: 'inline-block',
-                padding: '14px 16px',
-                borderRadius: '12px',
-                background: '#111827',
-                color: '#ffffff',
-                textDecoration: 'none',
-                fontWeight: 700,
-                textAlign: 'center',
-              }}
-            >
-              Download QR
-            </a>
-
-            <a
-              href={whatsappLink}
-              target="_blank"
-              style={{
-                display: 'inline-block',
-                padding: '14px 16px',
-                borderRadius: '12px',
-                background: '#16a34a',
-                color: '#ffffff',
-                textDecoration: 'none',
-                fontWeight: 700,
-                textAlign: 'center',
-              }}
-            >
-              Pay via WhatsApp
-            </a>
-          </div>
-
-          <button
-            onClick={copyDetails}
-            style={{
-              width: '100%',
+              display: 'inline-block',
               padding: '14px 16px',
               borderRadius: '12px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: '#111827',
+              color: '#ffffff',
+              textDecoration: 'none',
               fontWeight: 700,
-              cursor: 'pointer',
+              textAlign: 'center',
             }}
           >
-            Copy Payment Details
-          </button>
+            Download QR
+          </a>
+
+          <a
+            href={whatsappLink}
+            target="_blank"
+            style={{
+              display: 'inline-block',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: '#16a34a',
+              color: '#ffffff',
+              textDecoration: 'none',
+              fontWeight: 700,
+              textAlign: 'center',
+            }}
+          >
+            Send Receipt via WhatsApp
+          </a>
         </div>
 
         <p
@@ -245,9 +239,22 @@ export default function PayPage() {
             lineHeight: 1.6,
           }}
         >
-          If you have already paid, you can continue on WhatsApp and send your proof of payment.
+          Once payment is completed, please send your proof of payment on WhatsApp.
         </p>
       </div>
     </main>
   )
 }
+Lepas ini
+
+Commit changes macam biasa dan tunggu auto deploy.
+
+Hasil yang patut jadi
+
+Page buyer akan jadi lebih jelas:
+
+bukan “choose method”
+tapi ikut steps
+button WhatsApp tak misleading lagi
+
+Bila dah live, hantar screenshot baru. Lepas itu kita boleh sambung kemaskan homepage seller pula supaya dua-dua page matching.
