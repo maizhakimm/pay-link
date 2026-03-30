@@ -1,9 +1,12 @@
-export default function PayPage({
+export default async function PayPage({
   params,
   searchParams,
 }: {
-  params: { amount: string }
+  params: Promise<{ amount: string }>
   searchParams?: { desc?: string }
+}) {
+  const { amount } = await params
+
 }) {
   const phone = '60163352087'
   const description = searchParams?.desc || 'Payment'
