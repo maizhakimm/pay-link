@@ -10,8 +10,62 @@ export default function PayPage() {
   const amount = String(params.amount || '')
   const description = searchParams.get('desc') || 'Payment'
 
-  const message = `Hi, saya nak buat bayaran RM ${amount} untuk ${description}. Boleh share details pembayaran?`
+  if (!amount) {
+    return (
+      <main
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#f5f7fb',
+          padding: '24px',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '520px',
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '32px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+            textAlign: 'center',
+          }}
+        >
+          <h1
+            style={{
+              marginTop: 0,
+              marginBottom: '12px',
+              fontSize: '32px',
+              color: '#111827',
+            }}
+          >
+            Invalid payment link
+          </h1>
+
+          <p
+            style={{
+              margin: 0,
+              color: '#6b7280',
+              fontSize: '16px',
+            }}
+          >
+            Please check the payment link and try again.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
+  const message = `Hi, saya dah buat bayaran RM ${amount} untuk ${description}. Saya akan hantar bukti pembayaran.`
   const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+  const paymentDetails = `Bayaran RM ${amount} untuk ${description}`
+
+  const copyDetails = async () => {
+    await navigator.clipboard.writeText(paymentDetails)
+    alert('Payment details copied')
+  }
 
   return (
     <main
@@ -73,12 +127,23 @@ export default function PayPage() {
         <p
           style={{
             marginTop: 0,
-            marginBottom: '20px',
+            marginBottom: '10px',
             color: '#6b7280',
             fontSize: '16px',
           }}
         >
           Choose your preferred payment method below.
+        </p>
+
+        <p
+          style={{
+            marginTop: 0,
+            marginBottom: '20px',
+            color: '#6b7280',
+            fontSize: '14px',
+          }}
+        >
+          1. Pay using QR or your banking app. 2. Then continue on WhatsApp and send your proof of payment.
         </p>
 
         <img
@@ -145,6 +210,22 @@ export default function PayPage() {
           >
             Pay via WhatsApp
           </a>
+
+          <button
+            onClick={copyDetails}
+            style={{
+              display: 'inline-block',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: '#ffffff',
+              color: '#111827',
+              border: '1px solid #d1d5db',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Copy Payment Details
+          </button>
         </div>
 
         <p
