@@ -143,7 +143,7 @@ export default function PayPage() {
 
         <div
           style={{
-            marginBottom: '22px',
+            marginBottom: '24px',
             textAlign: 'left',
             background: '#f9fafb',
             border: '1px solid #e5e7eb',
@@ -157,6 +157,7 @@ export default function PayPage() {
               color: '#111827',
               fontSize: '15px',
               fontWeight: 600,
+              lineHeight: 1.6,
             }}
           >
             Step 1: Make payment using the QR code or bank details below.
@@ -165,12 +166,13 @@ export default function PayPage() {
           <p
             style={{
               margin: 0,
-              color: '#6b7280',
-              fontSize: '14px',
+              color: '#111827',
+              fontSize: '15px',
+              fontWeight: 600,
               lineHeight: 1.6,
             }}
           >
-            Step 2: After payment, send your receipt via WhatsApp.
+            Step 2: Send your receipt via WhatsApp after payment.
           </p>
         </div>
 
@@ -180,7 +182,7 @@ export default function PayPage() {
           style={{
             width: '220px',
             maxWidth: '100%',
-            margin: '0 auto 12px',
+            margin: '10px auto 16px',
             display: 'block',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
@@ -196,7 +198,7 @@ export default function PayPage() {
             lineHeight: 1.6,
           }}
         >
-          Scan this QR or download it and scan from your gallery.
+          Scan this QR or download it to scan from your gallery.
         </p>
 
         <div
@@ -241,7 +243,7 @@ export default function PayPage() {
               textAlign: 'center',
             }}
           >
-            Send Receipt via WhatsApp
+            Send Receipt on WhatsApp
           </a>
         </div>
 
@@ -257,7 +259,7 @@ export default function PayPage() {
         >
           <p
             style={{
-              margin: '0 0 14px 0',
+              margin: '0 0 10px 0',
               color: '#111827',
               fontSize: '15px',
               fontWeight: 700,
@@ -265,6 +267,14 @@ export default function PayPage() {
           >
             Bank Details
           </p>
+
+          <hr
+            style={{
+              margin: '0 0 16px 0',
+              border: 'none',
+              borderTop: '1px solid #e5e7eb',
+            }}
+          />
 
           <div style={{ display: 'grid', gap: '10px' }}>
             <div>
@@ -341,9 +351,9 @@ export default function PayPage() {
               marginTop: '16px',
               padding: '14px 16px',
               borderRadius: '12px',
-              background: '#ffffff',
+              background: '#f3f4f6',
               color: '#111827',
-              border: '1px solid #d1d5db',
+              border: '1px solid #e5e7eb',
               fontWeight: 700,
               cursor: 'pointer',
             }}
@@ -360,7 +370,7 @@ export default function PayPage() {
             lineHeight: 1.6,
           }}
         >
-          Once payment is completed, please send your proof of payment on WhatsApp.
+          Your order will be processed once payment is verified.
         </p>
       </div>
     </main>
