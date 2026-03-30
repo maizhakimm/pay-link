@@ -162,9 +162,10 @@ export default function PayPage() {
         <p
           style={{
             marginTop: 0,
-            marginBottom: '18px',
+            marginBottom: '22px',
             color: '#6b7280',
             fontSize: '14px',
+            lineHeight: 1.6,
           }}
         >
           Scan this QR, or download it and scan from your gallery in your banking or e-wallet app.
@@ -172,51 +173,59 @@ export default function PayPage() {
 
         <div
           style={{
-            display: 'flex',
+            display: 'grid',
             gap: '12px',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
             marginBottom: '16px',
           }}
         >
-          <a
-            href="/qr.png"
-            download
+          <div
             style={{
-              display: 'inline-block',
-              padding: '12px 16px',
-              borderRadius: '10px',
-              background: '#111827',
-              color: '#ffffff',
-              textDecoration: 'none',
-              fontWeight: 700,
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '12px',
             }}
           >
-            Download QR
-          </a>
+            <a
+              href="/qr.png"
+              download
+              style={{
+                display: 'inline-block',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                background: '#111827',
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontWeight: 700,
+                textAlign: 'center',
+              }}
+            >
+              Download QR
+            </a>
 
-          <a
-            href={whatsappLink}
-            target="_blank"
-            style={{
-              display: 'inline-block',
-              padding: '12px 16px',
-              borderRadius: '10px',
-              background: '#16a34a',
-              color: '#ffffff',
-              textDecoration: 'none',
-              fontWeight: 700,
-            }}
-          >
-            Pay via WhatsApp
-          </a>
+            <a
+              href={whatsappLink}
+              target="_blank"
+              style={{
+                display: 'inline-block',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                background: '#16a34a',
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontWeight: 700,
+                textAlign: 'center',
+              }}
+            >
+              Pay via WhatsApp
+            </a>
+          </div>
 
           <button
             onClick={copyDetails}
             style={{
-              display: 'inline-block',
-              padding: '12px 16px',
-              borderRadius: '10px',
+              width: '100%',
+              padding: '14px 16px',
+              borderRadius: '12px',
               background: '#ffffff',
               color: '#111827',
               border: '1px solid #d1d5db',
@@ -233,6 +242,7 @@ export default function PayPage() {
             marginTop: '10px',
             color: '#9ca3af',
             fontSize: '14px',
+            lineHeight: 1.6,
           }}
         >
           If you have already paid, you can continue on WhatsApp and send your proof of payment.
