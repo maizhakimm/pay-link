@@ -1,14 +1,12 @@
-export default async function PayPage({
+export default function PayPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ amount: string }>
+  params: { amount: string }
   searchParams?: { desc?: string }
 }) {
-  const { amount } = await params
-
-}) {
   const phone = '60163352087'
+  const amount = params.amount
   const description = searchParams?.desc || 'Payment'
   const message = `Hi, saya nak buat bayaran RM ${amount} untuk ${description}. Boleh share details pembayaran?`
   const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
@@ -55,7 +53,7 @@ export default async function PayPage({
             color: '#111827',
           }}
         >
-          RM {params.amount}
+          RM {amount}
         </h1>
 
         <p
@@ -73,41 +71,88 @@ export default async function PayPage({
         <p
           style={{
             marginTop: 0,
-            marginBottom: '28px',
+            marginBottom: '20px',
             color: '#6b7280',
             fontSize: '16px',
           }}
         >
-          Click the button below to continue payment via WhatsApp.
+          Choose your preferred payment method below.
         </p>
 
-        <a
-          href={whatsappLink}
-          target="_blank"
+        <img
+          src="/qr.png"
+          alt="QR Payment"
           style={{
-            display: 'inline-block',
-            width: '100%',
-            boxSizing: 'border-box',
-            padding: '14px 18px',
+            width: '220px',
+            maxWidth: '100%',
+            margin: '0 auto 12px',
+            display: 'block',
             borderRadius: '12px',
-            background: '#16a34a',
-            color: '#ffffff',
-            textDecoration: 'none',
-            fontSize: '16px',
-            fontWeight: 700,
+            border: '1px solid #e5e7eb',
           }}
-        >
-          Pay via WhatsApp
-        </a>
+        />
 
         <p
           style={{
-            marginTop: '18px',
+            marginTop: 0,
+            marginBottom: '18px',
+            color: '#6b7280',
+            fontSize: '14px',
+          }}
+        >
+          Scan this QR, or download it and scan from your gallery in your banking or e-wallet app.
+        </p>
+
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            marginBottom: '16px',
+          }}
+        >
+          <a
+            href="/qr.png"
+            download
+            style={{
+              display: 'inline-block',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: '#111827',
+              color: '#ffffff',
+              textDecoration: 'none',
+              fontWeight: 700,
+            }}
+          >
+            Download QR
+          </a>
+
+          <a
+            href={whatsappLink}
+            target="_blank"
+            style={{
+              display: 'inline-block',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: '#16a34a',
+              color: '#ffffff',
+              textDecoration: 'none',
+              fontWeight: 700,
+            }}
+          >
+            Pay via WhatsApp
+          </a>
+        </div>
+
+        <p
+          style={{
+            marginTop: '10px',
             color: '#9ca3af',
             fontSize: '14px',
           }}
         >
-          You will be redirected to WhatsApp with the payment amount and description pre-filled.
+          If you have already paid, you can continue on WhatsApp and send your proof of payment.
         </p>
       </div>
     </main>
