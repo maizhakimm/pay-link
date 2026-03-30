@@ -10,7 +10,7 @@ export default async function PayPage({
 }) {
   const phone = '60163352087'
   const description = searchParams?.desc || 'Payment'
-  const message = `Hi, saya nak buat bayaran RM ${params.amount} untuk ${description}. Boleh share details pembayaran?`
+  const message = `Hi, saya nak buat bayaran RM ${amount} untuk ${description}. Boleh share details pembayaran?`
   const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
 
   return (
