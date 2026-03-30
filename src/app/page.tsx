@@ -4,12 +4,18 @@ import { useState } from 'react'
 
 export default function Home() {
   const [amount, setAmount] = useState('')
+  const [description, setDescription] = useState('')
   const [link, setLink] = useState('')
   const [copied, setCopied] = useState(false)
 
   const generateLink = () => {
     if (!amount) return
-    const generated = `${window.location.origin}/pay/${amount}`
+
+    const base = `${window.location.origin}/pay/${amount}`
+    const generated = description
+      ? `${base}?desc=${encodeURIComponent(description)}`
+      : base
+
     setLink(generated)
     setCopied(false)
   }
@@ -35,7 +41,7 @@ export default function Home() {
       <div
         style={{
           width: '100%',
-          maxWidth: '520px',
+          maxWidth: '560px',
           background: '#ffffff',
           borderRadius: '16px',
           padding: '32px',
@@ -87,6 +93,23 @@ export default function Home() {
             width: '100%',
             padding: '14px 16px',
             fontSize: '18px',
+            borderRadius: '12px',
+            border: '1px solid #d1d5db',
+            outline: 'none',
+            marginBottom: '14px',
+            boxSizing: 'border-box',
+          }}
+        />
+
+        <input
+          type="text"
+          placeholder="Description (e.g. Deposit Website)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '14px 16px',
+            fontSize: '16px',
             borderRadius: '12px',
             border: '1px solid #d1d5db',
             outline: 'none',
