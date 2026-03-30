@@ -1,6 +1,13 @@
-export default function PayPage({ params }: { params: { amount: string } }) {
+export default function PayPage({
+  params,
+  searchParams,
+}: {
+  params: { amount: string }
+  searchParams?: { desc?: string }
+}) {
   const phone = '60163352087'
-  const message = `Hi, saya nak buat bayaran RM ${params.amount}. Boleh share details pembayaran?`
+  const description = searchParams?.desc || 'Payment'
+  const message = `Hi, saya nak buat bayaran RM ${params.amount} untuk ${description}. Boleh share details pembayaran?`
   const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
 
   return (
@@ -40,13 +47,25 @@ export default function PayPage({ params }: { params: { amount: string } }) {
         <h1
           style={{
             marginTop: '10px',
-            marginBottom: '10px',
+            marginBottom: '8px',
             fontSize: '34px',
             color: '#111827',
           }}
         >
           RM {params.amount}
         </h1>
+
+        <p
+          style={{
+            marginTop: 0,
+            marginBottom: '8px',
+            color: '#111827',
+            fontSize: '18px',
+            fontWeight: 600,
+          }}
+        >
+          {description}
+        </p>
 
         <p
           style={{
@@ -85,7 +104,7 @@ export default function PayPage({ params }: { params: { amount: string } }) {
             fontSize: '14px',
           }}
         >
-          You will be redirected to WhatsApp with the payment amount pre-filled.
+          You will be redirected to WhatsApp with the payment amount and description pre-filled.
         </p>
       </div>
     </main>
