@@ -1,13 +1,15 @@
-export default function PayPage({
-  params,
-  searchParams,
-}: {
-  params: { amount: string }
-  searchParams?: { desc?: string }
-}) {
+'use client'
+
+import { useParams, useSearchParams } from 'next/navigation'
+
+export default function PayPage() {
+  const params = useParams()
+  const searchParams = useSearchParams()
+
   const phone = '60163352087'
-  const amount = params.amount
-  const description = searchParams?.desc || 'Payment'
+  const amount = String(params.amount || '')
+  const description = searchParams.get('desc') || 'Payment'
+
   const message = `Hi, saya nak buat bayaran RM ${amount} untuk ${description}. Boleh share details pembayaran?`
   const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
 
