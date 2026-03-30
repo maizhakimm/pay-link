@@ -69,7 +69,7 @@ export default function PayPage() {
 
   const copyBankDetails = async () => {
     await navigator.clipboard.writeText(bankDetails)
-    alert('Bank details copied')
+    alert('Copied! Paste in your banking app.')
   }
 
   return (
@@ -157,7 +157,7 @@ export default function PayPage() {
               color: '#111827',
               fontSize: '15px',
               fontWeight: 600,
-              lineHeight: 1.6,
+              lineHeight: 1.7,
             }}
           >
             Step 1: Make payment using the QR code or bank details below.
@@ -169,7 +169,7 @@ export default function PayPage() {
               color: '#111827',
               fontSize: '15px',
               fontWeight: 600,
-              lineHeight: 1.6,
+              lineHeight: 1.7,
             }}
           >
             Step 2: Send your receipt via WhatsApp after payment.
@@ -186,6 +186,7 @@ export default function PayPage() {
             display: 'block',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
           }}
         />
 
@@ -204,8 +205,8 @@ export default function PayPage() {
         <div
           style={{
             display: 'grid',
-            gap: '12px',
-            marginBottom: '22px',
+            gap: '14px',
+            marginBottom: '24px',
           }}
         >
           <a
@@ -335,8 +336,9 @@ export default function PayPage() {
                 style={{
                   margin: 0,
                   color: '#111827',
-                  fontSize: '15px',
-                  fontWeight: 600,
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
                 }}
               >
                 {accountNumber}
