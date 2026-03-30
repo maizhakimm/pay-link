@@ -245,16 +245,3 @@ export default function PayPage() {
     </main>
   )
 }
-Lepas ini
-
-Commit changes macam biasa dan tunggu auto deploy.
-
-Hasil yang patut jadi
-
-Page buyer akan jadi lebih jelas:
-
-bukan “choose method”
-tapi ikut steps
-button WhatsApp tak misleading lagi
-
-Bila dah live, hantar screenshot baru. Lepas itu kita boleh sambung kemaskan homepage seller pula supaya dua-dua page matching.
