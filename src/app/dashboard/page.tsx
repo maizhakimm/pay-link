@@ -5,6 +5,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
+type SellerProfile = {
+  id: string
+  user_id: string
+  store_name: string | null
+  store_slug: string | null
+}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -50,26 +56,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#f5f7fb',
-          padding: '24px',
-        }}
-      >
-        <div
-          style={{
-            background: '#ffffff',
-            padding: '24px 28px',
-            borderRadius: '16px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            fontWeight: 600,
-            color: '#111827',
-          }}
-        >
+      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f7fb' }}>
+        <div style={{ background: '#fff', padding: 20, borderRadius: 12 }}>
           Loading dashboard...
         </div>
       </main>
@@ -77,256 +65,41 @@ export default function DashboardPage() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#f5f7fb',
-        padding: '24px',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '980px',
-          margin: '0 auto',
-        }}
-      >
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '18px',
-            padding: '28px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            marginBottom: '20px',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  margin: 0,
-                  color: '#16a34a',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  letterSpacing: '0.4px',
-                }}
-              >
-                SELLER DASHBOARD
-              </p>
+    <main style={{ minHeight: '100vh', background: '#f5f7fb', padding: 24 }}>
+      <div style={{ maxWidth: 980, margin: '0 auto' }}>
+        
+        <div style={{ background: '#fff', padding: 24, borderRadius: 16, marginBottom: 20 }}>
+          <h1>{seller?.store_name || 'My Store'}</h1>
+          <p>Logged in as {userEmail}</p>
 
-              <h1
-                style={{
-                  margin: '10px 0 8px 0',
-                  fontSize: '36px',
-                  color: '#111827',
-                }}
-              >
-                {seller?.store_name || 'My Store'}
-              </h1>
-
-              <p
-                style={{
-                  margin: 0,
-                  color: '#6b7280',
-                  fontSize: '16px',
-                  lineHeight: 1.6,
-                }}
-              >
-                Logged in as {userEmail || 'seller'}.
-              </p>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: '12px 16px',
-                borderRadius: '12px',
-                border: '1px solid #e5e7eb',
-                background: '#ffffff',
-                color: '#111827',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Logout
-            </button>
-          </div>
+          <button onClick={handleLogout}>
+            Logout
+          </button>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: '18px',
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              padding: '22px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            }}
-          >
-            <h2
-              style={{
-                marginTop: 0,
-                marginBottom: '10px',
-                color: '#111827',
-                fontSize: '20px',
-              }}
-            >
-              Store Settings
-            </h2>
+        <div style={{ display: 'grid', gap: 16 }}>
+          
+          <Link href="/dashboard/settings">
+            ⚙️ Store Settings
+          </Link>
 
-            <p
-              style={{
-                marginTop: 0,
-                marginBottom: '18px',
-                color: '#6b7280',
-                fontSize: '15px',
-                lineHeight: 1.6,
-              }}
-            >
-              Update your business details, contact number, bank details, and QR payment setup.
-            </p>
+          <Link href="/dashboard/products">
+            Payment Links
+          </Link>
 
-            <Link
-              href="/dashboard/settings"
-              style={{
-                display: 'inline-block',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                background: '#111827',
-                color: '#ffffff',
-                textDecoration: 'none',
-                fontWeight: 700,
-              }}
-            >
-              Manage Settings
-            </Link>
-          </div>
+          <Link href="/dashboard/orders">
+            Orders
+          </Link>
 
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              padding: '22px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            }}
-          >
-            <h2
-              style={{
-                marginTop: 0,
-                marginBottom: '10px',
-                color: '#111827',
-                fontSize: '20px',
-              }}
-            >
-              Payment Links
-            </h2>
-
-            <p
-              style={{
-                marginTop: 0,
-                marginBottom: '18px',
-                color: '#6b7280',
-                fontSize: '15px',
-                lineHeight: 1.6,
-              }}
-            >
-              Create and manage your payment links for products, services, deposits, and custom orders.
-            </p>
-
-            <Link
-              href="/dashboard/products"
-              style={{
-                display: 'inline-block',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                background: '#111827',
-                color: '#ffffff',
-                textDecoration: 'none',
-                fontWeight: 700,
-              }}
-            >
-              Manage Payment Links
-            </Link>
-          </div>
-
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              padding: '22px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            }}
-          >
-            <h2
-              style={{
-                marginTop: 0,
-                marginBottom: '10px',
-                color: '#111827',
-                fontSize: '20px',
-              }}
-            >
-              Orders
-            </h2>
-
-            <p
-              style={{
-                marginTop: 0,
-                marginBottom: '18px',
-                color: '#6b7280',
-                fontSize: '15px',
-                lineHeight: 1.6,
-              }}
-            >
-              Review incoming orders, buyer details, payment status, and uploaded proof of payment.
-            </p>
-
-            <Link
-              href="/dashboard/orders"
-              style={{
-                display: 'inline-block',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                background: '#111827',
-                color: '#ffffff',
-                textDecoration: 'none',
-                fontWeight: 700,
-              }}
-            >
-              View Orders
-            </Link>
-          </div>
         </div>
 
         {!seller && (
-          <div
-            style={{
-              marginTop: '20px',
-              background: '#fff7ed',
-              border: '1px solid #fed7aa',
-              borderRadius: '16px',
-              padding: '18px',
-              color: '#9a3412',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.04)',
-            }}
-          >
-            Your seller profile is not set up yet. Next, we should create the settings page so your profile can be saved properly.
+          <div style={{ marginTop: 20, background: '#fff3cd', padding: 16, borderRadius: 12 }}>
+            Setup your store first in settings.
           </div>
         )}
+
       </div>
     </main>
   )
 }
-
