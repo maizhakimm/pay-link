@@ -361,7 +361,7 @@ export default function PayPage() {
               cursor: 'pointer',
             }}
           >
-            Copy Bank Details
+            Copy Account Number
           </button>
         </div>
 
