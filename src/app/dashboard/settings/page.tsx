@@ -28,6 +28,24 @@ export default function DashboardSettingsPage() {
   const [accountName, setAccountName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
 
+  const banks = [
+  "Maybank (Malayan Banking Berhad)",
+  "CIMB Bank Berhad",
+  "Public Bank Berhad",
+  "RHB Bank Berhad",
+  "Hong Leong Bank Berhad",
+  "AmBank (AMMB Holdings Berhad)",
+  "Affin Bank Berhad",
+  "Alliance Bank Malaysia Berhad",
+  "Bank Islam Malaysia Berhad",
+  "Bank Muamalat Malaysia Berhad",
+  "Ryt Bank (YTL Digital Bank Berhad)",
+  "GX Bank Berhad (GXBank)",
+  "Boost Bank Berhad",
+  "AEON Bank (M) Berhad",
+  "KAF Digital Bank Berhad"
+]
+
   useEffect(() => {
     const loadSellerProfile = async () => {
       const {
@@ -289,7 +307,7 @@ export default function DashboardSettingsPage() {
               <input
                 value={storeSlug}
                 onChange={(e) => setStoreSlug(slugify(e.target.value))}
-                placeholder="e.g. maiz-kitchen"
+                placeholder="e.g. your-store"
                 style={{
                   width: '100%',
                   padding: '14px 16px',
@@ -317,7 +335,7 @@ export default function DashboardSettingsPage() {
               <input
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="e.g. 60163352087"
+                placeholder="e.g. 60123456789"
                 style={{
                   width: '100%',
                   padding: '14px 16px',
@@ -342,19 +360,27 @@ export default function DashboardSettingsPage() {
               >
                 Bank Name
               </label>
-              <input
+              <select
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                placeholder="e.g. Maybank / Ryt Bank"
                 style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '16px',
-                  borderRadius: '12px',
-                  border: '1px solid #d1d5db',
-                  outline: 'none',
-                  boxSizing: 'border-box',
+                width: '100%',
+                padding: '14px 16px',
+                fontSize: '16px',
+                borderRadius: '12px',
+                border: '1px solid #d1d5db',
+                outline: 'none',
+                boxSizing: 'border-box',
+                background: '#ffffff',
                 }}
+>
+  <option value="">Select Bank</option>
+  {banks.map((bank) => (
+    <option key={bank} value={bank}>
+      {bank}
+    </option>
+  ))}
+</select>
               />
             </div>
 
@@ -373,7 +399,7 @@ export default function DashboardSettingsPage() {
               <input
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value)}
-                placeholder="e.g. Maizhakim Bin Mazlan"
+                placeholder="e.g. Bank Account Name"
                 style={{
                   width: '100%',
                   padding: '14px 16px',
@@ -401,7 +427,7 @@ export default function DashboardSettingsPage() {
               <input
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="e.g. 60163352087"
+                placeholder="e.g. Bank Account Number"
                 style={{
                   width: '100%',
                   padding: '14px 16px',
