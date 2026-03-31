@@ -5,15 +5,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
-type SellerProfile = {
-  id: string
-  user_id: string
-  store_name: string
-  store_slug: string
-  contact_phone: string | null
-  created_at: string
-  updated_at: string
-}
 
 export default function DashboardPage() {
   const router = useRouter()
