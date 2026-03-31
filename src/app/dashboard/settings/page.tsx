@@ -18,7 +18,6 @@ export default function DashboardSettingsPage() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [sellerId, setSellerId] = useState('')
   const [userId, setUserId] = useState('')
 
   const [storeName, setStoreName] = useState('')
@@ -42,7 +41,7 @@ export default function DashboardSettingsPage() {
     'Ryt Bank (YTL Digital Bank Berhad)',
     'GX Bank Berhad (GXBank)',
     'Boost Bank Berhad',
-    'AEON Bank (M) Berhad)',
+    'AEON Bank (M) Berhad',
     'KAF Digital Bank Berhad',
   ]
 
@@ -67,52 +66,17 @@ export default function DashboardSettingsPage() {
 
       if (error) {
         console.error('Load seller profile error:', error.message)
-        setLoading(false)
-        return
       }
 
       if (sellerProfile) {
-        setSellerId(sellerProfile.id)
         setStoreName(sellerProfile.store_name || '')
         setStoreSlug(sellerProfile.store_slug || '')
         setContactPhone(sellerProfile.contact_phone || '')
         setBankName(sellerProfile.bank_name || '')
         setAccountName(sellerProfile.account_name || '')
         setAccountNumber(sellerProfile.account_number || '')
-        setLoading(false)
-        return
       }
 
-      const fallbackStoreName = 'My Store'
-      const fallbackStoreSlug = `store-${user.id.slice(0, 8)}`
-
-      const { data: newProfile, error: insertError } = await supabase
-        .from('seller_profiles')
-        .insert({
-          user_id: user.id,
-          store_name: fallbackStoreName,
-          store_slug: fallbackStoreSlug,
-          contact_phone: '',
-          bank_name: '',
-          account_name: '',
-          account_number: '',
-        })
-        .select()
-        .single()
-
-      if (insertError) {
-        console.error('Create seller profile error:', insertError.message)
-        setLoading(false)
-        return
-      }
-
-      setSellerId(newProfile.id)
-      setStoreName(newProfile.store_name || '')
-      setStoreSlug(newProfile.store_slug || '')
-      setContactPhone(newProfile.contact_phone || '')
-      setBankName(newProfile.bank_name || '')
-      setAccountName(newProfile.account_name || '')
-      setAccountNumber(newProfile.account_number || '')
       setLoading(false)
     }
 
@@ -124,76 +88,78 @@ export default function DashboardSettingsPage() {
     if (!storeSlug || storeSlug === slugify(storeName)) {
       setStoreSlug(slugify(value))
     }
+  }
+
   const handleSave = async () => {
-  if (!userId) {
-    alert('Missing user session')
-    return
-  }
+    if (!userId) {
+      alert('Missing user session')
+      return
+    }
 
-  if (!storeName.trim()) {
-    alert('Store name is required')
-    return
-  }
+    if (!storeName.trim()) {
+      alert('Store name is required')
+      return
+    }
 
-  if (!storeSlug.trim()) {
-    alert('Store slug is required')
-    return
-  }
+    if (!storeSlug.trim()) {
+      alert('Store slug is required')
+      return
+    }
 
-  setSaving(true)
+    setSaving(true)
 
-  const payload = {
-    user_id: userId,
-    store_name: storeName.trim(),
-    store_slug: slugify(storeSlug),
-    contact_phone: contactPhone.trim(),
-    bank_name: bankName.trim(),
-    account_name: accountName.trim(),
-    account_number: accountNumber.trim(),
-    updated_at: new Date().toISOString(),
-  }
+    const payload = {
+      user_id: userId,
+      store_name: storeName.trim(),
+      store_slug: slugify(storeSlug),
+      contact_phone: contactPhone.trim(),
+      bank_name: bankName.trim(),
+      account_name: accountName.trim(),
+      account_number: accountNumber.trim(),
+      updated_at: new Date().toISOString(),
+    }
 
-  const { data: existingProfile, error: checkError } = await supabase
-    .from('seller_profiles')
-    .select('id')
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  if (checkError) {
-    setSaving(false)
-    alert(`Failed to check seller profile: ${checkError.message}`)
-    return
-  }
-
-  let saveError = null
-
-  if (existingProfile) {
-    const { error } = await supabase
+    const { data: existingProfile, error: checkError } = await supabase
       .from('seller_profiles')
-      .update(payload)
+      .select('id')
       .eq('user_id', userId)
+      .maybeSingle()
 
-    saveError = error
-  } else {
-    const { error } = await supabase
-      .from('seller_profiles')
-      .insert({
-        ...payload,
-        created_at: new Date().toISOString(),
-      })
+    if (checkError) {
+      setSaving(false)
+      alert(`Failed to check seller profile: ${checkError.message}`)
+      return
+    }
 
-    saveError = error
+    let saveError = null
+
+    if (existingProfile) {
+      const { error } = await supabase
+        .from('seller_profiles')
+        .update(payload)
+        .eq('user_id', userId)
+
+      saveError = error
+    } else {
+      const { error } = await supabase
+        .from('seller_profiles')
+        .insert({
+          ...payload,
+          created_at: new Date().toISOString(),
+        })
+
+      saveError = error
+    }
+
+    setSaving(false)
+
+    if (saveError) {
+      alert(`Save failed: ${saveError.message}`)
+      return
+    }
+
+    alert('Settings saved OK 123')
   }
-
-  setSaving(false)
-
-  if (saveError) {
-    alert(`Save failed: ${saveError.message}`)
-    return
-  }
-
-  alert('Settings saved OK 123')
-}
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
