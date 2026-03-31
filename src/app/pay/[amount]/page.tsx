@@ -1,114 +1,380 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 
-export default function PayPage({ params }: { params: { amount: string } }) {
+export default function PayPage() {
+  const params = useParams()
   const searchParams = useSearchParams()
 
-  const amount = params.amount
+  const amount = String(params.amount || '')
   const description = searchParams.get('desc') || 'Payment'
 
-  // 🔹 Seller bank details (boleh ubah nanti)
   const bankName = 'Ryt Bank'
   const accountName = 'Maizhakim Bin Mazlan'
-  const accountNumber = '60163352087'
+  const accountNumber = '123456789123456789'
+  const whatsappNumber = '60163352087'
 
-  // 🔹 WhatsApp number (seller)
-  const whatsappNumber = '60123456789' // tukar nanti
+  if (!amount) {
+    return (
+      <main
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#f5f7fb',
+          padding: '24px',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '520px',
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '32px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+            textAlign: 'center',
+          }}
+        >
+          <h1
+            style={{
+              marginTop: 0,
+              marginBottom: '12px',
+              fontSize: '32px',
+              color: '#111827',
+            }}
+          >
+            Invalid payment link
+          </h1>
 
-  // 🔹 QR download
-  const downloadQR = () => {
-    const link = document.createElement('a')
-    link.href = '/qr.png'
-    link.download = 'qr.png'
-    link.click()
+          <p
+            style={{
+              margin: 0,
+              color: '#6b7280',
+              fontSize: '16px',
+            }}
+          >
+            Please check the payment link and try again.
+          </p>
+        </div>
+      </main>
+    )
   }
 
-  // 🔹 Copy account number sahaja
+  const whatsappMessage = `Hi, saya dah buat bayaran RM ${amount} untuk ${description}. Saya akan hantar bukti pembayaran.`
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+    whatsappMessage
+  )}`
+
   const copyAccountNumber = async () => {
     await navigator.clipboard.writeText(accountNumber)
     alert('Account number copied. Paste in your banking app.')
   }
 
-  // 🔹 WhatsApp message
-  const whatsappMessage = `Hi, I have made payment.\n\nAmount: RM ${amount}\nItem: ${description}`
-  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
-
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white max-w-md w-full rounded-2xl shadow p-6 text-center">
+    <main
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f5f7fb',
+        padding: '24px',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '540px',
+          background: '#ffffff',
+          borderRadius: '16px',
+          padding: '32px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+          textAlign: 'center',
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            color: '#16a34a',
+            fontWeight: 700,
+            fontSize: '14px',
+            letterSpacing: '0.4px',
+          }}
+        >
+          PAYMENT PAGE
+        </p>
 
-        {/* HEADER */}
-        <p className="text-green-600 font-semibold text-sm mb-2">PAYMENT PAGE</p>
+        <h1
+          style={{
+            marginTop: '10px',
+            marginBottom: '8px',
+            fontSize: '34px',
+            color: '#111827',
+          }}
+        >
+          RM {amount}
+        </h1>
 
-        <h1 className="text-3xl font-bold mb-1">RM {amount}</h1>
-        <p className="text-lg font-medium mb-4">{description}</p>
+        <p
+          style={{
+            marginTop: 0,
+            marginBottom: '8px',
+            color: '#111827',
+            fontSize: '20px',
+            fontWeight: 700,
+          }}
+        >
+          {description}
+        </p>
 
-        {/* INSTRUCTIONS */}
-        <div className="bg-gray-50 border rounded-xl p-4 text-sm text-left mb-6">
-          <p className="font-semibold mb-2">
+        <p
+          style={{
+            marginTop: 0,
+            marginBottom: '18px',
+            color: '#6b7280',
+            fontSize: '16px',
+            lineHeight: 1.6,
+          }}
+        >
+          Please follow the steps below to complete your payment.
+        </p>
+
+        <div
+          style={{
+            marginBottom: '24px',
+            textAlign: 'left',
+            background: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+          }}
+        >
+          <p
+            style={{
+              margin: '0 0 10px 0',
+              color: '#111827',
+              fontSize: '15px',
+              fontWeight: 600,
+              lineHeight: 1.7,
+            }}
+          >
             Step 1: Make payment using the QR code or bank details below.
           </p>
-          <p>
+
+          <p
+            style={{
+              margin: 0,
+              color: '#111827',
+              fontSize: '15px',
+              fontWeight: 600,
+              lineHeight: 1.7,
+            }}
+          >
             Step 2: Send your receipt via WhatsApp after payment.
           </p>
         </div>
 
-        {/* QR */}
-        <div className="border rounded-xl p-4 mb-4">
-          <img src="/qr.png" alt="QR Code" className="mx-auto w-60" />
-        </div>
+        <img
+          src="/qr.png"
+          alt="QR Payment"
+          style={{
+            width: '220px',
+            maxWidth: '100%',
+            margin: '10px auto 16px',
+            display: 'block',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+          }}
+        />
 
-        <p className="text-sm text-gray-600 mb-4">
+        <p
+          style={{
+            marginTop: 0,
+            marginBottom: '22px',
+            color: '#6b7280',
+            fontSize: '14px',
+            lineHeight: 1.6,
+          }}
+        >
           Scan this QR or download it to scan from your gallery.
         </p>
 
-        {/* BUTTONS */}
-        <div className="flex flex-col gap-3 mb-6">
-
-          <button
-            onClick={downloadQR}
-            className="bg-black text-white py-3 rounded-xl font-semibold"
+        <div
+          style={{
+            display: 'grid',
+            gap: '14px',
+            marginBottom: '24px',
+          }}
+        >
+          <a
+            href="/qr.png"
+            download
+            style={{
+              display: 'block',
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: '#111827',
+              color: '#ffffff',
+              textDecoration: 'none',
+              fontWeight: 700,
+              textAlign: 'center',
+            }}
           >
             Download QR
-          </button>
+          </a>
 
           <a
             href={whatsappLink}
             target="_blank"
-            className="bg-green-600 text-white py-3 rounded-xl font-semibold"
+            rel="noreferrer"
+            style={{
+              display: 'block',
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: '#16a34a',
+              color: '#ffffff',
+              textDecoration: 'none',
+              fontWeight: 700,
+              textAlign: 'center',
+            }}
           >
             Send Receipt on WhatsApp
           </a>
-
         </div>
 
-        {/* BANK DETAILS */}
-        <div className="border rounded-xl p-4 text-left">
-          <h2 className="font-semibold mb-3">Bank Details</h2>
+        <div
+          style={{
+            marginBottom: '18px',
+            textAlign: 'left',
+            background: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+          }}
+        >
+          <p
+            style={{
+              margin: '0 0 10px 0',
+              color: '#111827',
+              fontSize: '15px',
+              fontWeight: 700,
+            }}
+          >
+            Bank Details
+          </p>
 
-          <p className="text-sm text-gray-500">Bank</p>
-          <p className="font-medium mb-2">{bankName}</p>
+          <hr
+            style={{
+              margin: '0 0 16px 0',
+              border: 'none',
+              borderTop: '1px solid #e5e7eb',
+            }}
+          />
 
-          <p className="text-sm text-gray-500">Account Name</p>
-          <p className="font-medium mb-2">{accountName}</p>
+          <div style={{ display: 'grid', gap: '10px' }}>
+            <div>
+              <p
+                style={{
+                  margin: '0 0 4px 0',
+                  color: '#6b7280',
+                  fontSize: '13px',
+                }}
+              >
+                Bank
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#111827',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                }}
+              >
+                {bankName}
+              </p>
+            </div>
 
-          <p className="text-sm text-gray-500">Account Number</p>
-          <p className="font-bold text-lg mb-4">{accountNumber}</p>
+            <div>
+              <p
+                style={{
+                  margin: '0 0 4px 0',
+                  color: '#6b7280',
+                  fontSize: '13px',
+                }}
+              >
+                Account Name
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#111827',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                }}
+              >
+                {accountName}
+              </p>
+            </div>
+
+            <div>
+              <p
+                style={{
+                  margin: '0 0 4px 0',
+                  color: '#6b7280',
+                  fontSize: '13px',
+                }}
+              >
+                Account Number
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#111827',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
+                }}
+              >
+                {accountNumber}
+              </p>
+            </div>
+          </div>
 
           <button
             onClick={copyAccountNumber}
-            className="w-full border rounded-xl py-3 font-semibold"
+            style={{
+              width: '100%',
+              marginTop: '16px',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              background: '#f3f4f6',
+              color: '#111827',
+              border: '1px solid #e5e7eb',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
           >
             Copy Account Number
           </button>
         </div>
 
-        {/* FOOTER */}
-        <p className="text-xs text-gray-500 mt-6">
+        <p
+          style={{
+            marginTop: '10px',
+            color: '#9ca3af',
+            fontSize: '14px',
+            lineHeight: 1.6,
+          }}
+        >
           Your order will be processed once payment is verified.
         </p>
-
       </div>
     </main>
   )
