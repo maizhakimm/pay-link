@@ -4,19 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
-type SellerProfile = {
-  id: string
-  user_id: string
-  store_name: string
-  store_slug: string
-  contact_phone: string | null
-  bank_name: string | null
-  account_name: string | null
-  account_number: string | null
-  created_at?: string
-  updated_at?: string
-}
-
 function slugify(text: string) {
   return text
     .toLowerCase()
@@ -475,4 +462,3 @@ export default function DashboardSettingsPage() {
     </main>
   )
 }
-
