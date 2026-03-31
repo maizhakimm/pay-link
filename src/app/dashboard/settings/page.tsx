@@ -164,6 +164,26 @@ export default function DashboardSettingsPage() {
     alert('Store settings saved successfully')
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '14px 16px',
+    fontSize: '15px',
+    borderRadius: '12px',
+    border: '1px solid #d1d5db',
+    outline: 'none',
+    boxSizing: 'border-box',
+    background: '#ffffff',
+    color: '#111827',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    marginBottom: '8px',
+    color: '#111827',
+    fontSize: '14px',
+    fontWeight: 600,
+  }
+
   if (loading) {
     return (
       <main
@@ -202,15 +222,15 @@ export default function DashboardSettingsPage() {
     >
       <div
         style={{
-          maxWidth: '900px',
+          maxWidth: '980px',
           margin: '0 auto',
         }}
       >
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '18px',
-            padding: '28px',
+            borderRadius: '20px',
+            padding: '32px',
             boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
             marginBottom: '20px',
           }}
@@ -220,8 +240,8 @@ export default function DashboardSettingsPage() {
               margin: 0,
               color: '#16a34a',
               fontWeight: 700,
-              fontSize: '14px',
-              letterSpacing: '0.4px',
+              fontSize: '13px',
+              letterSpacing: '0.6px',
             }}
           >
             STORE SETTINGS
@@ -229,8 +249,9 @@ export default function DashboardSettingsPage() {
 
           <h1
             style={{
-              margin: '10px 0 8px 0',
-              fontSize: '34px',
+              margin: '10px 0 10px 0',
+              fontSize: '38px',
+              lineHeight: 1.1,
               color: '#111827',
             }}
           >
@@ -242,18 +263,19 @@ export default function DashboardSettingsPage() {
               margin: 0,
               color: '#6b7280',
               fontSize: '16px',
-              lineHeight: 1.6,
+              lineHeight: 1.7,
+              maxWidth: '720px',
             }}
           >
-            Update your seller information, contact details, and bank details here.
+            Manage your business details, contact information, and payout account for customer payments.
           </p>
         </div>
 
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '18px',
-            padding: '28px',
+            borderRadius: '20px',
+            padding: '32px',
             boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
           }}
         >
@@ -261,120 +283,47 @@ export default function DashboardSettingsPage() {
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '18px',
+              gap: '20px',
             }}
           >
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  color: '#111827',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                }}
-              >
-                Store Name
-              </label>
+              <label style={labelStyle}>Store Name</label>
               <input
                 value={storeName}
                 onChange={(e) => handleStoreNameChange(e.target.value)}
-                placeholder="e.g. Maiz Kitchen"
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '16px',
-                  borderRadius: '12px',
-                  border: '1px solid #d1d5db',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                placeholder="Enter your business or store name"
+                style={inputStyle}
               />
             </div>
 
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  color: '#111827',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                }}
-              >
-                Store Slug
-              </label>
+              <label style={labelStyle}>Store Slug</label>
               <input
                 value={storeSlug}
                 onChange={(e) => setStoreSlug(slugify(e.target.value))}
-                placeholder="e.g. maiz-kitchen"
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '16px',
-                  borderRadius: '12px',
-                  border: '1px solid #d1d5db',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                placeholder="Enter a unique store URL slug"
+                style={inputStyle}
               />
             </div>
 
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  color: '#111827',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                }}
-              >
-                Contact Phone
-              </label>
+              <label style={labelStyle}>Contact Phone</label>
               <input
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="e.g. 60163352087"
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '16px',
-                  borderRadius: '12px',
-                  border: '1px solid #d1d5db',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                placeholder="Enter your business contact number"
+                style={inputStyle}
               />
             </div>
 
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  color: '#111827',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                }}
-              >
-                Bank Name
-              </label>
+              <label style={labelStyle}>Bank Name</label>
               <select
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '16px',
-                  borderRadius: '12px',
-                  border: '1px solid #d1d5db',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  background: '#ffffff',
-                }}
+                style={inputStyle}
               >
-                <option value="">Select Bank</option>
+                <option value="">Select your bank</option>
                 {banks.map((bank) => (
                   <option key={bank} value={bank}>
                     {bank}
@@ -384,65 +333,29 @@ export default function DashboardSettingsPage() {
             </div>
 
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  color: '#111827',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                }}
-              >
-                Account Name
-              </label>
+              <label style={labelStyle}>Account Name</label>
               <input
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value)}
-                placeholder="e.g. Maizhakim Bin Mazlan"
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '16px',
-                  borderRadius: '12px',
-                  border: '1px solid #d1d5db',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                placeholder="Enter the account holder name"
+                style={inputStyle}
               />
             </div>
 
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  color: '#111827',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                }}
-              >
-                Account Number
-              </label>
+              <label style={labelStyle}>Account Number</label>
               <input
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="e.g. 60163352087"
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '16px',
-                  borderRadius: '12px',
-                  border: '1px solid #d1d5db',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                placeholder="Enter the bank account number"
+                style={inputStyle}
               />
             </div>
           </div>
 
           <div
             style={{
-              marginTop: '24px',
+              marginTop: '28px',
               display: 'flex',
               gap: '12px',
               flexWrap: 'wrap',
@@ -452,7 +365,7 @@ export default function DashboardSettingsPage() {
               onClick={handleSave}
               disabled={saving}
               style={{
-                padding: '14px 18px',
+                padding: '14px 20px',
                 border: 'none',
                 borderRadius: '12px',
                 background: '#111827',
@@ -469,7 +382,7 @@ export default function DashboardSettingsPage() {
             <button
               onClick={() => router.push('/dashboard')}
               style={{
-                padding: '14px 18px',
+                padding: '14px 20px',
                 border: '1px solid #e5e7eb',
                 borderRadius: '12px',
                 background: '#ffffff',
