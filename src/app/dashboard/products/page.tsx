@@ -462,7 +462,8 @@ export default function DashboardProductsPage() {
               }}
             >
               {products.map((product) => {
-                const link = `${appBaseUrl}/pay/${product.price}?desc=${encodeURIComponent(product.name)}`
+                const link = `${appBaseUrl}/pay-link/${product.slug}`
+
                 return (
                   <div
                     key={product.id}
