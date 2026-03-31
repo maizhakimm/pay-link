@@ -67,9 +67,10 @@ export default function PayPage() {
 
   const bankDetails = `Bank: ${bankName}\nAccount Name: ${accountName}\nAccount Number: ${accountNumber}\nAmount: RM ${amount}\nDescription: ${description}`
 
-  const copyBankDetails = async () => {
-    await navigator.clipboard.writeText(bankDetails)
-    alert('Copied! Paste in your banking app.')
+  const bankDetails = `Bank: ${bankName}\nAccount Name: ${accountName}\nAccount Number: ${accountNumber}\nAmount: RM ${amount}\nDescription: ${description}`
+    await navigator.clipboard.writeText(accountNumber)
+    alert('Account number copied. Paste in your banking app.')
+
   }
 
   return (
