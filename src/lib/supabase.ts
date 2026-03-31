@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase'
+import { supabase } from '../../../lib/supabase'
 
 const supabaseUrl = 'https://ciaztzqoaxutoftqwiud.supabase.co'
 const supabaseAnonKey = 'sb_publishable_mcsLahm_WOTQRU7PU1aWMQ_INqaQZGC'
