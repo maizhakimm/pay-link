@@ -1,14 +1,31 @@
-export default function PayPage({
-  params,
-  searchParams,
-}: {
-  params: { amount: string }
-  searchParams?: { desc?: string }
-}) {
-  const phone = '60163352087'
-  const description = searchParams?.desc || 'Payment'
-  const message = `Hi, saya nak buat bayaran RM ${params.amount} untuk ${description}. Boleh share details pembayaran?`
-  const whatsappLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+'use client'
+
+import { useState } from 'react'
+
+export default function Home() {
+  const [amount, setAmount] = useState('')
+  const [description, setDescription] = useState('')
+  const [link, setLink] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const generateLink = () => {
+    if (!amount) return
+
+    const base = `${window.location.origin}/pay/${amount}`
+    const generated = description
+      ? `${base}?desc=${encodeURIComponent(description)}`
+      : base
+
+    setLink(generated)
+    setCopied(false)
+  }
+
+  const copyLink = async () => {
+    if (!link) return
+    await navigator.clipboard.writeText(link)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <main
@@ -24,7 +41,7 @@ export default function PayPage({
       <div
         style={{
           width: '100%',
-          maxWidth: '520px',
+          maxWidth: '560px',
           background: '#ffffff',
           borderRadius: '16px',
           padding: '32px',
@@ -41,117 +58,231 @@ export default function PayPage({
             letterSpacing: '0.4px',
           }}
         >
-          PAYMENT PAGE
+          SELLER PAGE
         </p>
 
         <h1
           style={{
             marginTop: '10px',
-            marginBottom: '8px',
-            fontSize: '34px',
+            marginBottom: '10px',
+            fontSize: '36px',
+            lineHeight: 1.1,
             color: '#111827',
           }}
         >
-          RM {params.amount}
+          Create Payment Link
         </h1>
 
         <p
           style={{
             marginTop: 0,
-            marginBottom: '8px',
-            color: '#111827',
-            fontSize: '18px',
-            fontWeight: 600,
-          }}
-        >
-          {description}
-        </p>
-
-        <p
-          style={{
-            marginTop: 0,
-            marginBottom: '20px',
+            marginBottom: '24px',
             color: '#6b7280',
             fontSize: '16px',
+            lineHeight: 1.6,
           }}
         >
-          Choose your preferred payment method below.
-        </p>
-
-        <img
-          src="/qr.png"
-          alt="QR Payment"
-          style={{
-            width: '220px',
-            maxWidth: '100%',
-            margin: '0 auto 12px',
-            display: 'block',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-          }}
-        />
-
-        <p
-          style={{
-            marginTop: 0,
-            marginBottom: '18px',
-            color: '#6b7280',
-            fontSize: '14px',
-          }}
-        >
-          Scan this QR, or download it and scan from your gallery in your banking or e-wallet app.
+          Fill in the payment details below and generate a shareable payment link for your customer.
         </p>
 
         <div
           style={{
-            display: 'flex',
-            gap: '12px',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            marginBottom: '16px',
+            textAlign: 'left',
+            background: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '22px',
           }}
         >
-          <a
-            href="/qr.png"
-            download
+          <p
             style={{
-              display: 'inline-block',
-              padding: '12px 16px',
-              borderRadius: '10px',
-              background: '#111827',
-              color: '#ffffff',
-              textDecoration: 'none',
-              fontWeight: 700,
+              margin: '0 0 10px 0',
+              color: '#111827',
+              fontSize: '15px',
+              fontWeight: 600,
             }}
           >
-            Download QR
-          </a>
+            Step 1: Enter the amount and description.
+          </p>
 
-          <a
-            href={whatsappLink}
-            target="_blank"
+          <p
             style={{
-              display: 'inline-block',
-              padding: '12px 16px',
-              borderRadius: '10px',
-              background: '#16a34a',
-              color: '#ffffff',
-              textDecoration: 'none',
-              fontWeight: 700,
+              margin: 0,
+              color: '#111827',
+              fontSize: '15px',
+              fontWeight: 600,
             }}
           >
-            Pay via WhatsApp
-          </a>
+            Step 2: Generate and share the payment link with your customer.
+          </p>
         </div>
+
+        <div style={{ textAlign: 'left', marginBottom: '8px' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '8px',
+              color: '#111827',
+              fontSize: '14px',
+              fontWeight: 600,
+            }}
+          >
+            Payment Amount (RM)
+          </label>
+
+          <input
+            type="number"
+            placeholder="e.g. 39"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              fontSize: '18px',
+              borderRadius: '12px',
+              border: '1px solid #d1d5db',
+              outline: 'none',
+              marginBottom: '16px',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        <div style={{ textAlign: 'left', marginBottom: '16px' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '8px',
+              color: '#111827',
+              fontSize: '14px',
+              fontWeight: 600,
+            }}
+          >
+            Payment Description
+          </label>
+
+          <input
+            type="text"
+            placeholder="e.g. Kuih Koci / Deposit Website"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              fontSize: '16px',
+              borderRadius: '12px',
+              border: '1px solid #d1d5db',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        <button
+          onClick={generateLink}
+          style={{
+            width: '100%',
+            padding: '14px 18px',
+            border: 'none',
+            borderRadius: '12px',
+            background: '#111827',
+            color: '#ffffff',
+            fontSize: '16px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            marginBottom: '24px',
+          }}
+        >
+          Generate Payment Link
+        </button>
+
+        {link && (
+          <div
+            style={{
+              textAlign: 'left',
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '16px',
+            }}
+          >
+            <p
+              style={{
+                margin: '0 0 8px 0',
+                fontSize: '14px',
+                color: '#6b7280',
+                fontWeight: 600,
+              }}
+            >
+              Generated Link
+            </p>
+
+            <p
+              style={{
+                margin: '0 0 16px 0',
+                wordBreak: 'break-all',
+                color: '#111827',
+                fontSize: '15px',
+                lineHeight: 1.6,
+              }}
+            >
+              {link}
+            </p>
+
+            <div
+              style={{
+                display: 'grid',
+                gap: '12px',
+              }}
+            >
+              <a
+                href={link}
+                target="_blank"
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: '#16a34a',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                }}
+              >
+                Open Payment Link
+              </a>
+
+              <button
+                onClick={copyLink}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  border: '1px solid #e5e7eb',
+                  background: '#f3f4f6',
+                  color: '#111827',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                {copied ? 'Copied!' : 'Copy Payment Link'}
+              </button>
+            </div>
+          </div>
+        )}
 
         <p
           style={{
-            marginTop: '10px',
+            marginTop: '22px',
             color: '#9ca3af',
             fontSize: '14px',
+            lineHeight: 1.6,
           }}
         >
-          If you have already paid, you can continue on WhatsApp and send your proof of payment.
+          Share the generated payment link with your customer to start collecting payments.
         </p>
       </div>
     </main>
