@@ -9,31 +9,77 @@ type PayButtonProps = {
   total: number
 }
 
+const STATES = [
+  'Perlis',
+  'Kedah',
+  'Pulau Pinang',
+  'Perak',
+  'Selangor',
+  'W.P. Kuala Lumpur',
+  'W.P. Putrajaya',
+  'Negeri Sembilan',
+  'Melaka',
+  'Johor',
+  'Pahang',
+  'Terengganu',
+  'Kelantan',
+  'W.P. Labuan',
+  'Sabah',
+  'Sarawak',
+]
+
 export default function PayButton({
   slug,
   quantity,
   total,
 }: PayButtonProps) {
   const [loading, setLoading] = useState(false)
+
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  const [phone, setPhone] = useState('+60')
+
   const [needsDelivery, setNeedsDelivery] = useState(false)
-  const [address, setAddress] = useState('')
+
+  const [address1, setAddress1] = useState('')
+  const [address2, setAddress2] = useState('')
+  const [postcode, setPostcode] = useState('')
+  const [city, setCity] = useState('')
+  const [district, setDistrict] = useState('')
+  const [state, setState] = useState('')
+
+  function handlePhoneChange(value: string) {
+    let cleaned = value.replace(/[^\d+]/g, '')
+
+    if (!cleaned.startsWith('+60')) {
+      cleaned = '+60'
+    }
+
+    setPhone(cleaned)
+  }
+
+  function handlePostcodeChange(value: string) {
+    const cleaned = value.replace(/\D/g, '').slice(0, 5)
+    setPostcode(cleaned)
+  }
 
   async function handleClick() {
-    if (!name || !email || !phone) {
-      alert('Please enter your name, email and phone number')
+    if (!name || !email || phone.length <= 3) {
+      alert('Please enter valid name, email and phone number')
       return
     }
 
-    if (needsDelivery && !address.trim()) {
-      alert('Please enter your delivery address')
-      return
+    if (needsDelivery) {
+      if (!address1 || !postcode || !city || !district || !state) {
+        alert('Please complete delivery details')
+        return
+      }
     }
 
     try {
       setLoading(true)
+
+      const fullAddress = `${address1} ${address2}, ${postcode} ${city}, ${district}, ${state}`
 
       const res = await fetch(
         `/api/payments/bayarcash/create?slug=${encodeURIComponent(
@@ -42,30 +88,23 @@ export default function PayButton({
           email
         )}&phone=${encodeURIComponent(phone)}&quantity=${quantity}&needs_delivery=${
           needsDelivery ? '1' : '0'
-        }&address=${encodeURIComponent(address)}`
+        }&address=${encodeURIComponent(fullAddress)}`
       )
 
       const data = await res.json()
 
       if (!res.ok || !data.ok) {
-        alert(data.error || `Payment start failed (status ${res.status})`)
+        alert(data.error || `Payment failed`)
         return
       }
 
-      if (data.raw_response) {
-        const parsed = JSON.parse(data.raw_response)
+      const parsed = JSON.parse(data.raw_response)
 
-        if (parsed.url) {
-          window.location.href = parsed.url
-          return
-        }
+      if (parsed.url) {
+        window.location.href = parsed.url
       }
-
-      alert('Payment URL not found')
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Something went wrong. Please try again.'
-      alert(message)
+    } catch (err) {
+      alert('Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -73,119 +112,52 @@ export default function PayButton({
 
   return (
     <div style={{ maxWidth: '520px', margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'grid',
-          gap: '10px',
-          marginBottom: '14px',
-        }}
-      >
-        <label style={{ fontSize: '13px', color: '#475569', fontWeight: 600 }}>
-          Full Name
-        </label>
+      <div style={{ display: 'grid', gap: '10px', marginBottom: '14px' }}>
+        {/* NAME */}
+        <label>Full Name</label>
         <input
-          type="text"
-          placeholder="Enter your name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '13px 14px',
-            borderRadius: '12px',
-            border: '1px solid #dbe2ea',
-            fontSize: '14px',
-            outline: 'none',
-            background: '#fff',
-          }}
+          placeholder="Enter your name"
+          style={inputStyle}
         />
 
-        <label style={{ fontSize: '13px', color: '#475569', fontWeight: 600 }}>
-          Email Address
-        </label>
+        {/* EMAIL */}
+        <label>Email Address</label>
         <input
-          type="email"
-          placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '13px 14px',
-            borderRadius: '12px',
-            border: '1px solid #dbe2ea',
-            fontSize: '14px',
-            outline: 'none',
-            background: '#fff',
-          }}
+          placeholder="Enter your email"
+          style={inputStyle}
         />
 
-        <label style={{ fontSize: '13px', color: '#475569', fontWeight: 600 }}>
-          Phone Number
-        </label>
+        {/* PHONE */}
+        <label>Phone Number</label>
         <input
-          type="tel"
-          placeholder="Enter your phone number"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '13px 14px',
-            borderRadius: '12px',
-            border: '1px solid #dbe2ea',
-            fontSize: '14px',
-            outline: 'none',
-            background: '#fff',
-          }}
+          onChange={(e) => handlePhoneChange(e.target.value)}
+          style={inputStyle}
         />
 
-        <div
-          style={{
-            marginTop: '6px',
-            padding: '12px 14px',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            background: '#f8fafc',
-          }}
-        >
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              cursor: 'pointer',
-            }}
-          >
+        {/* DELIVERY TOGGLE */}
+        <div style={toggleBox}>
+          <label style={toggleLabel}>
             <div>
-              <div
-                style={{
-                  fontSize: '13px',
-                  color: '#0f172a',
-                  fontWeight: 700,
-                  marginBottom: '2px',
-                }}
-              >
-                Delivery required
-              </div>
-              <div
-                style={{
-                  fontSize: '12px',
-                  color: '#64748b',
-                }}
-              >
-                Turn on if this order needs delivery
+              <strong>Delivery required</strong>
+              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                Turn on if delivery needed
               </div>
             </div>
 
             <div
-              onClick={() => setNeedsDelivery((prev) => !prev)}
+              onClick={() => setNeedsDelivery(!needsDelivery)}
               style={{
                 width: '48px',
                 height: '28px',
                 borderRadius: '999px',
                 background: needsDelivery ? '#1d4ed8' : '#cbd5e1',
                 position: 'relative',
-                transition: 'all 0.2s ease',
-                flexShrink: 0,
+                cursor: 'pointer',
               }}
             >
               <span
@@ -196,77 +168,91 @@ export default function PayButton({
                   width: '22px',
                   height: '22px',
                   borderRadius: '999px',
-                  background: '#ffffff',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-                  transition: 'all 0.2s ease',
-                  display: 'block',
+                  background: '#fff',
                 }}
               />
             </div>
           </label>
         </div>
 
+        {/* DELIVERY FORM */}
         {needsDelivery && (
           <>
-            <label style={{ fontSize: '13px', color: '#475569', fontWeight: 600 }}>
-              Delivery Address
-            </label>
-            <textarea
-              placeholder="Enter your delivery address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              rows={4}
-              style={{
-                width: '100%',
-                padding: '13px 14px',
-                borderRadius: '12px',
-                border: '1px solid #dbe2ea',
-                fontSize: '14px',
-                outline: 'none',
-                background: '#fff',
-                resize: 'vertical',
-                fontFamily: 'inherit',
-              }}
-            />
+            <label>Address Line 1</label>
+            <input value={address1} onChange={(e) => setAddress1(e.target.value)} style={inputStyle} />
+
+            <label>Address Line 2</label>
+            <input value={address2} onChange={(e) => setAddress2(e.target.value)} style={inputStyle} />
+
+            <label>Postcode</label>
+            <input value={postcode} onChange={(e) => handlePostcodeChange(e.target.value)} style={inputStyle} />
+
+            <label>City</label>
+            <input value={city} onChange={(e) => setCity(e.target.value)} style={inputStyle} />
+
+            <label>District</label>
+            <input value={district} onChange={(e) => setDistrict(e.target.value)} style={inputStyle} />
+
+            <label>State</label>
+            <select value={state} onChange={(e) => setState(e.target.value)} style={inputStyle}>
+              <option value="">Select state</option>
+              {STATES.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
           </>
         )}
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '12px',
-          marginBottom: '16px',
-          padding: '14px 0 2px',
-          borderTop: '1px solid #e2e8f0',
-        }}
-      >
-        <span style={{ color: '#64748b', fontSize: '14px' }}>Total</span>
-        <span style={{ color: '#0f172a', fontWeight: 800, fontSize: '18px' }}>
-          RM {total.toFixed(2)}
-        </span>
+      {/* TOTAL */}
+      <div style={totalRow}>
+        <span>Total</span>
+        <strong>RM {total.toFixed(2)}</strong>
       </div>
 
-      <button
-        onClick={handleClick}
-        disabled={loading}
-        style={{
-          width: '100%',
-          padding: '16px',
-          borderRadius: '14px',
-          background: loading ? '#93c5fd' : '#0f172a',
-          color: '#ffffff',
-          fontSize: '15px',
-          fontWeight: 800,
-          border: 'none',
-          cursor: loading ? 'not-allowed' : 'pointer',
-          boxShadow: '0 12px 24px rgba(15,23,42,0.18)',
-        }}
-      >
+      {/* BUTTON */}
+      <button onClick={handleClick} disabled={loading} style={buttonStyle}>
         {loading ? 'Redirecting...' : 'Pay Now'}
       </button>
     </div>
   )
+}
+
+/* STYLES */
+const inputStyle = {
+  width: '100%',
+  padding: '13px',
+  borderRadius: '12px',
+  border: '1px solid #dbe2ea',
+}
+
+const toggleBox = {
+  padding: '12px',
+  border: '1px solid #e2e8f0',
+  borderRadius: '12px',
+  background: '#f8fafc',
+}
+
+const toggleLabel = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+}
+
+const totalRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  marginBottom: '12px',
+  paddingTop: '10px',
+  borderTop: '1px solid #e2e8f0',
+}
+
+const buttonStyle = {
+  width: '100%',
+  padding: '16px',
+  borderRadius: '14px',
+  background: '#0f172a',
+  color: '#fff',
+  fontWeight: 800,
+  border: 'none',
 }
