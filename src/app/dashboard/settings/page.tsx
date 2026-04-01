@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { ChangeEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
@@ -18,6 +18,7 @@ export default function DashboardSettingsPage() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadingQr, setUploadingQr] = useState(false)
   const [userId, setUserId] = useState('')
 
   const [storeName, setStoreName] = useState('')
@@ -26,6 +27,7 @@ export default function DashboardSettingsPage() {
   const [bankName, setBankName] = useState('')
   const [accountName, setAccountName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
+  const [qrPaymentImageUrl, setQrPaymentImageUrl] = useState('')
 
   const banks = [
     'Maybank (Malayan Banking Berhad)',
@@ -75,6 +77,7 @@ export default function DashboardSettingsPage() {
         setBankName(sellerProfile.bank_name || '')
         setAccountName(sellerProfile.account_name || '')
         setAccountNumber(sellerProfile.account_number || '')
+        setQrPaymentImageUrl(sellerProfile.qr_payment_image_url || '')
       }
 
       setLoading(false)
@@ -88,6 +91,39 @@ export default function DashboardSettingsPage() {
     if (!storeSlug || storeSlug === slugify(storeName)) {
       setStoreSlug(slugify(value))
     }
+  }
+
+  const handleQrUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!userId) {
+      alert('Missing user session')
+      return
+    }
+
+    setUploadingQr(true)
+
+    const fileExt = file.name.split('.').pop()
+    const filePath = `qr/${userId}-${Date.now()}.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('payment-assets')
+      .upload(filePath, file, {
+        upsert: true,
+      })
+
+    if (uploadError) {
+      setUploadingQr(false)
+      alert(`QR upload failed: ${uploadError.message}`)
+      return
+    }
+
+    const { data } = supabase.storage.from('payment-assets').getPublicUrl(filePath)
+
+    setQrPaymentImageUrl(data.publicUrl)
+    setUploadingQr(false)
+    alert('QR uploaded successfully. Please click Save Settings.')
   }
 
   const handleSave = async () => {
@@ -116,6 +152,7 @@ export default function DashboardSettingsPage() {
       bank_name: bankName.trim(),
       account_name: accountName.trim(),
       account_number: accountNumber.trim(),
+      qr_payment_image_url: qrPaymentImageUrl || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -158,7 +195,7 @@ export default function DashboardSettingsPage() {
       return
     }
 
-    alert('Settings saved OK 123')
+    alert('Store settings saved successfully')
   }
 
   const inputStyle: React.CSSProperties = {
@@ -264,7 +301,7 @@ export default function DashboardSettingsPage() {
               maxWidth: '720px',
             }}
           >
-            Manage your business details, contact information, and payout account for customer payments.
+            Manage your business details, contact information, payout account, and QR payment image.
           </p>
         </div>
 
@@ -308,7 +345,7 @@ export default function DashboardSettingsPage() {
               <input
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="Enter your business contact number"
+                placeholder="Enter your business contact number in 60123456789 format"
                 style={inputStyle}
               />
             </div>
@@ -347,6 +384,57 @@ export default function DashboardSettingsPage() {
                 placeholder="Enter the bank account number"
                 style={inputStyle}
               />
+            </div>
+
+            <div
+              style={{
+                gridColumn: '1 / -1',
+              }}
+            >
+              <label style={labelStyle}>QR Payment Image</label>
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleQrUpload}
+                style={{
+                  ...inputStyle,
+                  padding: '10px 12px',
+                }}
+              />
+
+              {uploadingQr && (
+                <p
+                  style={{
+                    marginTop: '10px',
+                    marginBottom: 0,
+                    color: '#6b7280',
+                    fontSize: '14px',
+                  }}
+                >
+                  Uploading QR image...
+                </p>
+              )}
+
+              {qrPaymentImageUrl && (
+                <div
+                  style={{
+                    marginTop: '14px',
+                  }}
+                >
+                  <img
+                    src={qrPaymentImageUrl}
+                    alt="QR Preview"
+                    style={{
+                      width: '220px',
+                      maxWidth: '100%',
+                      borderRadius: '14px',
+                      border: '1px solid #e5e7eb',
+                      display: 'block',
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
