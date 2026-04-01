@@ -63,6 +63,8 @@ export default function ProductsPage() {
   const [editingDescription, setEditingDescription] = useState('')
   const [editingPrice, setEditingPrice] = useState('')
   const [editingIsActive, setEditingIsActive] = useState(true)
+  const [editingExistingImages, setEditingExistingImages] = useState<string[]>([])
+  const [editingNewImages, setEditingNewImages] = useState<File[]>([])
 
   const appUrl =
     typeof window !== 'undefined'
@@ -123,17 +125,45 @@ export default function ProductsPage() {
     loadProductsPage()
   }, [loadProductsPage])
 
-  function handleImageSelect(files: FileList | null) {
+  function appendCreateImages(files: FileList | null) {
     if (!files) return
 
-    const selectedFiles = Array.from(files).slice(0, 5)
+    const incoming = Array.from(files)
+    const combined = [...productImages, ...incoming].slice(0, 5)
+    setProductImages(combined)
 
-    if (selectedFiles.length > 5) {
+    if (productImages.length + incoming.length > 5) {
+      alert('Maximum 5 images only.')
+    }
+  }
+
+  function removeCreateImage(index: number) {
+    setProductImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function appendEditImages(files: FileList | null) {
+    if (!files) return
+
+    const incoming = Array.from(files)
+    const totalCount = editingExistingImages.length + editingNewImages.length + incoming.length
+
+    if (totalCount > 5) {
+      const allowed = Math.max(0, 5 - editingExistingImages.length - editingNewImages.length)
+      const limited = [...editingNewImages, ...incoming.slice(0, allowed)]
+      setEditingNewImages(limited)
       alert('Maximum 5 images only.')
       return
     }
 
-    setProductImages(selectedFiles)
+    setEditingNewImages((prev) => [...prev, ...incoming])
+  }
+
+  function removeEditExistingImage(index: number) {
+    setEditingExistingImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function removeEditNewImage(index: number) {
+    setEditingNewImages((prev) => prev.filter((_, i) => i !== index))
   }
 
   async function uploadProductImages(files: File[], slug: string) {
@@ -228,6 +258,8 @@ export default function ProductsPage() {
     setEditingDescription(product.description || '')
     setEditingPrice(String(product.price))
     setEditingIsActive(product.is_active)
+    setEditingExistingImages(getProductImages(product))
+    setEditingNewImages([])
   }
 
   function cancelEdit() {
@@ -236,31 +268,51 @@ export default function ProductsPage() {
     setEditingDescription('')
     setEditingPrice('')
     setEditingIsActive(true)
+    setEditingExistingImages([])
+    setEditingNewImages([])
   }
 
-  async function saveEdit(productId: string) {
+  async function saveEdit(product: ProductRow) {
     if (!editingName.trim() || !editingPrice.trim()) {
       alert('Please fill in product name and price.')
       return
     }
 
-    const { error } = await supabase
-      .from('products')
-      .update({
-        name: editingName.trim(),
-        description: editingDescription.trim() || null,
-        price: Number(editingPrice),
-        is_active: editingIsActive,
-      })
-      .eq('id', productId)
+    try {
+      let newUploadedUrls: string[] = []
 
-    if (error) {
-      alert(error.message)
-      return
+      if (editingNewImages.length > 0) {
+        newUploadedUrls = await uploadProductImages(editingNewImages, product.slug)
+      }
+
+      const finalImages = [...editingExistingImages, ...newUploadedUrls].slice(0, 5)
+
+      const { error } = await supabase
+        .from('products')
+        .update({
+          name: editingName.trim(),
+          description: editingDescription.trim() || null,
+          price: Number(editingPrice),
+          is_active: editingIsActive,
+          image_1: finalImages[0] || null,
+          image_2: finalImages[1] || null,
+          image_3: finalImages[2] || null,
+          image_4: finalImages[3] || null,
+          image_5: finalImages[4] || null,
+        })
+        .eq('id', product.id)
+
+      if (error) {
+        alert(error.message)
+        return
+      }
+
+      cancelEdit()
+      await loadProductsPage()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to save product'
+      alert(message)
     }
-
-    cancelEdit()
-    await loadProductsPage()
   }
 
   async function deleteProduct(productId: string) {
@@ -441,12 +493,7 @@ export default function ProductsPage() {
                 Create Product
               </h2>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gap: '12px',
-                }}
-              >
+              <div style={{ display: 'grid', gap: '12px' }}>
                 <label style={labelStyle}>Product Name</label>
                 <input
                   value={name}
@@ -485,7 +532,7 @@ export default function ProductsPage() {
                   type="file"
                   accept="image/*"
                   multiple
-                  onChange={(e) => handleImageSelect(e.target.files)}
+                  onChange={(e) => appendCreateImages(e.target.files)}
                   style={inputStyle}
                 />
 
@@ -494,7 +541,7 @@ export default function ProductsPage() {
                     style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(5, 1fr)',
-                      gap: '8px',
+                      gap: '10px',
                     }}
                   >
                     {productImages.map((file, index) => (
@@ -505,12 +552,26 @@ export default function ProductsPage() {
                           borderRadius: '12px',
                           padding: '8px',
                           background: '#f8fafc',
-                          fontSize: '12px',
-                          color: '#475569',
-                          textAlign: 'center',
                         }}
                       >
-                        {file.name}
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: '#475569',
+                            marginBottom: '6px',
+                            textAlign: 'center',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {file.name}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeCreateImage(index)}
+                          style={miniDangerButton}
+                        >
+                          Remove
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -582,15 +643,11 @@ export default function ProductsPage() {
               ) : products.length === 0 ? (
                 <p style={{ margin: 0, color: '#64748b' }}>No products yet.</p>
               ) : (
-                <div
-                  style={{
-                    display: 'grid',
-                    gap: '14px',
-                  }}
-                >
+                <div style={{ display: 'grid', gap: '14px' }}>
                   {products.map((product) => {
                     const link = `${appUrl}/pay-link/${product.slug}`
                     const images = getProductImages(product)
+                    const thumb = images[0]
 
                     return (
                       <div
@@ -642,6 +699,102 @@ export default function ProductsPage() {
                               Active
                             </label>
 
+                            <label style={labelStyle}>Existing Images</label>
+                            {editingExistingImages.length > 0 ? (
+                              <div
+                                style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: 'repeat(5, 1fr)',
+                                  gap: '10px',
+                                }}
+                              >
+                                {editingExistingImages.map((image, index) => (
+                                  <div
+                                    key={index}
+                                    style={{
+                                      border: '1px solid #e2e8f0',
+                                      borderRadius: '12px',
+                                      padding: '8px',
+                                      background: '#f8fafc',
+                                    }}
+                                  >
+                                    <img
+                                      src={image}
+                                      alt={`Existing ${index + 1}`}
+                                      style={{
+                                        width: '100%',
+                                        height: '70px',
+                                        objectFit: 'cover',
+                                        borderRadius: '10px',
+                                        marginBottom: '6px',
+                                      }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeEditExistingImage(index)}
+                                      style={miniDangerButton}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
+                                No existing images
+                              </p>
+                            )}
+
+                            <label style={labelStyle}>Add More Images (Max total 5)</label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={(e) => appendEditImages(e.target.files)}
+                              style={inputStyle}
+                            />
+
+                            {editingNewImages.length > 0 && (
+                              <div
+                                style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: 'repeat(5, 1fr)',
+                                  gap: '10px',
+                                }}
+                              >
+                                {editingNewImages.map((file, index) => (
+                                  <div
+                                    key={index}
+                                    style={{
+                                      border: '1px solid #e2e8f0',
+                                      borderRadius: '12px',
+                                      padding: '8px',
+                                      background: '#f8fafc',
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        fontSize: '11px',
+                                        color: '#475569',
+                                        marginBottom: '6px',
+                                        textAlign: 'center',
+                                        wordBreak: 'break-word',
+                                      }}
+                                    >
+                                      {file.name}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeEditNewImage(index)}
+                                      style={miniDangerButton}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
                             <div
                               style={{
                                 display: 'flex',
@@ -649,7 +802,7 @@ export default function ProductsPage() {
                                 flexWrap: 'wrap',
                               }}
                             >
-                              <button onClick={() => saveEdit(product.id)} style={darkButton}>
+                              <button onClick={() => saveEdit(product)} style={darkButton}>
                                 Save
                               </button>
                               <button onClick={cancelEdit} style={lightButton}>
@@ -661,78 +814,94 @@ export default function ProductsPage() {
                           <>
                             <div
                               style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-start',
-                                gap: '12px',
-                                flexWrap: 'wrap',
+                                display: 'grid',
+                                gridTemplateColumns: thumb ? '92px 1fr' : '1fr',
+                                gap: '14px',
                                 marginBottom: '10px',
                               }}
                             >
-                              <div>
-                                <h3
+                              {thumb && (
+                                <img
+                                  src={thumb}
+                                  alt={product.name}
                                   style={{
-                                    margin: '0 0 6px 0',
-                                    fontSize: '20px',
-                                    color: '#0f172a',
-                                    fontWeight: 800,
+                                    width: '92px',
+                                    height: '92px',
+                                    objectFit: 'cover',
+                                    borderRadius: '14px',
+                                    border: '1px solid #e2e8f0',
                                   }}
-                                >
-                                  {product.name}
-                                </h3>
-
-                                <p
-                                  style={{
-                                    margin: '0 0 6px 0',
-                                    color: '#1d4ed8',
-                                    fontSize: '18px',
-                                    fontWeight: 800,
-                                  }}
-                                >
-                                  RM {Number(product.price).toFixed(2)}
-                                </p>
-
-                                <span
-                                  style={{
-                                    display: 'inline-block',
-                                    padding: '6px 10px',
-                                    borderRadius: '999px',
-                                    background: product.is_active ? '#dcfce7' : '#f3f4f6',
-                                    color: product.is_active ? '#166534' : '#374151',
-                                    fontSize: '12px',
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {product.is_active ? 'Active' : 'Inactive'}
-                                </span>
-                              </div>
+                                />
+                              )}
 
                               <div
                                 style={{
                                   display: 'flex',
-                                  gap: '8px',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'flex-start',
+                                  gap: '12px',
                                   flexWrap: 'wrap',
                                 }}
                               >
-                                <button onClick={() => copyLink(product.slug)} style={lightButton}>
-                                  📋 Copy Link
-                                </button>
-                                <button onClick={() => shareLink(product.slug)} style={lightButton}>
-                                  🔗 Share
-                                </button>
-                                <button onClick={() => toggleActive(product)} style={lightButton}>
-                                  {product.is_active ? 'Set Inactive' : 'Set Active'}
-                                </button>
-                                <button onClick={() => startEdit(product)} style={lightButton}>
-                                  Edit
-                                </button>
-                                <button onClick={() => deleteProduct(product.id)} style={dangerButton}>
-                                  Delete
-                                </button>
+                                <div>
+                                  <h3
+                                    style={{
+                                      margin: '0 0 6px 0',
+                                      fontSize: '20px',
+                                      color: '#0f172a',
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {product.name}
+                                  </h3>
+
+                                  <p
+                                    style={{
+                                      margin: '0 0 6px 0',
+                                      color: '#1d4ed8',
+                                      fontSize: '18px',
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    RM {Number(product.price).toFixed(2)}
+                                  </p>
+
+                                  <span
+                                    style={{
+                                      display: 'inline-block',
+                                      padding: '6px 10px',
+                                      borderRadius: '999px',
+                                      background: product.is_active ? '#dcfce7' : '#f3f4f6',
+                                      color: product.is_active ? '#166534' : '#374151',
+                                      fontSize: '12px',
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {product.is_active ? 'Active' : 'Inactive'}
+                                  </span>
+                                </div>
+
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    gap: '8px',
+                                    flexWrap: 'wrap',
+                                  }}
+                                >
+                                  <button onClick={() => copyLink(product.slug)} style={lightButton}>
+                                    📋 Copy
+                                  </button>
+                                  <button onClick={() => shareLink(product.slug)} style={lightButton}>
+                                    🔗 Share
+                                  </button>
+                                  <button onClick={() => startEdit(product)} style={lightButton}>
+                                    Edit
+                                  </button>
+                                </div>
                               </div>
                             </div>
 
-                            {images.length > 0 && (
+                            {images.length > 1 && (
                               <div
                                 style={{
                                   display: 'grid',
@@ -741,14 +910,14 @@ export default function ProductsPage() {
                                   marginBottom: '10px',
                                 }}
                               >
-                                {images.map((image, index) => (
+                                {images.slice(0, 5).map((image, index) => (
                                   <img
                                     key={index}
                                     src={image}
                                     alt={`Product ${index + 1}`}
                                     style={{
                                       width: '100%',
-                                      height: '70px',
+                                      height: '64px',
                                       objectFit: 'cover',
                                       borderRadius: '12px',
                                       border: '1px solid #e2e8f0',
@@ -780,9 +949,46 @@ export default function ProductsPage() {
                                 fontSize: '13px',
                                 color: '#475569',
                                 wordBreak: 'break-all',
+                                marginBottom: '10px',
                               }}
                             >
                               {link}
+                            </div>
+
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '10px',
+                                borderTop: '1px solid #f1f5f9',
+                                paddingTop: '10px',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: '13px',
+                                  color: '#64748b',
+                                }}
+                              >
+                                Public visibility: <strong>{product.is_active ? 'Visible' : 'Hidden'}</strong>
+                              </div>
+
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  gap: '8px',
+                                  flexWrap: 'wrap',
+                                }}
+                              >
+                                <button onClick={() => toggleActive(product)} style={lightButton}>
+                                  {product.is_active ? 'Set Inactive' : 'Set Active'}
+                                </button>
+                                <button onClick={() => deleteProduct(product.id)} style={dangerButton}>
+                                  Delete
+                                </button>
+                              </div>
                             </div>
                           </>
                         )}
@@ -864,6 +1070,18 @@ const dangerButton = {
   color: '#b91c1c',
   fontWeight: 700,
   cursor: 'pointer',
+} as const
+
+const miniDangerButton = {
+  width: '100%',
+  padding: '8px 10px',
+  borderRadius: '10px',
+  border: '1px solid #fecaca',
+  background: '#fff1f2',
+  color: '#b91c1c',
+  fontWeight: 700,
+  cursor: 'pointer',
+  fontSize: '12px',
 } as const
 
 const navLinkStyle = {
