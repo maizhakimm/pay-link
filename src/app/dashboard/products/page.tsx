@@ -13,6 +13,11 @@ type ProductRow = {
   store_name: string | null
   seller_profile_id: string | null
   created_at?: string
+  image_1?: string | null
+  image_2?: string | null
+  image_3?: string | null
+  image_4?: string | null
+  image_5?: string | null
 }
 
 type SellerProfileRow = {
@@ -30,6 +35,16 @@ function createSlug(value: string) {
     .slice(0, 60)
 }
 
+function getProductImages(product: ProductRow) {
+  return [
+    product.image_1,
+    product.image_2,
+    product.image_3,
+    product.image_4,
+    product.image_5,
+  ].filter(Boolean) as string[]
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([])
   const [sellerProfile, setSellerProfile] = useState<SellerProfileRow | null>(null)
@@ -41,6 +56,7 @@ export default function ProductsPage() {
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [customSlug, setCustomSlug] = useState('')
+  const [productImages, setProductImages] = useState<File[]>([])
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
@@ -107,6 +123,44 @@ export default function ProductsPage() {
     loadProductsPage()
   }, [loadProductsPage])
 
+  function handleImageSelect(files: FileList | null) {
+    if (!files) return
+
+    const selectedFiles = Array.from(files).slice(0, 5)
+
+    if (selectedFiles.length > 5) {
+      alert('Maximum 5 images only.')
+      return
+    }
+
+    setProductImages(selectedFiles)
+  }
+
+  async function uploadProductImages(files: File[], slug: string) {
+    const uploadedUrls: string[] = []
+
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i]
+      const ext = file.name.split('.').pop() || 'jpg'
+      const filePath = `${slug}/${Date.now()}-${i}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file, {
+          upsert: true,
+        })
+
+      if (uploadError) {
+        throw new Error(uploadError.message)
+      }
+
+      const { data } = supabase.storage.from('product-images').getPublicUrl(filePath)
+      uploadedUrls.push(data.publicUrl)
+    }
+
+    return uploadedUrls
+  }
+
   async function handleCreateProduct() {
     if (!sellerProfile) {
       alert('Seller profile not ready yet.')
@@ -126,28 +180,46 @@ export default function ProductsPage() {
 
     setSaving(true)
 
-    const { error } = await supabase.from('products').insert({
-      name: name.trim(),
-      slug: finalSlug,
-      description: description.trim() || null,
-      price: Number(price),
-      is_active: true,
-      store_name: sellerProfile.store_name || null,
-      seller_profile_id: sellerProfile.id,
-    })
+    try {
+      let uploadedUrls: string[] = []
 
-    setSaving(false)
+      if (productImages.length > 0) {
+        uploadedUrls = await uploadProductImages(productImages, finalSlug)
+      }
 
-    if (error) {
-      alert(error.message)
-      return
+      const { error } = await supabase.from('products').insert({
+        name: name.trim(),
+        slug: finalSlug,
+        description: description.trim() || null,
+        price: Number(price),
+        is_active: true,
+        store_name: sellerProfile.store_name || null,
+        seller_profile_id: sellerProfile.id,
+        image_1: uploadedUrls[0] || null,
+        image_2: uploadedUrls[1] || null,
+        image_3: uploadedUrls[2] || null,
+        image_4: uploadedUrls[3] || null,
+        image_5: uploadedUrls[4] || null,
+      })
+
+      if (error) {
+        alert(error.message)
+        setSaving(false)
+        return
+      }
+
+      setName('')
+      setDescription('')
+      setPrice('')
+      setCustomSlug('')
+      setProductImages([])
+      await loadProductsPage()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Image upload failed'
+      alert(message)
     }
 
-    setName('')
-    setDescription('')
-    setPrice('')
-    setCustomSlug('')
-    await loadProductsPage()
+    setSaving(false)
   }
 
   function startEdit(product: ProductRow) {
@@ -230,6 +302,25 @@ export default function ProductsPage() {
     }
   }
 
+  async function shareLink(slug: string) {
+    const shareUrl = `${appUrl}/pay-link/${slug}`
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Payment Link',
+          text: 'Here is your payment link',
+          url: shareUrl,
+        })
+      } else {
+        await navigator.clipboard.writeText(shareUrl)
+        alert('Share not supported. Link copied instead.')
+      }
+    } catch {
+      alert('Unable to share link')
+    }
+  }
+
   return (
     <main
       style={{
@@ -239,7 +330,6 @@ export default function ProductsPage() {
         flexDirection: 'column',
       }}
     >
-      {/* Header */}
       <header
         style={{
           background: '#ffffff',
@@ -289,7 +379,6 @@ export default function ProductsPage() {
         </div>
       </header>
 
-      {/* Body */}
       <div
         style={{
           flex: 1,
@@ -391,6 +480,42 @@ export default function ProductsPage() {
                   style={inputStyle}
                 />
 
+                <label style={labelStyle}>Upload Product Images (Max 5)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleImageSelect(e.target.files)}
+                  style={inputStyle}
+                />
+
+                {productImages.length > 0 && (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(5, 1fr)',
+                      gap: '8px',
+                    }}
+                  >
+                    {productImages.map((file, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          padding: '8px',
+                          background: '#f8fafc',
+                          fontSize: '12px',
+                          color: '#475569',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {file.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div
                   style={{
                     padding: '12px 14px',
@@ -465,6 +590,7 @@ export default function ProductsPage() {
                 >
                   {products.map((product) => {
                     const link = `${appUrl}/pay-link/${product.slug}`
+                    const images = getProductImages(product)
 
                     return (
                       <div
@@ -589,7 +715,10 @@ export default function ProductsPage() {
                                 }}
                               >
                                 <button onClick={() => copyLink(product.slug)} style={lightButton}>
-                                  Copy Link
+                                  📋 Copy Link
+                                </button>
+                                <button onClick={() => shareLink(product.slug)} style={lightButton}>
+                                  🔗 Share
                                 </button>
                                 <button onClick={() => toggleActive(product)} style={lightButton}>
                                   {product.is_active ? 'Set Inactive' : 'Set Active'}
@@ -602,6 +731,32 @@ export default function ProductsPage() {
                                 </button>
                               </div>
                             </div>
+
+                            {images.length > 0 && (
+                              <div
+                                style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: 'repeat(5, 1fr)',
+                                  gap: '8px',
+                                  marginBottom: '10px',
+                                }}
+                              >
+                                {images.map((image, index) => (
+                                  <img
+                                    key={index}
+                                    src={image}
+                                    alt={`Product ${index + 1}`}
+                                    style={{
+                                      width: '100%',
+                                      height: '70px',
+                                      objectFit: 'cover',
+                                      borderRadius: '12px',
+                                      border: '1px solid #e2e8f0',
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            )}
 
                             {product.description && (
                               <p
@@ -641,7 +796,6 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer
         style={{
           marginTop: '20px',
