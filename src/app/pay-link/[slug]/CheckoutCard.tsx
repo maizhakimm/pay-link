@@ -9,12 +9,7 @@ type ProductRow = {
   slug: string
   description: string | null
   price: number
-  seller_profile_id: string
-  is_active: boolean
   store_name: string | null
-  product_image_url?: string | null
-  image_url?: string | null
-  image_urls?: string[] | null
   image_1?: string | null
   image_2?: string | null
   image_3?: string | null
@@ -22,120 +17,96 @@ type ProductRow = {
   image_5?: string | null
 }
 
-function getSellerInitial(name: string | null) {
-  if (!name) return 'S'
-  return name.trim().charAt(0).toUpperCase()
-}
+function getImages(product: ProductRow) {
+  const arr = [
+    product.image_1,
+    product.image_2,
+    product.image_3,
+    product.image_4,
+    product.image_5,
+  ].filter(Boolean) as string[]
 
-function getProductImages(product: ProductRow) {
-  const images: string[] = []
-
-  const push = (v?: string | null) => {
-    if (v && v.trim()) images.push(v.trim())
-  }
-
-  if (Array.isArray(product.image_urls)) {
-    product.image_urls.forEach(push)
-  }
-
-  push(product.product_image_url)
-  push(product.image_url)
-  push(product.image_1)
-  push(product.image_2)
-  push(product.image_3)
-  push(product.image_4)
-  push(product.image_5)
-
-  const unique = Array.from(new Set(images)).slice(0, 5)
-
-  return unique.length ? unique : ['__placeholder__']
+  return arr.length ? arr : ['__placeholder__']
 }
 
 export default function CheckoutCard({ product }: { product: ProductRow }) {
-  const [quantity, setQuantity] = useState(1)
-  const [index] = useState(0)
-  const images = getProductImages(product)
-  const currentImage = images[index]
+  const [qty, setQty] = useState(1)
+  const [index, setIndex] = useState(0)
 
-  const total = useMemo(() => product.price * quantity, [product.price, quantity])
+  const images = getImages(product)
+  const current = images[index]
+
+  const total = useMemo(() => product.price * qty, [product.price, qty])
+
+  function next() {
+    setIndex((prev) => (prev + 1) % images.length)
+  }
+
+  function prev() {
+    setIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))
+  }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%)',
-        padding: '18px 14px 30px',
-      }}
-    >
-      <div style={{ maxWidth: '620px', margin: '0 auto' }}>
+    <main style={main}>
+      <div style={{ maxWidth: 600, margin: '0 auto' }}>
 
-        {/* LOGO */}
-        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+        {/* LOGO CENTER */}
+        <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <img
             src="/GoBayar%20Logo%2001%20800px.svg"
-            style={{ height: '42px' }}
+            alt="GoBayar"
+            style={{ height: 44, margin: '0 auto', display: 'block' }}
           />
         </div>
 
         {/* PRODUCT CARD */}
         <div style={card}>
-          {/* IMAGE */}
+
+          {/* IMAGE CAROUSEL */}
           <div style={imageBox}>
-            {currentImage === '__placeholder__' ? (
+            {current === '__placeholder__' ? (
               <div style={placeholder}>Product image</div>
             ) : (
-              <img src={currentImage} style={imgStyle} />
+              <img src={current} alt="product" style={img} />
             )}
 
-            {/* overlay */}
+            {/* arrows */}
+            {images.length > 1 && (
+              <>
+                <button style={leftArrow} onClick={prev}>‹</button>
+                <button style={rightArrow} onClick={next}>›</button>
+              </>
+            )}
+
+            {/* gradient */}
             <div style={gradient} />
 
             {/* seller */}
-            <div style={sellerBox}>
+            <div style={seller}>
               <div style={avatar}>
-                {getSellerInitial(product.store_name)}
+                {product.store_name?.charAt(0) || 'S'}
               </div>
-              <div style={sellerName}>
-                {product.store_name || 'Seller'}
-              </div>
+              <span style={{ color: '#fff', fontWeight: 700 }}>
+                {product.store_name}
+              </span>
             </div>
-
-            {/* dots */}
-            {images.length > 1 && (
-              <div style={dots}>
-                {images.map((_, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      width: i === index ? 20 : 8,
-                      height: 8,
-                      borderRadius: 999,
-                      background: '#fff',
-                    }}
-                  />
-                ))}
-              </div>
-            )}
           </div>
 
           {/* INFO */}
-          <div style={infoRow}>
-            <div style={{ flex: 1 }}>
+          <div style={row}>
+            <div>
               <h2 style={title}>{product.name}</h2>
               <p style={price}>RM {product.price.toFixed(2)}</p>
-
-              {product.description && (
-                <p style={desc}>{product.description}</p>
-              )}
+              <p style={desc}>{product.description}</p>
             </div>
 
-            {/* QUANTITY */}
+            {/* QTY */}
             <div style={qtyBox}>
-              <div style={qtyLabel}>Quantity</div>
+              <div style={{ fontSize: 12 }}>Qty</div>
               <div style={qtyRow}>
-                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
-                <span>{quantity}</span>
-                <button onClick={() => setQuantity(quantity + 1)}>+</button>
+                <button onClick={() => setQty(Math.max(1, qty - 1))}>-</button>
+                <span>{qty}</span>
+                <button onClick={() => setQty(qty + 1)}>+</button>
               </div>
             </div>
           </div>
@@ -143,22 +114,23 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
 
         {/* PAYMENT */}
         <div style={card}>
-          <PayButton
-            slug={product.slug}
-            unitPrice={product.price}
-            quantity={quantity}
-            total={total}
-          />
+          <PayButton slug={product.slug} unitPrice={product.price} quantity={qty} total={total} />
 
           <p style={footerText}>
             This transaction is encrypted and secured.
           </p>
 
-          {/* PAYMENT IMAGE */}
+          {/* CENTER PAYMENT IMAGE */}
           <div style={{ textAlign: 'center' }}>
             <img
               src="/Payment%20List%20Check%20Out%20Page%2001.jpg"
-              style={{ maxWidth: '220px', width: '100%' }}
+              alt="payments"
+              style={{
+                width: '100%',
+                maxWidth: 220,
+                display: 'block',
+                margin: '0 auto',
+              }}
             />
           </div>
         </div>
@@ -169,35 +141,39 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
 }
 
 /* STYLES */
+const main = {
+  minHeight: '100vh',
+  background: '#f8fafc',
+  padding: 16,
+}
+
 const card = {
   background: '#fff',
-  borderRadius: 24,
-  padding: 18,
+  borderRadius: 20,
+  padding: 16,
   marginBottom: 14,
-  border: '1px solid #eef2f7',
 }
 
 const imageBox = {
   position: 'relative' as const,
   width: '100%',
   aspectRatio: '16/9',
-  borderRadius: 18,
+  borderRadius: 16,
   overflow: 'hidden',
-  marginBottom: 16,
+  marginBottom: 14,
 }
 
-const imgStyle = {
+const img = {
   width: '100%',
   height: '100%',
   objectFit: 'cover' as const,
 }
 
 const placeholder = {
-  width: '100%',
-  height: '100%',
   display: 'flex',
-  alignItems: 'center',
   justifyContent: 'center',
+  alignItems: 'center',
+  height: '100%',
 }
 
 const gradient = {
@@ -209,18 +185,18 @@ const gradient = {
   background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
 }
 
-const sellerBox = {
+const seller = {
   position: 'absolute' as const,
-  bottom: 14,
-  left: 14,
+  bottom: 12,
+  left: 12,
   display: 'flex',
-  gap: 10,
+  gap: 8,
   alignItems: 'center',
 }
 
 const avatar = {
-  width: 36,
-  height: 36,
+  width: 32,
+  height: 32,
   borderRadius: 999,
   background: '#fff',
   display: 'flex',
@@ -229,58 +205,59 @@ const avatar = {
   fontWeight: 800,
 }
 
-const sellerName = {
-  color: '#fff',
-  fontWeight: 700,
-}
-
-const dots = {
+const leftArrow = {
   position: 'absolute' as const,
-  bottom: 14,
-  left: '50%',
-  transform: 'translateX(-50%)',
-  display: 'flex',
-  gap: 6,
+  left: 10,
+  top: '50%',
+  transform: 'translateY(-50%)',
+  background: '#fff',
+  borderRadius: '50%',
+  width: 32,
+  height: 32,
 }
 
-const infoRow = {
+const rightArrow = {
+  position: 'absolute' as const,
+  right: 10,
+  top: '50%',
+  transform: 'translateY(-50%)',
+  background: '#fff',
+  borderRadius: '50%',
+  width: 32,
+  height: 32,
+}
+
+const row = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: 16,
-  flexWrap: 'wrap' as const,
+  gap: 10,
 }
 
 const title = {
-  fontSize: 28,
+  fontSize: 26,
   fontWeight: 800,
-  marginBottom: 6,
 }
 
 const price = {
   color: '#1d4ed8',
   fontWeight: 800,
-  fontSize: 22,
+  fontSize: 20,
 }
 
 const desc = {
-  color: '#64748b',
   fontSize: 14,
+  color: '#64748b',
 }
 
 const qtyBox = {
-  background: '#f8fafc',
-  padding: 12,
-  borderRadius: 14,
-}
-
-const qtyLabel = {
-  fontSize: 12,
-  marginBottom: 6,
+  background: '#f1f5f9',
+  padding: 10,
+  borderRadius: 12,
 }
 
 const qtyRow = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
   alignItems: 'center',
 }
 
@@ -288,5 +265,5 @@ const footerText = {
   textAlign: 'center' as const,
   fontSize: 12,
   color: '#64748b',
-  margin: '12px 0',
+  margin: '10px 0',
 }
