@@ -7,14 +7,9 @@ type ProductRow = {
   slug: string
   description: string | null
   price: number
-  bank_name: string | null
-  account_name: string | null
-  account_number: string | null
-  qr_payment_image_url: string | null
   seller_profile_id: string
   is_active: boolean
   store_name: string | null
-  contact_phone: string | null
 }
 
 export default async function PaymentPage({
@@ -45,9 +40,9 @@ export default async function PaymentPage({
             width: '100%',
             maxWidth: '560px',
             background: '#ffffff',
-            borderRadius: '20px',
-            padding: '32px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+            borderRadius: '24px',
+            padding: '36px',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
             textAlign: 'center',
           }}
         >
@@ -56,6 +51,7 @@ export default async function PaymentPage({
               margin: '0 0 12px 0',
               fontSize: '32px',
               color: '#111827',
+              fontWeight: 800,
             }}
           >
             Payment Link Not Found
@@ -95,9 +91,9 @@ export default async function PaymentPage({
             width: '100%',
             maxWidth: '560px',
             background: '#ffffff',
-            borderRadius: '20px',
-            padding: '32px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+            borderRadius: '24px',
+            padding: '36px',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
             textAlign: 'center',
           }}
         >
@@ -106,6 +102,7 @@ export default async function PaymentPage({
               margin: '0 0 12px 0',
               fontSize: '32px',
               color: '#111827',
+              fontWeight: 800,
             }}
           >
             Payment Link Inactive
@@ -126,67 +123,102 @@ export default async function PaymentPage({
     )
   }
 
-  const whatsappPhone = typedProduct.contact_phone || ''
-  const whatsappMessage = `Hi, I have made payment for ${typedProduct.name} (RM ${Number(
-    typedProduct.price
-  ).toFixed(2)}). I will send my payment receipt shortly.`
-
-  const whatsappLink = whatsappPhone
-    ? `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(whatsappMessage)}`
-    : '#'
-
   return (
     <main
       style={{
         minHeight: '100vh',
-        background: '#f5f7fb',
-        padding: '24px',
+        background: 'linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)',
+        padding: '28px 20px',
       }}
     >
       <div
         style={{
-          maxWidth: '860px',
+          maxWidth: '760px',
           margin: '0 auto',
         }}
       >
         <div
           style={{
-            background: '#ffffff',
-            borderRadius: '20px',
-            padding: '32px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+            textAlign: 'center',
             marginBottom: '20px',
           }}
         >
           <p
             style={{
-              margin: 0,
+              margin: '0 0 10px 0',
               color: '#16a34a',
-              fontWeight: 700,
+              fontWeight: 800,
               fontSize: '13px',
-              letterSpacing: '0.6px',
+              letterSpacing: '1px',
             }}
           >
-            PAYMENT PAGE
+            SECURE PAYMENT LINK
           </p>
 
           <h1
             style={{
-              margin: '10px 0 10px 0',
+              margin: '0 0 12px 0',
               fontSize: '38px',
               lineHeight: 1.1,
               color: '#111827',
+              fontWeight: 800,
             }}
           >
-            {typedProduct.name}
+            Complete Your Payment
           </h1>
 
           <p
             style={{
+              margin: '0 auto',
+              maxWidth: '560px',
+              color: '#6b7280',
+              fontSize: '16px',
+              lineHeight: 1.7,
+            }}
+          >
+            Fast, secure and simple checkout for your order.
+          </p>
+        </div>
+
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            padding: '32px',
+            boxShadow: '0 14px 40px rgba(0,0,0,0.08)',
+            marginBottom: '20px',
+          }}
+        >
+          <p
+            style={{
               margin: '0 0 10px 0',
-              color: '#16a34a',
+              color: '#6b7280',
+              fontSize: '13px',
               fontWeight: 700,
-              fontSize: '28px',
+              letterSpacing: '0.5px',
+            }}
+          >
+            ORDER SUMMARY
+          </p>
+
+          <h2
+            style={{
+              margin: '0 0 12px 0',
+              fontSize: '34px',
+              lineHeight: 1.15,
+              color: '#111827',
+              fontWeight: 800,
+            }}
+          >
+            {typedProduct.name}
+          </h2>
+
+          <p
+            style={{
+              margin: '0 0 16px 0',
+              color: '#16a34a',
+              fontWeight: 800,
+              fontSize: '30px',
             }}
           >
             RM {Number(typedProduct.price).toFixed(2)}
@@ -195,7 +227,7 @@ export default async function PaymentPage({
           {typedProduct.store_name && (
             <p
               style={{
-                margin: '0 0 10px 0',
+                margin: '0 0 14px 0',
                 color: '#111827',
                 fontSize: '16px',
                 fontWeight: 600,
@@ -211,8 +243,7 @@ export default async function PaymentPage({
                 margin: 0,
                 color: '#6b7280',
                 fontSize: '16px',
-                lineHeight: 1.7,
-                maxWidth: '720px',
+                lineHeight: 1.8,
               }}
             >
               {typedProduct.description}
@@ -223,198 +254,83 @@ export default async function PaymentPage({
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '20px',
+            borderRadius: '24px',
             padding: '32px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            marginBottom: '20px',
+            boxShadow: '0 14px 40px rgba(0,0,0,0.08)',
+            textAlign: 'center',
           }}
         >
-          <h2
-            style={{
-              margin: '0 0 18px 0',
-              fontSize: '24px',
-              color: '#111827',
-            }}
-          >
-            Payment Details
-          </h2>
-
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-              gap: '18px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#ecfdf5',
+              color: '#15803d',
+              borderRadius: '999px',
+              padding: '8px 14px',
+              fontWeight: 700,
+              fontSize: '13px',
+              marginBottom: '16px',
             }}
           >
-            <div>
-              <p
-                style={{
-                  margin: '0 0 6px 0',
-                  color: '#6b7280',
-                  fontSize: '13px',
-                }}
-              >
-                Bank Name
-              </p>
-              <p
-                style={{
-                  margin: 0,
-                  color: '#111827',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  lineHeight: 1.6,
-                }}
-              >
-                {typedProduct.bank_name || '-'}
-              </p>
-            </div>
-
-            <div>
-              <p
-                style={{
-                  margin: '0 0 6px 0',
-                  color: '#6b7280',
-                  fontSize: '13px',
-                }}
-              >
-                Account Name
-              </p>
-              <p
-                style={{
-                  margin: 0,
-                  color: '#111827',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  lineHeight: 1.6,
-                }}
-              >
-                {typedProduct.account_name || '-'}
-              </p>
-            </div>
-
-            <div>
-              <p
-                style={{
-                  margin: '0 0 6px 0',
-                  color: '#6b7280',
-                  fontSize: '13px',
-                }}
-              >
-                Account Number
-              </p>
-              <p
-                style={{
-                  margin: 0,
-                  color: '#111827',
-                  fontSize: '16px',
-                  fontWeight: 700,
-                  lineHeight: 1.6,
-                }}
-              >
-                {typedProduct.account_number || '-'}
-              </p>
-            </div>
+            <span>🔒</span>
+            <span>Secure Checkout</span>
           </div>
 
-          {typedProduct.qr_payment_image_url && (
-            <div
-              style={{
-                marginTop: '24px',
-              }}
-            >
-              <p
-                style={{
-                  margin: '0 0 10px 0',
-                  color: '#111827',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                }}
-              >
-                QR Payment
-              </p>
-
-              <img
-                src={typedProduct.qr_payment_image_url}
-                alt="QR Payment"
-                style={{
-                  width: '260px',
-                  maxWidth: '100%',
-                  display: 'block',
-                  borderRadius: '14px',
-                  border: '1px solid #e5e7eb',
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '20px',
-            padding: '32px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-          }}
-        >
-          <h2
+          <h3
             style={{
-              margin: '0 0 14px 0',
-              fontSize: '24px',
+              margin: '0 0 12px 0',
+              fontSize: '28px',
               color: '#111827',
+              fontWeight: 800,
             }}
           >
-            Next Step
-          </h2>
+            Pay Securely Now
+          </h3>
 
           <p
             style={{
-              margin: '0 0 18px 0',
+              margin: '0 auto 24px auto',
+              maxWidth: '520px',
               color: '#6b7280',
               fontSize: '15px',
+              lineHeight: 1.8,
+            }}
+          >
+            You will be redirected to our secure payment partner to complete your payment using
+            FPX, card or Buy Now Pay Later.
+          </p>
+
+          <Link
+            href="/api/payments/bayarcash/create"
+            style={{
+              display: 'inline-block',
+              width: '100%',
+              maxWidth: '420px',
+              padding: '16px 22px',
+              borderRadius: '14px',
+              background: '#16a34a',
+              color: '#ffffff',
+              textDecoration: 'none',
+              fontSize: '16px',
+              fontWeight: 800,
+              boxShadow: '0 10px 20px rgba(22,163,74,0.22)',
+            }}
+          >
+            Proceed to Secure Payment
+          </Link>
+
+          <p
+            style={{
+              margin: '18px 0 0 0',
+              color: '#9ca3af',
+              fontSize: '13px',
               lineHeight: 1.7,
             }}
           >
-            Complete your bank transfer or QR payment, then send your payment receipt to the seller for verification.
+            Powered by Bayarcash • Automatic payment capture • No manual receipt required
           </p>
-
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap',
-            }}
-          >
-            {whatsappPhone ? (
-              <Link
-                href={whatsappLink}
-                target="_blank"
-                style={{
-                  display: 'inline-block',
-                  padding: '14px 18px',
-                  borderRadius: '12px',
-                  background: '#16a34a',
-                  color: '#ffffff',
-                  textDecoration: 'none',
-                  fontWeight: 700,
-                }}
-              >
-                Send Receipt on WhatsApp
-              </Link>
-            ) : (
-              <span
-                style={{
-                  display: 'inline-block',
-                  padding: '14px 18px',
-                  borderRadius: '12px',
-                  background: '#e5e7eb',
-                  color: '#6b7280',
-                  fontWeight: 700,
-                }}
-              >
-                Seller contact not available
-              </span>
-            )}
-          </div>
         </div>
       </div>
     </main>
