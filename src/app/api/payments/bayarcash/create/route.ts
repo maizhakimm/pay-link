@@ -18,6 +18,7 @@ type ProductRow = {
   price: number
   is_active: boolean
   store_name: string | null
+  seller_profile_id: string | null
 }
 
 export async function GET(req: NextRequest) {
@@ -27,10 +28,7 @@ export async function GET(req: NextRequest) {
 
     if (!slug) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: 'Missing product slug',
-        },
+        { ok: false, error: 'Missing product slug' },
         { status: 400 }
       )
     }
@@ -43,10 +41,7 @@ export async function GET(req: NextRequest) {
 
     if (productError || !product) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: 'Product not found',
-        },
+        { ok: false, error: 'Product not found' },
         { status: 404 }
       )
     }
@@ -55,10 +50,7 @@ export async function GET(req: NextRequest) {
 
     if (!typedProduct.is_active) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: 'Product is inactive',
-        },
+        { ok: false, error: 'Product is inactive' },
         { status: 400 }
       )
     }
@@ -69,6 +61,31 @@ export async function GET(req: NextRequest) {
     const payer_email = searchParams.get('email') || 'customer@example.com'
     const payer_telephone_number = searchParams.get('phone') || ''
     const payment_channel = BAYARCASH_CHANNELS.FPX
+
+    const { error: orderInsertError } = await supabase.from('orders').insert({
+      product_id: typedProduct.id,
+      product_slug: typedProduct.slug,
+      product_name: typedProduct.name,
+      seller_profile_id: typedProduct.seller_profile_id,
+      buyer_name: payer_name,
+      buyer_email: payer_email,
+      buyer_phone: payer_telephone_number,
+      amount: amount,
+      order_number: order_number,
+      payment_provider: 'bayarcash',
+      payment_channel: payment_channel,
+      status: 'pending',
+    })
+
+    if (orderInsertError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Failed to create order: ${orderInsertError.message}`,
+        },
+        { status: 500 }
+      )
+    }
 
     const checksum = createBayarcashPaymentIntentChecksum({
       payment_channel,
@@ -102,6 +119,30 @@ export async function GET(req: NextRequest) {
     })
 
     const text = await response.text()
+    let parsedResponse: {
+      id?: string
+      url?: string
+    } | null = null
+
+    try {
+      parsedResponse = JSON.parse(text) as {
+        id?: string
+        url?: string
+      }
+    } catch {
+      parsedResponse = null
+    }
+
+    if (response.ok && parsedResponse?.id) {
+      await supabase
+        .from('orders')
+        .update({
+          gateway_payment_intent_id: parsedResponse.id,
+          status: 'awaiting_payment',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('order_number', order_number)
+    }
 
     return NextResponse.json({
       ok: response.ok,
@@ -111,6 +152,7 @@ export async function GET(req: NextRequest) {
         slug: typedProduct.slug,
         price: typedProduct.price,
       },
+      order_number,
       sent_payload: payload,
       raw_response: text,
     })
