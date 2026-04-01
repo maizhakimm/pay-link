@@ -49,13 +49,15 @@ export async function POST(req: NextRequest) {
       sent_payload: payload,
       raw_response: text,
     })
-  } catch (error: any) {
-    return NextResponse.json(
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unexpected error'
+
+      return NextResponse.json(
       {
         ok: false,
-        error: error.message || 'Unexpected error',
+        error: message,
       },
       { status: 500 }
     )
-  }
+}
 }
