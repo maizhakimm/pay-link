@@ -63,10 +63,9 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const order_number = `ORD-${Date.now()}`
-    const amount = Number(typedProduct.price).toFixed(2)
     const payer_name = searchParams.get('name') || 'Customer'
     const payer_email = searchParams.get('email') || 'customer@example.com'
+    const payer_telephone_number = searchParams.get('phone') || ''
     const payment_channel = BAYARCASH_CHANNELS.FPX
 
     const checksum = createBayarcashPaymentIntentChecksum({
