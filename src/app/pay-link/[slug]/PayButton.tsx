@@ -18,10 +18,17 @@ export default function PayButton({
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [needsDelivery, setNeedsDelivery] = useState(false)
+  const [address, setAddress] = useState('')
 
   async function handleClick() {
     if (!name || !email || !phone) {
       alert('Please enter your name, email and phone number')
+      return
+    }
+
+    if (needsDelivery && !address.trim()) {
+      alert('Please enter your delivery address')
       return
     }
 
@@ -33,7 +40,9 @@ export default function PayButton({
           slug
         )}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(
           email
-        )}&phone=${encodeURIComponent(phone)}&quantity=${quantity}`
+        )}&phone=${encodeURIComponent(phone)}&quantity=${quantity}&needs_delivery=${
+          needsDelivery ? '1' : '0'
+        }&address=${encodeURIComponent(address)}`
       )
 
       const data = await res.json()
@@ -127,6 +136,100 @@ export default function PayButton({
             background: '#fff',
           }}
         />
+
+        <div
+          style={{
+            marginTop: '6px',
+            padding: '12px 14px',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            background: '#f8fafc',
+          }}
+        >
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: '#0f172a',
+                  fontWeight: 700,
+                  marginBottom: '2px',
+                }}
+              >
+                Delivery required
+              </div>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: '#64748b',
+                }}
+              >
+                Turn on if this order needs delivery
+              </div>
+            </div>
+
+            <div
+              onClick={() => setNeedsDelivery((prev) => !prev)}
+              style={{
+                width: '48px',
+                height: '28px',
+                borderRadius: '999px',
+                background: needsDelivery ? '#1d4ed8' : '#cbd5e1',
+                position: 'relative',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '3px',
+                  left: needsDelivery ? '23px' : '3px',
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '999px',
+                  background: '#ffffff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                  transition: 'all 0.2s ease',
+                  display: 'block',
+                }}
+              />
+            </div>
+          </label>
+        </div>
+
+        {needsDelivery && (
+          <>
+            <label style={{ fontSize: '13px', color: '#475569', fontWeight: 600 }}>
+              Delivery Address
+            </label>
+            <textarea
+              placeholder="Enter your delivery address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              rows={4}
+              style={{
+                width: '100%',
+                padding: '13px 14px',
+                borderRadius: '12px',
+                border: '1px solid #dbe2ea',
+                fontSize: '14px',
+                outline: 'none',
+                background: '#fff',
+                resize: 'vertical',
+                fontFamily: 'inherit',
+              }}
+            />
+          </>
+        )}
       </div>
 
       <div
