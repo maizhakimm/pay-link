@@ -13,6 +13,7 @@ type SellerProfile = {
   bank_name: string | null
   account_name: string | null
   account_number: string | null
+  qr_payment_image_url?: string | null
 }
 
 type Product = {
@@ -27,6 +28,8 @@ type Product = {
   bank_name: string | null
   account_name: string | null
   account_number: string | null
+  store_name: string | null
+  contact_phone: string | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -151,10 +154,12 @@ export default function DashboardProductsPage() {
       description: description.trim() || null,
       price: numericPrice,
       product_image_url: null,
-      qr_payment_image_url: null,
+      qr_payment_image_url: seller.qr_payment_image_url || null,
       bank_name: seller.bank_name || null,
       account_name: seller.account_name || null,
       account_number: seller.account_number || null,
+      store_name: seller.store_name || null,
+      contact_phone: seller.contact_phone || null,
       is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
