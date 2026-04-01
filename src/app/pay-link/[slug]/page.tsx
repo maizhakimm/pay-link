@@ -1,135 +1,69 @@
-import { supabase } from '../../../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import CheckoutCard from './CheckoutCard'
 
-type ProductRow = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  price: number
-  seller_profile_id: string
-  is_active: boolean
-  store_name: string | null
-  product_image_url?: string | null
-  image_url?: string | null
-  image_urls?: string[] | null
-  image_1?: string | null
-  image_2?: string | null
-  image_3?: string | null
-  image_4?: string | null
-  image_5?: string | null
+type PageProps = {
+  params: {
+    slug: string
+  }
 }
 
-export default async function PaymentPage({
-  params,
-}: {
-  params: { slug: string }
-}) {
-  const { data: product, error: productError } = await supabase
+export default async function Page({ params }: PageProps) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const { data: product, error } = await supabase
     .from('products')
     .select('*')
     .eq('slug', params.slug)
-    .maybeSingle()
+    .eq('is_active', true)
+    .single()
 
-  if (productError || !product) {
+  if (error || !product) {
     return (
       <main
         style={{
           minHeight: '100vh',
-          background: '#f8fafc',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '24px',
+          background: '#f8fafc',
+          padding: '20px',
         }}
       >
         <div
           style={{
-            width: '100%',
-            maxWidth: '560px',
-            background: '#ffffff',
-            borderRadius: '24px',
-            padding: '32px',
-            boxShadow: '0 12px 32px rgba(15,23,42,0.08)',
+            background: '#fff',
+            padding: '24px',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
             textAlign: 'center',
           }}
         >
-          <h1
+          <h2
             style={{
-              margin: '0 0 12px 0',
-              fontSize: '28px',
+              marginBottom: '8px',
               color: '#0f172a',
               fontWeight: 800,
             }}
           >
-            Payment Link Not Found
-          </h1>
+            Product not found
+          </h2>
 
           <p
             style={{
               margin: 0,
               color: '#64748b',
-              fontSize: '15px',
-              lineHeight: 1.7,
+              fontSize: '14px',
             }}
           >
-            This payment link may be invalid, expired, or no longer available.
+            The product link may be invalid or no longer available.
           </p>
         </div>
       </main>
     )
   }
 
-  const typedProduct = product as ProductRow
-
-  if (!typedProduct.is_active) {
-    return (
-      <main
-        style={{
-          minHeight: '100vh',
-          background: '#f8fafc',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px',
-        }}
-      >
-        <div
-          style={{
-            width: '100%',
-            maxWidth: '560px',
-            background: '#ffffff',
-            borderRadius: '24px',
-            padding: '32px',
-            boxShadow: '0 12px 32px rgba(15,23,42,0.08)',
-            textAlign: 'center',
-          }}
-        >
-          <h1
-            style={{
-              margin: '0 0 12px 0',
-              fontSize: '28px',
-              color: '#0f172a',
-              fontWeight: 800,
-            }}
-          >
-            Payment Link Inactive
-          </h1>
-
-          <p
-            style={{
-              margin: 0,
-              color: '#64748b',
-              fontSize: '15px',
-              lineHeight: 1.7,
-            }}
-          >
-            This payment link is currently inactive.
-          </p>
-        </div>
-      </main>
-    )
-  }
-
-  return <CheckoutCard product={typedProduct} />
+  return <CheckoutCard product={product} />
 }
