@@ -12,6 +12,9 @@ type OrderRow = {
   buyer_phone: string | null
   amount: number
   status: string
+  gateway_payment_intent_id: string | null
+  gateway_transaction_id: string | null
+  gateway_status_description: string | null
   created_at: string
 }
 
@@ -37,6 +40,13 @@ function getStatusStyle(status: string) {
     }
   }
 
+  if (status === 'awaiting_payment') {
+    return {
+      background: '#dbeafe',
+      color: '#1d4ed8',
+    }
+  }
+
   return {
     background: '#fef3c7',
     color: '#92400e',
@@ -56,7 +66,20 @@ export default function OrdersPage() {
       const { data, error } = await supabase
         .from('orders')
         .select(
-          'id, order_number, product_name, buyer_name, buyer_email, buyer_phone, amount, status, created_at'
+          `
+            id,
+            order_number,
+            product_name,
+            buyer_name,
+            buyer_email,
+            buyer_phone,
+            amount,
+            status,
+            gateway_payment_intent_id,
+            gateway_transaction_id,
+            gateway_status_description,
+            created_at
+          `
         )
         .order('created_at', { ascending: false })
 
@@ -83,15 +106,11 @@ export default function OrdersPage() {
     >
       <div
         style={{
-          maxWidth: '1200px',
+          maxWidth: '1400px',
           margin: '0 auto',
         }}
       >
-        <div
-          style={{
-            marginBottom: '20px',
-          }}
-        >
+        <div style={{ marginBottom: '20px' }}>
           <h1
             style={{
               margin: '0 0 8px 0',
@@ -134,7 +153,7 @@ export default function OrdersPage() {
               style={{
                 width: '100%',
                 borderCollapse: 'collapse',
-                minWidth: '900px',
+                minWidth: '1300px',
               }}
             >
               <thead>
@@ -164,6 +183,15 @@ export default function OrdersPage() {
                   </th>
                   <th style={{ padding: '14px 10px', fontSize: '14px', color: '#374151' }}>
                     Status
+                  </th>
+                  <th style={{ padding: '14px 10px', fontSize: '14px', color: '#374151' }}>
+                    Payment Intent ID
+                  </th>
+                  <th style={{ padding: '14px 10px', fontSize: '14px', color: '#374151' }}>
+                    Transaction ID
+                  </th>
+                  <th style={{ padding: '14px 10px', fontSize: '14px', color: '#374151' }}>
+                    Gateway Note
                   </th>
                   <th style={{ padding: '14px 10px', fontSize: '14px', color: '#374151' }}>
                     Created
@@ -213,6 +241,15 @@ export default function OrdersPage() {
                         >
                           {order.status}
                         </span>
+                      </td>
+                      <td style={{ padding: '14px 10px', color: '#6b7280' }}>
+                        {order.gateway_payment_intent_id || '-'}
+                      </td>
+                      <td style={{ padding: '14px 10px', color: '#6b7280' }}>
+                        {order.gateway_transaction_id || '-'}
+                      </td>
+                      <td style={{ padding: '14px 10px', color: '#6b7280' }}>
+                        {order.gateway_status_description || '-'}
                       </td>
                       <td style={{ padding: '14px 10px', color: '#6b7280' }}>
                         {new Date(order.created_at).toLocaleString()}
