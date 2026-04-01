@@ -18,8 +18,9 @@ export async function POST(req: NextRequest) {
     const payload = await req.json()
 
     const orderNumber = payload.order_number
-    const transactionId = payload.transaction_id
+    const transactionId = payload.transaction_id || null
     const statusNumber = Number(payload.status || 0)
+    const statusDescription = payload.status_description || null
     const newStatus = mapBayarcashStatus(statusNumber)
 
     if (!orderNumber) {
@@ -29,20 +30,41 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { error } = await supabase
+    const { data: existingOrder, error: existingOrderError } = await supabase
+      .from('orders')
+      .select('id, status, gateway_transaction_id')
+      .eq('order_number', orderNumber)
+      .maybeSingle()
+
+    if (existingOrderError || !existingOrder) {
+      return NextResponse.json(
+        { ok: false, error: 'Order not found' },
+        { status: 404 }
+      )
+    }
+
+    if (
+      existingOrder.status === 'paid' &&
+      existingOrder.gateway_transaction_id &&
+      existingOrder.gateway_transaction_id === transactionId
+    ) {
+      return NextResponse.json({ ok: true, duplicate: true })
+    }
+
+    const { error: updateError } = await supabase
       .from('orders')
       .update({
-        gateway_transaction_id: transactionId || null,
+        gateway_transaction_id: transactionId,
         gateway_status: statusNumber,
-        gateway_status_description: payload.status_description || null,
+        gateway_status_description: statusDescription,
         status: newStatus,
         updated_at: new Date().toISOString(),
       })
       .eq('order_number', orderNumber)
 
-    if (error) {
+    if (updateError) {
       return NextResponse.json(
-        { ok: false, error: error.message },
+        { ok: false, error: updateError.message },
         { status: 500 }
       )
     }
