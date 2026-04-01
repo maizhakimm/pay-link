@@ -540,7 +540,7 @@ export default function ProductsPage() {
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(5, 1fr)',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
                       gap: '10px',
                     }}
                   >
@@ -704,7 +704,7 @@ export default function ProductsPage() {
                               <div
                                 style={{
                                   display: 'grid',
-                                  gridTemplateColumns: 'repeat(5, 1fr)',
+                                  gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
                                   gap: '10px',
                                 }}
                               >
@@ -758,7 +758,7 @@ export default function ProductsPage() {
                               <div
                                 style={{
                                   display: 'grid',
-                                  gridTemplateColumns: 'repeat(5, 1fr)',
+                                  gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
                                   gap: '10px',
                                 }}
                               >
@@ -815,7 +815,7 @@ export default function ProductsPage() {
                             <div
                               style={{
                                 display: 'grid',
-                                gridTemplateColumns: thumb ? '92px 1fr' : '1fr',
+                                gridTemplateColumns: thumb ? '92px minmax(0,1fr)' : '1fr',
                                 gap: '14px',
                                 marginBottom: '10px',
                               }}
@@ -836,96 +836,105 @@ export default function ProductsPage() {
 
                               <div
                                 style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'flex-start',
-                                  gap: '12px',
-                                  flexWrap: 'wrap',
+                                  display: 'grid',
+                                  gap: '10px',
+                                  minWidth: 0,
                                 }}
                               >
-                                <div>
-                                  <h3
-                                    style={{
-                                      margin: '0 0 6px 0',
-                                      fontSize: '20px',
-                                      color: '#0f172a',
-                                      fontWeight: 800,
-                                    }}
-                                  >
-                                    {product.name}
-                                  </h3>
-
-                                  <p
-                                    style={{
-                                      margin: '0 0 6px 0',
-                                      color: '#1d4ed8',
-                                      fontSize: '18px',
-                                      fontWeight: 800,
-                                    }}
-                                  >
-                                    RM {Number(product.price).toFixed(2)}
-                                  </p>
-
-                                  <span
-                                    style={{
-                                      display: 'inline-block',
-                                      padding: '6px 10px',
-                                      borderRadius: '999px',
-                                      background: product.is_active ? '#dcfce7' : '#f3f4f6',
-                                      color: product.is_active ? '#166534' : '#374151',
-                                      fontSize: '12px',
-                                      fontWeight: 700,
-                                    }}
-                                  >
-                                    {product.is_active ? 'Active' : 'Inactive'}
-                                  </span>
-                                </div>
-
                                 <div
                                   style={{
                                     display: 'flex',
-                                    gap: '8px',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-start',
+                                    gap: '12px',
                                     flexWrap: 'wrap',
                                   }}
                                 >
-                                  <button onClick={() => copyLink(product.slug)} style={lightButton}>
-                                    📋 Copy
-                                  </button>
-                                  <button onClick={() => shareLink(product.slug)} style={lightButton}>
-                                    🔗 Share
-                                  </button>
-                                  <button onClick={() => startEdit(product)} style={lightButton}>
-                                    Edit
-                                  </button>
+                                  <div style={{ minWidth: 0 }}>
+                                    <h3
+                                      style={{
+                                        margin: '0 0 6px 0',
+                                        fontSize: '20px',
+                                        color: '#0f172a',
+                                        fontWeight: 800,
+                                      }}
+                                    >
+                                      {product.name}
+                                    </h3>
+
+                                    <p
+                                      style={{
+                                        margin: '0 0 6px 0',
+                                        color: '#1d4ed8',
+                                        fontSize: '18px',
+                                        fontWeight: 800,
+                                      }}
+                                    >
+                                      RM {Number(product.price).toFixed(2)}
+                                    </p>
+
+                                    <span
+                                      style={{
+                                        display: 'inline-block',
+                                        padding: '6px 10px',
+                                        borderRadius: '999px',
+                                        background: product.is_active ? '#dcfce7' : '#f3f4f6',
+                                        color: product.is_active ? '#166534' : '#374151',
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      {product.is_active ? 'Active' : 'Inactive'}
+                                    </span>
+                                  </div>
+
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      gap: '8px',
+                                      flexWrap: 'wrap',
+                                    }}
+                                  >
+                                    <button onClick={() => copyLink(product.slug)} style={lightButton}>
+                                      📋 Copy
+                                    </button>
+                                    <button onClick={() => shareLink(product.slug)} style={lightButton}>
+                                      🔗 Share
+                                    </button>
+                                    <button onClick={() => startEdit(product)} style={lightButton}>
+                                      Edit
+                                    </button>
+                                  </div>
                                 </div>
+
+                                {images.length > 1 && (
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      gap: '8px',
+                                      overflowX: 'auto',
+                                      paddingBottom: '2px',
+                                    }}
+                                  >
+                                    {images.slice(0, 5).map((image, index) => (
+                                      <img
+                                        key={index}
+                                        src={image}
+                                        alt={`Product ${index + 1}`}
+                                        style={{
+                                          width: '64px',
+                                          height: '64px',
+                                          flex: '0 0 64px',
+                                          objectFit: 'cover',
+                                          borderRadius: '12px',
+                                          border: '1px solid #e2e8f0',
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
-
-                            {images.length > 1 && (
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'repeat(5, 1fr)',
-                                  gap: '8px',
-                                  marginBottom: '10px',
-                                }}
-                              >
-                                {images.slice(0, 5).map((image, index) => (
-                                  <img
-                                    key={index}
-                                    src={image}
-                                    alt={`Product ${index + 1}`}
-                                    style={{
-                                      width: '100%',
-                                      height: '64px',
-                                      objectFit: 'cover',
-                                      borderRadius: '12px',
-                                      border: '1px solid #e2e8f0',
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                            )}
 
                             {product.description && (
                               <p
