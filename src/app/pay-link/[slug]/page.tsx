@@ -1,4 +1,3 @@
-
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 
@@ -14,12 +13,7 @@ type ProductRow = {
   qr_payment_image_url: string | null
   seller_profile_id: string
   is_active: boolean
-}
-
-type SellerProfileRow = {
-  id: string
   store_name: string | null
-  store_slug: string | null
   contact_phone: string | null
 }
 
@@ -132,15 +126,7 @@ export default async function PaymentPage({
     )
   }
 
-  const { data: sellerProfile } = await supabase
-    .from('seller_profiles')
-    .select('*')
-    .eq('id', typedProduct.seller_profile_id)
-    .maybeSingle()
-
-  const seller = sellerProfile as SellerProfileRow | null
-
-  const whatsappPhone = seller?.contact_phone || ''
+  const whatsappPhone = typedProduct.contact_phone || ''
   const whatsappMessage = `Hi, I have made payment for ${typedProduct.name} (RM ${Number(
     typedProduct.price
   ).toFixed(2)}). I will send my payment receipt shortly.`
@@ -206,7 +192,7 @@ export default async function PaymentPage({
             RM {Number(typedProduct.price).toFixed(2)}
           </p>
 
-          {seller?.store_name && (
+          {typedProduct.store_name && (
             <p
               style={{
                 margin: '0 0 10px 0',
@@ -215,7 +201,7 @@ export default async function PaymentPage({
                 fontWeight: 600,
               }}
             >
-              Sold by {seller.store_name}
+              Sold by {typedProduct.store_name}
             </p>
           )}
 
