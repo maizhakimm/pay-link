@@ -1,3 +1,9 @@
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    message: 'Use POST to create Bayarcash payment',
+  })
+}
 import { NextRequest, NextResponse } from 'next/server'
 import { createBayarcashPaymentIntentChecksum, BAYARCASH_CHANNELS } from '../../../../../lib/bayarcash'
 
