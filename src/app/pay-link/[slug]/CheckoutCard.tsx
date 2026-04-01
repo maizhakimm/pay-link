@@ -91,7 +91,7 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
     >
       <div
         style={{
-          maxWidth: '680px',
+          maxWidth: '620px',
           margin: '0 auto',
         }}
       >
@@ -101,16 +101,16 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
             marginBottom: '14px',
           }}
         >
-          <div
+          <img
+            src="/GoBayar%20Logo%2001%20800px.svg"
+            alt="GoBayar"
             style={{
-              fontSize: '20px',
-              fontWeight: 800,
-              color: '#0f172a',
-              marginBottom: '6px',
+              height: '42px',
+              width: 'auto',
+              display: 'block',
+              margin: '0 auto 8px auto',
             }}
-          >
-            GoBayar
-          </div>
+          />
 
           <p
             style={{
@@ -464,7 +464,7 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
 
           <p
             style={{
-              margin: '14px 0 0 0',
+              margin: '14px 0 8px 0',
               textAlign: 'center',
               color: '#64748b',
               fontSize: '12px',
@@ -473,6 +473,25 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
           >
             This transaction is encrypted and secured.
           </p>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginTop: '6px',
+            }}
+          >
+            <img
+              src="/Payment%20List%20Check%20Out%20Page%2001.jpg"
+              alt="Available payment methods"
+              style={{
+                width: '100%',
+                maxWidth: '230px',
+                height: 'auto',
+                display: 'block',
+              }}
+            />
+          </div>
         </div>
       </div>
     </main>
