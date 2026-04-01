@@ -24,62 +24,41 @@ type ProductRow = {
 
 function getSellerInitial(name: string | null) {
   if (!name) return 'S'
-  return name.trim().charAt(0).toUpperCase() || 'S'
+  return name.trim().charAt(0).toUpperCase()
 }
 
 function getProductImages(product: ProductRow) {
   const images: string[] = []
 
-  const pushIfValid = (value?: string | null) => {
-    if (value && value.trim()) images.push(value.trim())
+  const push = (v?: string | null) => {
+    if (v && v.trim()) images.push(v.trim())
   }
 
   if (Array.isArray(product.image_urls)) {
-    product.image_urls.forEach((img) => {
-      if (img && img.trim()) images.push(img.trim())
-    })
+    product.image_urls.forEach(push)
   }
 
-  pushIfValid(product.product_image_url)
-  pushIfValid(product.image_url)
-  pushIfValid(product.image_1)
-  pushIfValid(product.image_2)
-  pushIfValid(product.image_3)
-  pushIfValid(product.image_4)
-  pushIfValid(product.image_5)
+  push(product.product_image_url)
+  push(product.image_url)
+  push(product.image_1)
+  push(product.image_2)
+  push(product.image_3)
+  push(product.image_4)
+  push(product.image_5)
 
-  const uniqueImages = Array.from(new Set(images)).slice(0, 5)
+  const unique = Array.from(new Set(images)).slice(0, 5)
 
-  if (uniqueImages.length === 0) {
-    return ['__placeholder__']
-  }
-
-  return uniqueImages
+  return unique.length ? unique : ['__placeholder__']
 }
 
 export default function CheckoutCard({ product }: { product: ProductRow }) {
   const [quantity, setQuantity] = useState(1)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [index, setIndex] = useState(0)
 
-  const total = useMemo(() => Number(product.price) * quantity, [product.price, quantity])
-  const productImages = getProductImages(product)
-  const currentImage = productImages[currentImageIndex]
+  const images = getProductImages(product)
+  const currentImage = images[index]
 
-  function decreaseQty() {
-    setQuantity((prev) => (prev > 1 ? prev - 1 : 1))
-  }
-
-  function increaseQty() {
-    setQuantity((prev) => prev + 1)
-  }
-
-  function prevImage() {
-    setCurrentImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1))
-  }
-
-  function nextImage() {
-    setCurrentImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1))
-  }
+  const total = useMemo(() => product.price * quantity, [product.price, quantity])
 
   return (
     <main
@@ -89,218 +68,50 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
         padding: '18px 14px 30px',
       }}
     >
-      <div
-        style={{
-          maxWidth: '620px',
-          margin: '0 auto',
-        }}
-      >
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: '14px',
-          }}
-        >
+      <div style={{ maxWidth: '620px', margin: '0 auto' }}>
+
+        {/* LOGO */}
+        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
           <img
             src="/GoBayar%20Logo%2001%20800px.svg"
-            alt="GoBayar"
-            style={{
-              height: '42px',
-              width: 'auto',
-              display: 'block',
-              margin: '0 auto 8px auto',
-            }}
+            style={{ height: '42px' }}
           />
-
-          <p
-            style={{
-              margin: 0,
-              color: '#64748b',
-              fontSize: '13px',
-            }}
-          >
-            Secure checkout
-          </p>
         </div>
 
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '24px',
-            padding: '18px',
-            boxShadow: '0 14px 40px rgba(15,23,42,0.08)',
-            marginBottom: '14px',
-            border: '1px solid #eef2f7',
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              aspectRatio: '16 / 9',
-              borderRadius: '18px',
-              overflow: 'hidden',
-              border: '1px solid #e2e8f0',
-              background: 'linear-gradient(135deg, #dbeafe 0%, #ede9fe 45%, #f8fafc 100%)',
-              marginBottom: '16px',
-            }}
-          >
+        {/* PRODUCT CARD */}
+        <div style={card}>
+          {/* IMAGE */}
+          <div style={imageBox}>
             {currentImage === '__placeholder__' ? (
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#475569',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  textAlign: 'center',
-                  padding: '16px',
-                }}
-              >
-                Product image placeholder
-              </div>
+              <div style={placeholder}>Product image</div>
             ) : (
-              <img
-                src={currentImage}
-                alt={product.name}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block',
-                }}
-              />
+              <img src={currentImage} style={imgStyle} />
             )}
 
-            {productImages.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={prevImage}
-                  style={{
-                    position: 'absolute',
-                    left: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '999px',
-                    border: '1px solid rgba(255,255,255,0.8)',
-                    background: 'rgba(255,255,255,0.9)',
-                    color: '#0f172a',
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    boxShadow: '0 8px 18px rgba(15,23,42,0.12)',
-                  }}
-                >
-                  ‹
-                </button>
+            {/* overlay */}
+            <div style={gradient} />
 
-                <button
-                  type="button"
-                  onClick={nextImage}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '999px',
-                    border: '1px solid rgba(255,255,255,0.8)',
-                    background: 'rgba(255,255,255,0.9)',
-                    color: '#0f172a',
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    boxShadow: '0 8px 18px rgba(15,23,42,0.12)',
-                  }}
-                >
-                  ›
-                </button>
-              </>
-            )}
-
-            <div
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: '50%',
-                background: 'linear-gradient(to top, rgba(0,0,0,0.68), transparent)',
-                pointerEvents: 'none',
-              }}
-            />
-
-            <div
-              style={{
-                position: 'absolute',
-                left: '14px',
-                bottom: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}
-            >
-              <div
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '999px',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: '14px',
-                  border: '2px solid rgba(255,255,255,0.85)',
-                  boxShadow: '0 6px 12px rgba(0,0,0,0.18)',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                }}
-              >
+            {/* seller */}
+            <div style={sellerBox}>
+              <div style={avatar}>
                 {getSellerInitial(product.store_name)}
               </div>
-
-              <div
-                style={{
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  textShadow: '0 2px 8px rgba(0,0,0,0.35)',
-                }}
-              >
+              <div style={sellerName}>
                 {product.store_name || 'Seller'}
               </div>
             </div>
 
-            {productImages.length > 1 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  bottom: '14px',
-                  transform: 'translateX(-50%)',
-                  display: 'flex',
-                  gap: '6px',
-                  alignItems: 'center',
-                }}
-              >
-                {productImages.map((_, index) => (
+            {/* dots */}
+            {images.length > 1 && (
+              <div style={dots}>
+                {images.map((_, i) => (
                   <span
-                    key={index}
+                    key={i}
                     style={{
-                      width: index === currentImageIndex ? '20px' : '8px',
-                      height: '8px',
-                      borderRadius: '999px',
-                      background: index === currentImageIndex ? '#ffffff' : 'rgba(255,255,255,0.65)',
-                      transition: 'all 0.2s ease',
+                      width: i === index ? 20 : 8,
+                      height: 8,
+                      borderRadius: 999,
+                      background: '#fff',
                     }}
                   />
                 ))}
@@ -308,192 +119,175 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
             )}
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div style={{ flex: '1 1 260px' }}>
-              <h2
-                style={{
-                  margin: '0 0 8px 0',
-                  fontSize: 'clamp(24px, 5vw, 32px)',
-                  lineHeight: 1.1,
-                  color: '#0f172a',
-                  fontWeight: 800,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {product.name}
-              </h2>
-
-              <p
-                style={{
-                  margin: '0 0 10px 0',
-                  color: '#1d4ed8',
-                  fontWeight: 800,
-                  fontSize: 'clamp(20px, 4vw, 24px)',
-                }}
-              >
-                RM {Number(product.price).toFixed(2)}
-              </p>
+          {/* INFO */}
+          <div style={infoRow}>
+            <div style={{ flex: 1 }}>
+              <h2 style={title}>{product.name}</h2>
+              <p style={price}>RM {product.price.toFixed(2)}</p>
 
               {product.description && (
-                <p
-                  style={{
-                    margin: 0,
-                    color: '#64748b',
-                    fontSize: '14px',
-                    lineHeight: 1.8,
-                  }}
-                >
-                  {product.description}
-                </p>
+                <p style={desc}>{product.description}</p>
               )}
             </div>
 
-            <div
-              style={{
-                flex: '0 0 auto',
-                minWidth: '140px',
-              }}
-            >
-              <div
-                style={{
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '16px',
-                  padding: '12px 14px',
-                  background: '#f8fafc',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: '#64748b',
-                    fontWeight: 700,
-                    marginBottom: '6px',
-                  }}
-                >
-                  Quantity
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={decreaseQty}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
-                      background: '#fff',
-                      color: '#0f172a',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    -
-                  </button>
-
-                  <span
-                    style={{
-                      fontSize: '15px',
-                      fontWeight: 800,
-                      color: '#0f172a',
-                      minWidth: '16px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    {quantity}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={increaseQty}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
-                      background: '#fff',
-                      color: '#0f172a',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
+            {/* QUANTITY */}
+            <div style={qtyBox}>
+              <div style={qtyLabel}>Quantity</div>
+              <div style={qtyRow}>
+                <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
+                <span>{quantity}</span>
+                <button onClick={() => setQuantity(quantity + 1)}>+</button>
               </div>
             </div>
           </div>
         </div>
 
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '24px',
-            padding: '18px',
-            boxShadow: '0 14px 40px rgba(15,23,42,0.08)',
-            border: '1px solid #eef2f7',
-          }}
-        >
+        {/* PAYMENT */}
+        <div style={card}>
           <PayButton
             slug={product.slug}
-            unitPrice={Number(product.price)}
+            unitPrice={product.price}
             quantity={quantity}
             total={total}
           />
 
-          <p
-            style={{
-              margin: '14px 0 8px 0',
-              textAlign: 'center',
-              color: '#64748b',
-              fontSize: '12px',
-              lineHeight: 1.7,
-            }}
-          >
+          <p style={footerText}>
             This transaction is encrypted and secured.
           </p>
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              marginTop: '6px',
-            }}
-          >
+          {/* PAYMENT IMAGE */}
+          <div style={{ textAlign: 'center' }}>
             <img
               src="/Payment%20List%20Check%20Out%20Page%2001.jpg"
-              alt="Available payment methods"
-              style={{
-                width: '100%',
-                maxWidth: '230px',
-                height: 'auto',
-                display: 'block',
-              }}
+              style={{ maxWidth: '220px', width: '100%' }}
             />
           </div>
         </div>
+
       </div>
     </main>
   )
+}
+
+/* STYLES */
+const card = {
+  background: '#fff',
+  borderRadius: 24,
+  padding: 18,
+  marginBottom: 14,
+  border: '1px solid #eef2f7',
+}
+
+const imageBox = {
+  position: 'relative' as const,
+  width: '100%',
+  aspectRatio: '16/9',
+  borderRadius: 18,
+  overflow: 'hidden',
+  marginBottom: 16,
+}
+
+const imgStyle = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover' as const,
+}
+
+const placeholder = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const gradient = {
+  position: 'absolute' as const,
+  bottom: 0,
+  left: 0,
+  right: 0,
+  height: '50%',
+  background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)',
+}
+
+const sellerBox = {
+  position: 'absolute' as const,
+  bottom: 14,
+  left: 14,
+  display: 'flex',
+  gap: 10,
+  alignItems: 'center',
+}
+
+const avatar = {
+  width: 36,
+  height: 36,
+  borderRadius: 999,
+  background: '#fff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontWeight: 800,
+}
+
+const sellerName = {
+  color: '#fff',
+  fontWeight: 700,
+}
+
+const dots = {
+  position: 'absolute' as const,
+  bottom: 14,
+  left: '50%',
+  transform: 'translateX(-50%)',
+  display: 'flex',
+  gap: 6,
+}
+
+const infoRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 16,
+  flexWrap: 'wrap' as const,
+}
+
+const title = {
+  fontSize: 28,
+  fontWeight: 800,
+  marginBottom: 6,
+}
+
+const price = {
+  color: '#1d4ed8',
+  fontWeight: 800,
+  fontSize: 22,
+}
+
+const desc = {
+  color: '#64748b',
+  fontSize: 14,
+}
+
+const qtyBox = {
+  background: '#f8fafc',
+  padding: 12,
+  borderRadius: 14,
+}
+
+const qtyLabel = {
+  fontSize: 12,
+  marginBottom: 6,
+}
+
+const qtyRow = {
+  display: 'flex',
+  gap: 8,
+  alignItems: 'center',
+}
+
+const footerText = {
+  textAlign: 'center' as const,
+  fontSize: 12,
+  color: '#64748b',
+  margin: '12px 0',
 }
