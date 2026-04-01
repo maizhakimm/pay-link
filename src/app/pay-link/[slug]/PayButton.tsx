@@ -6,10 +6,11 @@ export default function PayButton({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
 
   async function handleClick() {
-    if (!name || !email) {
-      alert('Please enter your name and email')
+    if (!name || !email || !phone) {
+      alert('Please enter your name, email and phone number')
       return
     }
 
@@ -17,9 +18,11 @@ export default function PayButton({ slug }: { slug: string }) {
       setLoading(true)
 
       const res = await fetch(
-        `/api/payments/bayarcash/create?slug=${slug}&name=${encodeURIComponent(
-          name
-        )}&email=${encodeURIComponent(email)}`
+        `/api/payments/bayarcash/create?slug=${encodeURIComponent(
+          slug
+        )}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(
+          email
+        )}&phone=${encodeURIComponent(phone)}`
       )
 
       const data = await res.json()
@@ -54,6 +57,7 @@ export default function PayButton({ slug }: { slug: string }) {
           marginBottom: '10px',
           borderRadius: '10px',
           border: '1px solid #e5e7eb',
+          fontSize: '14px',
         }}
       />
 
@@ -65,9 +69,25 @@ export default function PayButton({ slug }: { slug: string }) {
         style={{
           width: '100%',
           padding: '12px',
+          marginBottom: '10px',
+          borderRadius: '10px',
+          border: '1px solid #e5e7eb',
+          fontSize: '14px',
+        }}
+      />
+
+      <input
+        type="tel"
+        placeholder="Your Phone Number"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '12px',
           marginBottom: '16px',
           borderRadius: '10px',
           border: '1px solid #e5e7eb',
+          fontSize: '14px',
         }}
       />
 
@@ -84,6 +104,7 @@ export default function PayButton({ slug }: { slug: string }) {
           fontWeight: 800,
           border: 'none',
           cursor: loading ? 'not-allowed' : 'pointer',
+          boxShadow: '0 10px 20px rgba(22,163,74,0.22)',
         }}
       >
         {loading ? 'Redirecting...' : 'Proceed to Secure Payment'}
