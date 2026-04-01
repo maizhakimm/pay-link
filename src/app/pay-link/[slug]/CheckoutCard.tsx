@@ -22,27 +22,6 @@ type ProductRow = {
   image_5?: string | null
 }
 
-function PaymentBadge({ label }: { label: string }) {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px 12px',
-        borderRadius: '999px',
-        background: '#f8fafc',
-        border: '1px solid #e2e8f0',
-        color: '#334155',
-        fontSize: '12px',
-        fontWeight: 700,
-      }}
-    >
-      {label}
-    </span>
-  )
-}
-
 function getSellerInitial(name: string | null) {
   if (!name) return 'S'
   return name.trim().charAt(0).toUpperCase() || 'S'
@@ -112,7 +91,7 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
     >
       <div
         style={{
-          maxWidth: '760px',
+          maxWidth: '680px',
           margin: '0 auto',
         }}
       >
@@ -246,7 +225,6 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
               </>
             )}
 
-            {/* Gradient overlay */}
             <div
               style={{
                 position: 'absolute',
@@ -259,7 +237,6 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
               }}
             />
 
-            {/* Seller overlay */}
             <div
               style={{
                 position: 'absolute',
@@ -478,43 +455,6 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
             border: '1px solid #eef2f7',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '10px',
-              marginBottom: '16px',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px',
-              }}
-            >
-              <PaymentBadge label="FPX" />
-              <PaymentBadge label="Card" />
-              <PaymentBadge label="QR" />
-              <PaymentBadge label="BNPL" />
-            </div>
-
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#0f766e',
-                fontSize: '13px',
-                fontWeight: 700,
-              }}
-            >
-              <span>🛡️</span>
-            </div>
-          </div>
-
           <PayButton
             slug={product.slug}
             unitPrice={Number(product.price)}
