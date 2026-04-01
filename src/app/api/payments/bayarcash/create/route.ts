@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
       amount,
       payer_name,
       payer_email,
+      payer_telephone_number,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment-return`,
       callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/bayarcash/webhook`,
       checksum,
