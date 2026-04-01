@@ -53,8 +53,7 @@ function getProductImages(product: ProductRow) {
 
 export default function CheckoutCard({ product }: { product: ProductRow }) {
   const [quantity, setQuantity] = useState(1)
-  const [index, setIndex] = useState(0)
-
+  const [index] = useState(0)
   const images = getProductImages(product)
   const currentImage = images[index]
 
