@@ -302,7 +302,7 @@ export default async function PaymentPage({
             FPX, card or Buy Now Pay Later.
           </p>
 
-         <PayButton />
+         <PayButton slug={typedProduct.slug} />
 
           <p
             style={{
