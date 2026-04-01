@@ -240,42 +240,134 @@ export default async function PaymentPage({
             Product image placeholder
           </div>
 
-          <h2
+          <div
             style={{
-              margin: '0 0 8px 0',
-              fontSize: 'clamp(24px, 5vw, 32px)',
-              lineHeight: 1.1,
-              color: '#0f172a',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+              flexWrap: 'wrap',
             }}
           >
-            {typedProduct.name}
-          </h2>
+            <div style={{ flex: '1 1 260px' }}>
+              <h2
+                style={{
+                  margin: '0 0 8px 0',
+                  fontSize: 'clamp(24px, 5vw, 32px)',
+                  lineHeight: 1.1,
+                  color: '#0f172a',
+                  fontWeight: 800,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {typedProduct.name}
+              </h2>
 
-          <p
-            style={{
-              margin: '0 0 12px 0',
-              color: '#16a34a',
-              fontWeight: 800,
-              fontSize: 'clamp(24px, 4vw, 30px)',
-            }}
-          >
-            RM {Number(typedProduct.price).toFixed(2)}
-          </p>
+              <p
+                style={{
+                  margin: '0 0 10px 0',
+                  color: '#16a34a',
+                  fontWeight: 800,
+                  fontSize: 'clamp(24px, 4vw, 30px)',
+                }}
+              >
+                RM {Number(typedProduct.price).toFixed(2)}
+              </p>
 
-          {typedProduct.description && (
-            <p
+              {typedProduct.description && (
+                <p
+                  style={{
+                    margin: 0,
+                    color: '#64748b',
+                    fontSize: '14px',
+                    lineHeight: 1.8,
+                  }}
+                >
+                  {typedProduct.description}
+                </p>
+              )}
+            </div>
+
+            <div
               style={{
-                margin: 0,
-                color: '#64748b',
-                fontSize: '14px',
-                lineHeight: 1.8,
+                flex: '0 0 auto',
+                minWidth: '140px',
               }}
             >
-              {typedProduct.description}
-            </p>
-          )}
+              <div
+                style={{
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '12px 14px',
+                  background: '#f8fafc',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#64748b',
+                    fontWeight: 700,
+                    marginBottom: '6px',
+                  }}
+                >
+                  Quantity
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      background: '#fff',
+                      color: '#0f172a',
+                      fontWeight: 700,
+                    }}
+                  >
+                    -
+                  </span>
+
+                  <span
+                    style={{
+                      fontSize: '15px',
+                      fontWeight: 800,
+                      color: '#0f172a',
+                    }}
+                  >
+                    1
+                  </span>
+
+                  <span
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      background: '#fff',
+                      color: '#0f172a',
+                      fontWeight: 700,
+                    }}
+                  >
+                    +
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div
@@ -290,16 +382,39 @@ export default async function PaymentPage({
           <div
             style={{
               display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '8px',
+              gap: '10px',
               marginBottom: '16px',
             }}
           >
-            <PaymentBadge label="FPX" />
-            <PaymentBadge label="Card" />
-            <PaymentBadge label="QR" />
-            <PaymentBadge label="BNPL" />
-            <PaymentBadge label="Protected" />
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <PaymentBadge label="FPX" />
+              <PaymentBadge label="Card" />
+              <PaymentBadge label="QR" />
+              <PaymentBadge label="BNPL" />
+            </div>
+
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#0f766e',
+                fontSize: '13px',
+                fontWeight: 700,
+              }}
+            >
+              <span>🛡️</span>
+              <span>Secured</span>
+            </div>
           </div>
 
           <PayButton
@@ -311,12 +426,12 @@ export default async function PaymentPage({
             style={{
               margin: '14px 0 0 0',
               textAlign: 'center',
-              color: '#94a3b8',
+              color: '#64748b',
               fontSize: '12px',
               lineHeight: 1.7,
             }}
           >
-            Available payment methods depend on merchant activation and gateway support.
+            This transaction is secured and encrypted for your protection.
           </p>
         </div>
       </div>
