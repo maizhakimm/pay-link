@@ -68,7 +68,87 @@ export default function PayButton({ slug, unitPrice }: PayButtonProps) {
   }
 
   return (
-    <div style={{ maxWidth: '460px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '520px', margin: '0 auto' }}>
+      <div
+        style={{
+          border: '1px solid #e2e8f0',
+          borderRadius: '16px',
+          padding: '14px',
+          background: '#f8fafc',
+          marginBottom: '16px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ fontSize: '14px', color: '#334155', fontWeight: 600 }}>
+            Quantity
+          </span>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={decreaseQty}
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                background: '#fff',
+                cursor: 'pointer',
+                fontSize: '18px',
+                fontWeight: 700,
+                color: '#0f172a',
+              }}
+            >
+              -
+            </button>
+
+            <span
+              style={{
+                minWidth: '24px',
+                textAlign: 'center',
+                fontSize: '15px',
+                fontWeight: 700,
+                color: '#0f172a',
+              }}
+            >
+              {quantity}
+            </span>
+
+            <button
+              type="button"
+              onClick={increaseQty}
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                background: '#fff',
+                cursor: 'pointer',
+                fontSize: '18px',
+                fontWeight: 700,
+                color: '#0f172a',
+              }}
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div
         style={{
           display: 'grid',
@@ -136,97 +216,19 @@ export default function PayButton({ slug, unitPrice }: PayButtonProps) {
 
       <div
         style={{
-          border: '1px solid #e2e8f0',
-          borderRadius: '16px',
-          padding: '14px',
-          background: '#f8fafc',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '12px',
           marginBottom: '16px',
+          padding: '14px 0 2px',
+          borderTop: '1px solid #e2e8f0',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '12px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <span style={{ fontSize: '14px', color: '#334155', fontWeight: 600 }}>
-            Quantity
-          </span>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
-            <button
-              type="button"
-              onClick={decreaseQty}
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '10px',
-                border: '1px solid #cbd5e1',
-                background: '#fff',
-                cursor: 'pointer',
-                fontSize: '18px',
-                fontWeight: 700,
-                color: '#0f172a',
-              }}
-            >
-              -
-            </button>
-
-            <span
-              style={{
-                minWidth: '24px',
-                textAlign: 'center',
-                fontSize: '15px',
-                fontWeight: 700,
-                color: '#0f172a',
-              }}
-            >
-              {quantity}
-            </span>
-
-            <button
-              type="button"
-              onClick={increaseQty}
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '10px',
-                border: '1px solid #cbd5e1',
-                background: '#fff',
-                cursor: 'pointer',
-                fontSize: '18px',
-                fontWeight: 700,
-                color: '#0f172a',
-              }}
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: '12px',
-            fontSize: '14px',
-          }}
-        >
-          <span style={{ color: '#64748b' }}>Total</span>
-          <span style={{ color: '#0f172a', fontWeight: 800 }}>
-            RM {total.toFixed(2)}
-          </span>
-        </div>
+        <span style={{ color: '#64748b', fontSize: '14px' }}>Total</span>
+        <span style={{ color: '#0f172a', fontWeight: 800, fontSize: '18px' }}>
+          RM {total.toFixed(2)}
+        </span>
       </div>
 
       <button
