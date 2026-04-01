@@ -12,6 +12,14 @@ type ProductRow = {
   seller_profile_id: string
   is_active: boolean
   store_name: string | null
+  product_image_url?: string | null
+  image_url?: string | null
+  image_urls?: string[] | null
+  image_1?: string | null
+  image_2?: string | null
+  image_3?: string | null
+  image_4?: string | null
+  image_5?: string | null
 }
 
 function PaymentBadge({ label }: { label: string }) {
@@ -35,10 +43,48 @@ function PaymentBadge({ label }: { label: string }) {
   )
 }
 
+function getSellerInitial(name: string | null) {
+  if (!name) return 'S'
+  return name.trim().charAt(0).toUpperCase() || 'S'
+}
+
+function getProductImages(product: ProductRow) {
+  const images: string[] = []
+
+  const pushIfValid = (value?: string | null) => {
+    if (value && value.trim()) images.push(value.trim())
+  }
+
+  if (Array.isArray(product.image_urls)) {
+    product.image_urls.forEach((img) => {
+      if (img && img.trim()) images.push(img.trim())
+    })
+  }
+
+  pushIfValid(product.product_image_url)
+  pushIfValid(product.image_url)
+  pushIfValid(product.image_1)
+  pushIfValid(product.image_2)
+  pushIfValid(product.image_3)
+  pushIfValid(product.image_4)
+  pushIfValid(product.image_5)
+
+  const uniqueImages = Array.from(new Set(images)).slice(0, 5)
+
+  if (uniqueImages.length === 0) {
+    return ['__placeholder__']
+  }
+
+  return uniqueImages
+}
+
 export default function CheckoutCard({ product }: { product: ProductRow }) {
   const [quantity, setQuantity] = useState(1)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   const total = useMemo(() => Number(product.price) * quantity, [product.price, quantity])
+  const productImages = getProductImages(product)
+  const currentImage = productImages[currentImageIndex]
 
   function decreaseQty() {
     setQuantity((prev) => (prev > 1 ? prev - 1 : 1))
@@ -46,6 +92,14 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
 
   function increaseQty() {
     setQuantity((prev) => prev + 1)
+  }
+
+  function prevImage() {
+    setCurrentImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1))
+  }
+
+  function nextImage() {
+    setCurrentImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1))
   }
 
   return (
@@ -102,24 +156,122 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
         >
           <div
             style={{
+              position: 'relative',
               width: '100%',
               aspectRatio: '16 / 9',
               borderRadius: '18px',
-              background:
-                'linear-gradient(135deg, #dbeafe 0%, #ede9fe 45%, #f8fafc 100%)',
+              overflow: 'hidden',
               border: '1px solid #e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #dbeafe 0%, #ede9fe 45%, #f8fafc 100%)',
               marginBottom: '16px',
-              color: '#475569',
-              fontWeight: 700,
-              fontSize: '14px',
-              textAlign: 'center',
-              padding: '16px',
             }}
           >
-            Product image placeholder
+            {currentImage === '__placeholder__' ? (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#475569',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  textAlign: 'center',
+                  padding: '16px',
+                }}
+              >
+                Product image placeholder
+              </div>
+            ) : (
+              <img
+                src={currentImage}
+                alt={product.name}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+              />
+            )}
+
+            {productImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={prevImage}
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '999px',
+                    border: '1px solid rgba(255,255,255,0.8)',
+                    background: 'rgba(255,255,255,0.9)',
+                    color: '#0f172a',
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 18px rgba(15,23,42,0.12)',
+                  }}
+                >
+                  ‹
+                </button>
+
+                <button
+                  type="button"
+                  onClick={nextImage}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '999px',
+                    border: '1px solid rgba(255,255,255,0.8)',
+                    background: 'rgba(255,255,255,0.9)',
+                    color: '#0f172a',
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 18px rgba(15,23,42,0.12)',
+                  }}
+                >
+                  ›
+                </button>
+              </>
+            )}
+
+            {productImages.length > 1 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: '12px',
+                  transform: 'translateX(-50%)',
+                  display: 'flex',
+                  gap: '6px',
+                  alignItems: 'center',
+                }}
+              >
+                {productImages.map((_, index) => (
+                  <span
+                    key={index}
+                    style={{
+                      width: index === currentImageIndex ? '20px' : '8px',
+                      height: '8px',
+                      borderRadius: '999px',
+                      background: index === currentImageIndex ? '#ffffff' : 'rgba(255,255,255,0.6)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           <div
@@ -132,6 +284,56 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
             }}
           >
             <div style={{ flex: '1 1 260px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '10px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '999px',
+                    background: '#dbeafe',
+                    color: '#1d4ed8',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '14px',
+                    border: '1px solid #bfdbfe',
+                    flexShrink: 0,
+                  }}
+                >
+                  {getSellerInitial(product.store_name)}
+                </div>
+
+                <div>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '12px',
+                      color: '#64748b',
+                    }}
+                  >
+                    Seller
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '14px',
+                      color: '#0f172a',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {product.store_name || 'Seller'}
+                  </p>
+                </div>
+              </div>
+
               <h2
                 style={{
                   margin: '0 0 8px 0',
@@ -144,16 +346,6 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
               >
                 {product.name}
               </h2>
-
-              <p
-                style={{
-                  margin: '4px 0 8px 0',
-                  fontSize: '12px',
-                  color: '#64748b',
-                }}
-              >
-                Sold by {product.store_name || 'Seller'}
-              </p>
 
               <p
                 style={{
@@ -332,7 +524,7 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
               lineHeight: 1.7,
             }}
           >
-            Your payment is encrypted and protected by GoBayar.
+            This transaction is encrypted and secured.
           </p>
         </div>
       </div>
