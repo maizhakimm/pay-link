@@ -205,6 +205,22 @@ export default function ProductsPage() {
     await loadProductsPage()
   }
 
+  async function toggleActive(product: ProductRow) {
+    const { error } = await supabase
+      .from('products')
+      .update({
+        is_active: !product.is_active,
+      })
+      .eq('id', product.id)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    await loadProductsPage()
+  }
+
   async function copyLink(slug: string) {
     try {
       await navigator.clipboard.writeText(`${appUrl}/pay-link/${slug}`)
@@ -219,349 +235,433 @@ export default function ProductsPage() {
       style={{
         minHeight: '100vh',
         background: '#f8fafc',
-        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      <div
+      {/* Header */}
+      <header
         style={{
-          maxWidth: '1100px',
-          margin: '0 auto',
+          background: '#ffffff',
+          borderBottom: '1px solid #e5e7eb',
+          padding: '14px 24px',
         }}
       >
-        <div style={{ marginBottom: '18px' }}>
-          <h1
-            style={{
-              margin: '0 0 8px 0',
-              fontSize: '32px',
-              color: '#0f172a',
-              fontWeight: 800,
-            }}
-          >
-            Products
-          </h1>
-
-          <p
-            style={{
-              margin: 0,
-              color: '#64748b',
-              fontSize: '15px',
-            }}
-          >
-            Create and manage your payment link products.
-          </p>
-        </div>
-
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1.1fr 1fr',
-            gap: '18px',
+            maxWidth: '1100px',
+            margin: '0 auto',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '16px',
+            flexWrap: 'wrap',
           }}
         >
-          <section
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img
+              src="/GoBayar%20Logo%2001%20800px.svg"
+              alt="GoBayar"
+              style={{ height: '40px', width: 'auto', display: 'block' }}
+            />
+          </div>
+
+          <nav
             style={{
-              background: '#ffffff',
-              borderRadius: '22px',
-              padding: '22px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
+              display: 'flex',
+              gap: '10px',
+              flexWrap: 'wrap',
             }}
           >
-            <h2
+            <a href="/dashboard" style={navLinkStyle}>
+              Dashboard
+            </a>
+            <a href="/dashboard/products" style={navLinkActiveStyle}>
+              Products
+            </a>
+            <a href="/dashboard/orders" style={navLinkStyle}>
+              Orders
+            </a>
+            <a href="/dashboard/settings" style={navLinkStyle}>
+              Settings
+            </a>
+          </nav>
+        </div>
+      </header>
+
+      {/* Body */}
+      <div
+        style={{
+          flex: 1,
+          padding: '24px',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '1100px',
+            margin: '0 auto',
+          }}
+        >
+          <div style={{ marginBottom: '18px' }}>
+            <h1
               style={{
-                margin: '0 0 16px 0',
-                fontSize: '22px',
+                margin: '0 0 8px 0',
+                fontSize: '32px',
                 color: '#0f172a',
                 fontWeight: 800,
               }}
             >
-              Create Product
-            </h2>
+              Products
+            </h1>
 
-            <div
+            <p
               style={{
-                display: 'grid',
-                gap: '12px',
+                margin: 0,
+                color: '#64748b',
+                fontSize: '15px',
               }}
             >
-              <label style={labelStyle}>Product Name</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Example: Lolipop"
-                style={inputStyle}
-              />
+              Create and manage your payment link products.
+            </p>
+          </div>
 
-              <label style={labelStyle}>Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Short product description"
-                rows={4}
-                style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-              />
-
-              <label style={labelStyle}>Price (RM)</label>
-              <input
-                value={price}
-                onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
-                placeholder="0.00"
-                style={inputStyle}
-              />
-
-              <label style={labelStyle}>Custom Slug (optional)</label>
-              <input
-                value={customSlug}
-                onChange={(e) => setCustomSlug(e.target.value)}
-                placeholder="leave blank to auto-generate"
-                style={inputStyle}
-              />
-
-              <div
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1.1fr 1fr',
+              gap: '18px',
+            }}
+          >
+            <section
+              style={{
+                background: '#ffffff',
+                borderRadius: '22px',
+                padding: '22px',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
+              }}
+            >
+              <h2
                 style={{
-                  padding: '12px 14px',
-                  borderRadius: '14px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  color: '#475569',
-                  fontSize: '13px',
-                }}
-              >
-                <strong style={{ color: '#0f172a' }}>Preview link:</strong>
-                <div style={{ marginTop: '6px', wordBreak: 'break-all' }}>
-                  {generatedSlug
-                    ? `${appUrl}/pay-link/${generatedSlug}`
-                    : 'Enter product name to generate pay link'}
-                </div>
-              </div>
-
-              <button
-                onClick={handleCreateProduct}
-                disabled={saving}
-                style={{
-                  width: '100%',
-                  padding: '15px 18px',
-                  borderRadius: '14px',
-                  background: saving ? '#93c5fd' : '#0f172a',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontSize: '15px',
+                  margin: '0 0 16px 0',
+                  fontSize: '22px',
+                  color: '#0f172a',
                   fontWeight: 800,
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 12px 24px rgba(15,23,42,0.16)',
                 }}
               >
-                {saving ? 'Saving...' : 'Create Product'}
-              </button>
-            </div>
-          </section>
+                Create Product
+              </h2>
 
-          <section
-            style={{
-              background: '#ffffff',
-              borderRadius: '22px',
-              padding: '22px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
-            }}
-          >
-            <h2
-              style={{
-                margin: '0 0 16px 0',
-                fontSize: '22px',
-                color: '#0f172a',
-                fontWeight: 800,
-              }}
-            >
-              Your Products
-            </h2>
-
-            {loading ? (
-              <p style={{ margin: 0, color: '#64748b' }}>Loading products...</p>
-            ) : error ? (
-              <p style={{ margin: 0, color: '#b91c1c' }}>{error}</p>
-            ) : products.length === 0 ? (
-              <p style={{ margin: 0, color: '#64748b' }}>No products yet.</p>
-            ) : (
               <div
                 style={{
                   display: 'grid',
-                  gap: '14px',
+                  gap: '12px',
                 }}
               >
-                {products.map((product) => {
-                  const link = `${appUrl}/pay-link/${product.slug}`
+                <label style={labelStyle}>Product Name</label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Example: Lolipop"
+                  style={inputStyle}
+                />
 
-                  return (
-                    <div
-                      key={product.id}
-                      style={{
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '18px',
-                        padding: '16px',
-                        background: '#ffffff',
-                      }}
-                    >
-                      {editingId === product.id ? (
-                        <div style={{ display: 'grid', gap: '10px' }}>
-                          <input
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            style={inputStyle}
-                          />
+                <label style={labelStyle}>Description</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Short product description"
+                  rows={4}
+                  style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+                />
 
-                          <textarea
-                            value={editingDescription}
-                            onChange={(e) => setEditingDescription(e.target.value)}
-                            rows={3}
-                            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-                          />
+                <label style={labelStyle}>Price (RM)</label>
+                <input
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
+                  placeholder="0.00"
+                  style={inputStyle}
+                />
 
-                          <input
-                            value={editingPrice}
-                            onChange={(e) =>
-                              setEditingPrice(e.target.value.replace(/[^\d.]/g, ''))
-                            }
-                            style={inputStyle}
-                          />
+                <label style={labelStyle}>Custom Slug (optional)</label>
+                <input
+                  value={customSlug}
+                  onChange={(e) => setCustomSlug(e.target.value)}
+                  placeholder="leave blank to auto-generate"
+                  style={inputStyle}
+                />
 
-                          <label
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              fontSize: '14px',
-                              color: '#334155',
-                            }}
-                          >
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '14px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    color: '#475569',
+                    fontSize: '13px',
+                  }}
+                >
+                  <strong style={{ color: '#0f172a' }}>Preview link:</strong>
+                  <div style={{ marginTop: '6px', wordBreak: 'break-all' }}>
+                    {generatedSlug
+                      ? `${appUrl}/pay-link/${generatedSlug}`
+                      : 'Enter product name to generate pay link'}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCreateProduct}
+                  disabled={saving}
+                  style={{
+                    width: '100%',
+                    padding: '15px 18px',
+                    borderRadius: '14px',
+                    background: saving ? '#93c5fd' : '#0f172a',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '15px',
+                    fontWeight: 800,
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 12px 24px rgba(15,23,42,0.16)',
+                  }}
+                >
+                  {saving ? 'Saving...' : 'Create Product'}
+                </button>
+              </div>
+            </section>
+
+            <section
+              style={{
+                background: '#ffffff',
+                borderRadius: '22px',
+                padding: '22px',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
+              }}
+            >
+              <h2
+                style={{
+                  margin: '0 0 16px 0',
+                  fontSize: '22px',
+                  color: '#0f172a',
+                  fontWeight: 800,
+                }}
+              >
+                Your Products
+              </h2>
+
+              {loading ? (
+                <p style={{ margin: 0, color: '#64748b' }}>Loading products...</p>
+              ) : error ? (
+                <p style={{ margin: 0, color: '#b91c1c' }}>{error}</p>
+              ) : products.length === 0 ? (
+                <p style={{ margin: 0, color: '#64748b' }}>No products yet.</p>
+              ) : (
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: '14px',
+                  }}
+                >
+                  {products.map((product) => {
+                    const link = `${appUrl}/pay-link/${product.slug}`
+
+                    return (
+                      <div
+                        key={product.id}
+                        style={{
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '18px',
+                          padding: '16px',
+                          background: '#ffffff',
+                        }}
+                      >
+                        {editingId === product.id ? (
+                          <div style={{ display: 'grid', gap: '10px' }}>
                             <input
-                              type="checkbox"
-                              checked={editingIsActive}
-                              onChange={(e) => setEditingIsActive(e.target.checked)}
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              style={inputStyle}
                             />
-                            Active
-                          </label>
 
-                          <div
-                            style={{
-                              display: 'flex',
-                              gap: '10px',
-                              flexWrap: 'wrap',
-                            }}
-                          >
-                            <button onClick={() => saveEdit(product.id)} style={darkButton}>
-                              Save
-                            </button>
-                            <button onClick={cancelEdit} style={lightButton}>
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'flex-start',
-                              gap: '12px',
-                              flexWrap: 'wrap',
-                              marginBottom: '10px',
-                            }}
-                          >
-                            <div>
-                              <h3
-                                style={{
-                                  margin: '0 0 6px 0',
-                                  fontSize: '20px',
-                                  color: '#0f172a',
-                                  fontWeight: 800,
-                                }}
-                              >
-                                {product.name}
-                              </h3>
+                            <textarea
+                              value={editingDescription}
+                              onChange={(e) => setEditingDescription(e.target.value)}
+                              rows={3}
+                              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+                            />
 
-                              <p
-                                style={{
-                                  margin: '0 0 6px 0',
-                                  color: '#1d4ed8',
-                                  fontSize: '18px',
-                                  fontWeight: 800,
-                                }}
-                              >
-                                RM {Number(product.price).toFixed(2)}
-                              </p>
+                            <input
+                              value={editingPrice}
+                              onChange={(e) =>
+                                setEditingPrice(e.target.value.replace(/[^\d.]/g, ''))
+                              }
+                              style={inputStyle}
+                            />
 
-                              <span
-                                style={{
-                                  display: 'inline-block',
-                                  padding: '6px 10px',
-                                  borderRadius: '999px',
-                                  background: product.is_active ? '#dcfce7' : '#f3f4f6',
-                                  color: product.is_active ? '#166534' : '#374151',
-                                  fontSize: '12px',
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {product.is_active ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
+                            <label
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                fontSize: '14px',
+                                color: '#334155',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={editingIsActive}
+                                onChange={(e) => setEditingIsActive(e.target.checked)}
+                              />
+                              Active
+                            </label>
 
                             <div
                               style={{
                                 display: 'flex',
-                                gap: '8px',
+                                gap: '10px',
                                 flexWrap: 'wrap',
                               }}
                             >
-                              <button onClick={() => copyLink(product.slug)} style={lightButton}>
-                                Copy Link
+                              <button onClick={() => saveEdit(product.id)} style={darkButton}>
+                                Save
                               </button>
-                              <button onClick={() => startEdit(product)} style={lightButton}>
-                                Edit
-                              </button>
-                              <button onClick={() => deleteProduct(product.id)} style={dangerButton}>
-                                Delete
+                              <button onClick={cancelEdit} style={lightButton}>
+                                Cancel
                               </button>
                             </div>
                           </div>
-
-                          {product.description && (
-                            <p
+                        ) : (
+                          <>
+                            <div
                               style={{
-                                margin: '0 0 10px 0',
-                                color: '#64748b',
-                                fontSize: '14px',
-                                lineHeight: 1.7,
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
+                                gap: '12px',
+                                flexWrap: 'wrap',
+                                marginBottom: '10px',
                               }}
                             >
-                              {product.description}
-                            </p>
-                          )}
+                              <div>
+                                <h3
+                                  style={{
+                                    margin: '0 0 6px 0',
+                                    fontSize: '20px',
+                                    color: '#0f172a',
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  {product.name}
+                                </h3>
 
-                          <div
-                            style={{
-                              padding: '12px 14px',
-                              borderRadius: '14px',
-                              background: '#f8fafc',
-                              border: '1px solid #e2e8f0',
-                              fontSize: '13px',
-                              color: '#475569',
-                              wordBreak: 'break-all',
-                            }}
-                          >
-                            {link}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </section>
+                                <p
+                                  style={{
+                                    margin: '0 0 6px 0',
+                                    color: '#1d4ed8',
+                                    fontSize: '18px',
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  RM {Number(product.price).toFixed(2)}
+                                </p>
+
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '6px 10px',
+                                    borderRadius: '999px',
+                                    background: product.is_active ? '#dcfce7' : '#f3f4f6',
+                                    color: product.is_active ? '#166534' : '#374151',
+                                    fontSize: '12px',
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {product.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  gap: '8px',
+                                  flexWrap: 'wrap',
+                                }}
+                              >
+                                <button onClick={() => copyLink(product.slug)} style={lightButton}>
+                                  Copy Link
+                                </button>
+                                <button onClick={() => toggleActive(product)} style={lightButton}>
+                                  {product.is_active ? 'Set Inactive' : 'Set Active'}
+                                </button>
+                                <button onClick={() => startEdit(product)} style={lightButton}>
+                                  Edit
+                                </button>
+                                <button onClick={() => deleteProduct(product.id)} style={dangerButton}>
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+
+                            {product.description && (
+                              <p
+                                style={{
+                                  margin: '0 0 10px 0',
+                                  color: '#64748b',
+                                  fontSize: '14px',
+                                  lineHeight: 1.7,
+                                }}
+                              >
+                                {product.description}
+                              </p>
+                            )}
+
+                            <div
+                              style={{
+                                padding: '12px 14px',
+                                borderRadius: '14px',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                fontSize: '13px',
+                                color: '#475569',
+                                wordBreak: 'break-all',
+                              }}
+                            >
+                              {link}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer
+        style={{
+          marginTop: '20px',
+          borderTop: '1px solid #e5e7eb',
+          background: '#ffffff',
+          padding: '16px 24px',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '1100px',
+            margin: '0 auto',
+            textAlign: 'center',
+            color: '#64748b',
+            fontSize: '13px',
+          }}
+        >
+          © 2026 All rights reserved. Neugens Solution.
+        </div>
+      </footer>
     </main>
   )
 }
@@ -610,4 +710,23 @@ const dangerButton = {
   color: '#b91c1c',
   fontWeight: 700,
   cursor: 'pointer',
+} as const
+
+const navLinkStyle = {
+  display: 'inline-block',
+  padding: '10px 14px',
+  borderRadius: '12px',
+  textDecoration: 'none',
+  color: '#334155',
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  fontSize: '14px',
+  fontWeight: 700,
+} as const
+
+const navLinkActiveStyle = {
+  ...navLinkStyle,
+  background: '#0f172a',
+  color: '#ffffff',
+  border: '1px solid #0f172a',
 } as const
