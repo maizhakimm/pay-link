@@ -10,6 +10,14 @@ type ProductRow = {
   seller_profile_id: string
   is_active: boolean
   store_name: string | null
+  product_image_url?: string | null
+  image_url?: string | null
+  image_urls?: string[] | null
+  image_1?: string | null
+  image_2?: string | null
+  image_3?: string | null
+  image_4?: string | null
+  image_5?: string | null
 }
 
 export default async function PaymentPage({
