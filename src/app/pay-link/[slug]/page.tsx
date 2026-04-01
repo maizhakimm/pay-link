@@ -28,7 +28,7 @@ export default async function PaymentPage({
       <main
         style={{
           minHeight: '100vh',
-          background: '#f5f7fb',
+          background: '#f8fafc',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -42,15 +42,30 @@ export default async function PaymentPage({
             background: '#ffffff',
             borderRadius: '24px',
             padding: '36px',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
+            boxShadow: '0 12px 32px rgba(15,23,42,0.08)',
             textAlign: 'center',
           }}
         >
+          <div
+            style={{
+              display: 'inline-block',
+              padding: '8px 14px',
+              borderRadius: '999px',
+              background: '#eef2ff',
+              color: '#4338ca',
+              fontWeight: 700,
+              fontSize: '13px',
+              marginBottom: '14px',
+            }}
+          >
+            Neugens Pay
+          </div>
+
           <h1
             style={{
               margin: '0 0 12px 0',
               fontSize: '32px',
-              color: '#111827',
+              color: '#0f172a',
               fontWeight: 800,
             }}
           >
@@ -60,7 +75,7 @@ export default async function PaymentPage({
           <p
             style={{
               margin: 0,
-              color: '#6b7280',
+              color: '#64748b',
               fontSize: '16px',
               lineHeight: 1.7,
             }}
@@ -79,7 +94,7 @@ export default async function PaymentPage({
       <main
         style={{
           minHeight: '100vh',
-          background: '#f5f7fb',
+          background: '#f8fafc',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -93,15 +108,30 @@ export default async function PaymentPage({
             background: '#ffffff',
             borderRadius: '24px',
             padding: '36px',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.08)',
+            boxShadow: '0 12px 32px rgba(15,23,42,0.08)',
             textAlign: 'center',
           }}
         >
+          <div
+            style={{
+              display: 'inline-block',
+              padding: '8px 14px',
+              borderRadius: '999px',
+              background: '#eef2ff',
+              color: '#4338ca',
+              fontWeight: 700,
+              fontSize: '13px',
+              marginBottom: '14px',
+            }}
+          >
+            Neugens Pay
+          </div>
+
           <h1
             style={{
               margin: '0 0 12px 0',
               fontSize: '32px',
-              color: '#111827',
+              color: '#0f172a',
               fontWeight: 800,
             }}
           >
@@ -111,7 +141,7 @@ export default async function PaymentPage({
           <p
             style={{
               margin: 0,
-              color: '#6b7280',
+              color: '#64748b',
               fontSize: '16px',
               lineHeight: 1.7,
             }}
@@ -127,8 +157,8 @@ export default async function PaymentPage({
     <main
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)',
-        padding: '28px 20px',
+        background: 'linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%)',
+        padding: '20px 16px 32px',
       }}
     >
       <div
@@ -137,77 +167,89 @@ export default async function PaymentPage({
           margin: '0 auto',
         }}
       >
+        {/* Header */}
         <div
           style={{
             textAlign: 'center',
-            marginBottom: '20px',
+            marginBottom: '18px',
           }}
         >
-          <p
+          <div
             style={{
-              margin: '0 0 10px 0',
-              color: '#16a34a',
-              fontWeight: 800,
+              display: 'inline-block',
+              padding: '8px 14px',
+              borderRadius: '999px',
+              background: '#e0e7ff',
+              color: '#4338ca',
+              fontWeight: 700,
               fontSize: '13px',
-              letterSpacing: '1px',
+              marginBottom: '14px',
             }}
           >
-            SECURE PAYMENT LINK
-          </p>
+            Neugens Pay
+          </div>
 
           <h1
             style={{
-              margin: '0 0 12px 0',
-              fontSize: '38px',
-              lineHeight: 1.1,
-              color: '#111827',
+              margin: '0 0 10px 0',
+              fontSize: 'clamp(32px, 6vw, 48px)',
+              lineHeight: 1.08,
+              color: '#0f172a',
               fontWeight: 800,
+              letterSpacing: '-0.02em',
             }}
           >
-            Complete Your Payment
+            Secure Checkout
           </h1>
 
           <p
             style={{
               margin: '0 auto',
               maxWidth: '560px',
-              color: '#6b7280',
+              color: '#64748b',
               fontSize: '16px',
               lineHeight: 1.7,
             }}
           >
-            Fast, secure and simple checkout for your order.
+            Fast, simple and secure payment for your order.
           </p>
         </div>
 
+        {/* Order Summary */}
         <div
           style={{
             background: '#ffffff',
             borderRadius: '24px',
-            padding: '32px',
-            boxShadow: '0 14px 40px rgba(0,0,0,0.08)',
-            marginBottom: '20px',
+            padding: '24px',
+            boxShadow: '0 14px 40px rgba(15,23,42,0.08)',
+            marginBottom: '16px',
+            border: '1px solid #eef2f7',
           }}
         >
-          <p
+          <div
             style={{
-              margin: '0 0 10px 0',
-              color: '#6b7280',
-              fontSize: '13px',
+              display: 'inline-block',
+              padding: '7px 12px',
+              borderRadius: '999px',
+              background: '#f1f5f9',
+              color: '#475569',
               fontWeight: 700,
-              letterSpacing: '0.5px',
+              fontSize: '12px',
+              marginBottom: '14px',
+              letterSpacing: '0.03em',
             }}
           >
             ORDER SUMMARY
-          </p>
+          </div>
 
           <h2
             style={{
-              margin: '0 0 12px 0',
-              fontSize: '34px',
-              lineHeight: 1.15,
-              color: '#111827',
+              margin: '0 0 10px 0',
+              fontSize: 'clamp(30px, 5vw, 40px)',
+              lineHeight: 1.08,
+              color: '#0f172a',
               fontWeight: 800,
+              letterSpacing: '-0.02em',
             }}
           >
             {typedProduct.name}
@@ -215,34 +257,85 @@ export default async function PaymentPage({
 
           <p
             style={{
-              margin: '0 0 16px 0',
+              margin: '0 0 14px 0',
               color: '#16a34a',
               fontWeight: 800,
-              fontSize: '30px',
+              fontSize: 'clamp(28px, 5vw, 36px)',
             }}
           >
             RM {Number(typedProduct.price).toFixed(2)}
           </p>
 
-          {typedProduct.store_name && (
-            <p
+          <div
+            style={{
+              display: 'grid',
+              gap: '10px',
+              marginBottom: typedProduct.description ? '14px' : 0,
+            }}
+          >
+            <div
               style={{
-                margin: '0 0 14px 0',
-                color: '#111827',
-                fontSize: '16px',
-                fontWeight: 600,
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                alignItems: 'center',
               }}
             >
-              Sold by {typedProduct.store_name}
-            </p>
-          )}
+              <span
+                style={{
+                  color: '#64748b',
+                  fontSize: '14px',
+                  minWidth: '74px',
+                }}
+              >
+                Sold by
+              </span>
+              <span
+                style={{
+                  color: '#0f172a',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                }}
+              >
+                {typedProduct.store_name || 'Seller'}
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                alignItems: 'center',
+              }}
+            >
+              <span
+                style={{
+                  color: '#64748b',
+                  fontSize: '14px',
+                  minWidth: '74px',
+                }}
+              >
+                Checkout
+              </span>
+              <span
+                style={{
+                  color: '#0f172a',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                }}
+              >
+                Processed by Neugens Pay
+              </span>
+            </div>
+          </div>
 
           {typedProduct.description && (
             <p
               style={{
                 margin: 0,
-                color: '#6b7280',
-                fontSize: '16px',
+                color: '#64748b',
+                fontSize: '15px',
                 lineHeight: 1.8,
               }}
             >
@@ -251,13 +344,14 @@ export default async function PaymentPage({
           )}
         </div>
 
+        {/* Checkout Card */}
         <div
           style={{
             background: '#ffffff',
             borderRadius: '24px',
-            padding: '32px',
-            boxShadow: '0 14px 40px rgba(0,0,0,0.08)',
-            textAlign: 'center',
+            padding: '24px',
+            boxShadow: '0 14px 40px rgba(15,23,42,0.08)',
+            border: '1px solid #eef2f7',
           }}
         >
           <div
@@ -265,8 +359,8 @@ export default async function PaymentPage({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              background: '#ecfdf5',
-              color: '#15803d',
+              background: '#ecfeff',
+              color: '#0f766e',
               borderRadius: '999px',
               padding: '8px 14px',
               fontWeight: 700,
@@ -275,44 +369,129 @@ export default async function PaymentPage({
             }}
           >
             <span>🔒</span>
-            <span>Secure Checkout</span>
+            <span>Secure payment</span>
           </div>
 
           <h3
             style={{
-              margin: '0 0 12px 0',
-              fontSize: '28px',
-              color: '#111827',
+              margin: '0 0 10px 0',
+              fontSize: 'clamp(28px, 5vw, 36px)',
+              color: '#0f172a',
               fontWeight: 800,
+              letterSpacing: '-0.02em',
             }}
           >
-            Pay Securely Now
+            Complete Payment
           </h3>
 
           <p
             style={{
-              margin: '0 auto 24px auto',
-              maxWidth: '520px',
-              color: '#6b7280',
+              margin: '0 0 18px 0',
+              color: '#64748b',
               fontSize: '15px',
               lineHeight: 1.8,
             }}
           >
-            You will be redirected to our secure payment partner to complete your payment using
-            FPX, card or Buy Now Pay Later.
+            Enter your details below and continue to our secure payment partner to pay
+            using FPX, card or Buy Now Pay Later.
           </p>
 
-         <PayButton slug={typedProduct.slug} />
+          <div
+            style={{
+              display: 'grid',
+              gap: '10px',
+              marginBottom: '18px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                color: '#334155',
+                fontSize: '14px',
+                lineHeight: 1.6,
+              }}
+            >
+              <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+              <span>Sold by {typedProduct.store_name || 'Seller'}</span>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                color: '#334155',
+                fontSize: '14px',
+                lineHeight: 1.6,
+              }}
+            >
+              <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+              <span>Payments processed securely by Neugens Pay</span>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                color: '#334155',
+                fontSize: '14px',
+                lineHeight: 1.6,
+              }}
+            >
+              <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+              <span>Your order record is captured automatically after checkout</span>
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: '16px',
+              borderRadius: '18px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              marginBottom: '18px',
+            }}
+          >
+            <p
+              style={{
+                margin: '0 0 8px 0',
+                color: '#0f172a',
+                fontSize: '14px',
+                fontWeight: 700,
+              }}
+            >
+              Before you continue
+            </p>
+
+            <p
+              style={{
+                margin: 0,
+                color: '#64748b',
+                fontSize: '14px',
+                lineHeight: 1.7,
+              }}
+            >
+              You may see <strong>Neugens Pay</strong> / <strong>Neugens Solution</strong> as
+              the payment merchant on the next page because payment is processed by our platform
+              on behalf of the seller.
+            </p>
+          </div>
+
+          <PayButton slug={typedProduct.slug} />
 
           <p
             style={{
-              margin: '18px 0 0 0',
-              color: '#9ca3af',
+              margin: '16px 0 0 0',
+              textAlign: 'center',
+              color: '#94a3b8',
               fontSize: '13px',
               lineHeight: 1.7,
             }}
           >
-            Powered by Bayarcash • Automatic payment capture • No manual receipt required
+            Secure checkout powered by Neugens Pay
           </p>
         </div>
       </div>
