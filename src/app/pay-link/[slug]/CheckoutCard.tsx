@@ -246,12 +246,69 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
               </>
             )}
 
+            {/* Gradient overlay */}
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: '50%',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.68), transparent)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Seller overlay */}
+            <div
+              style={{
+                position: 'absolute',
+                left: '14px',
+                bottom: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
+              <div
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '999px',
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '14px',
+                  border: '2px solid rgba(255,255,255,0.85)',
+                  boxShadow: '0 6px 12px rgba(0,0,0,0.18)',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                }}
+              >
+                {getSellerInitial(product.store_name)}
+              </div>
+
+              <div
+                style={{
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  textShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                }}
+              >
+                {product.store_name || 'Seller'}
+              </div>
+            </div>
+
             {productImages.length > 1 && (
               <div
                 style={{
                   position: 'absolute',
                   left: '50%',
-                  bottom: '12px',
+                  bottom: '14px',
                   transform: 'translateX(-50%)',
                   display: 'flex',
                   gap: '6px',
@@ -265,7 +322,7 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
                       width: index === currentImageIndex ? '20px' : '8px',
                       height: '8px',
                       borderRadius: '999px',
-                      background: index === currentImageIndex ? '#ffffff' : 'rgba(255,255,255,0.6)',
+                      background: index === currentImageIndex ? '#ffffff' : 'rgba(255,255,255,0.65)',
                       transition: 'all 0.2s ease',
                     }}
                   />
@@ -284,56 +341,6 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
             }}
           >
             <div style={{ flex: '1 1 260px' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  marginBottom: '10px',
-                }}
-              >
-                <div
-                  style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '999px',
-                    background: '#dbeafe',
-                    color: '#1d4ed8',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: '14px',
-                    border: '1px solid #bfdbfe',
-                    flexShrink: 0,
-                  }}
-                >
-                  {getSellerInitial(product.store_name)}
-                </div>
-
-                <div>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '12px',
-                      color: '#64748b',
-                    }}
-                  >
-                    Seller
-                  </p>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '14px',
-                      color: '#0f172a',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {product.store_name || 'Seller'}
-                  </p>
-                </div>
-              </div>
-
               <h2
                 style={{
                   margin: '0 0 8px 0',
