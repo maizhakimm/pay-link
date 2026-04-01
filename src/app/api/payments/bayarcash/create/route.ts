@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createBayarcashPaymentIntentChecksum, BAYARCASH_CHANNELS } from '@/lib/bayarcash'
+import { createBayarcashPaymentIntentChecksum, BAYARCASH_CHANNELS } from '../../../../../lib/bayarcash'
 
 export async function POST(req: NextRequest) {
   try {
