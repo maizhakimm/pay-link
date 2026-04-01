@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import PayButton from './PayButton'
 
