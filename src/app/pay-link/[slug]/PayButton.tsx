@@ -103,7 +103,7 @@ export default function PayButton({
       if (parsed.url) {
         window.location.href = parsed.url
       }
-    } catch (err) {
+    } catch  {
       alert('Something went wrong')
     } finally {
       setLoading(false)
