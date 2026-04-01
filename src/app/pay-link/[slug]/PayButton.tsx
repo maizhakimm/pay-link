@@ -27,7 +27,12 @@ export default function PayButton({ slug }: { slug: string }) {
 
       const data = await res.json()
 
-      if (data.ok && data.raw_response) {
+      if (!res.ok || !data.ok) {
+        alert(data.error || `Payment start failed (status ${res.status})`)
+        return
+      }
+
+      if (data.raw_response) {
         const parsed = JSON.parse(data.raw_response)
 
         if (parsed.url) {
@@ -36,9 +41,11 @@ export default function PayButton({ slug }: { slug: string }) {
         }
       }
 
-      alert('Unable to start payment. Please try again.')
-    } catch {
-      alert('Something went wrong. Please try again.')
+      alert('Payment URL not found')
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+      alert(message)
     } finally {
       setLoading(false)
     }
