@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
+import PayButton from './PayButton'
 
 type ProductRow = {
   id: string
@@ -302,24 +303,7 @@ export default async function PaymentPage({
             FPX, card or Buy Now Pay Later.
           </p>
 
-          <Link
-            href="/api/payments/bayarcash/create"
-            style={{
-              display: 'inline-block',
-              width: '100%',
-              maxWidth: '420px',
-              padding: '16px 22px',
-              borderRadius: '14px',
-              background: '#16a34a',
-              color: '#ffffff',
-              textDecoration: 'none',
-              fontSize: '16px',
-              fontWeight: 800,
-              boxShadow: '0 10px 20px rgba(22,163,74,0.22)',
-            }}
-          >
-            Proceed to Secure Payment
-          </Link>
+         <PayButton />
 
           <p
             style={{
