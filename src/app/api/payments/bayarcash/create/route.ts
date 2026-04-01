@@ -119,33 +119,54 @@ export async function GET(req: NextRequest) {
     })
 
     const text = await response.text()
+
     let parsedResponse: {
       id?: string
       url?: string
+      message?: string
     } | null = null
 
     try {
       parsedResponse = JSON.parse(text) as {
         id?: string
         url?: string
+        message?: string
       }
     } catch {
       parsedResponse = null
     }
 
-    if (response.ok && parsedResponse?.id) {
+    if (!response.ok) {
       await supabase
         .from('orders')
         .update({
-          gateway_payment_intent_id: parsedResponse.id,
-          status: 'awaiting_payment',
+          status: 'failed',
+          gateway_status_description:
+            parsedResponse?.message || `Bayarcash error (${response.status})`,
           updated_at: new Date().toISOString(),
         })
         .eq('order_number', order_number)
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: parsedResponse?.message || 'Failed to create Bayarcash payment intent',
+        },
+        { status: response.status }
+      )
     }
 
+    await supabase
+      .from('orders')
+      .update({
+        gateway_payment_intent_id: parsedResponse?.id || null,
+        status: 'awaiting_payment',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('order_number', order_number)
+
     return NextResponse.json({
-      ok: response.ok,
+      ok: true,
       status: response.status,
       product: {
         name: typedProduct.name,
@@ -153,7 +174,7 @@ export async function GET(req: NextRequest) {
         price: typedProduct.price,
       },
       order_number,
-      sent_payload: payload,
+      payment_intent_id: parsedResponse?.id || null,
       raw_response: text,
     })
   } catch (error: unknown) {
