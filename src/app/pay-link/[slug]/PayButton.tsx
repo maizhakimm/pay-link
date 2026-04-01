@@ -1,28 +1,23 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
 type PayButtonProps = {
   slug: string
   unitPrice: number
+  quantity: number
+  total: number
 }
 
-export default function PayButton({ slug, unitPrice }: PayButtonProps) {
+export default function PayButton({
+  slug,
+  quantity,
+  total,
+}: PayButtonProps) {
   const [loading, setLoading] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [quantity, setQuantity] = useState(1)
-
-  const total = useMemo(() => unitPrice * quantity, [unitPrice, quantity])
-
-  function decreaseQty() {
-    setQuantity((prev) => (prev > 1 ? prev - 1 : 1))
-  }
-
-  function increaseQty() {
-    setQuantity((prev) => prev + 1)
-  }
 
   async function handleClick() {
     if (!name || !email || !phone) {
@@ -69,86 +64,6 @@ export default function PayButton({ slug, unitPrice }: PayButtonProps) {
 
   return (
     <div style={{ maxWidth: '520px', margin: '0 auto' }}>
-      <div
-        style={{
-          border: '1px solid #e2e8f0',
-          borderRadius: '16px',
-          padding: '14px',
-          background: '#f8fafc',
-          marginBottom: '16px',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '12px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <span style={{ fontSize: '14px', color: '#334155', fontWeight: 600 }}>
-            Quantity
-          </span>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
-            <button
-              type="button"
-              onClick={decreaseQty}
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '10px',
-                border: '1px solid #cbd5e1',
-                background: '#fff',
-                cursor: 'pointer',
-                fontSize: '18px',
-                fontWeight: 700,
-                color: '#0f172a',
-              }}
-            >
-              -
-            </button>
-
-            <span
-              style={{
-                minWidth: '24px',
-                textAlign: 'center',
-                fontSize: '15px',
-                fontWeight: 700,
-                color: '#0f172a',
-              }}
-            >
-              {quantity}
-            </span>
-
-            <button
-              type="button"
-              onClick={increaseQty}
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '10px',
-                border: '1px solid #cbd5e1',
-                background: '#fff',
-                cursor: 'pointer',
-                fontSize: '18px',
-                fontWeight: 700,
-                color: '#0f172a',
-              }}
-            >
-              +
-            </button>
-          </div>
-        </div>
-      </div>
-
       <div
         style={{
           display: 'grid',
