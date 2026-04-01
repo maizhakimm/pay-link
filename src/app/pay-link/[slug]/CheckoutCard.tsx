@@ -49,8 +49,6 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
   return (
     <main style={main}>
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
-
-        {/* LOGO CENTER */}
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <img
             src="/GoBayar%20Logo%2001%20800px.svg"
@@ -59,10 +57,7 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
           />
         </div>
 
-        {/* PRODUCT CARD */}
         <div style={card}>
-
-          {/* IMAGE CAROUSEL */}
           <div style={imageBox}>
             {current === '__placeholder__' ? (
               <div style={placeholder}>Product image</div>
@@ -70,57 +65,62 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
               <img src={current} alt="product" style={img} />
             )}
 
-            {/* arrows */}
             {images.length > 1 && (
               <>
-                <button style={leftArrow} onClick={prev}>‹</button>
-                <button style={rightArrow} onClick={next}>›</button>
+                <button type="button" style={leftArrow} onClick={prev}>
+                  ‹
+                </button>
+                <button type="button" style={rightArrow} onClick={next}>
+                  ›
+                </button>
               </>
             )}
 
-            {/* gradient */}
             <div style={gradient} />
 
-            {/* seller */}
             <div style={seller}>
-              <div style={avatar}>
-                {product.store_name?.charAt(0) || 'S'}
-              </div>
-              <span style={{ color: '#fff', fontWeight: 700 }}>
-                {product.store_name}
-              </span>
+              <div style={avatar}>{product.store_name?.charAt(0) || 'S'}</div>
+              <span style={{ color: '#fff', fontWeight: 700 }}>{product.store_name}</span>
             </div>
           </div>
 
-          {/* INFO */}
           <div style={row}>
-            <div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <h2 style={title}>{product.name}</h2>
               <p style={price}>RM {product.price.toFixed(2)}</p>
               <p style={desc}>{product.description}</p>
             </div>
 
-            {/* QTY */}
             <div style={qtyBox}>
-              <div style={{ fontSize: 12 }}>Qty</div>
+              <div style={qtyLabel}>Qty</div>
               <div style={qtyRow}>
-                <button onClick={() => setQty(Math.max(1, qty - 1))}>-</button>
-                <span>{qty}</span>
-                <button onClick={() => setQty(qty + 1)}>+</button>
+                <button
+                  type="button"
+                  onClick={() => setQty(Math.max(1, qty - 1))}
+                  style={qtyButton}
+                >
+                  -
+                </button>
+
+                <span style={qtyValue}>{qty}</span>
+
+                <button
+                  type="button"
+                  onClick={() => setQty(qty + 1)}
+                  style={qtyButton}
+                >
+                  +
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* PAYMENT */}
         <div style={card}>
           <PayButton slug={product.slug} unitPrice={product.price} quantity={qty} total={total} />
 
-          <p style={footerText}>
-            This transaction is encrypted and secured.
-          </p>
+          <p style={footerText}>This transaction is encrypted and secured.</p>
 
-          {/* CENTER PAYMENT IMAGE */}
           <div style={{ textAlign: 'center' }}>
             <img
               src="/Payment%20List%20Check%20Out%20Page%2001.jpg"
@@ -134,7 +134,6 @@ export default function CheckoutCard({ product }: { product: ProductRow }) {
             />
           </div>
         </div>
-
       </div>
     </main>
   )
@@ -211,9 +210,11 @@ const leftArrow = {
   top: '50%',
   transform: 'translateY(-50%)',
   background: '#fff',
+  border: '1px solid #e2e8f0',
   borderRadius: '50%',
   width: 32,
   height: 32,
+  cursor: 'pointer',
 }
 
 const rightArrow = {
@@ -222,43 +223,81 @@ const rightArrow = {
   top: '50%',
   transform: 'translateY(-50%)',
   background: '#fff',
+  border: '1px solid #e2e8f0',
   borderRadius: '50%',
   width: 32,
   height: 32,
+  cursor: 'pointer',
 }
 
 const row = {
   display: 'flex',
   justifyContent: 'space-between',
-  gap: 10,
+  gap: 12,
+  alignItems: 'flex-start',
 }
 
 const title = {
   fontSize: 26,
   fontWeight: 800,
+  marginBottom: 6,
 }
 
 const price = {
   color: '#1d4ed8',
   fontWeight: 800,
   fontSize: 20,
+  marginBottom: 8,
 }
 
 const desc = {
   fontSize: 14,
   color: '#64748b',
+  margin: 0,
 }
 
 const qtyBox = {
   background: '#f1f5f9',
-  padding: 10,
-  borderRadius: 12,
+  padding: '12px 14px',
+  borderRadius: 14,
+  minWidth: 120,
+  display: 'flex',
+  flexDirection: 'column' as const,
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const qtyLabel = {
+  fontSize: 12,
+  color: '#64748b',
+  textAlign: 'center' as const,
+  marginBottom: 8,
+  fontWeight: 600,
 }
 
 const qtyRow = {
   display: 'flex',
-  gap: 6,
+  gap: 8,
   alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const qtyButton = {
+  width: 30,
+  height: 30,
+  borderRadius: 8,
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  cursor: 'pointer',
+  fontWeight: 700,
+  color: '#0f172a',
+}
+
+const qtyValue = {
+  minWidth: 18,
+  textAlign: 'center' as const,
+  fontWeight: 700,
+  color: '#0f172a',
 }
 
 const footerText = {
