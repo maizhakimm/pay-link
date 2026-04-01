@@ -1,3 +1,7 @@
+'use client'
+
+import { useState } from 'react'
+
 export default function PayButton({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(false)
 
@@ -24,3 +28,27 @@ export default function PayButton({ slug }: { slug: string }) {
       setLoading(false)
     }
   }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={loading}
+      style={{
+        display: 'inline-block',
+        width: '100%',
+        maxWidth: '420px',
+        padding: '16px 22px',
+        borderRadius: '14px',
+        background: loading ? '#86efac' : '#16a34a',
+        color: '#ffffff',
+        fontSize: '16px',
+        fontWeight: 800,
+        boxShadow: '0 10px 20px rgba(22,163,74,0.22)',
+        border: 'none',
+        cursor: loading ? 'not-allowed' : 'pointer',
+      }}
+    >
+      {loading ? 'Redirecting...' : 'Proceed to Secure Payment'}
+    </button>
+  )
+}
