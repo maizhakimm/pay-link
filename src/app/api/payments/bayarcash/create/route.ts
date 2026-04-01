@@ -1,8 +1,60 @@
 export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    message: 'Use POST to create Bayarcash payment',
-  })
+  try {
+    const order_number = `TEST-${Date.now()}`
+    const amount = '10.00'
+    const payer_name = 'Test Buyer'
+    const payer_email = 'testbuyer@example.com'
+    const payment_channel = BAYARCASH_CHANNELS.FPX
+
+    const checksum = createBayarcashPaymentIntentChecksum({
+      payment_channel,
+      order_number,
+      amount,
+      payer_name,
+      payer_email,
+    })
+
+    const payload = {
+      payment_channel,
+      portal_key: process.env.BAYARCASH_PORTAL_KEY,
+      order_number,
+      amount,
+      payer_name,
+      payer_email,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment-return`,
+      callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/bayarcash/webhook`,
+      checksum,
+    }
+
+    const response = await fetch(`${process.env.BAYARCASH_BASE_URL}/payment-intents`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.BAYARCASH_PAT}`,
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    })
+
+    const text = await response.text()
+
+    return NextResponse.json({
+      ok: response.ok,
+      status: response.status,
+      sent_payload: payload,
+      raw_response: text,
+    })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: message,
+      },
+      { status: 500 }
+    )
+  }
 }
 import { NextRequest, NextResponse } from 'next/server'
 import { createBayarcashPaymentIntentChecksum, BAYARCASH_CHANNELS } from '../../../../../lib/bayarcash'
