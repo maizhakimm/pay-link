@@ -18,7 +18,6 @@ type OrderRow = {
   id: string
   amount?: number | null
   payment_status?: string | null
-  order_status?: string | null
   payout_status?: string | null
   fulfillment_status?: string | null
   created_at?: string | null
@@ -31,7 +30,7 @@ function normalizeStatus(value?: string | null, fallback = 'pending') {
 }
 
 function getMainPaymentStatus(order: OrderRow) {
-  return normalizeStatus(order.payment_status || order.order_status, 'pending')
+  return normalizeStatus(order.payment_status, 'pending')
 }
 
 function isPaidStatus(status: string) {
@@ -104,7 +103,7 @@ export default function DashboardPage() {
         supabase
           .from('orders')
           .select(
-            'id, amount, payment_status, order_status, payout_status, fulfillment_status, created_at, product_name, buyer_name'
+            'id, amount, payment_status, payout_status, fulfillment_status, created_at, product_name, buyer_name'
           )
           .eq('seller_profile_id', typedSeller.id)
           .order('created_at', { ascending: false }),
