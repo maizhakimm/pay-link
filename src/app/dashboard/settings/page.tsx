@@ -146,7 +146,7 @@ export default function SettingsPage() {
         <div style={cardStyle}>
           <h1 style={titleStyle}>Seller Profile</h1>
           <p style={subtitleStyle}>
-            Manage your store, payout details, and seller message.
+            Manage your store, payout details, and customer-facing message.
           </p>
 
           {loading ? (
@@ -230,7 +230,7 @@ export default function SettingsPage() {
               </div>
 
               <div style={sectionStyle}>
-                <p style={sectionTitleStyle}>Daily Note for Customers</p>
+                <p style={sectionTitleStyle}>Message</p>
 
                 <textarea
                   placeholder={`Contoh:
@@ -243,7 +243,10 @@ Area delivery: Setia Alam sahaja`}
                 />
 
                 <p style={smallNoteStyle}>
-                  Nota ini akan dimasukkan dalam mesej WhatsApp share menu.
+                  Message ini akan dimasukkan secara automatik dalam WhatsApp share.
+                </p>
+                <p style={smallNoteStyle}>
+                  Product list pula akan ikut produk yang active sahaja. Kalau nak ubah senarai produk, sila update di page Products.
                 </p>
               </div>
 
