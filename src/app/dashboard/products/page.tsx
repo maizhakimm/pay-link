@@ -343,13 +343,17 @@ export default function ProductsPage() {
     const confirmed = window.confirm('Delete this product?')
     if (!confirmed) return
 
-    const { error: deleteError } = await supabase.from('products').delete().eq('id', productId)
+    const { error: deleteError } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId)
 
     if (deleteError) {
-      alert(deleteError.message)
+      alert(`Delete failed: ${deleteError.message}`)
       return
     }
 
+    alert('Product deleted')
     await loadProductsPage()
   }
 
@@ -678,16 +682,40 @@ export default function ProductsPage() {
                             )}
 
                             <div style={actionRow}>
-                              <button onClick={() => saveEdit(product)} style={primaryInlineButton}>
+                              <button type="button" onClick={() => saveEdit(product)} style={primaryInlineButton}>
                                 Save
                               </button>
-                              <button onClick={cancelEdit} style={secondaryInlineButton}>
+                              <button type="button" onClick={cancelEdit} style={secondaryInlineButton}>
                                 Cancel
                               </button>
                             </div>
                           </div>
                         ) : (
                           <>
+                            <div style={badgeCornerWrap}>
+                              <span
+                                style={{
+                                  ...statusBadge,
+                                  background: product.is_active ? '#dcfce7' : '#f3f4f6',
+                                  color: product.is_active ? '#166534' : '#374151',
+                                }}
+                              >
+                                {product.is_active ? 'Active' : 'Inactive'}
+                              </span>
+
+                              {product.sold_out ? (
+                                <span
+                                  style={{
+                                    ...statusBadge,
+                                    background: '#fee2e2',
+                                    color: '#b91c1c',
+                                  }}
+                                >
+                                  Sold Out
+                                </span>
+                              ) : null}
+                            </div>
+
                             <div style={productTopRow}>
                               {thumb ? (
                                 <img
@@ -699,31 +727,7 @@ export default function ProductsPage() {
                                 <div style={productThumbPlaceholder}>No image</div>
                               )}
 
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={badgeRow}>
-                                  <span
-                                    style={{
-                                      ...statusBadge,
-                                      background: product.is_active ? '#dcfce7' : '#f3f4f6',
-                                      color: product.is_active ? '#166534' : '#374151',
-                                    }}
-                                  >
-                                    {product.is_active ? 'Active' : 'Inactive'}
-                                  </span>
-
-                                  {product.sold_out ? (
-                                    <span
-                                      style={{
-                                        ...statusBadge,
-                                        background: '#fee2e2',
-                                        color: '#b91c1c',
-                                      }}
-                                    >
-                                      Sold Out
-                                    </span>
-                                  ) : null}
-                                </div>
-
+                              <div style={productInfoWrap}>
                                 <h3 style={productTitle}>{product.name}</h3>
                                 <p style={productPrice}>RM {Number(product.price).toFixed(2)}</p>
 
@@ -783,9 +787,10 @@ export default function ProductsPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
+                                    e.preventDefault()
                                     e.stopPropagation()
-                                    deleteProduct(product.id)
+                                    await deleteProduct(product.id)
                                   }}
                                   style={dangerActionButton}
                                 >
@@ -1044,6 +1049,7 @@ const productListWrap = {
 } as const
 
 const productCard = {
+  position: 'relative' as const,
   border: '1px solid #e5e7eb',
   borderRadius: '18px',
   padding: '14px',
@@ -1052,10 +1058,29 @@ const productCard = {
   gap: '12px',
 } as const
 
+const badgeCornerWrap = {
+  position: 'absolute' as const,
+  top: '12px',
+  right: '12px',
+  display: 'flex',
+  gap: '8px',
+  flexWrap: 'wrap' as const,
+  justifyContent: 'flex-end' as const,
+  maxWidth: '180px',
+  zIndex: 2,
+} as const
+
 const productTopRow = {
   display: 'flex',
   gap: '12px',
   alignItems: 'flex-start',
+  paddingTop: '26px',
+} as const
+
+const productInfoWrap = {
+  flex: 1,
+  minWidth: 0,
+  paddingRight: '10px',
 } as const
 
 const productThumb = {
@@ -1079,13 +1104,6 @@ const productThumbPlaceholder = {
   borderRadius: '14px',
   border: '1px solid #e2e8f0',
   flexShrink: 0,
-} as const
-
-const badgeRow = {
-  display: 'flex',
-  gap: '8px',
-  flexWrap: 'wrap' as const,
-  marginBottom: '8px',
 } as const
 
 const statusBadge = {
