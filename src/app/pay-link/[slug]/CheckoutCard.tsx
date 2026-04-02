@@ -1,40 +1,259 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import PayButton from './PayButton'
 
-type SellerProfile = {
-  store_name?: string | null
-  profile_image?: string | null
-  email?: string | null
-  whatsapp?: string | null
+type Props = {
+  product: any
+  seller?: any
 }
 
-type Product = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  price: number
-  image_1?: string | null
-  image_2?: string | null
-  image_3?: string | null
-  image_4?: string | null
-  image_5?: string | null
-  seller_profiles?: SellerProfile | null
-}
-
-export default function CheckoutCard({ product }: { product: Product }) {
-  const seller = product.seller_profiles || {}
-
+export default function CheckoutCard({ product, seller }: Props) {
   const [qty, setQty] = useState(1)
-  const [index, setIndex] = useState(0)
 
-  const images = [
-    product.image_1,
-    product.image_2,
-    product.image_3,
-    product.image_4,
+  const images: string[] = [
+    product.image_url,
+    product.image_url_2,
+    product.image_url_3,
+    product.image_url_4,
+    product.image_url_5,
+  ].filter(Boolean)
+
+  const current = images[0] || null
+
+  const total = useMemo(() => product.price * qty, [product.price, qty])
+
+  return (
+    <main style={main}>
+      <div style={{ maxWidth: 600, margin: '0 auto' }}>
+
+        {/* LOGO */}
+        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+          <img
+            src="/GoBayar%20Logo%2001%20800px.svg"
+            alt="GoBayar"
+            style={{ height: 44 }}
+          />
+        </div>
+
+        {/* PRODUCT */}
+        <div style={card}>
+          <div style={imageBox}>
+            {current ? (
+              <img src={current} alt="product" style={img} />
+            ) : (
+              <div style={placeholder}>No Image</div>
+            )}
+
+            {/* SELLER */}
+            <div style={sellerOverlay}>
+              {seller?.profile_image ? (
+                <img src={seller.profile_image} style={sellerImg} />
+              ) : (
+                <div style={sellerFallback}>
+                  {seller?.store_name?.charAt(0) || 'S'}
+                </div>
+              )}
+
+              <div>
+                <div style={sellerName}>
+                  {seller?.store_name || 'Seller'}
+                </div>
+                {seller?.email && (
+                  <div style={sellerEmail}>{seller.email}</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* INFO */}
+          <div style={row}>
+            <div style={{ flex: 1 }}>
+              <h2 style={title}>{product.name}</h2>
+              <p style={price}>RM {product.price.toFixed(2)}</p>
+              <p style={desc}>{product.description}</p>
+            </div>
+
+            {/* QTY */}
+            <div style={qtyBox}>
+              <div style={qtyLabel}>Qty</div>
+              <div style={qtyRow}>
+                <button
+                  onClick={() => setQty(Math.max(1, qty - 1))}
+                  style={qtyBtn}
+                >
+                  -
+                </button>
+
+                <span style={qtyValue}>{qty}</span>
+
+                <button
+                  onClick={() => setQty(qty + 1)}
+                  style={qtyBtn}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* PAYMENT */}
+        <div style={card}>
+          <button style={payBtn}>
+            Pay RM {total.toFixed(2)}
+          </button>
+
+          <p style={footer}>
+            This transaction is encrypted and secured.
+          </p>
+
+          <img
+            src="/Payment%20List%20Check%20Out%20Page%2001.jpg"
+            alt="payment methods"
+            style={{ width: 200, margin: '0 auto', display: 'block' }}
+          />
+        </div>
+      </div>
+    </main>
+  )
+}
+
+/* STYLES */
+
+const main = {
+  minHeight: '100vh',
+  background: '#f8fafc',
+  padding: 16,
+}
+
+const card = {
+  background: '#fff',
+  padding: 16,
+  borderRadius: 16,
+  marginBottom: 16,
+  border: '1px solid #e2e8f0',
+}
+
+const imageBox = {
+  position: 'relative' as const,
+  marginBottom: 12,
+}
+
+const img = {
+  width: '100%',
+  borderRadius: 12,
+}
+
+const placeholder = {
+  height: 200,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#e2e8f0',
+  borderRadius: 12,
+}
+
+const sellerOverlay = {
+  position: 'absolute' as const,
+  bottom: 10,
+  left: 10,
+  background: 'rgba(255,255,255,0.9)',
+  padding: '6px 10px',
+  borderRadius: 10,
+  display: 'flex',
+  gap: 8,
+  alignItems: 'center',
+}
+
+const sellerImg = {
+  width: 28,
+  height: 28,
+  borderRadius: '50%',
+}
+
+const sellerFallback = {
+  width: 28,
+  height: 28,
+  borderRadius: '50%',
+  background: '#0ea5e9',
+  color: '#fff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const sellerName = {
+  fontSize: 12,
+  fontWeight: 600,
+}
+
+const sellerEmail = {
+  fontSize: 10,
+  color: '#64748b',
+}
+
+const row = {
+  display: 'flex',
+  gap: 12,
+}
+
+const title = {
+  fontSize: 18,
+  fontWeight: 700,
+}
+
+const price = {
+  fontSize: 16,
+  fontWeight: 600,
+  margin: '4px 0',
+}
+
+const desc = {
+  fontSize: 13,
+  color: '#64748b',
+}
+
+const qtyBox = {
+  width: 100,
+}
+
+const qtyLabel = {
+  fontSize: 12,
+  marginBottom: 4,
+}
+
+const qtyRow = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+}
+
+const qtyBtn = {
+  padding: '4px 8px',
+  cursor: 'pointer',
+}
+
+const qtyValue = {
+  minWidth: 20,
+  textAlign: 'center' as const,
+}
+
+const payBtn = {
+  width: '100%',
+  padding: '12px',
+  background: '#0ea5e9',
+  color: '#fff',
+  borderRadius: 10,
+  border: 'none',
+  fontWeight: 600,
+  cursor: 'pointer',
+}
+
+const footer = {
+  fontSize: 12,
+  color: '#64748b',
+  margin: '10px 0',
+}    product.image_4,
     product.image_5,
   ].filter(Boolean) as string[]
 
