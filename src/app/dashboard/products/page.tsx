@@ -340,21 +340,55 @@ export default function ProductsPage() {
   }
 
   async function deleteProduct(productId: string) {
-    const confirmed = window.confirm('Delete this product?')
-    if (!confirmed) return
+    console.log('Delete clicked for product id:', productId)
 
-    const { error: deleteError } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', productId)
-
-    if (deleteError) {
-      alert(`Delete failed: ${deleteError.message}`)
+    const confirmed = window.confirm(`Delete this product?\n\nID: ${productId}`)
+    if (!confirmed) {
+      console.log('Delete cancelled by user')
       return
     }
 
-    alert('Product deleted')
-    await loadProductsPage()
+    try {
+      const { data: beforeData, error: beforeError } = await supabase
+        .from('products')
+        .select('id, name')
+        .eq('id', productId)
+        .maybeSingle()
+
+      console.log('Before delete check:', { beforeData, beforeError })
+
+      const { error: deleteError } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId)
+
+      console.log('Delete response:', { deleteError })
+
+      if (deleteError) {
+        alert(`Delete failed: ${deleteError.message}`)
+        return
+      }
+
+      const { data: afterData, error: afterError } = await supabase
+        .from('products')
+        .select('id')
+        .eq('id', productId)
+        .maybeSingle()
+
+      console.log('After delete check:', { afterData, afterError })
+
+      if (afterData) {
+        alert('Delete request sent, but product still exists in database. This is usually a Supabase RLS policy issue.')
+        return
+      }
+
+      alert('Product deleted successfully')
+      await loadProductsPage()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unexpected delete error'
+      console.error('Delete catch error:', err)
+      alert(`Delete failed: ${message}`)
+    }
   }
 
   async function toggleActive(product: ProductRow) {
