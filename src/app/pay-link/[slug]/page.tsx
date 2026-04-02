@@ -18,15 +18,17 @@ type ProductRow = {
   image_3?: string | null
   image_4?: string | null
   image_5?: string | null
-  seller_profile_id?: string | null
   store_name?: string | null
-  seller_profile?: {
-    store_name?: string | null
-    profile_image?: string | null
-    email?: string | null
-    whatsapp?: string | null
-    company_name?: string | null
-  } | null
+  seller_profile_id?: string | null
+}
+
+type SellerProfileRow = {
+  id: string
+  store_name?: string | null
+  profile_image?: string | null
+  email?: string | null
+  whatsapp?: string | null
+  company_name?: string | null
 }
 
 export default async function Page({ params }: PageProps) {
@@ -37,16 +39,7 @@ export default async function Page({ params }: PageProps) {
 
   const { data: product, error } = await supabase
     .from('products')
-    .select(`
-      *,
-      seller_profile:seller_profiles!products_seller_profile_id_fkey (
-        store_name,
-        profile_image,
-        email,
-        whatsapp,
-        company_name
-      )
-    `)
+    .select('*')
     .eq('slug', params.slug)
     .eq('is_active', true)
     .single()
@@ -96,5 +89,19 @@ export default async function Page({ params }: PageProps) {
     )
   }
 
-  return <CheckoutCard product={product as ProductRow} />
+  const typedProduct = product as ProductRow
+
+  let seller: SellerProfileRow | null = null
+
+  if (typedProduct.seller_profile_id) {
+    const { data: sellerData } = await supabase
+      .from('seller_profiles')
+      .select('*')
+      .eq('id', typedProduct.seller_profile_id)
+      .single()
+
+    seller = (sellerData as SellerProfileRow) || null
+  }
+
+  return <CheckoutCard product={typedProduct} seller={seller} />
 }
