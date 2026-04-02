@@ -22,6 +22,11 @@ type ProductRow = {
   price: number
   is_active: boolean
   seller_profile_id: string | null
+
+  // NEW
+  track_stock: boolean
+  stock_quantity: number
+  sold_out: boolean
 }
 
 export async function POST(req: NextRequest) {
@@ -35,63 +40,83 @@ export async function POST(req: NextRequest) {
     const items = (body.items || []) as RequestItem[]
 
     if (!sellerId) {
-      return NextResponse.json(
-        { ok: false, error: 'Missing seller ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ ok: false, error: 'Missing seller ID' }, { status: 400 })
     }
 
     if (!items.length) {
-      return NextResponse.json(
-        { ok: false, error: 'No items selected' },
-        { status: 400 }
-      )
+      return NextResponse.json({ ok: false, error: 'No items selected' }, { status: 400 })
     }
 
     const productIds = items.map((item) => item.product_id)
 
+    // 🔥 GET PRODUCT + STOCK
     const { data: products, error: productError } = await supabase
       .from('products')
-      .select('id, name, slug, price, is_active, seller_profile_id')
+      .select(
+        'id, name, slug, price, is_active, seller_profile_id, track_stock, stock_quantity, sold_out'
+      )
       .in('id', productIds)
       .eq('seller_profile_id', sellerId)
 
     if (productError || !products || products.length === 0) {
-      return NextResponse.json(
-        { ok: false, error: 'Products not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ ok: false, error: 'Products not found' }, { status: 404 })
     }
 
     const productMap = new Map(
       (products as ProductRow[]).map((product) => [product.id, product])
     )
 
-    const validItems = items
-      .filter((item) => Number.isFinite(item.quantity) && item.quantity > 0)
-      .map((item) => {
-        const product = productMap.get(item.product_id)
-        if (!product || !product.is_active) return null
+    // 🔥 VALIDATE + CHECK STOCK
+    const validItems = []
 
-        return {
-          product,
-          quantity: Math.floor(item.quantity),
-          unit_price: Number(product.price),
-          line_total: Number(product.price) * Math.floor(item.quantity),
+    for (const item of items) {
+      const product = productMap.get(item.product_id)
+      const qty = Math.floor(item.quantity)
+
+      if (!product || !product.is_active || qty <= 0) continue
+
+      // ❌ PREVENT OVERSELL
+      if (product.track_stock) {
+        if (product.stock_quantity < qty) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: `${product.name} stock not enough`,
+            },
+            { status: 400 }
+          )
         }
+      }
+
+      validItems.push({
+        product,
+        quantity: qty,
+        unit_price: Number(product.price),
+        line_total: Number(product.price) * qty,
       })
-      .filter(Boolean) as {
-      product: ProductRow
-      quantity: number
-      unit_price: number
-      line_total: number
-    }[]
+    }
 
     if (!validItems.length) {
       return NextResponse.json(
         { ok: false, error: 'No valid products selected' },
         { status: 400 }
       )
+    }
+
+    // 🔥 REDUCE STOCK IMMEDIATELY
+    for (const item of validItems) {
+      if (item.product.track_stock) {
+        const newStock = item.product.stock_quantity - item.quantity
+        const newSoldOut = newStock <= 0
+
+        await supabase
+          .from('products')
+          .update({
+            stock_quantity: newStock,
+            sold_out: newSoldOut,
+          })
+          .eq('id', item.product.id)
+      }
     }
 
     const totalAmount = validItems.reduce((sum, item) => sum + item.line_total, 0)
@@ -135,31 +160,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Failed to create order: ${orderInsertError?.message || 'Unknown error'}`,
-        },
-        { status: 500 }
-      )
-    }
-
-    const orderItemsPayload = validItems.map((item) => ({
-      order_id: insertedOrder.id,
-      product_id: item.product.id,
-      product_name: item.product.name,
-      product_slug: item.product.slug,
-      unit_price: item.unit_price.toFixed(2),
-      quantity: item.quantity,
-      line_total: item.line_total.toFixed(2),
-    }))
-
-    const { error: itemInsertError } = await supabase
-      .from('order_items')
-      .insert(orderItemsPayload)
-
-    if (itemInsertError) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: `Failed to create order items: ${itemInsertError.message}`,
+          error: `Failed to create order`,
         },
         { status: 500 }
       )
@@ -198,65 +199,30 @@ export async function POST(req: NextRequest) {
 
     const text = await response.text()
 
-    let parsedResponse: {
-      id?: string
-      url?: string
-      message?: string
-    } | null = null
-
+    let parsedResponse: any = null
     try {
-      parsedResponse = JSON.parse(text) as {
-        id?: string
-        url?: string
-        message?: string
-      }
-    } catch {
-      parsedResponse = null
-    }
+      parsedResponse = JSON.parse(text)
+    } catch {}
 
     if (!response.ok) {
-      await supabase
-        .from('orders')
-        .update({
-          status: 'failed',
-          gateway_status_description:
-            parsedResponse?.message || `Bayarcash error (${response.status})`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', insertedOrder.id)
-
       return NextResponse.json(
         {
           ok: false,
-          error: parsedResponse?.message || 'Failed to create Bayarcash payment intent',
+          error: parsedResponse?.message || 'Payment failed',
         },
         { status: response.status }
       )
     }
 
-    await supabase
-      .from('orders')
-      .update({
-        gateway_payment_intent_id: parsedResponse?.id || null,
-        status: 'awaiting_payment',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', insertedOrder.id)
-
     return NextResponse.json({
       ok: true,
-      order_id: insertedOrder.id,
-      order_number,
-      payment_intent_id: parsedResponse?.id || null,
       raw_response: text,
     })
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unexpected error'
-
+  } catch (error: any) {
     return NextResponse.json(
       {
         ok: false,
-        error: message,
+        error: error.message || 'Unexpected error',
       },
       { status: 500 }
     )
