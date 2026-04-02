@@ -23,6 +23,11 @@ type ProductRow = {
   image_5?: string | null
   is_active?: boolean | null
   seller_profile_id?: string | null
+  store_name?: string | null
+  track_stock?: boolean
+  stock_quantity?: number
+  sold_out?: boolean
+  created_at?: string
 }
 
 type PageProps = {
@@ -48,37 +53,57 @@ export default async function Page({ params }: PageProps) {
 
   const requestedSlug = params.slug.toLowerCase().trim()
 
+  let seller: SellerProfile | null = null
+
+  // 1) Try from seller_profiles first
   const { data: sellers, error: sellerError } = await supabase
     .from('seller_profiles')
     .select('id, store_name, profile_image, email, whatsapp, business_address')
 
-  if (sellerError || !sellers) {
-    return (
-      <main style={errorMain}>
-        <div style={errorBox}>
-          <h2 style={errorTitle}>Shop not found</h2>
-          <p style={errorText}>Unable to load seller shop page.</p>
-        </div>
-      </main>
-    )
+  if (!sellerError && sellers && sellers.length > 0) {
+    seller =
+      (sellers as SellerProfile[]).find((item) => {
+        if (!item.store_name) return false
+        return slugify(item.store_name) === requestedSlug
+      }) || null
   }
 
-  const seller =
-  (sellers as SellerProfile[]).find((item) => {
-    if (!item.store_name) return false
-    return slugify(item.store_name) === requestedSlug
-  }) || null
+  // 2) Fallback: find from products.store_name if seller_profiles not publicly readable / not matched
+  if (!seller) {
+    const { data: fallbackProducts, error: fallbackError } = await supabase
+      .from('products')
+      .select(
+        'seller_profile_id, store_name, is_active, name, slug, description, price, image_1, image_2, image_3, image_4, image_5, track_stock, stock_quantity, sold_out, created_at'
+      )
+      .eq('is_active', true)
+
+    if (!fallbackError && fallbackProducts && fallbackProducts.length > 0) {
+      const matchedProduct = (fallbackProducts as ProductRow[]).find((item) => {
+        if (!item.store_name) return false
+        return slugify(item.store_name) === requestedSlug
+      })
+
+      if (matchedProduct) {
+        seller = {
+          id: matchedProduct.seller_profile_id || '',
+          store_name: matchedProduct.store_name || 'Shop',
+          profile_image: null,
+          email: null,
+          whatsapp: null,
+          business_address: null,
+        }
+      }
+    }
+  }
 
   if (!seller) {
     return (
       <main style={errorMain}>
         <div style={errorBox}>
           <h2 style={errorTitle}>Shop not found</h2>
-          <p style={errorText}>
-            The shop link may be invalid or unavailable.
-          </p>
+          <p style={errorText}>The shop link may be invalid or unavailable.</p>
           <p style={{ ...errorText, marginTop: 8 }}>
-            Try using the exact shop slug based on store name.
+            Please check the shop slug or make sure active products exist for this shop.
           </p>
         </div>
       </main>
