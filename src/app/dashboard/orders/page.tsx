@@ -28,6 +28,10 @@ type OrderRow = {
   delivery_country?: string | null
   created_at?: string | null
   paid_at?: string | null
+
+  fulfillment_status?: string | null
+  delivered_at?: string | null
+  payout_status?: string | null
 }
 
 type SellerProfileRow = {
@@ -55,27 +59,34 @@ function formatDate(value?: string | null) {
   })
 }
 
-function getMainStatus(order: OrderRow) {
-  return (
-    order.payment_status ||
-    order.bayarcash_status ||
-    order.order_status ||
+function normalizeStatus(value?: string | null, fallback = 'pending') {
+  return (value || fallback).toString().toLowerCase().trim()
+}
+
+function getMainPaymentStatus(order: OrderRow) {
+  return normalizeStatus(
+    order.payment_status || order.bayarcash_status || order.order_status,
     'pending'
   )
-    .toString()
-    .toLowerCase()
-    .trim()
+}
+
+function getFulfillmentStatus(order: OrderRow) {
+  return normalizeStatus(order.fulfillment_status, 'pending')
+}
+
+function getPayoutStatus(order: OrderRow) {
+  return normalizeStatus(order.payout_status, 'unpaid')
 }
 
 function isPaidStatus(status: string) {
   return ['paid', 'success', 'successful', 'completed'].includes(status)
 }
 
-function isPendingStatus(status: string) {
+function isPendingPaymentStatus(status: string) {
   return ['pending', 'processing', 'awaiting_payment'].includes(status)
 }
 
-function getStatusBadgeStyle(status: string) {
+function getPaymentBadgeStyle(status: string) {
   if (isPaidStatus(status)) {
     return {
       background: '#dcfce7',
@@ -83,7 +94,7 @@ function getStatusBadgeStyle(status: string) {
     }
   }
 
-  if (isPendingStatus(status)) {
+  if (isPendingPaymentStatus(status)) {
     return {
       background: '#fef3c7',
       color: '#92400e',
@@ -94,6 +105,62 @@ function getStatusBadgeStyle(status: string) {
     return {
       background: '#fee2e2',
       color: '#b91c1c',
+    }
+  }
+
+  return {
+    background: '#f1f5f9',
+    color: '#334155',
+  }
+}
+
+function getFulfillmentBadgeStyle(status: string) {
+  if (status === 'delivered') {
+    return {
+      background: '#dcfce7',
+      color: '#166534',
+    }
+  }
+
+  if (status === 'shipped') {
+    return {
+      background: '#dbeafe',
+      color: '#1d4ed8',
+    }
+  }
+
+  if (status === 'processing') {
+    return {
+      background: '#fef3c7',
+      color: '#92400e',
+    }
+  }
+
+  return {
+    background: '#f1f5f9',
+    color: '#334155',
+  }
+}
+
+function getPayoutBadgeStyle(status: string) {
+  if (status === 'paid') {
+    return {
+      background: '#dcfce7',
+      color: '#166534',
+    }
+  }
+
+  if (status === 'processing') {
+    return {
+      background: '#dbeafe',
+      color: '#1d4ed8',
+    }
+  }
+
+  if (status === 'eligible') {
+    return {
+      background: '#fef3c7',
+      color: '#92400e',
     }
   }
 
@@ -121,6 +188,7 @@ export default function OrdersPage() {
   const [sellerProfile, setSellerProfile] = useState<SellerProfileRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -174,12 +242,56 @@ export default function OrdersPage() {
     loadOrdersPage()
   }, [loadOrdersPage])
 
+  async function updateFulfillmentStatus(order: OrderRow, nextStatus: 'processing' | 'shipped' | 'delivered') {
+    try {
+      setUpdatingOrderId(order.id)
+
+      const paymentStatus = getMainPaymentStatus(order)
+      const updatePayload: Record<string, string | null> = {
+        fulfillment_status: nextStatus,
+      }
+
+      if (nextStatus === 'delivered') {
+        updatePayload.delivered_at = new Date().toISOString()
+
+        const currentPayoutStatus = getPayoutStatus(order)
+
+        if (isPaidStatus(paymentStatus) && currentPayoutStatus === 'unpaid') {
+          updatePayload.payout_status = 'eligible'
+        }
+      }
+
+      const { error } = await supabase
+        .from('orders')
+        .update(updatePayload)
+        .eq('id', order.id)
+
+      if (error) {
+        alert(error.message)
+        return
+      }
+
+      await loadOrdersPage()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to update delivery status'
+      alert(message)
+    } finally {
+      setUpdatingOrderId(null)
+    }
+  }
+
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      const status = getMainStatus(order)
+      const paymentStatus = getMainPaymentStatus(order)
+      const fulfillmentStatus = getFulfillmentStatus(order)
+      const payoutStatus = getPayoutStatus(order)
 
       const matchesStatus =
-        statusFilter === 'all' ? true : status === statusFilter
+        statusFilter === 'all'
+          ? true
+          : paymentStatus === statusFilter ||
+            fulfillmentStatus === statusFilter ||
+            payoutStatus === statusFilter
 
       const haystack = [
         order.product_name,
@@ -194,7 +306,8 @@ export default function OrdersPage() {
         .join(' ')
         .toLowerCase()
 
-      const matchesSearch = haystack.includes(search.toLowerCase().trim())
+      const keyword = search.toLowerCase().trim()
+      const matchesSearch = keyword ? haystack.includes(keyword) : true
 
       return matchesStatus && matchesSearch
     })
@@ -203,19 +316,28 @@ export default function OrdersPage() {
   const stats = useMemo(() => {
     const totalOrders = orders.length
     const paidOrders = orders.filter((order) =>
-      isPaidStatus(getMainStatus(order))
+      isPaidStatus(getMainPaymentStatus(order))
     ).length
     const pendingOrders = orders.filter((order) =>
-      isPendingStatus(getMainStatus(order))
+      isPendingPaymentStatus(getMainPaymentStatus(order))
     ).length
+    const deliveredOrders = orders.filter(
+      (order) => getFulfillmentStatus(order) === 'delivered'
+    ).length
+    const eligiblePayouts = orders.filter(
+      (order) => getPayoutStatus(order) === 'eligible'
+    ).length
+
     const revenue = orders
-      .filter((order) => isPaidStatus(getMainStatus(order)))
+      .filter((order) => isPaidStatus(getMainPaymentStatus(order)))
       .reduce((sum, order) => sum + Number(order.amount || 0), 0)
 
     return {
       totalOrders,
       paidOrders,
       pendingOrders,
+      deliveredOrders,
+      eligiblePayouts,
       revenue,
     }
   }, [orders])
@@ -309,14 +431,14 @@ export default function OrdersPage() {
                 fontSize: '15px',
               }}
             >
-              Monitor payments, customer details, delivery requests, and order activity.
+              Monitor payments, delivery progress, payout readiness, and customer order activity.
             </p>
           </div>
 
           <section
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+              gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
               gap: '14px',
               marginBottom: '18px',
             }}
@@ -332,8 +454,18 @@ export default function OrdersPage() {
             </div>
 
             <div style={statCardStyle}>
-              <div style={statLabelStyle}>Pending Orders</div>
+              <div style={statLabelStyle}>Pending Payment</div>
               <div style={statValueStyle}>{stats.pendingOrders}</div>
+            </div>
+
+            <div style={statCardStyle}>
+              <div style={statLabelStyle}>Delivered</div>
+              <div style={statValueStyle}>{stats.deliveredOrders}</div>
+            </div>
+
+            <div style={statCardStyle}>
+              <div style={statLabelStyle}>Payout Eligible</div>
+              <div style={statValueStyle}>{stats.eligiblePayouts}</div>
             </div>
 
             <div style={statCardStyle}>
@@ -378,6 +510,10 @@ export default function OrdersPage() {
                 <option value="pending">Pending</option>
                 <option value="processing">Processing</option>
                 <option value="awaiting_payment">Awaiting Payment</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+                <option value="eligible">Payout Eligible</option>
+                <option value="unpaid">Payout Unpaid</option>
                 <option value="failed">Failed</option>
                 <option value="expired">Expired</option>
                 <option value="cancelled">Cancelled</option>
@@ -432,8 +568,27 @@ export default function OrdersPage() {
             ) : (
               <div style={{ display: 'grid', gap: '14px' }}>
                 {filteredOrders.map((order) => {
-                  const status = getMainStatus(order)
-                  const badge = getStatusBadgeStyle(status)
+                  const paymentStatus = getMainPaymentStatus(order)
+                  const fulfillmentStatus = getFulfillmentStatus(order)
+                  const payoutStatus = getPayoutStatus(order)
+
+                  const paymentBadge = getPaymentBadgeStyle(paymentStatus)
+                  const fulfillmentBadge = getFulfillmentBadgeStyle(fulfillmentStatus)
+                  const payoutBadge = getPayoutBadgeStyle(payoutStatus)
+
+                  const disableProcessing =
+                    updatingOrderId === order.id ||
+                    fulfillmentStatus === 'processing' ||
+                    fulfillmentStatus === 'shipped' ||
+                    fulfillmentStatus === 'delivered'
+
+                  const disableShipped =
+                    updatingOrderId === order.id ||
+                    fulfillmentStatus === 'shipped' ||
+                    fulfillmentStatus === 'delivered'
+
+                  const disableDelivered =
+                    updatingOrderId === order.id || fulfillmentStatus === 'delivered'
 
                   return (
                     <div
@@ -481,22 +636,48 @@ export default function OrdersPage() {
                             <span>Created: {formatDate(order.created_at)}</span>
                             <span>•</span>
                             <span>Paid: {formatDate(order.paid_at)}</span>
+                            <span>•</span>
+                            <span>Delivered: {formatDate(order.delivered_at)}</span>
                           </div>
                         </div>
 
                         <div
                           style={{
-                            display: 'inline-block',
-                            padding: '6px 10px',
-                            borderRadius: '999px',
-                            background: badge.background,
-                            color: badge.color,
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            textTransform: 'capitalize',
+                            display: 'flex',
+                            gap: '8px',
+                            flexWrap: 'wrap',
+                            justifyContent: 'flex-end',
                           }}
                         >
-                          {status.replace(/_/g, ' ')}
+                          <div
+                            style={{
+                              ...badgeBaseStyle,
+                              background: paymentBadge.background,
+                              color: paymentBadge.color,
+                            }}
+                          >
+                            Payment: {paymentStatus.replace(/_/g, ' ')}
+                          </div>
+
+                          <div
+                            style={{
+                              ...badgeBaseStyle,
+                              background: fulfillmentBadge.background,
+                              color: fulfillmentBadge.color,
+                            }}
+                          >
+                            Delivery: {fulfillmentStatus.replace(/_/g, ' ')}
+                          </div>
+
+                          <div
+                            style={{
+                              ...badgeBaseStyle,
+                              background: payoutBadge.background,
+                              color: payoutBadge.color,
+                            }}
+                          >
+                            Payout: {payoutStatus.replace(/_/g, ' ')}
+                          </div>
                         </div>
                       </div>
 
@@ -505,6 +686,7 @@ export default function OrdersPage() {
                           display: 'grid',
                           gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
                           gap: '12px',
+                          marginBottom: '12px',
                         }}
                       >
                         <div style={infoBoxStyle}>
@@ -538,22 +720,91 @@ export default function OrdersPage() {
                             Required: <strong>{order.wants_delivery ? 'Yes' : 'No'}</strong>
                           </div>
                           <div style={infoTextStyle}>
+                            Status: <strong>{fulfillmentStatus.replace(/_/g, ' ')}</strong>
+                          </div>
+                          <div style={infoTextStyle}>
                             {order.wants_delivery ? buildDeliveryAddress(order) : '-'}
                           </div>
                         </div>
 
                         <div style={infoBoxStyle}>
-                          <div style={infoTitleStyle}>Product</div>
+                          <div style={infoTitleStyle}>Product & Payout</div>
                           <div style={infoTextStyle}>
                             Name: <strong>{order.product_name || '-'}</strong>
                           </div>
                           <div style={infoTextStyle}>Slug: {order.product_slug || '-'}</div>
                           <div style={infoTextStyle}>
-                            Payment Status: {order.payment_status || '-'}
+                            Payout Status: <strong>{payoutStatus.replace(/_/g, ' ')}</strong>
                           </div>
                           <div style={infoTextStyle}>
-                            Order Status: {order.order_status || '-'}
+                            Payment Status: {order.payment_status || '-'}
                           </div>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          borderTop: '1px solid #f1f5f9',
+                          paddingTop: '12px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '12px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <div
+                          style={{
+                            color: '#64748b',
+                            fontSize: '13px',
+                          }}
+                        >
+                          Seller can update delivery status for own internal record. Once marked as
+                          delivered and payment is paid, payout becomes eligible.
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '8px',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <button
+                            onClick={() => updateFulfillmentStatus(order, 'processing')}
+                            disabled={disableProcessing}
+                            style={{
+                              ...smallActionButton,
+                              opacity: disableProcessing ? 0.55 : 1,
+                              cursor: disableProcessing ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {updatingOrderId === order.id ? 'Updating...' : 'Mark Processing'}
+                          </button>
+
+                          <button
+                            onClick={() => updateFulfillmentStatus(order, 'shipped')}
+                            disabled={disableShipped}
+                            style={{
+                              ...smallBlueButton,
+                              opacity: disableShipped ? 0.55 : 1,
+                              cursor: disableShipped ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {updatingOrderId === order.id ? 'Updating...' : 'Mark Shipped'}
+                          </button>
+
+                          <button
+                            onClick={() => updateFulfillmentStatus(order, 'delivered')}
+                            disabled={disableDelivered}
+                            style={{
+                              ...smallGreenButton,
+                              opacity: disableDelivered ? 0.55 : 1,
+                              cursor: disableDelivered ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {updatingOrderId === order.id ? 'Updating...' : 'Mark Delivered'}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -635,8 +886,17 @@ const statLabelStyle = {
 
 const statValueStyle = {
   color: '#0f172a',
-  fontSize: '28px',
+  fontSize: '26px',
   fontWeight: 800,
+} as const
+
+const badgeBaseStyle = {
+  display: 'inline-block',
+  padding: '6px 10px',
+  borderRadius: '999px',
+  fontSize: '12px',
+  fontWeight: 700,
+  textTransform: 'capitalize' as const,
 } as const
 
 const infoBoxStyle = {
@@ -659,4 +919,34 @@ const infoTextStyle = {
   fontSize: '13px',
   lineHeight: 1.7,
   wordBreak: 'break-word' as const,
+} as const
+
+const smallActionButton = {
+  padding: '8px 12px',
+  borderRadius: '12px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#0f172a',
+  fontWeight: 700,
+  fontSize: '13px',
+} as const
+
+const smallBlueButton = {
+  padding: '8px 12px',
+  borderRadius: '12px',
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  fontWeight: 700,
+  fontSize: '13px',
+} as const
+
+const smallGreenButton = {
+  padding: '8px 12px',
+  borderRadius: '12px',
+  border: '1px solid #bbf7d0',
+  background: '#f0fdf4',
+  color: '#166534',
+  fontWeight: 700,
+  fontSize: '13px',
 } as const
