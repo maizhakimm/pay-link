@@ -657,6 +657,7 @@ export default function ProductsPage() {
                           borderRadius: '18px',
                           padding: '16px',
                           background: '#ffffff',
+                          position: 'relative',
                         }}
                       >
                         {editingId === product.id ? (
@@ -814,10 +815,33 @@ export default function ProductsPage() {
                           <>
                             <div
                               style={{
+                                position: 'absolute',
+                                top: '16px',
+                                right: '16px',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '6px 10px',
+                                  borderRadius: '999px',
+                                  background: product.is_active ? '#dcfce7' : '#f3f4f6',
+                                  color: product.is_active ? '#166534' : '#374151',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {product.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+
+                            <div
+                              style={{
                                 display: 'grid',
                                 gridTemplateColumns: thumb ? '92px minmax(0,1fr)' : '1fr',
                                 gap: '14px',
                                 marginBottom: '10px',
+                                paddingRight: '90px',
                               }}
                             >
                               {thumb && (
@@ -872,20 +896,6 @@ export default function ProductsPage() {
                                     >
                                       RM {Number(product.price).toFixed(2)}
                                     </p>
-
-                                    <span
-                                      style={{
-                                        display: 'inline-block',
-                                        padding: '6px 10px',
-                                        borderRadius: '999px',
-                                        background: product.is_active ? '#dcfce7' : '#f3f4f6',
-                                        color: product.is_active ? '#166534' : '#374151',
-                                        fontSize: '12px',
-                                        fontWeight: 700,
-                                      }}
-                                    >
-                                      {product.is_active ? 'Active' : 'Inactive'}
-                                    </span>
                                   </div>
 
                                   <div
@@ -906,33 +916,6 @@ export default function ProductsPage() {
                                     </button>
                                   </div>
                                 </div>
-
-                                {images.length > 1 && (
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      gap: '8px',
-                                      overflowX: 'auto',
-                                      paddingBottom: '2px',
-                                    }}
-                                  >
-                                    {images.slice(0, 5).map((image, index) => (
-                                      <img
-                                        key={index}
-                                        src={image}
-                                        alt={`Product ${index + 1}`}
-                                        style={{
-                                          width: '64px',
-                                          height: '64px',
-                                          flex: '0 0 64px',
-                                          objectFit: 'cover',
-                                          borderRadius: '12px',
-                                          border: '1px solid #e2e8f0',
-                                        }}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
                               </div>
                             </div>
 
