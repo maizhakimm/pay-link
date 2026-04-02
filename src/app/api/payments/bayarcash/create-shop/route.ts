@@ -93,8 +93,9 @@ export async function POST(req: NextRequest) {
 
       if (!product || !product.is_active || qty <= 0) continue
 
+      // CHECK STOCK ONLY - DO NOT DEDUCT YET
       if (product.track_stock) {
-        if (product.stock_quantity < qty) {
+        if (product.sold_out || product.stock_quantity < qty) {
           return NextResponse.json(
             {
               ok: false,
@@ -118,21 +119,6 @@ export async function POST(req: NextRequest) {
         { ok: false, error: 'No valid products selected' },
         { status: 400 }
       )
-    }
-
-    for (const item of validItems) {
-      if (item.product.track_stock) {
-        const newStock = item.product.stock_quantity - item.quantity
-        const newSoldOut = newStock <= 0
-
-        await supabase
-          .from('products')
-          .update({
-            stock_quantity: newStock,
-            sold_out: newSoldOut,
-          })
-          .eq('id', item.product.id)
-      }
     }
 
     const totalAmount = validItems.reduce((sum, item) => sum + item.line_total, 0)
@@ -182,6 +168,32 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const orderItemsPayload = validItems.map((item) => ({
+      order_id: insertedOrder.id,
+      product_id: item.product.id,
+      product_name: item.product.name,
+      product_slug: item.product.slug,
+      unit_price: item.unit_price.toFixed(2),
+      quantity: item.quantity,
+      line_total: item.line_total.toFixed(2),
+    }))
+
+    const { error: itemInsertError } = await supabase
+      .from('order_items')
+      .insert(orderItemsPayload)
+
+    if (itemInsertError) {
+      await supabase.from('orders').delete().eq('id', insertedOrder.id)
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Failed to create order items: ${itemInsertError.message}`,
+        },
+        { status: 500 }
+      )
+    }
+
     const checksum = createBayarcashPaymentIntentChecksum({
       payment_channel,
       order_number,
@@ -224,6 +236,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (!response.ok) {
+      await supabase
+        .from('orders')
+        .update({
+          status: 'failed',
+          gateway_status_description:
+            parsedResponse?.message || `Bayarcash error (${response.status})`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', insertedOrder.id)
+
       return NextResponse.json(
         {
           ok: false,
@@ -233,8 +255,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    await supabase
+      .from('orders')
+      .update({
+        gateway_payment_intent_id: parsedResponse?.id || null,
+        status: 'awaiting_payment',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', insertedOrder.id)
+
     return NextResponse.json({
       ok: true,
+      order_id: insertedOrder.id,
+      order_number,
+      payment_intent_id: parsedResponse?.id || null,
       raw_response: text,
     })
   } catch (error: unknown) {
