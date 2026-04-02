@@ -25,7 +25,8 @@ type ProductRow = {
   track_stock: boolean
   stock_quantity: number
   sold_out: boolean
-  reserved_quantity?: number
+  reserved_quantity?: number | null
+  reserved_until?: string | null
 }
 
 type ValidItem = {
@@ -39,6 +40,11 @@ type BayarcashResponse = {
   id?: string
   url?: string
   message?: string
+}
+
+function isReservationExpired(reservedUntil?: string | null) {
+  if (!reservedUntil) return true
+  return new Date(reservedUntil).getTime() <= Date.now()
 }
 
 export async function POST(req: NextRequest) {
@@ -67,10 +73,10 @@ export async function POST(req: NextRequest) {
 
     const productIds = items.map((item) => item.product_id)
 
-    const { data: products, error: productError } = await supabase
+    let { data: products, error: productError } = await supabase
       .from('products')
       .select(
-        'id, name, slug, price, is_active, seller_profile_id, track_stock, stock_quantity, sold_out, reserved_quantity'
+        'id, name, slug, price, is_active, seller_profile_id, track_stock, stock_quantity, sold_out, reserved_quantity, reserved_until'
       )
       .in('id', productIds)
       .eq('seller_profile_id', sellerId)
@@ -82,8 +88,40 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 1) RELEASE EXPIRED RESERVATIONS FIRST
+    for (const product of products as ProductRow[]) {
+      const reservedQty = product.reserved_quantity || 0
+      const expired = isReservationExpired(product.reserved_until)
+
+      if (reservedQty > 0 && expired) {
+        await supabase
+          .from('products')
+          .update({
+            reserved_quantity: 0,
+            reserved_until: null,
+          })
+          .eq('id', product.id)
+      }
+    }
+
+    // 2) RELOAD PRODUCTS AFTER RELEASE
+    const { data: refreshedProducts, error: refreshedError } = await supabase
+      .from('products')
+      .select(
+        'id, name, slug, price, is_active, seller_profile_id, track_stock, stock_quantity, sold_out, reserved_quantity, reserved_until'
+      )
+      .in('id', productIds)
+      .eq('seller_profile_id', sellerId)
+
+    if (refreshedError || !refreshedProducts || refreshedProducts.length === 0) {
+      return NextResponse.json(
+        { ok: false, error: 'Products not found after refresh' },
+        { status: 404 }
+      )
+    }
+
     const productMap = new Map(
-      (products as ProductRow[]).map((product) => [product.id, product])
+      (refreshedProducts as ProductRow[]).map((product) => [product.id, product])
     )
 
     const validItems: ValidItem[] = []
@@ -94,7 +132,6 @@ export async function POST(req: NextRequest) {
 
       if (!product || !product.is_active || qty <= 0) continue
 
-      // 🔥 AVAILABLE STOCK = STOCK - RESERVED
       if (product.track_stock) {
         const reserved = product.reserved_quantity || 0
         const availableStock = product.stock_quantity - reserved
@@ -125,7 +162,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 🔥 RESERVE STOCK (10 MINUTES)
+    // 3) RESERVE STOCK FOR 10 MINUTES
     const reserveUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
     for (const item of validItems) {
@@ -133,22 +170,29 @@ export async function POST(req: NextRequest) {
 
       const currentReserved = item.product.reserved_quantity || 0
 
-      await supabase
+      const { error: reserveError } = await supabase
         .from('products')
         .update({
           reserved_quantity: currentReserved + item.quantity,
           reserved_until: reserveUntil,
         })
         .eq('id', item.product.id)
+
+      if (reserveError) {
+        return NextResponse.json(
+          { ok: false, error: `Failed to reserve stock for ${item.product.name}` },
+          { status: 500 }
+        )
+      }
     }
 
     const totalAmount = validItems.reduce((sum, item) => sum + item.line_total, 0)
     const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0)
 
     const firstProduct = validItems[0].product
-    const order_number = `ORD-${Date.now()}`
+    const orderNumber = `ORD-${Date.now()}`
     const amount = totalAmount.toFixed(2)
-    const payment_channel = BAYARCASH_CHANNELS.FPX
+    const paymentChannel = BAYARCASH_CHANNELS.FPX
 
     const { data: insertedOrder, error: orderInsertError } = await supabase
       .from('orders')
@@ -166,11 +210,11 @@ export async function POST(req: NextRequest) {
         buyer_phone: phone || '',
 
         quantity: totalQuantity,
-        amount: amount,
-        order_number: order_number,
+        amount,
+        order_number: orderNumber,
 
         payment_provider: 'bayarcash',
-        payment_channel: payment_channel,
+        payment_channel: paymentChannel,
 
         status: 'pending',
         fulfillment_status: 'pending',
@@ -206,24 +250,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Failed to create order items`,
+          error: 'Failed to create order items',
         },
         { status: 500 }
       )
     }
 
     const checksum = createBayarcashPaymentIntentChecksum({
-      payment_channel,
-      order_number,
+      payment_channel: paymentChannel,
+      order_number: orderNumber,
       amount,
       payer_name: name || 'Customer',
       payer_email: email || 'customer@example.com',
     })
 
     const payload = {
-      payment_channel,
+      payment_channel: paymentChannel,
       portal_key: process.env.BAYARCASH_PORTAL_KEY,
-      order_number,
+      order_number: orderNumber,
       amount,
       payer_name: name || 'Customer',
       payer_email: email || 'customer@example.com',
@@ -283,7 +327,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       order_id: insertedOrder.id,
-      order_number,
+      order_number: orderNumber,
       payment_intent_id: parsedResponse?.id || null,
     })
   } catch (error: unknown) {
