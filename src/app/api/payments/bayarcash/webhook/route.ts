@@ -24,6 +24,7 @@ type ProductRow = {
   track_stock: boolean
   stock_quantity: number
   sold_out: boolean
+  reserved_quantity?: number | null
 }
 
 function mapBayarcashStatus(status: number) {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     const orderNumber = payload.order_number as string | undefined
     const transactionId = (payload.transaction_id as string | undefined) || null
     const statusNumber = Number(payload.status || 0)
-    const statusDescription = (payload.status_description as string | undefined) || null
+    const statusDescription = payload.status_description || null
     const newStatus = mapBayarcashStatus(statusNumber)
 
     if (!orderNumber) {
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     const order = existingOrder as OrderRow
 
-    // Duplicate paid webhook guard
+    // Prevent duplicate webhook
     if (
       order.status === 'paid' &&
       order.gateway_transaction_id &&
@@ -74,145 +75,82 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, duplicate: true })
     }
 
-    // If payment successful, deduct stock here
+    // 🔥 HANDLE SUCCESS PAYMENT
     if (statusNumber === 3) {
-      const { data: orderItems, error: orderItemsError } = await supabase
+      const { data: orderItems } = await supabase
         .from('order_items')
         .select('product_id, quantity, product_name')
         .eq('order_id', order.id)
 
-      if (orderItemsError || !orderItems || orderItems.length === 0) {
-        await supabase
-          .from('orders')
-          .update({
-            gateway_transaction_id: transactionId,
-            gateway_status: statusNumber,
-            gateway_status_description: 'Payment received but order items missing',
-            status: 'failed',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('order_number', orderNumber)
+      const productIds = (orderItems || []).map((item) => item.product_id)
 
-        return NextResponse.json(
-          { ok: false, error: 'Order items not found' },
-          { status: 500 }
-        )
-      }
-
-      const typedOrderItems = orderItems as OrderItemRow[]
-      const productIds = typedOrderItems.map((item) => item.product_id)
-
-      const { data: products, error: productsError } = await supabase
+      const { data: products } = await supabase
         .from('products')
-        .select('id, name, track_stock, stock_quantity, sold_out')
+        .select('id, name, track_stock, stock_quantity, sold_out, reserved_quantity')
         .in('id', productIds)
 
-      if (productsError || !products || products.length === 0) {
-        await supabase
-          .from('orders')
-          .update({
-            gateway_transaction_id: transactionId,
-            gateway_status: statusNumber,
-            gateway_status_description: 'Payment received but products not found',
-            status: 'failed',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('order_number', orderNumber)
-
-        return NextResponse.json(
-          { ok: false, error: 'Products not found for stock update' },
-          { status: 500 }
-        )
-      }
-
       const productMap = new Map(
-        (products as ProductRow[]).map((product) => [product.id, product])
+        (products || []).map((product) => [product.id, product as ProductRow])
       )
 
-      // 1) Re-check stock before deducting
-      for (const item of typedOrderItems) {
+      // CHECK AGAIN (ANTI OVERSELL)
+      for (const item of orderItems as OrderItemRow[]) {
         const product = productMap.get(item.product_id)
 
-        if (!product) {
-          await supabase
-            .from('orders')
-            .update({
-              gateway_transaction_id: transactionId,
-              gateway_status: statusNumber,
-              gateway_status_description: `Product missing during payment confirmation`,
-              status: 'failed',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('order_number', orderNumber)
-
-          return NextResponse.json(
-            { ok: false, error: 'Product missing during stock confirmation' },
-            { status: 409 }
-          )
-        }
+        if (!product) continue
 
         if (product.track_stock) {
-          if (product.sold_out || product.stock_quantity < item.quantity) {
+          const reserved = product.reserved_quantity || 0
+          const available = product.stock_quantity - reserved
+
+          if (available < 0) {
             await supabase
               .from('orders')
               .update({
-                gateway_transaction_id: transactionId,
-                gateway_status: statusNumber,
-                gateway_status_description: `${product.name || item.product_name || 'Product'} is out of stock during payment confirmation`,
                 status: 'failed',
-                updated_at: new Date().toISOString(),
+                gateway_status_description: 'Stock conflict during payment',
               })
               .eq('order_number', orderNumber)
 
             return NextResponse.json(
-              {
-                ok: false,
-                error: `${product.name || item.product_name || 'Product'} stock not enough during payment confirmation`,
-              },
+              { ok: false, error: 'Stock conflict' },
               { status: 409 }
             )
           }
         }
       }
 
-      // 2) Deduct stock
-      for (const item of typedOrderItems) {
+      // 🔥 FINAL STOCK UPDATE
+      for (const item of orderItems as OrderItemRow[]) {
         const product = productMap.get(item.product_id)
 
         if (!product || !product.track_stock) continue
 
-        const newStock = Math.max(0, Number(product.stock_quantity) - Number(item.quantity))
+        const newStock = Math.max(
+          0,
+          product.stock_quantity - item.quantity
+        )
+
+        const newReserved = Math.max(
+          0,
+          (product.reserved_quantity || 0) - item.quantity
+        )
+
         const newSoldOut = newStock <= 0
 
-        const { error: stockUpdateError } = await supabase
+        await supabase
           .from('products')
           .update({
             stock_quantity: newStock,
+            reserved_quantity: newReserved,
             sold_out: newSoldOut,
           })
           .eq('id', product.id)
-
-        if (stockUpdateError) {
-          await supabase
-            .from('orders')
-            .update({
-              gateway_transaction_id: transactionId,
-              gateway_status: statusNumber,
-              gateway_status_description: `Failed to update stock for ${product.name}`,
-              status: 'failed',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('order_number', orderNumber)
-
-          return NextResponse.json(
-            { ok: false, error: stockUpdateError.message },
-            { status: 500 }
-          )
-        }
       }
     }
 
-    const { error: updateError } = await supabase
+    // UPDATE ORDER STATUS
+    await supabase
       .from('orders')
       .update({
         gateway_transaction_id: transactionId,
@@ -223,22 +161,12 @@ export async function POST(req: NextRequest) {
       })
       .eq('order_number', orderNumber)
 
-    if (updateError) {
-      return NextResponse.json(
-        { ok: false, error: updateError.message },
-        { status: 500 }
-      )
-    }
-
     return NextResponse.json({ ok: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error'
 
     return NextResponse.json(
-      {
-        ok: false,
-        error: message,
-      },
+      { ok: false, error: message },
       { status: 500 }
     )
   }
