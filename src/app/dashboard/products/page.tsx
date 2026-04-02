@@ -224,6 +224,9 @@ export default function ProductsPage() {
         uploadedUrls = await uploadProductImages(productImages, finalSlug)
       }
 
+      const safeStock = trackStock ? Math.max(0, Number(stockQuantity || 0)) : 0
+      const computedSoldOut = trackStock ? safeStock <= 0 : false
+
       const { error } = await supabase.from('products').insert({
         name: name.trim(),
         slug: finalSlug,
@@ -231,7 +234,8 @@ export default function ProductsPage() {
         price: Number(price),
         is_active: true,
         track_stock: trackStock,
-        stock_quantity: trackStock ? Math.max(0, Number(stockQuantity || 0)) : 0,
+        stock_quantity: safeStock,
+        sold_out: computedSoldOut,
         store_name: sellerProfile.store_name || null,
         seller_profile_id: sellerProfile.id,
         image_1: uploadedUrls[0] || null,
@@ -301,6 +305,8 @@ export default function ProductsPage() {
       }
 
       const finalImages = [...editingExistingImages, ...newUploadedUrls].slice(0, 5)
+      const safeStock = editingTrackStock ? Math.max(0, Number(editingStockQuantity || 0)) : 0
+      const computedSoldOut = editingTrackStock ? safeStock <= 0 : false
 
       const { error } = await supabase
         .from('products')
@@ -310,7 +316,8 @@ export default function ProductsPage() {
           price: Number(editingPrice),
           is_active: editingIsActive,
           track_stock: editingTrackStock,
-          stock_quantity: editingTrackStock ? Math.max(0, Number(editingStockQuantity || 0)) : 0,
+          stock_quantity: safeStock,
+          sold_out: computedSoldOut,
           image_1: finalImages[0] || null,
           image_2: finalImages[1] || null,
           image_3: finalImages[2] || null,
