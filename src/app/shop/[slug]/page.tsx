@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import ShopPageClient from './ShopPageClient'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 type SellerProfile = {
   id: string
   store_name: string | null
@@ -55,7 +58,6 @@ export default async function Page({ params }: PageProps) {
 
   let seller: SellerProfile | null = null
 
-  // 1) Try from seller_profiles first
   const { data: sellers, error: sellerError } = await supabase
     .from('seller_profiles')
     .select('id, store_name, profile_image, email, whatsapp, business_address')
@@ -68,7 +70,6 @@ export default async function Page({ params }: PageProps) {
       }) || null
   }
 
-  // 2) Fallback: find from products.store_name if seller_profiles not publicly readable / not matched
   if (!seller) {
     const { data: fallbackProducts, error: fallbackError } = await supabase
       .from('products')
