@@ -8,6 +8,7 @@ type SellerProfile = {
   profile_image?: string | null
   email?: string | null
   whatsapp?: string | null
+  company_name?: string | null
 }
 
 type Product = {
@@ -21,11 +22,17 @@ type Product = {
   image_3?: string | null
   image_4?: string | null
   image_5?: string | null
-  seller_profiles?: SellerProfile | null
+  store_name?: string | null
+  seller_profile?: SellerProfile | null
 }
 
 export default function CheckoutCard({ product }: { product: Product }) {
-  const seller = product.seller_profiles || {}
+  const seller = product.seller_profile || null
+
+  const sellerName =
+    seller?.store_name?.trim() ||
+    product.store_name?.trim() ||
+    'Seller'
 
   const [qty, setQty] = useState(1)
   const [index, setIndex] = useState(0)
@@ -95,21 +102,21 @@ export default function CheckoutCard({ product }: { product: Product }) {
             <div style={gradient} />
 
             <div style={sellerOverlay}>
-              {seller.profile_image ? (
+              {seller?.profile_image ? (
                 <img
                   src={seller.profile_image}
-                  alt={seller.store_name || 'Seller profile'}
+                  alt={sellerName}
                   style={sellerImg}
                 />
               ) : (
                 <div style={sellerFallback}>
-                  {seller.store_name?.charAt(0)?.toUpperCase() || 'S'}
+                  {sellerName.charAt(0).toUpperCase()}
                 </div>
               )}
 
               <div style={sellerInfo}>
-                <div style={sellerName}>{seller.store_name || 'Seller'}</div>
-                {seller.email ? (
+                <div style={sellerNameStyle}>{sellerName}</div>
+                {seller?.email ? (
                   <div style={sellerEmail}>{seller.email}</div>
                 ) : null}
               </div>
@@ -280,7 +287,7 @@ const sellerInfo = {
   minWidth: 0,
 } as const
 
-const sellerName = {
+const sellerNameStyle = {
   color: '#fff',
   fontWeight: 700,
   fontSize: 14,
