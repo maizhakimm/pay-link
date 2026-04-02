@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import PayButton from './PayButton'
 
 type SellerProfile = {
+  id?: string
   store_name?: string | null
   profile_image?: string | null
   email?: string | null
@@ -23,12 +24,15 @@ type Product = {
   image_4?: string | null
   image_5?: string | null
   store_name?: string | null
-  seller_profile?: SellerProfile | null
 }
 
-export default function CheckoutCard({ product }: { product: Product }) {
-  const seller = product.seller_profile || null
-
+export default function CheckoutCard({
+  product,
+  seller,
+}: {
+  product: Product
+  seller: SellerProfile | null
+}) {
   const sellerName =
     seller?.store_name?.trim() ||
     product.store_name?.trim() ||
