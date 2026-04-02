@@ -22,11 +22,22 @@ type ProductRow = {
   price: number
   is_active: boolean
   seller_profile_id: string | null
-
-  // NEW
   track_stock: boolean
   stock_quantity: number
   sold_out: boolean
+}
+
+type ValidItem = {
+  product: ProductRow
+  quantity: number
+  unit_price: number
+  line_total: number
+}
+
+type BayarcashResponse = {
+  id?: string
+  url?: string
+  message?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -40,16 +51,21 @@ export async function POST(req: NextRequest) {
     const items = (body.items || []) as RequestItem[]
 
     if (!sellerId) {
-      return NextResponse.json({ ok: false, error: 'Missing seller ID' }, { status: 400 })
+      return NextResponse.json(
+        { ok: false, error: 'Missing seller ID' },
+        { status: 400 }
+      )
     }
 
     if (!items.length) {
-      return NextResponse.json({ ok: false, error: 'No items selected' }, { status: 400 })
+      return NextResponse.json(
+        { ok: false, error: 'No items selected' },
+        { status: 400 }
+      )
     }
 
     const productIds = items.map((item) => item.product_id)
 
-    // 🔥 GET PRODUCT + STOCK
     const { data: products, error: productError } = await supabase
       .from('products')
       .select(
@@ -59,15 +75,17 @@ export async function POST(req: NextRequest) {
       .eq('seller_profile_id', sellerId)
 
     if (productError || !products || products.length === 0) {
-      return NextResponse.json({ ok: false, error: 'Products not found' }, { status: 404 })
+      return NextResponse.json(
+        { ok: false, error: 'Products not found' },
+        { status: 404 }
+      )
     }
 
     const productMap = new Map(
       (products as ProductRow[]).map((product) => [product.id, product])
     )
 
-    // 🔥 VALIDATE + CHECK STOCK
-    const validItems = []
+    const validItems: ValidItem[] = []
 
     for (const item of items) {
       const product = productMap.get(item.product_id)
@@ -75,7 +93,6 @@ export async function POST(req: NextRequest) {
 
       if (!product || !product.is_active || qty <= 0) continue
 
-      // ❌ PREVENT OVERSELL
       if (product.track_stock) {
         if (product.stock_quantity < qty) {
           return NextResponse.json(
@@ -103,7 +120,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 🔥 REDUCE STOCK IMMEDIATELY
     for (const item of validItems) {
       if (item.product.track_stock) {
         const newStock = item.product.stock_quantity - item.quantity
@@ -160,7 +176,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Failed to create order`,
+          error: 'Failed to create order',
         },
         { status: 500 }
       )
@@ -199,10 +215,13 @@ export async function POST(req: NextRequest) {
 
     const text = await response.text()
 
-    let parsedResponse: any = null
+    let parsedResponse: BayarcashResponse | null = null
+
     try {
-      parsedResponse = JSON.parse(text)
-    } catch {}
+      parsedResponse = JSON.parse(text) as BayarcashResponse
+    } catch {
+      parsedResponse = null
+    }
 
     if (!response.ok) {
       return NextResponse.json(
@@ -218,11 +237,13 @@ export async function POST(req: NextRequest) {
       ok: true,
       raw_response: text,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unexpected error'
+
     return NextResponse.json(
       {
         ok: false,
-        error: error.message || 'Unexpected error',
+        error: message,
       },
       { status: 500 }
     )
