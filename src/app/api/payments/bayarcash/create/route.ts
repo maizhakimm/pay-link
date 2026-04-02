@@ -56,7 +56,10 @@ export async function GET(req: NextRequest) {
     }
 
     const rawQuantity = Number(searchParams.get('quantity') || '1')
-    const quantity = Number.isFinite(rawQuantity) && rawQuantity > 0 ? Math.floor(rawQuantity) : 1
+    const quantity =
+      Number.isFinite(rawQuantity) && rawQuantity > 0
+        ? Math.floor(rawQuantity)
+        : 1
 
     const unitPrice = Number(typedProduct.price)
     const totalAmount = unitPrice * quantity
@@ -73,15 +76,21 @@ export async function GET(req: NextRequest) {
       product_slug: typedProduct.slug,
       product_name: typedProduct.name,
       seller_profile_id: typedProduct.seller_profile_id,
+
       buyer_name: payer_name,
       buyer_email: payer_email,
       buyer_phone: payer_telephone_number,
+
       quantity: quantity,
       amount: amount,
       order_number: order_number,
+
       payment_provider: 'bayarcash',
       payment_channel: payment_channel,
+
       status: 'pending',
+      fulfillment_status: 'pending',
+      payout_status: 'unpaid',
     })
 
     if (orderInsertError) {
