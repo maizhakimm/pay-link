@@ -25,6 +25,7 @@ type ProductRow = {
   track_stock: boolean
   stock_quantity: number
   sold_out: boolean
+  reserved_quantity?: number
 }
 
 type ValidItem = {
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
     const { data: products, error: productError } = await supabase
       .from('products')
       .select(
-        'id, name, slug, price, is_active, seller_profile_id, track_stock, stock_quantity, sold_out'
+        'id, name, slug, price, is_active, seller_profile_id, track_stock, stock_quantity, sold_out, reserved_quantity'
       )
       .in('id', productIds)
       .eq('seller_profile_id', sellerId)
@@ -93,9 +94,12 @@ export async function POST(req: NextRequest) {
 
       if (!product || !product.is_active || qty <= 0) continue
 
-      // CHECK STOCK ONLY - DO NOT DEDUCT YET
+      // 🔥 AVAILABLE STOCK = STOCK - RESERVED
       if (product.track_stock) {
-        if (product.sold_out || product.stock_quantity < qty) {
+        const reserved = product.reserved_quantity || 0
+        const availableStock = product.stock_quantity - reserved
+
+        if (product.sold_out || availableStock < qty) {
           return NextResponse.json(
             {
               ok: false,
@@ -119,6 +123,23 @@ export async function POST(req: NextRequest) {
         { ok: false, error: 'No valid products selected' },
         { status: 400 }
       )
+    }
+
+    // 🔥 RESERVE STOCK (10 MINUTES)
+    const reserveUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+
+    for (const item of validItems) {
+      if (!item.product.track_stock) continue
+
+      const currentReserved = item.product.reserved_quantity || 0
+
+      await supabase
+        .from('products')
+        .update({
+          reserved_quantity: currentReserved + item.quantity,
+          reserved_until: reserveUntil,
+        })
+        .eq('id', item.product.id)
     }
 
     const totalAmount = validItems.reduce((sum, item) => sum + item.line_total, 0)
@@ -160,10 +181,7 @@ export async function POST(req: NextRequest) {
 
     if (orderInsertError || !insertedOrder) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: 'Failed to create order',
-        },
+        { ok: false, error: 'Failed to create order' },
         { status: 500 }
       )
     }
@@ -188,7 +206,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Failed to create order items: ${itemInsertError.message}`,
+          error: `Failed to create order items`,
         },
         { status: 500 }
       )
@@ -240,8 +258,6 @@ export async function POST(req: NextRequest) {
         .from('orders')
         .update({
           status: 'failed',
-          gateway_status_description:
-            parsedResponse?.message || `Bayarcash error (${response.status})`,
           updated_at: new Date().toISOString(),
         })
         .eq('id', insertedOrder.id)
@@ -269,7 +285,6 @@ export async function POST(req: NextRequest) {
       order_id: insertedOrder.id,
       order_number,
       payment_intent_id: parsedResponse?.id || null,
-      raw_response: text,
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error'
