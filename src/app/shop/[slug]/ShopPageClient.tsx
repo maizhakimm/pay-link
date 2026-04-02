@@ -25,6 +25,11 @@ type ProductRow = {
   image_5?: string | null
   is_active?: boolean | null
   seller_profile_id?: string | null
+
+  // ✅ NEW
+  track_stock?: boolean
+  stock_quantity?: number
+  sold_out?: boolean
 }
 
 function getFirstImage(product: ProductRow) {
@@ -49,10 +54,13 @@ export default function ShopPageClient({
 }) {
   const [cart, setCart] = useState<Record<string, number>>({})
 
-  function increase(productId: string) {
+  function increase(product: ProductRow) {
+    // ❌ BLOCK kalau sold out
+    if (product.sold_out) return
+
     setCart((prev) => ({
       ...prev,
-      [productId]: (prev[productId] || 0) + 1,
+      [product.id]: (prev[product.id] || 0) + 1,
     }))
   }
 
@@ -166,11 +174,24 @@ export default function ShopPageClient({
                     ) : (
                       <div style={productImagePlaceholder}>No image</div>
                     )}
+
+                    {/* 🔴 SOLD OUT BADGE */}
+                    {product.sold_out && (
+                      <div style={soldOutBadge}>Sold Out</div>
+                    )}
                   </div>
 
                   <div style={{ flex: 1 }}>
                     <div style={productName}>{product.name}</div>
                     <div style={productPrice}>RM {product.price.toFixed(2)}</div>
+
+                    {/* OPTIONAL STOCK DISPLAY */}
+                    {product.track_stock && (
+                      <div style={stockText}>
+                        Stock: {product.stock_quantity ?? 0}
+                      </div>
+                    )}
+
                     <div style={productDesc}>
                       {product.description || 'Tiada deskripsi.'}
                     </div>
@@ -186,11 +207,18 @@ export default function ShopPageClient({
                       >
                         -
                       </button>
+
                       <span style={qtyValue}>{qty}</span>
+
                       <button
                         type="button"
-                        onClick={() => increase(product.id)}
-                        style={qtyBtn}
+                        onClick={() => increase(product)}
+                        style={{
+                          ...qtyBtn,
+                          opacity: product.sold_out ? 0.4 : 1,
+                          cursor: product.sold_out ? 'not-allowed' : 'pointer',
+                        }}
+                        disabled={product.sold_out}
                       >
                         +
                       </button>
@@ -246,27 +274,30 @@ export default function ShopPageClient({
   )
 }
 
-const main = {
-  minHeight: '100vh',
-  background: '#f8fafc',
-  padding: 16,
+/* NEW STYLE */
+const soldOutBadge = {
+  position: 'absolute' as const,
+  top: 6,
+  right: 6,
+  background: '#ef4444',
+  color: '#fff',
+  fontSize: 11,
+  fontWeight: 800,
+  padding: '4px 8px',
+  borderRadius: 8,
 } as const
 
-const container = {
-  maxWidth: 760,
-  margin: '0 auto',
+const stockText = {
+  fontSize: 12,
+  color: '#64748b',
+  marginBottom: 4,
 } as const
 
-const logoWrap = {
-  textAlign: 'center' as const,
-  marginBottom: 16,
-} as const
-
-const logo = {
-  height: 44,
-  margin: '0 auto',
-  display: 'block',
-} as const
+/* ORIGINAL STYLES BELOW */
+const main = { minHeight: '100vh', background: '#f8fafc', padding: 16 } as const
+const container = { maxWidth: 760, margin: '0 auto' } as const
+const logoWrap = { textAlign: 'center' as const, marginBottom: 16 } as const
+const logo = { height: 44, margin: '0 auto', display: 'block' } as const
 
 const heroCard = {
   background: '#fff',
@@ -311,11 +342,7 @@ const shopTitle = {
   color: '#0f172a',
 } as const
 
-const shopSub = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: 14,
-} as const
+const shopSub = { margin: 0, color: '#64748b', fontSize: 14 } as const
 
 const shopLinkBox = {
   background: '#f8fafc',
@@ -339,9 +366,7 @@ const shopLinkValue = {
   wordBreak: 'break-all' as const,
 } as const
 
-const sectionTitleWrap = {
-  marginBottom: 12,
-} as const
+const sectionTitleWrap = { marginBottom: 12 } as const
 
 const sectionTitle = {
   margin: '0 0 4px 0',
@@ -350,11 +375,7 @@ const sectionTitle = {
   color: '#0f172a',
 } as const
 
-const sectionSub = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: 14,
-} as const
+const sectionSub = { margin: 0, color: '#64748b', fontSize: 14 } as const
 
 const emptyCard = {
   background: '#fff',
@@ -364,11 +385,7 @@ const emptyCard = {
   marginBottom: 16,
 } as const
 
-const productGrid = {
-  display: 'grid',
-  gap: 12,
-  marginBottom: 16,
-} as const
+const productGrid = { display: 'grid', gap: 12, marginBottom: 16 } as const
 
 const productCard = {
   background: '#fff',
@@ -378,6 +395,7 @@ const productCard = {
   display: 'flex',
   gap: 12,
   alignItems: 'flex-start',
+  position: 'relative' as const,
 } as const
 
 const productImageWrap = {
@@ -387,6 +405,7 @@ const productImageWrap = {
   overflow: 'hidden',
   background: '#e2e8f0',
   flexShrink: 0,
+  position: 'relative' as const,
 } as const
 
 const productImage = {
@@ -472,9 +491,7 @@ const checkoutCard = {
   boxShadow: '0 10px 30px rgba(15,23,42,0.05)',
 } as const
 
-const checkoutHeader = {
-  marginBottom: 14,
-} as const
+const checkoutHeader = { marginBottom: 14 } as const
 
 const checkoutTitle = {
   margin: '0 0 4px 0',
@@ -483,11 +500,7 @@ const checkoutTitle = {
   color: '#0f172a',
 } as const
 
-const checkoutSub = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: 14,
-} as const
+const checkoutSub = { margin: 0, color: '#64748b', fontSize: 14 } as const
 
 const emptyCartBox = {
   padding: 14,
