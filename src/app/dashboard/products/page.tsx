@@ -861,76 +861,66 @@ export default function ProductsPage() {
                               <div
                                 style={{
                                   display: 'grid',
-                                  gap: '10px',
+                                  gap: '8px',
                                   minWidth: 0,
                                 }}
                               >
+                                <div>
+                                  <h3
+                                    style={{
+                                      margin: '0 0 6px 0',
+                                      fontSize: '20px',
+                                      color: '#0f172a',
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {product.name}
+                                  </h3>
+
+                                  <p
+                                    style={{
+                                      margin: '0 0 6px 0',
+                                      color: '#1d4ed8',
+                                      fontSize: '18px',
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    RM {Number(product.price).toFixed(2)}
+                                  </p>
+
+                                  {product.description && (
+                                    <p
+                                      style={{
+                                        margin: 0,
+                                        color: '#64748b',
+                                        fontSize: '14px',
+                                        lineHeight: 1.7,
+                                      }}
+                                    >
+                                      {product.description}
+                                    </p>
+                                  )}
+                                </div>
+
                                 <div
                                   style={{
                                     display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'flex-start',
-                                    gap: '12px',
+                                    gap: '8px',
                                     flexWrap: 'wrap',
                                   }}
                                 >
-                                  <div style={{ minWidth: 0 }}>
-                                    <h3
-                                      style={{
-                                        margin: '0 0 6px 0',
-                                        fontSize: '20px',
-                                        color: '#0f172a',
-                                        fontWeight: 800,
-                                      }}
-                                    >
-                                      {product.name}
-                                    </h3>
-
-                                    <p
-                                      style={{
-                                        margin: '0 0 6px 0',
-                                        color: '#1d4ed8',
-                                        fontSize: '18px',
-                                        fontWeight: 800,
-                                      }}
-                                    >
-                                      RM {Number(product.price).toFixed(2)}
-                                    </p>
-                                  </div>
-
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      gap: '8px',
-                                      flexWrap: 'wrap',
-                                    }}
-                                  >
-                                    <button onClick={() => copyLink(product.slug)} style={lightButton}>
-                                      📋 Copy
-                                    </button>
-                                    <button onClick={() => shareLink(product.slug)} style={lightButton}>
-                                      🔗 Share
-                                    </button>
-                                    <button onClick={() => startEdit(product)} style={lightButton}>
-                                      Edit
-                                    </button>
-                                  </div>
+                                  <button onClick={() => copyLink(product.slug)} style={smallActionButton}>
+                                    📋 Copy
+                                  </button>
+                                  <button onClick={() => shareLink(product.slug)} style={smallActionButton}>
+                                    🔗 Share
+                                  </button>
+                                  <button onClick={() => startEdit(product)} style={smallActionButton}>
+                                    ✏️ Edit
+                                  </button>
                                 </div>
                               </div>
                             </div>
-
-                            {product.description && (
-                              <p
-                                style={{
-                                  margin: '0 0 10px 0',
-                                  color: '#64748b',
-                                  fontSize: '14px',
-                                  lineHeight: 1.7,
-                                }}
-                              >
-                                {product.description}
-                              </p>
-                            )}
 
                             <div
                               style={{
@@ -1052,6 +1042,17 @@ const lightButton = {
   color: '#0f172a',
   fontWeight: 700,
   cursor: 'pointer',
+} as const
+
+const smallActionButton = {
+  padding: '8px 12px',
+  borderRadius: '12px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#0f172a',
+  fontWeight: 700,
+  cursor: 'pointer',
+  fontSize: '13px',
 } as const
 
 const dangerButton = {
