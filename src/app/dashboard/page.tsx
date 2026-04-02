@@ -57,12 +57,22 @@ function formatDate(value?: string | null) {
   })
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [sellerProfile, setSellerProfile] = useState<SellerProfileRow | null>(null)
   const [products, setProducts] = useState<ProductRow[]>([])
   const [orders, setOrders] = useState<OrderRow[]>([])
+  const [copied, setCopied] = useState(false)
 
   const loadDashboard = useCallback(async () => {
     setLoading(true)
@@ -157,6 +167,43 @@ export default function DashboardPage() {
     }
   }, [products, orders])
 
+  const shopSlug = sellerProfile?.store_name ? slugify(sellerProfile.store_name) : ''
+  const shopLink =
+    typeof window !== 'undefined' && shopSlug
+      ? `${window.location.origin}/shop/${shopSlug}`
+      : shopSlug
+        ? `/shop/${shopSlug}`
+        : ''
+
+  async function handleCopyLink() {
+    if (!shopLink) return
+
+    try {
+      await navigator.clipboard.writeText(shopLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      alert('Unable to copy link')
+    }
+  }
+
+  function handleShareWhatsApp() {
+    if (!shopLink || !sellerProfile?.store_name) return
+
+    const message = `Salam 😊
+
+Open order hari ini.
+
+Klik link di bawah untuk order:
+${shopLink}
+
+Terima kasih.
+${sellerProfile.store_name}`
+
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(waUrl, '_blank')
+  }
+
   return (
     <main
       style={{
@@ -250,6 +297,49 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
+              <section style={sharePanelStyle}>
+                <div style={sharePanelLeft}>
+                  <div>
+                    <h2 style={shareTitleStyle}>Shop Link</h2>
+                    <p style={shareSubStyle}>
+                      Share satu link sahaja kepada pelanggan untuk order menu anda.
+                    </p>
+                  </div>
+
+                  <div style={shopLinkBox}>
+                    {shopLink || 'Complete your seller profile first'}
+                  </div>
+                </div>
+
+                <div style={shareActions}>
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    disabled={!shopLink}
+                    style={{
+                      ...actionButtonStyle,
+                      opacity: shopLink ? 1 : 0.5,
+                      cursor: shopLink ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    {copied ? 'Copied' : 'Copy Link'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleShareWhatsApp}
+                    disabled={!shopLink}
+                    style={{
+                      ...whatsAppButtonStyle,
+                      opacity: shopLink ? 1 : 0.5,
+                      cursor: shopLink ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    Share WhatsApp
+                  </button>
+                </div>
+              </section>
+
               <section
                 style={{
                   display: 'grid',
@@ -422,6 +512,72 @@ const panelStyle = {
   padding: '22px',
   border: '1px solid #e5e7eb',
   boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
+} as const
+
+const sharePanelStyle = {
+  background: '#ffffff',
+  borderRadius: '22px',
+  padding: '22px',
+  border: '1px solid #e5e7eb',
+  boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
+  marginBottom: '18px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: '18px',
+  alignItems: 'flex-start',
+  flexWrap: 'wrap',
+} as const
+
+const sharePanelLeft = {
+  flex: 1,
+  minWidth: 0,
+} as const
+
+const shareTitleStyle = {
+  margin: '0 0 4px 0',
+  fontSize: '22px',
+  color: '#0f172a',
+  fontWeight: 800,
+} as const
+
+const shareSubStyle = {
+  margin: '0 0 14px 0',
+  color: '#64748b',
+  fontSize: '14px',
+} as const
+
+const shopLinkBox = {
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: '14px',
+  padding: '14px',
+  color: '#0f172a',
+  fontWeight: 600,
+  wordBreak: 'break-all' as const,
+} as const
+
+const shareActions = {
+  display: 'flex',
+  gap: '10px',
+  flexWrap: 'wrap',
+} as const
+
+const actionButtonStyle = {
+  padding: '12px 16px',
+  borderRadius: '14px',
+  border: '1px solid #cbd5e1',
+  background: '#ffffff',
+  color: '#0f172a',
+  fontWeight: 700,
+} as const
+
+const whatsAppButtonStyle = {
+  padding: '12px 16px',
+  borderRadius: '14px',
+  border: '1px solid #bbf7d0',
+  background: '#f0fdf4',
+  color: '#166534',
+  fontWeight: 700,
 } as const
 
 const statCardStyle = {
