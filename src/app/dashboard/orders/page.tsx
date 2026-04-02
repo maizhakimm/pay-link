@@ -28,7 +28,6 @@ type OrderRow = {
   delivery_country?: string | null
   created_at?: string | null
   paid_at?: string | null
-
   fulfillment_status?: string | null
   delivered_at?: string | null
   payout_status?: string | null
@@ -38,6 +37,8 @@ type SellerProfileRow = {
   id: string
   store_name: string | null
 }
+
+const ITEMS_PER_PAGE = 20
 
 function formatMoney(value?: number | null) {
   return `RM ${Number(value || 0).toFixed(2)}`
@@ -192,6 +193,7 @@ export default function OrdersPage() {
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
 
   const loadOrdersPage = useCallback(async () => {
     setLoading(true)
@@ -242,11 +244,20 @@ export default function OrdersPage() {
     loadOrdersPage()
   }, [loadOrdersPage])
 
-  async function updateFulfillmentStatus(order: OrderRow, nextStatus: 'processing' | 'shipped' | 'delivered') {
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, statusFilter])
+
+  async function updateFulfillmentStatus(
+    order: OrderRow,
+    nextStatus: 'pending' | 'processing' | 'shipped' | 'delivered'
+  ) {
     try {
       setUpdatingOrderId(order.id)
 
       const paymentStatus = getMainPaymentStatus(order)
+      const currentPayoutStatus = getPayoutStatus(order)
+
       const updatePayload: Record<string, string | null> = {
         fulfillment_status: nextStatus,
       }
@@ -254,11 +265,11 @@ export default function OrdersPage() {
       if (nextStatus === 'delivered') {
         updatePayload.delivered_at = new Date().toISOString()
 
-        const currentPayoutStatus = getPayoutStatus(order)
-
         if (isPaidStatus(paymentStatus) && currentPayoutStatus === 'unpaid') {
           updatePayload.payout_status = 'eligible'
         }
+      } else {
+        updatePayload.delivered_at = null
       }
 
       const { error } = await supabase
@@ -313,6 +324,13 @@ export default function OrdersPage() {
     })
   }, [orders, search, statusFilter])
 
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ITEMS_PER_PAGE))
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+  }, [filteredOrders, currentPage])
+
   const stats = useMemo(() => {
     const totalOrders = orders.length
     const paidOrders = orders.filter((order) =>
@@ -341,6 +359,14 @@ export default function OrdersPage() {
       revenue,
     }
   }, [orders])
+
+  function goToPreviousPage() {
+    setCurrentPage((prev) => Math.max(1, prev - 1))
+  }
+
+  function goToNextPage() {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+  }
 
   return (
     <main
@@ -533,30 +559,49 @@ export default function OrdersPage() {
             <div
               style={{
                 marginBottom: '16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: '12px',
+                flexWrap: 'wrap',
               }}
             >
-              <h2
-                style={{
-                  margin: '0 0 6px 0',
-                  fontSize: '22px',
-                  color: '#0f172a',
-                  fontWeight: 800,
-                }}
-              >
-                Order List
-              </h2>
+              <div>
+                <h2
+                  style={{
+                    margin: '0 0 6px 0',
+                    fontSize: '22px',
+                    color: '#0f172a',
+                    fontWeight: 800,
+                  }}
+                >
+                  Order List
+                </h2>
 
-              <p
+                <p
+                  style={{
+                    margin: 0,
+                    color: '#64748b',
+                    fontSize: '14px',
+                  }}
+                >
+                  {sellerProfile?.store_name
+                    ? `Showing orders for ${sellerProfile.store_name}`
+                    : 'Showing your incoming orders'}
+                </p>
+              </div>
+
+              <div
                 style={{
-                  margin: 0,
                   color: '#64748b',
-                  fontSize: '14px',
+                  fontSize: '13px',
+                  fontWeight: 700,
                 }}
               >
-                {sellerProfile?.store_name
-                  ? `Showing orders for ${sellerProfile.store_name}`
-                  : 'Showing your incoming orders'}
-              </p>
+                Showing {filteredOrders.length === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1}
+                {' - '}
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredOrders.length)} of {filteredOrders.length}
+              </div>
             </div>
 
             {loading ? (
@@ -566,78 +611,107 @@ export default function OrdersPage() {
             ) : filteredOrders.length === 0 ? (
               <p style={{ margin: 0, color: '#64748b' }}>No orders found.</p>
             ) : (
-              <div style={{ display: 'grid', gap: '14px' }}>
-                {filteredOrders.map((order) => {
-                  const paymentStatus = getMainPaymentStatus(order)
-                  const fulfillmentStatus = getFulfillmentStatus(order)
-                  const payoutStatus = getPayoutStatus(order)
+              <>
+                <div style={{ display: 'grid', gap: '14px' }}>
+                  {paginatedOrders.map((order) => {
+                    const paymentStatus = getMainPaymentStatus(order)
+                    const fulfillmentStatus = getFulfillmentStatus(order)
+                    const payoutStatus = getPayoutStatus(order)
 
-                  const paymentBadge = getPaymentBadgeStyle(paymentStatus)
-                  const fulfillmentBadge = getFulfillmentBadgeStyle(fulfillmentStatus)
-                  const payoutBadge = getPayoutBadgeStyle(payoutStatus)
+                    const paymentBadge = getPaymentBadgeStyle(paymentStatus)
+                    const fulfillmentBadge = getFulfillmentBadgeStyle(fulfillmentStatus)
+                    const payoutBadge = getPayoutBadgeStyle(payoutStatus)
 
-                  const disableProcessing =
-                    updatingOrderId === order.id ||
-                    fulfillmentStatus === 'processing' ||
-                    fulfillmentStatus === 'shipped' ||
-                    fulfillmentStatus === 'delivered'
-
-                  const disableShipped =
-                    updatingOrderId === order.id ||
-                    fulfillmentStatus === 'shipped' ||
-                    fulfillmentStatus === 'delivered'
-
-                  const disableDelivered =
-                    updatingOrderId === order.id || fulfillmentStatus === 'delivered'
-
-                  return (
-                    <div
-                      key={order.id}
-                      style={{
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '18px',
-                        padding: '16px',
-                        background: '#ffffff',
-                      }}
-                    >
+                    return (
                       <div
+                        key={order.id}
                         style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          gap: '12px',
-                          flexWrap: 'wrap',
-                          marginBottom: '12px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '18px',
+                          padding: '16px',
+                          background: '#ffffff',
                         }}
                       >
-                        <div style={{ minWidth: 0 }}>
-                          <h3
-                            style={{
-                              margin: '0 0 6px 0',
-                              fontSize: '18px',
-                              color: '#0f172a',
-                              fontWeight: 800,
-                            }}
-                          >
-                            {order.product_name || 'Product Order'}
-                          </h3>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: '12px',
+                            flexWrap: 'wrap',
+                            marginBottom: '12px',
+                          }}
+                        >
+                          <div style={{ minWidth: 0 }}>
+                            <h3
+                              style={{
+                                margin: '0 0 6px 0',
+                                fontSize: '18px',
+                                color: '#0f172a',
+                                fontWeight: 800,
+                              }}
+                            >
+                              {order.product_name || 'Product Order'}
+                            </h3>
+
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: '8px',
+                                flexWrap: 'wrap',
+                                color: '#64748b',
+                                fontSize: '13px',
+                              }}
+                            >
+                              <span>Order ID: {order.id}</span>
+                              <span>•</span>
+                              <span>Created: {formatDate(order.created_at)}</span>
+                              <span>•</span>
+                              <span>Paid: {formatDate(order.paid_at)}</span>
+                              <span>•</span>
+                              <span>Delivered: {formatDate(order.delivered_at)}</span>
+                            </div>
+                          </div>
 
                           <div
                             style={{
                               display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-end',
                               gap: '8px',
-                              flexWrap: 'wrap',
-                              color: '#64748b',
-                              fontSize: '13px',
+                              minWidth: '220px',
                             }}
                           >
-                            <span>Order ID: {order.id}</span>
-                            <span>•</span>
-                            <span>Created: {formatDate(order.created_at)}</span>
-                            <span>•</span>
-                            <span>Paid: {formatDate(order.paid_at)}</span>
-                            <span>•</span>
-                            <span>Delivered: {formatDate(order.delivered_at)}</span>
+                            <select
+                              value={fulfillmentStatus}
+                              onChange={(e) =>
+                                updateFulfillmentStatus(
+                                  order,
+                                  e.target.value as 'pending' | 'processing' | 'shipped' | 'delivered'
+                                )
+                              }
+                              disabled={updatingOrderId === order.id}
+                              style={{
+                                ...dropdownStyle,
+                                opacity: updatingOrderId === order.id ? 0.6 : 1,
+                                cursor: updatingOrderId === order.id ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              <option value="pending">Delivery: Pending</option>
+                              <option value="processing">Delivery: Processing</option>
+                              <option value="shipped">Delivery: Shipped</option>
+                              <option value="delivered">Delivery: Delivered</option>
+                            </select>
+
+                            <div
+                              style={{
+                                color: '#64748b',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                              }}
+                            >
+                              {updatingOrderId === order.id ? 'Updating status...' : 'Update delivery status'}
+                            </div>
                           </div>
                         </div>
 
@@ -646,7 +720,7 @@ export default function OrdersPage() {
                             display: 'flex',
                             gap: '8px',
                             flexWrap: 'wrap',
-                            justifyContent: 'flex-end',
+                            marginBottom: '12px',
                           }}
                         >
                           <div
@@ -679,138 +753,125 @@ export default function OrdersPage() {
                             Payout: {payoutStatus.replace(/_/g, ' ')}
                           </div>
                         </div>
-                      </div>
-
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                          gap: '12px',
-                          marginBottom: '12px',
-                        }}
-                      >
-                        <div style={infoBoxStyle}>
-                          <div style={infoTitleStyle}>Customer</div>
-                          <div style={infoTextStyle}>
-                            <strong>{order.customer_name || '-'}</strong>
-                          </div>
-                          <div style={infoTextStyle}>{order.customer_email || '-'}</div>
-                          <div style={infoTextStyle}>{order.customer_phone || '-'}</div>
-                        </div>
-
-                        <div style={infoBoxStyle}>
-                          <div style={infoTitleStyle}>Payment</div>
-                          <div style={infoTextStyle}>
-                            Amount: <strong>{formatMoney(order.amount)}</strong>
-                          </div>
-                          <div style={infoTextStyle}>
-                            Method: {order.payment_method || '-'}
-                          </div>
-                          <div style={infoTextStyle}>
-                            Reference: {order.reference_no || '-'}
-                          </div>
-                          <div style={infoTextStyle}>
-                            Txn ID: {order.transaction_id || '-'}
-                          </div>
-                        </div>
-
-                        <div style={infoBoxStyle}>
-                          <div style={infoTitleStyle}>Delivery</div>
-                          <div style={infoTextStyle}>
-                            Required: <strong>{order.wants_delivery ? 'Yes' : 'No'}</strong>
-                          </div>
-                          <div style={infoTextStyle}>
-                            Status: <strong>{fulfillmentStatus.replace(/_/g, ' ')}</strong>
-                          </div>
-                          <div style={infoTextStyle}>
-                            {order.wants_delivery ? buildDeliveryAddress(order) : '-'}
-                          </div>
-                        </div>
-
-                        <div style={infoBoxStyle}>
-                          <div style={infoTitleStyle}>Product & Payout</div>
-                          <div style={infoTextStyle}>
-                            Name: <strong>{order.product_name || '-'}</strong>
-                          </div>
-                          <div style={infoTextStyle}>Slug: {order.product_slug || '-'}</div>
-                          <div style={infoTextStyle}>
-                            Payout Status: <strong>{payoutStatus.replace(/_/g, ' ')}</strong>
-                          </div>
-                          <div style={infoTextStyle}>
-                            Payment Status: {order.payment_status || '-'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          borderTop: '1px solid #f1f5f9',
-                          paddingTop: '12px',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: '12px',
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <div
-                          style={{
-                            color: '#64748b',
-                            fontSize: '13px',
-                          }}
-                        >
-                          Seller can update delivery status for own internal record. Once marked as
-                          delivered and payment is paid, payout becomes eligible.
-                        </div>
 
                         <div
                           style={{
-                            display: 'flex',
-                            gap: '8px',
-                            flexWrap: 'wrap',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                            gap: '12px',
                           }}
                         >
-                          <button
-                            onClick={() => updateFulfillmentStatus(order, 'processing')}
-                            disabled={disableProcessing}
-                            style={{
-                              ...smallActionButton,
-                              opacity: disableProcessing ? 0.55 : 1,
-                              cursor: disableProcessing ? 'not-allowed' : 'pointer',
-                            }}
-                          >
-                            {updatingOrderId === order.id ? 'Updating...' : 'Mark Processing'}
-                          </button>
+                          <div style={infoBoxStyle}>
+                            <div style={infoTitleStyle}>Customer</div>
+                            <div style={infoTextStyle}>
+                              <strong>{order.customer_name || '-'}</strong>
+                            </div>
+                            <div style={infoTextStyle}>{order.customer_email || '-'}</div>
+                            <div style={infoTextStyle}>{order.customer_phone || '-'}</div>
+                          </div>
 
-                          <button
-                            onClick={() => updateFulfillmentStatus(order, 'shipped')}
-                            disabled={disableShipped}
-                            style={{
-                              ...smallBlueButton,
-                              opacity: disableShipped ? 0.55 : 1,
-                              cursor: disableShipped ? 'not-allowed' : 'pointer',
-                            }}
-                          >
-                            {updatingOrderId === order.id ? 'Updating...' : 'Mark Shipped'}
-                          </button>
+                          <div style={infoBoxStyle}>
+                            <div style={infoTitleStyle}>Payment</div>
+                            <div style={infoTextStyle}>
+                              Amount: <strong>{formatMoney(order.amount)}</strong>
+                            </div>
+                            <div style={infoTextStyle}>
+                              Method: {order.payment_method || '-'}
+                            </div>
+                            <div style={infoTextStyle}>
+                              Reference: {order.reference_no || '-'}
+                            </div>
+                            <div style={infoTextStyle}>
+                              Txn ID: {order.transaction_id || '-'}
+                            </div>
+                          </div>
 
-                          <button
-                            onClick={() => updateFulfillmentStatus(order, 'delivered')}
-                            disabled={disableDelivered}
-                            style={{
-                              ...smallGreenButton,
-                              opacity: disableDelivered ? 0.55 : 1,
-                              cursor: disableDelivered ? 'not-allowed' : 'pointer',
-                            }}
-                          >
-                            {updatingOrderId === order.id ? 'Updating...' : 'Mark Delivered'}
-                          </button>
+                          <div style={infoBoxStyle}>
+                            <div style={infoTitleStyle}>Delivery</div>
+                            <div style={infoTextStyle}>
+                              Required: <strong>{order.wants_delivery ? 'Yes' : 'No'}</strong>
+                            </div>
+                            <div style={infoTextStyle}>
+                              Status: <strong>{fulfillmentStatus.replace(/_/g, ' ')}</strong>
+                            </div>
+                            <div style={infoTextStyle}>
+                              {order.wants_delivery ? buildDeliveryAddress(order) : '-'}
+                            </div>
+                          </div>
+
+                          <div style={infoBoxStyle}>
+                            <div style={infoTitleStyle}>Product & Payout</div>
+                            <div style={infoTextStyle}>
+                              Name: <strong>{order.product_name || '-'}</strong>
+                            </div>
+                            <div style={infoTextStyle}>Slug: {order.product_slug || '-'}</div>
+                            <div style={infoTextStyle}>
+                              Payout Status: <strong>{payoutStatus.replace(/_/g, ' ')}</strong>
+                            </div>
+                            <div style={infoTextStyle}>
+                              Payment Status: {order.payment_status || '-'}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: '18px',
+                    paddingTop: '14px',
+                    borderTop: '1px solid #f1f5f9',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '12px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div
+                    style={{
+                      color: '#64748b',
+                      fontSize: '13px',
+                    }}
+                  >
+                    Page {currentPage} of {totalPages}
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '8px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <button
+                      onClick={goToPreviousPage}
+                      disabled={currentPage === 1}
+                      style={{
+                        ...smallActionButton,
+                        opacity: currentPage === 1 ? 0.5 : 1,
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      Previous
+                    </button>
+
+                    <button
+                      onClick={goToNextPage}
+                      disabled={currentPage === totalPages}
+                      style={{
+                        ...smallActionButton,
+                        opacity: currentPage === totalPages ? 0.5 : 1,
+                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </section>
         </div>
@@ -848,6 +909,18 @@ const inputStyle = {
   fontSize: '14px',
   outline: 'none',
   background: '#fff',
+} as const
+
+const dropdownStyle = {
+  width: '220px',
+  padding: '11px 12px',
+  borderRadius: '12px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#0f172a',
+  fontWeight: 700,
+  fontSize: '13px',
+  outline: 'none',
 } as const
 
 const navLinkStyle = {
@@ -927,26 +1000,6 @@ const smallActionButton = {
   border: '1px solid #cbd5e1',
   background: '#fff',
   color: '#0f172a',
-  fontWeight: 700,
-  fontSize: '13px',
-} as const
-
-const smallBlueButton = {
-  padding: '8px 12px',
-  borderRadius: '12px',
-  border: '1px solid #bfdbfe',
-  background: '#eff6ff',
-  color: '#1d4ed8',
-  fontWeight: 700,
-  fontSize: '13px',
-} as const
-
-const smallGreenButton = {
-  padding: '8px 12px',
-  borderRadius: '12px',
-  border: '1px solid #bbf7d0',
-  background: '#f0fdf4',
-  color: '#166534',
   fontWeight: 700,
   fontSize: '13px',
 } as const
