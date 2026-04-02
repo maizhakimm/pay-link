@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
 
     const productIds = items.map((item) => item.product_id)
 
-    let { data: products, error: productError } = await supabase
+   const { data: products, error: productError } = await supabase
       .from('products')
       .select(
         'id, name, slug, price, is_active, seller_profile_id, track_stock, stock_quantity, sold_out, reserved_quantity, reserved_until'
