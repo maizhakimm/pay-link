@@ -27,11 +27,6 @@ type ProductRow = {
   seller_profile_id?: string | null
 }
 
-type CartItem = {
-  product_id: string
-  quantity: number
-}
-
 function getFirstImage(product: ProductRow) {
   return (
     product.image_1 ||
@@ -153,7 +148,9 @@ export default function ShopPageClient({
 
         {products.length === 0 ? (
           <div style={emptyCard}>
-            <p style={{ margin: 0, color: '#64748b' }}>Tiada menu aktif buat masa ini.</p>
+            <p style={{ margin: 0, color: '#64748b' }}>
+              Tiada menu aktif buat masa ini.
+            </p>
           </div>
         ) : (
           <div style={productGrid}>
