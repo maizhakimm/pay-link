@@ -1,487 +1,238 @@
 'use client'
 
-import { ChangeEvent, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-}
-
-export default function DashboardSettingsPage() {
-  const router = useRouter()
-
+export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [uploadingQr, setUploadingQr] = useState(false)
-  const [userId, setUserId] = useState('')
 
   const [storeName, setStoreName] = useState('')
-  const [storeSlug, setStoreSlug] = useState('')
-  const [contactPhone, setContactPhone] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
   const [bankName, setBankName] = useState('')
-  const [accountName, setAccountName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
-  const [qrPaymentImageUrl, setQrPaymentImageUrl] = useState('')
+  const [accountHolderName, setAccountHolderName] = useState('')
 
-  const banks = [
-    'Maybank (Malayan Banking Berhad)',
-    'CIMB Bank Berhad',
-    'Public Bank Berhad',
-    'RHB Bank Berhad',
-    'Hong Leong Bank Berhad',
-    'AmBank (AMMB Holdings Berhad)',
-    'Affin Bank Berhad',
-    'Alliance Bank Malaysia Berhad',
-    'Bank Islam Malaysia Berhad',
-    'Bank Muamalat Malaysia Berhad',
-    'Ryt Bank (YTL Digital Bank Berhad)',
-    'GX Bank Berhad (GXBank)',
-    'Boost Bank Berhad',
-    'AEON Bank (M) Berhad',
-    'KAF Digital Bank Berhad',
-  ]
+  const [sellerId, setSellerId] = useState<string | null>(null)
 
   useEffect(() => {
-    const loadSellerProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+    loadProfile()
+  }, [])
 
-      if (!user) {
-        router.push('/auth')
-        return
-      }
+  async function loadProfile() {
+    setLoading(true)
 
-      setUserId(user.id)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-      const { data: sellerProfile, error } = await supabase
-        .from('seller_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle()
+    if (!user) return
 
-      if (error) {
-        console.error('Load seller profile error:', error.message)
-      }
+    const { data } = await supabase
+      .from('seller_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
 
-      if (sellerProfile) {
-        setStoreName(sellerProfile.store_name || '')
-        setStoreSlug(sellerProfile.store_slug || '')
-        setContactPhone(sellerProfile.contact_phone || '')
-        setBankName(sellerProfile.bank_name || '')
-        setAccountName(sellerProfile.account_name || '')
-        setAccountNumber(sellerProfile.account_number || '')
-        setQrPaymentImageUrl(sellerProfile.qr_payment_image_url || '')
-      }
-
-      setLoading(false)
+    if (data) {
+      setSellerId(data.id)
+      setStoreName(data.store_name || '')
+      setWhatsapp(data.whatsapp || '')
+      setBankName(data.bank_name || '')
+      setAccountNumber(data.account_number || '')
+      setAccountHolderName(data.account_holder_name || '')
     }
 
-    loadSellerProfile()
-  }, [router])
-
-  const handleStoreNameChange = (value: string) => {
-    setStoreName(value)
-    if (!storeSlug || storeSlug === slugify(storeName)) {
-      setStoreSlug(slugify(value))
-    }
+    setLoading(false)
   }
 
-  const handleQrUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    if (!userId) {
-      alert('Missing user session')
-      return
-    }
-
-    setUploadingQr(true)
-
-    const fileExt = file.name.split('.').pop()
-    const filePath = `qr/${userId}-${Date.now()}.${fileExt}`
-
-    const { error: uploadError } = await supabase.storage
-      .from('payment-assets')
-      .upload(filePath, file, {
-        upsert: true,
-      })
-
-    if (uploadError) {
-      setUploadingQr(false)
-      alert(`QR upload failed: ${uploadError.message}`)
-      return
-    }
-
-    const { data } = supabase.storage.from('payment-assets').getPublicUrl(filePath)
-
-    setQrPaymentImageUrl(data.publicUrl)
-    setUploadingQr(false)
-    alert('QR uploaded successfully. Please click Save Settings.')
-  }
-
-  const handleSave = async () => {
-    if (!userId) {
-      alert('Missing user session')
-      return
-    }
-
-    if (!storeName.trim()) {
-      alert('Store name is required')
-      return
-    }
-
-    if (!storeSlug.trim()) {
-      alert('Store slug is required')
-      return
-    }
+  async function handleSave() {
+    if (!sellerId) return
 
     setSaving(true)
 
-    const payload = {
-      user_id: userId,
-      store_name: storeName.trim(),
-      store_slug: slugify(storeSlug),
-      contact_phone: contactPhone.trim(),
-      bank_name: bankName.trim(),
-      account_name: accountName.trim(),
-      account_number: accountNumber.trim(),
-      qr_payment_image_url: qrPaymentImageUrl || null,
-      updated_at: new Date().toISOString(),
-    }
-
-    const { data: existingProfile, error: checkError } = await supabase
+    const { error } = await supabase
       .from('seller_profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (checkError) {
-      setSaving(false)
-      alert(`Failed to check seller profile: ${checkError.message}`)
-      return
-    }
-
-    let saveError = null
-
-    if (existingProfile) {
-      const { error } = await supabase
-        .from('seller_profiles')
-        .update(payload)
-        .eq('user_id', userId)
-
-      saveError = error
-    } else {
-      const { error } = await supabase
-        .from('seller_profiles')
-        .insert({
-          ...payload,
-          created_at: new Date().toISOString(),
-        })
-
-      saveError = error
-    }
+      .update({
+        store_name: storeName,
+        whatsapp,
+        bank_name: bankName,
+        account_number: accountNumber,
+        account_holder_name: accountHolderName,
+      })
+      .eq('id', sellerId)
 
     setSaving(false)
 
-    if (saveError) {
-      alert(`Save failed: ${saveError.message}`)
-      return
+    if (error) {
+      alert(error.message)
+    } else {
+      alert('Settings saved successfully!')
     }
-
-    alert('Store settings saved successfully')
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '14px 16px',
-    fontSize: '15px',
-    borderRadius: '12px',
-    border: '1px solid #d1d5db',
-    outline: 'none',
-    boxSizing: 'border-box',
-    background: '#ffffff',
-    color: '#111827',
-  }
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    marginBottom: '8px',
-    color: '#111827',
-    fontSize: '14px',
-    fontWeight: 600,
-  }
-
-  if (loading) {
-    return (
-      <main
-        style={{
-          minHeight: '100vh',
-          background: '#f5f7fb',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px',
-        }}
-      >
-        <div
-          style={{
-            background: '#ffffff',
-            padding: '24px 28px',
-            borderRadius: '16px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            fontWeight: 600,
-            color: '#111827',
-          }}
-        >
-          Loading store settings...
-        </div>
-      </main>
-    )
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#f5f7fb',
-        padding: '24px',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: '980px',
-          margin: '0 auto',
-        }}
-      >
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '20px',
-            padding: '32px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-            marginBottom: '20px',
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: '#16a34a',
-              fontWeight: 700,
-              fontSize: '13px',
-              letterSpacing: '0.6px',
-            }}
-          >
-            STORE SETTINGS
-          </p>
+    <main style={{ minHeight: '100vh', background: '#f8fafc' }}>
+      <header style={headerStyle}>
+        <div style={containerStyle}>
+          <img
+            src="/GoBayar%20Logo%2001%20800px.svg"
+            style={{ height: 40 }}
+          />
 
-          <h1
-            style={{
-              margin: '10px 0 10px 0',
-              fontSize: '38px',
-              lineHeight: 1.1,
-              color: '#111827',
-            }}
-          >
-            Business Profile
-          </h1>
-
-          <p
-            style={{
-              margin: 0,
-              color: '#6b7280',
-              fontSize: '16px',
-              lineHeight: 1.7,
-              maxWidth: '720px',
-            }}
-          >
-            Manage your business details, contact information, payout account, and QR payment image.
-          </p>
+          <nav style={navStyle}>
+            <a href="/dashboard" style={navLinkStyle}>Dashboard</a>
+            <a href="/dashboard/products" style={navLinkStyle}>Products</a>
+            <a href="/dashboard/orders" style={navLinkStyle}>Orders</a>
+            <a href="/dashboard/settings" style={navLinkActiveStyle}>Settings</a>
+          </nav>
         </div>
+      </header>
 
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '20px',
-            padding: '32px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-          }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '20px',
-            }}
-          >
-            <div>
-              <label style={labelStyle}>Store Name</label>
-              <input
-                value={storeName}
-                onChange={(e) => handleStoreNameChange(e.target.value)}
-                placeholder="Enter your business or store name"
-                style={inputStyle}
-              />
-            </div>
+      <div style={wrapperStyle}>
+        <div style={cardStyle}>
+          <h1 style={titleStyle}>Settings</h1>
+          <p style={subtitleStyle}>
+            Manage your store and payout details
+          </p>
 
-            <div>
-              <label style={labelStyle}>Store Slug</label>
-              <input
-                value={storeSlug}
-                onChange={(e) => setStoreSlug(slugify(e.target.value))}
-                placeholder="Enter a unique store URL slug"
-                style={inputStyle}
-              />
-            </div>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <>
+              <div style={formGrid}>
+                <input
+                  placeholder="Store Name"
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
+                  style={inputStyle}
+                />
 
-            <div>
-              <label style={labelStyle}>Contact Phone</label>
-              <input
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="Enter your business contact number in 60123456789 format"
-                style={inputStyle}
-              />
-            </div>
+                <input
+                  placeholder="WhatsApp Number"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  style={inputStyle}
+                />
 
-            <div>
-              <label style={labelStyle}>Bank Name</label>
-              <select
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                style={inputStyle}
+                <input
+                  placeholder="Bank Name"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  style={inputStyle}
+                />
+
+                <input
+                  placeholder="Account Number"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  style={inputStyle}
+                />
+
+                <input
+                  placeholder="Account Holder Name"
+                  value={accountHolderName}
+                  onChange={(e) => setAccountHolderName(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={saveButton}
               >
-                <option value="">Select your bank</option>
-                {banks.map((bank) => (
-                  <option key={bank} value={bank}>
-                    {bank}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={labelStyle}>Account Name</label>
-              <input
-                value={accountName}
-                onChange={(e) => setAccountName(e.target.value)}
-                placeholder="Enter the account holder name"
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Account Number</label>
-              <input
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="Enter the bank account number"
-                style={inputStyle}
-              />
-            </div>
-
-            <div
-              style={{
-                gridColumn: '1 / -1',
-              }}
-            >
-              <label style={labelStyle}>QR Payment Image</label>
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleQrUpload}
-                style={{
-                  ...inputStyle,
-                  padding: '10px 12px',
-                }}
-              />
-
-              {uploadingQr && (
-                <p
-                  style={{
-                    marginTop: '10px',
-                    marginBottom: 0,
-                    color: '#6b7280',
-                    fontSize: '14px',
-                  }}
-                >
-                  Uploading QR image...
-                </p>
-              )}
-
-              {qrPaymentImageUrl && (
-                <div
-                  style={{
-                    marginTop: '14px',
-                  }}
-                >
-                  <img
-                    src={qrPaymentImageUrl}
-                    alt="QR Preview"
-                    style={{
-                      width: '220px',
-                      maxWidth: '100%',
-                      borderRadius: '14px',
-                      border: '1px solid #e5e7eb',
-                      display: 'block',
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: '28px',
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{
-                padding: '14px 20px',
-                border: 'none',
-                borderRadius: '12px',
-                background: '#111827',
-                color: '#ffffff',
-                fontSize: '15px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                opacity: saving ? 0.7 : 1,
-              }}
-            >
-              {saving ? 'Saving...' : 'Save Settings'}
-            </button>
-
-            <button
-              onClick={() => router.push('/dashboard')}
-              style={{
-                padding: '14px 20px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '12px',
-                background: '#ffffff',
-                color: '#111827',
-                fontSize: '15px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Back to Dashboard
-            </button>
-          </div>
+                {saving ? 'Saving...' : 'Save Settings'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </main>
   )
+}
+
+/* STYLES */
+
+const headerStyle = {
+  background: '#fff',
+  borderBottom: '1px solid #e5e7eb',
+  padding: '14px 24px',
+}
+
+const containerStyle = {
+  maxWidth: '1100px',
+  margin: '0 auto',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+}
+
+const navStyle = {
+  display: 'flex',
+  gap: '10px',
+}
+
+const navLinkStyle = {
+  padding: '10px 14px',
+  borderRadius: '12px',
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  textDecoration: 'none',
+  color: '#334155',
+  fontWeight: 600,
+}
+
+const navLinkActiveStyle = {
+  ...navLinkStyle,
+  background: '#0f172a',
+  color: '#fff',
+}
+
+const wrapperStyle = {
+  maxWidth: '700px',
+  margin: '40px auto',
+  padding: '0 20px',
+}
+
+const cardStyle = {
+  background: '#fff',
+  borderRadius: '20px',
+  padding: '30px',
+  border: '1px solid #e5e7eb',
+  boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+}
+
+const titleStyle = {
+  fontSize: '28px',
+  fontWeight: 800,
+  marginBottom: '6px',
+}
+
+const subtitleStyle = {
+  color: '#64748b',
+  marginBottom: '20px',
+}
+
+const formGrid = {
+  display: 'grid',
+  gap: '12px',
+}
+
+const inputStyle = {
+  padding: '12px',
+  borderRadius: '10px',
+  border: '1px solid #d1d5db',
+  fontSize: '14px',
+}
+
+const saveButton = {
+  marginTop: '20px',
+  padding: '12px',
+  borderRadius: '12px',
+  border: 'none',
+  background: '#0f172a',
+  color: '#fff',
+  fontWeight: 700,
+  cursor: 'pointer',
 }
