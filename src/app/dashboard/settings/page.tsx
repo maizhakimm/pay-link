@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [companyName, setCompanyName] = useState('')
   const [companyReg, setCompanyReg] = useState('')
   const [businessAddress, setBusinessAddress] = useState('')
+  const [dailyNote, setDailyNote] = useState('')
 
   const [bankName, setBankName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
@@ -34,7 +35,10 @@ export default function SettingsPage() {
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
     const { data } = await supabase
       .from('seller_profiles')
@@ -50,6 +54,7 @@ export default function SettingsPage() {
       setCompanyName(data.company_name || '')
       setCompanyReg(data.company_registration || '')
       setBusinessAddress(data.business_address || '')
+      setDailyNote(data.daily_note || '')
 
       setBankName(data.bank_name || '')
       setAccountNumber(data.account_number || '')
@@ -66,11 +71,12 @@ export default function SettingsPage() {
 
     setUploading(true)
 
-    const filePath = `seller-${sellerId}-${Date.now()}`
+    const ext = file.name.split('.').pop() || 'jpg'
+    const filePath = `seller-${sellerId}-${Date.now()}.${ext}`
 
     const { error } = await supabase.storage
       .from('product-images')
-      .upload(filePath, file)
+      .upload(filePath, file, { upsert: true })
 
     if (error) {
       alert(error.message)
@@ -100,6 +106,7 @@ export default function SettingsPage() {
         company_name: companyName,
         company_registration: companyReg,
         business_address: businessAddress,
+        daily_note: dailyNote,
         bank_name: bankName,
         account_number: accountNumber,
         account_holder_name: accountHolderName,
@@ -120,7 +127,11 @@ export default function SettingsPage() {
     <main style={{ minHeight: '100vh', background: '#f8fafc' }}>
       <header style={headerStyle}>
         <div style={containerStyle}>
-          <img src="/GoBayar%20Logo%2001%20800px.svg" style={{ height: 40 }} />
+          <img
+            src="/GoBayar%20Logo%2001%20800px.svg"
+            alt="GoBayar"
+            style={{ height: 40 }}
+          />
 
           <nav style={navStyle}>
             <a href="/dashboard" style={navLinkStyle}>Dashboard</a>
@@ -134,30 +145,28 @@ export default function SettingsPage() {
       <div style={wrapperStyle}>
         <div style={cardStyle}>
           <h1 style={titleStyle}>Seller Profile</h1>
+          <p style={subtitleStyle}>
+            Manage your store, payout details, and seller message.
+          </p>
 
           {loading ? (
             <p>Loading...</p>
           ) : (
             <>
-              {/* PROFILE IMAGE */}
               <div style={{ marginBottom: 20 }}>
-                <p style={label}>Profile Image</p>
+                <p style={labelStyle}>Profile Image</p>
 
-                {profileImage && (
+                {profileImage ? (
                   <img
                     src={profileImage}
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      marginBottom: 10,
-                    }}
+                    alt="Seller profile"
+                    style={profilePreviewStyle}
                   />
-                )}
+                ) : null}
 
                 <input
                   type="file"
+                  accept="image/*"
                   onChange={(e) => {
                     if (e.target.files?.[0]) {
                       uploadImage(e.target.files[0])
@@ -165,88 +174,109 @@ export default function SettingsPage() {
                   }}
                 />
 
-                {uploading && <p>Uploading...</p>}
+                {uploading ? (
+                  <p style={smallNoteStyle}>Uploading...</p>
+                ) : null}
               </div>
 
-              {/* BASIC */}
-              <div style={section}>
-                <p style={sectionTitle}>Basic Info</p>
+              <div style={sectionStyle}>
+                <p style={sectionTitleStyle}>Basic Info</p>
 
                 <input
                   placeholder="Store Name"
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
-                  style={input}
+                  style={inputStyle}
                 />
 
                 <input
                   placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  style={input}
+                  style={inputStyle}
                 />
 
                 <input
                   placeholder="WhatsApp Number"
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
-                  style={input}
+                  style={inputStyle}
                 />
               </div>
 
-              {/* COMPANY */}
-              <div style={section}>
-                <p style={sectionTitle}>Business Info</p>
+              <div style={sectionStyle}>
+                <p style={sectionTitleStyle}>Business Info</p>
 
                 <input
                   placeholder="Company Name"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  style={input}
+                  style={inputStyle}
                 />
 
                 <input
                   placeholder="Company Registration No"
                   value={companyReg}
                   onChange={(e) => setCompanyReg(e.target.value)}
-                  style={input}
+                  style={inputStyle}
                 />
 
                 <textarea
                   placeholder="Business Address"
                   value={businessAddress}
                   onChange={(e) => setBusinessAddress(e.target.value)}
-                  style={{ ...input, height: 80 }}
+                  style={textareaStyle}
                 />
               </div>
 
-              {/* BANK */}
-              <div style={section}>
-                <p style={sectionTitle}>Payout Details</p>
+              <div style={sectionStyle}>
+                <p style={sectionTitleStyle}>Daily Note for Customers</p>
+
+                <textarea
+                  placeholder={`Contoh:
+Delivery start 12 tengahari 😊
+Self pickup available
+Area delivery: Setia Alam sahaja`}
+                  value={dailyNote}
+                  onChange={(e) => setDailyNote(e.target.value)}
+                  style={dailyNoteStyle}
+                />
+
+                <p style={smallNoteStyle}>
+                  Nota ini akan dimasukkan dalam mesej WhatsApp share menu.
+                </p>
+              </div>
+
+              <div style={sectionStyle}>
+                <p style={sectionTitleStyle}>Payout Details</p>
 
                 <input
                   placeholder="Bank Name"
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  style={input}
+                  style={inputStyle}
                 />
 
                 <input
                   placeholder="Account Number"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value)}
-                  style={input}
+                  style={inputStyle}
                 />
 
                 <input
                   placeholder="Account Holder Name"
                   value={accountHolderName}
                   onChange={(e) => setAccountHolderName(e.target.value)}
-                  style={input}
+                  style={inputStyle}
                 />
               </div>
 
-              <button onClick={handleSave} style={saveBtn}>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={saveBtnStyle}
+              >
                 {saving ? 'Saving...' : 'Save Settings'}
               </button>
             </>
@@ -257,13 +287,11 @@ export default function SettingsPage() {
   )
 }
 
-/* STYLES */
-
 const headerStyle = {
   background: '#fff',
   borderBottom: '1px solid #e5e7eb',
   padding: '14px 24px',
-}
+} as const
 
 const containerStyle = {
   maxWidth: '1100px',
@@ -271,12 +299,15 @@ const containerStyle = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-}
+  gap: '16px',
+  flexWrap: 'wrap' as const,
+} as const
 
 const navStyle = {
   display: 'flex',
   gap: '10px',
-}
+  flexWrap: 'wrap' as const,
+} as const
 
 const navLinkStyle = {
   padding: '10px 14px',
@@ -286,19 +317,19 @@ const navLinkStyle = {
   textDecoration: 'none',
   color: '#334155',
   fontWeight: 600,
-}
+} as const
 
 const navLinkActiveStyle = {
   ...navLinkStyle,
   background: '#0f172a',
   color: '#fff',
-}
+} as const
 
 const wrapperStyle = {
-  maxWidth: '700px',
+  maxWidth: '760px',
   margin: '40px auto',
   padding: '0 20px',
-}
+} as const
 
 const cardStyle = {
   background: '#fff',
@@ -306,37 +337,84 @@ const cardStyle = {
   padding: '30px',
   border: '1px solid #e5e7eb',
   boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
-}
+} as const
 
 const titleStyle = {
   fontSize: '26px',
   fontWeight: 800,
-  marginBottom: '16px',
-}
+  marginBottom: '6px',
+  color: '#0f172a',
+} as const
 
-const section = {
-  marginBottom: 20,
-}
+const subtitleStyle = {
+  color: '#64748b',
+  marginBottom: '20px',
+} as const
 
-const sectionTitle = {
+const sectionStyle = {
+  marginBottom: '20px',
+} as const
+
+const sectionTitleStyle = {
   fontWeight: 700,
-  marginBottom: 10,
-}
+  marginBottom: '10px',
+  color: '#0f172a',
+} as const
 
-const input = {
+const inputStyle = {
   width: '100%',
   padding: '12px',
   marginBottom: '10px',
   borderRadius: '10px',
   border: '1px solid #d1d5db',
-}
+  fontSize: '14px',
+} as const
 
-const label = {
+const textareaStyle = {
+  width: '100%',
+  minHeight: '90px',
+  padding: '12px',
+  marginBottom: '10px',
+  borderRadius: '10px',
+  border: '1px solid #d1d5db',
+  fontSize: '14px',
+  resize: 'vertical' as const,
+} as const
+
+const dailyNoteStyle = {
+  width: '100%',
+  minHeight: '120px',
+  padding: '12px',
+  marginBottom: '8px',
+  borderRadius: '10px',
+  border: '1px solid #d1d5db',
+  fontSize: '14px',
+  resize: 'vertical' as const,
+  lineHeight: 1.6,
+} as const
+
+const labelStyle = {
   fontWeight: 600,
   marginBottom: 6,
-}
+  color: '#0f172a',
+} as const
 
-const saveBtn = {
+const smallNoteStyle = {
+  fontSize: '12px',
+  color: '#64748b',
+  marginTop: '4px',
+} as const
+
+const profilePreviewStyle = {
+  width: 80,
+  height: 80,
+  borderRadius: '50%',
+  objectFit: 'cover' as const,
+  marginBottom: 10,
+  display: 'block',
+} as const
+
+const saveBtnStyle = {
   width: '100%',
   padding: '14px',
   borderRadius: '12px',
@@ -344,4 +422,4 @@ const saveBtn = {
   color: '#fff',
   border: 'none',
   fontWeight: 700,
-}
+} as const
