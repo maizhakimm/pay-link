@@ -18,7 +18,6 @@ type OrderRow = {
   id: string
   amount?: number | null
   payment_status?: string | null
-  bayarcash_status?: string | null
   order_status?: string | null
   payout_status?: string | null
   fulfillment_status?: string | null
@@ -32,10 +31,7 @@ function normalizeStatus(value?: string | null, fallback = 'pending') {
 }
 
 function getMainPaymentStatus(order: OrderRow) {
-  return normalizeStatus(
-    order.payment_status || order.bayarcash_status || order.order_status,
-    'pending'
-  )
+  return normalizeStatus(order.payment_status || order.order_status, 'pending')
 }
 
 function isPaidStatus(status: string) {
@@ -108,11 +104,10 @@ export default function DashboardPage() {
         supabase
           .from('orders')
           .select(
-            'id, amount, payment_status, bayarcash_status, order_status, payout_status, fulfillment_status, created_at, product_name, buyer_name'
+            'id, amount, payment_status, order_status, payout_status, fulfillment_status, created_at, product_name, buyer_name'
           )
           .eq('seller_profile_id', typedSeller.id)
-          .order('created_at', { ascending: false })
-          .limit(5),
+          .order('created_at', { ascending: false }),
       ])
 
     if (productError) {
@@ -135,6 +130,8 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboard()
   }, [loadDashboard])
+
+  const recentOrders = useMemo(() => orders.slice(0, 5), [orders])
 
   const stats = useMemo(() => {
     const totalProducts = products.length
@@ -314,15 +311,22 @@ export default function DashboardPage() {
                     </a>
                   </div>
 
-                  {orders.length === 0 ? (
+                  {recentOrders.length === 0 ? (
                     <p style={{ margin: 0, color: '#64748b' }}>No orders yet.</p>
                   ) : (
                     <div style={{ display: 'grid', gap: '12px' }}>
-                      {orders.map((order) => {
+                      {recentOrders.map((order) => {
                         const paymentStatus = getMainPaymentStatus(order)
                         return (
                           <div key={order.id} style={orderCardStyle}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: '10px',
+                                flexWrap: 'wrap',
+                              }}
+                            >
                               <div>
                                 <div style={orderTitleStyle}>
                                   {order.product_name || 'Order'}
