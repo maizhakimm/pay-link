@@ -6,10 +6,12 @@ import { supabase } from '../../lib/supabase'
 type SellerProfileRow = {
   id: string
   store_name: string | null
+  daily_note?: string | null
 }
 
 type ProductRow = {
   id: string
+  name?: string | null
   is_active?: boolean | null
   price?: number | null
 }
@@ -91,7 +93,7 @@ export default function DashboardPage() {
 
     const { data: sellerData, error: sellerError } = await supabase
       .from('seller_profiles')
-      .select('id, store_name')
+      .select('id, store_name, daily_note')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -108,7 +110,7 @@ export default function DashboardPage() {
       await Promise.all([
         supabase
           .from('products')
-          .select('id, is_active, price')
+          .select('id, name, is_active, price')
           .eq('seller_profile_id', typedSeller.id),
         supabase
           .from('orders')
@@ -175,6 +177,12 @@ export default function DashboardPage() {
         ? `/shop/${shopSlug}`
         : ''
 
+  const activeProducts = useMemo(() => {
+    return products
+      .filter((product) => Boolean(product.is_active))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  }, [products])
+
   async function handleCopyLink() {
     if (!shopLink) return
 
@@ -190,10 +198,24 @@ export default function DashboardPage() {
   function handleShareWhatsApp() {
     if (!shopLink || !sellerProfile?.store_name) return
 
+    const productLines =
+      activeProducts.length > 0
+        ? activeProducts
+            .map((product, index) => {
+              return `${index + 1}. ${product.name || 'Menu'} - ${formatMoney(product.price)}`
+            })
+            .join('\n')
+        : 'Menu akan dikemaskini tidak lama lagi.'
+
+    const dailyNoteBlock = sellerProfile.daily_note?.trim()
+      ? `\n${sellerProfile.daily_note.trim()}\n`
+      : '\n'
+
     const message = `Salam 😊
 
-Open order hari ini.
+Open order hari ini:
 
+${productLines}${dailyNoteBlock}
 Klik link di bawah untuk order:
 ${shopLink}
 
@@ -308,6 +330,28 @@ ${sellerProfile.store_name}`
 
                   <div style={shopLinkBox}>
                     {shopLink || 'Complete your seller profile first'}
+                  </div>
+
+                  <div style={menuPreviewBox}>
+                    <div style={menuPreviewTitle}>Preview mesej WhatsApp</div>
+
+                    {activeProducts.length === 0 ? (
+                      <div style={menuPreviewText}>Tiada menu aktif buat masa ini.</div>
+                    ) : (
+                      <div style={menuPreviewText}>
+                        {activeProducts.map((product, index) => (
+                          <div key={product.id}>
+                            {index + 1}. {product.name || 'Menu'} - {formatMoney(product.price)}
+                          </div>
+                        ))}
+
+                        {sellerProfile?.daily_note?.trim() ? (
+                          <div style={dailyNotePreviewStyle}>
+                            {sellerProfile.daily_note.trim()}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -554,6 +598,35 @@ const shopLinkBox = {
   color: '#0f172a',
   fontWeight: 600,
   wordBreak: 'break-all' as const,
+  marginBottom: '12px',
+} as const
+
+const menuPreviewBox = {
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: '14px',
+  padding: '14px',
+} as const
+
+const menuPreviewTitle = {
+  fontSize: '13px',
+  fontWeight: 800,
+  color: '#0f172a',
+  marginBottom: '8px',
+} as const
+
+const menuPreviewText = {
+  color: '#475569',
+  fontSize: '14px',
+  lineHeight: 1.8,
+} as const
+
+const dailyNotePreviewStyle = {
+  marginTop: '10px',
+  paddingTop: '10px',
+  borderTop: '1px dashed #cbd5e1',
+  whiteSpace: 'pre-line' as const,
+  color: '#334155',
 } as const
 
 const shareActions = {
