@@ -63,11 +63,11 @@ export default async function Page({ params }: PageProps) {
     )
   }
 
-  let seller =
-    (sellers as SellerProfile[]).find((item) => {
-      if (!item.store_name) return false
-      return slugify(item.store_name) === requestedSlug
-    }) || null
+  const seller =
+  (sellers as SellerProfile[]).find((item) => {
+    if (!item.store_name) return false
+    return slugify(item.store_name) === requestedSlug
+  }) || null
 
   if (!seller) {
     return (
