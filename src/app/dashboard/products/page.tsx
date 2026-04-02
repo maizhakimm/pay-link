@@ -126,7 +126,7 @@ const header = {
   borderBottom: '1px solid #eee',
 }
 
-const navRow = {
+const navRow: React.CSSProperties = {
   display: 'flex',
   gap: 8,
   overflowX: 'auto',
