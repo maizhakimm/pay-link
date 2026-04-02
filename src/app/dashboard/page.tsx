@@ -207,7 +207,7 @@ export default function DashboardPage() {
             .join('\n')
         : 'Menu akan dikemaskini tidak lama lagi.'
 
-    const dailyNoteBlock = sellerProfile.daily_note?.trim()
+    const messageBlock = sellerProfile.daily_note?.trim()
       ? `\n${sellerProfile.daily_note.trim()}\n`
       : '\n'
 
@@ -215,7 +215,7 @@ export default function DashboardPage() {
 
 Open order hari ini:
 
-${productLines}${dailyNoteBlock}
+${productLines}${messageBlock}
 Klik link di bawah untuk order:
 ${shopLink}
 
@@ -333,7 +333,13 @@ ${sellerProfile.store_name}`
                   </div>
 
                   <div style={menuPreviewBox}>
-                    <div style={menuPreviewTitle}>Preview mesej WhatsApp</div>
+                    <div style={menuPreviewTitle}>Preview WhatsApp message</div>
+
+                    <div style={previewInfoBox}>
+                      Message dan product list ini akan ikut data secara automatik.
+                      Product list hanya akan ambil produk yang active sahaja.
+                      Kalau nak ubah senarai produk, sila update di page Products.
+                    </div>
 
                     {activeProducts.length === 0 ? (
                       <div style={menuPreviewText}>Tiada menu aktif buat masa ini.</div>
@@ -613,6 +619,17 @@ const menuPreviewTitle = {
   fontWeight: 800,
   color: '#0f172a',
   marginBottom: '8px',
+} as const
+
+const previewInfoBox = {
+  background: '#ffffff',
+  border: '1px solid #dbe2ea',
+  borderRadius: '12px',
+  padding: '12px',
+  color: '#475569',
+  fontSize: '13px',
+  lineHeight: 1.7,
+  marginBottom: '10px',
 } as const
 
 const menuPreviewText = {
