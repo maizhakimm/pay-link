@@ -38,8 +38,14 @@ export default function CheckoutCard({
     product.store_name?.trim() ||
     'Seller'
 
+  const sellerImage =
+    seller?.profile_image && seller.profile_image.startsWith('http')
+      ? seller.profile_image
+      : ''
+
   const [qty, setQty] = useState(1)
   const [index, setIndex] = useState(0)
+  const [sellerImageError, setSellerImageError] = useState(false)
 
   const images = [
     product.image_1,
@@ -106,11 +112,12 @@ export default function CheckoutCard({
             <div style={gradient} />
 
             <div style={sellerOverlay}>
-              {seller?.profile_image ? (
+              {sellerImage && !sellerImageError ? (
                 <img
-                  src={seller.profile_image}
+                  src={sellerImage}
                   alt={sellerName}
                   style={sellerImg}
+                  onError={() => setSellerImageError(true)}
                 />
               ) : (
                 <div style={sellerFallback}>
