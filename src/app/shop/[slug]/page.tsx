@@ -46,6 +46,8 @@ export default async function Page({ params }: PageProps) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  const requestedSlug = params.slug.toLowerCase().trim()
+
   const { data: sellers, error: sellerError } = await supabase
     .from('seller_profiles')
     .select('id, store_name, profile_image, email, whatsapp, business_address')
@@ -61,17 +63,23 @@ export default async function Page({ params }: PageProps) {
     )
   }
 
-  const seller =
-    (sellers as SellerProfile[]).find(
-      (item) => item.store_name && slugify(item.store_name) === params.slug
-    ) || null
+  let seller =
+    (sellers as SellerProfile[]).find((item) => {
+      if (!item.store_name) return false
+      return slugify(item.store_name) === requestedSlug
+    }) || null
 
   if (!seller) {
     return (
       <main style={errorMain}>
         <div style={errorBox}>
           <h2 style={errorTitle}>Shop not found</h2>
-          <p style={errorText}>The shop link may be invalid or unavailable.</p>
+          <p style={errorText}>
+            The shop link may be invalid or unavailable.
+          </p>
+          <p style={{ ...errorText, marginTop: 8 }}>
+            Try using the exact shop slug based on store name.
+          </p>
         </div>
       </main>
     )
@@ -99,7 +107,7 @@ export default async function Page({ params }: PageProps) {
     <ShopPageClient
       seller={seller}
       products={(products || []) as ProductRow[]}
-      shopSlug={params.slug}
+      shopSlug={requestedSlug}
     />
   )
 }
