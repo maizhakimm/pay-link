@@ -398,47 +398,18 @@ export default function ProductsPage() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#f8fafc',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <header
-        style={{
-          background: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '14px 24px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1100px',
-            margin: '0 auto',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '16px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <main style={pageWrap}>
+      <header style={headerStyle}>
+        <div style={headerInner}>
+          <div style={brandWrap}>
             <img
               src="/GoBayar%20Logo%2001%20800px.svg"
               alt="GoBayar"
-              style={{ height: '40px', width: 'auto', display: 'block' }}
+              style={brandLogo}
             />
           </div>
 
-          <nav
-            style={{
-              display: 'flex',
-              gap: '10px',
-              flexWrap: 'wrap',
-            }}
-          >
+          <nav style={mobileNavWrap}>
             <a href="/dashboard" style={navLinkStyle}>
               Dashboard
             </a>
@@ -455,74 +426,25 @@ export default function ProductsPage() {
         </div>
       </header>
 
-      <div
-        style={{
-          flex: 1,
-          padding: '24px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1100px',
-            margin: '0 auto',
-          }}
-        >
-          <div style={{ marginBottom: '18px' }}>
-            <h1
-              style={{
-                margin: '0 0 8px 0',
-                fontSize: '32px',
-                color: '#0f172a',
-                fontWeight: 800,
-              }}
-            >
-              Products
-            </h1>
-
-            <p
-              style={{
-                margin: 0,
-                color: '#64748b',
-                fontSize: '15px',
-              }}
-            >
-              Create and manage your payment link products.
+      <div style={contentWrap}>
+        <div style={contentInner}>
+          <div style={pageTitleWrap}>
+            <h1 style={pageTitle}>Products</h1>
+            <p style={pageSubTitle}>
+              Add, edit, and manage products easily from your phone.
             </p>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1.1fr 1fr',
-              gap: '18px',
-            }}
-          >
-            <section
-              style={{
-                background: '#ffffff',
-                borderRadius: '22px',
-                padding: '22px',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
-              }}
-            >
-              <h2
-                style={{
-                  margin: '0 0 16px 0',
-                  fontSize: '22px',
-                  color: '#0f172a',
-                  fontWeight: 800,
-                }}
-              >
-                Create Product
-              </h2>
+          <div style={mobileStackLayout}>
+            <section style={sectionCard}>
+              <h2 style={sectionTitle}>Create Product</h2>
 
-              <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={formGrid}>
                 <label style={labelStyle}>Product Name</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Example: Lolipop"
+                  placeholder="Example: Nasi Lemak Ayam"
                   style={inputStyle}
                 />
 
@@ -551,21 +473,13 @@ export default function ProductsPage() {
                   style={inputStyle}
                 />
 
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    fontSize: '14px',
-                    color: '#334155',
-                  }}
-                >
+                <label style={switchLabel}>
                   <input
                     type="checkbox"
                     checked={trackStock}
                     onChange={(e) => setTrackStock(e.target.checked)}
                   />
-                  Track Stock Quantity
+                  <span>Track Stock Quantity</span>
                 </label>
 
                 <label style={labelStyle}>Stock Quantity</label>
@@ -581,19 +495,10 @@ export default function ProductsPage() {
                   }}
                 />
 
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '14px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    color: '#475569',
-                    fontSize: '13px',
-                  }}
-                >
+                <div style={infoBox}>
                   <strong style={{ color: '#0f172a' }}>Stock note:</strong>
-                  <div style={{ marginTop: '6px' }}>
-                    If stock tracking is ON and quantity is 0, product will become sold out automatically.
+                  <div style={{ marginTop: 6 }}>
+                    If stock tracking is on and quantity is 0, the product will become sold out automatically.
                   </div>
                 </div>
 
@@ -607,34 +512,10 @@ export default function ProductsPage() {
                 />
 
                 {productImages.length > 0 && (
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-                      gap: '10px',
-                    }}
-                  >
+                  <div style={thumbGrid}>
                     {productImages.map((file, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '12px',
-                          padding: '8px',
-                          background: '#f8fafc',
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            color: '#475569',
-                            marginBottom: '6px',
-                            textAlign: 'center',
-                            wordBreak: 'break-word',
-                          }}
-                        >
-                          {file.name}
-                        </div>
+                      <div key={index} style={thumbItem}>
+                        <div style={thumbName}>{file.name}</div>
                         <button
                           type="button"
                           onClick={() => removeCreateImage(index)}
@@ -647,18 +528,9 @@ export default function ProductsPage() {
                   </div>
                 )}
 
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '14px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    color: '#475569',
-                    fontSize: '13px',
-                  }}
-                >
+                <div style={infoBox}>
                   <strong style={{ color: '#0f172a' }}>Preview link:</strong>
-                  <div style={{ marginTop: '6px', wordBreak: 'break-all' }}>
+                  <div style={{ marginTop: 6, wordBreak: 'break-all' }}>
                     {generatedSlug
                       ? `${appUrl}/pay-link/${generatedSlug}`
                       : 'Enter product name to generate pay link'}
@@ -669,16 +541,9 @@ export default function ProductsPage() {
                   onClick={handleCreateProduct}
                   disabled={saving}
                   style={{
-                    width: '100%',
-                    padding: '15px 18px',
-                    borderRadius: '14px',
-                    background: saving ? '#93c5fd' : '#0f172a',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontSize: '15px',
-                    fontWeight: 800,
+                    ...primaryButton,
+                    opacity: saving ? 0.7 : 1,
                     cursor: saving ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 12px 24px rgba(15,23,42,0.16)',
                   }}
                 >
                   {saving ? 'Saving...' : 'Create Product'}
@@ -686,56 +551,31 @@ export default function ProductsPage() {
               </div>
             </section>
 
-            <section
-              style={{
-                background: '#ffffff',
-                borderRadius: '22px',
-                padding: '22px',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
-              }}
-            >
-              <h2
-                style={{
-                  margin: '0 0 16px 0',
-                  fontSize: '22px',
-                  color: '#0f172a',
-                  fontWeight: 800,
-                }}
-              >
-                Your Products
-              </h2>
+            <section style={sectionCard}>
+              <h2 style={sectionTitle}>Your Products</h2>
 
               {loading ? (
-                <p style={{ margin: 0, color: '#64748b' }}>Loading products...</p>
+                <p style={mutedText}>Loading products...</p>
               ) : error ? (
-                <p style={{ margin: 0, color: '#b91c1c' }}>{error}</p>
+                <p style={errorText}>{error}</p>
               ) : products.length === 0 ? (
-                <p style={{ margin: 0, color: '#64748b' }}>No products yet.</p>
+                <p style={mutedText}>No products yet.</p>
               ) : (
-                <div style={{ display: 'grid', gap: '14px' }}>
+                <div style={productListWrap}>
                   {products.map((product) => {
                     const link = `${appUrl}/pay-link/${product.slug}`
                     const images = getProductImages(product)
                     const thumb = images[0]
 
                     return (
-                      <div
-                        key={product.id}
-                        style={{
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '18px',
-                          padding: '16px',
-                          background: '#ffffff',
-                          position: 'relative',
-                        }}
-                      >
+                      <div key={product.id} style={productCard}>
                         {editingId === product.id ? (
-                          <div style={{ display: 'grid', gap: '10px' }}>
+                          <div style={formGrid}>
                             <input
                               value={editingName}
                               onChange={(e) => setEditingName(e.target.value)}
                               style={inputStyle}
+                              placeholder="Product name"
                             />
 
                             <textarea
@@ -743,6 +583,7 @@ export default function ProductsPage() {
                               onChange={(e) => setEditingDescription(e.target.value)}
                               rows={3}
                               style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+                              placeholder="Description"
                             />
 
                             <input
@@ -751,49 +592,33 @@ export default function ProductsPage() {
                                 setEditingPrice(e.target.value.replace(/[^\d.]/g, ''))
                               }
                               style={inputStyle}
+                              placeholder="Price"
                             />
 
-                            <label
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                fontSize: '14px',
-                                color: '#334155',
-                              }}
-                            >
+                            <label style={switchLabel}>
                               <input
                                 type="checkbox"
                                 checked={editingIsActive}
                                 onChange={(e) => setEditingIsActive(e.target.checked)}
                               />
-                              Active
+                              <span>Active</span>
                             </label>
 
-                            <label
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                fontSize: '14px',
-                                color: '#334155',
-                              }}
-                            >
+                            <label style={switchLabel}>
                               <input
                                 type="checkbox"
                                 checked={editingTrackStock}
                                 onChange={(e) => setEditingTrackStock(e.target.checked)}
                               />
-                              Track Stock Quantity
+                              <span>Track Stock Quantity</span>
                             </label>
 
-                            <label style={labelStyle}>Stock Quantity</label>
                             <input
                               value={editingStockQuantity}
                               onChange={(e) =>
                                 setEditingStockQuantity(e.target.value.replace(/[^\d]/g, ''))
                               }
-                              placeholder="0"
+                              placeholder="Stock quantity"
                               disabled={!editingTrackStock}
                               style={{
                                 ...inputStyle,
@@ -804,33 +629,13 @@ export default function ProductsPage() {
 
                             <label style={labelStyle}>Existing Images</label>
                             {editingExistingImages.length > 0 ? (
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-                                  gap: '10px',
-                                }}
-                              >
+                              <div style={thumbGrid}>
                                 {editingExistingImages.map((image, index) => (
-                                  <div
-                                    key={index}
-                                    style={{
-                                      border: '1px solid #e2e8f0',
-                                      borderRadius: '12px',
-                                      padding: '8px',
-                                      background: '#f8fafc',
-                                    }}
-                                  >
+                                  <div key={index} style={thumbItem}>
                                     <img
                                       src={image}
                                       alt={`Existing ${index + 1}`}
-                                      style={{
-                                        width: '100%',
-                                        height: '70px',
-                                        objectFit: 'cover',
-                                        borderRadius: '10px',
-                                        marginBottom: '6px',
-                                      }}
+                                      style={thumbPreview}
                                     />
                                     <button
                                       type="button"
@@ -843,9 +648,7 @@ export default function ProductsPage() {
                                 ))}
                               </div>
                             ) : (
-                              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
-                                No existing images
-                              </p>
+                              <p style={mutedSmall}>No existing images</p>
                             )}
 
                             <label style={labelStyle}>Add More Images (Max total 5)</label>
@@ -858,34 +661,10 @@ export default function ProductsPage() {
                             />
 
                             {editingNewImages.length > 0 && (
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-                                  gap: '10px',
-                                }}
-                              >
+                              <div style={thumbGrid}>
                                 {editingNewImages.map((file, index) => (
-                                  <div
-                                    key={index}
-                                    style={{
-                                      border: '1px solid #e2e8f0',
-                                      borderRadius: '12px',
-                                      padding: '8px',
-                                      background: '#f8fafc',
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        fontSize: '11px',
-                                        color: '#475569',
-                                        marginBottom: '6px',
-                                        textAlign: 'center',
-                                        wordBreak: 'break-word',
-                                      }}
-                                    >
-                                      {file.name}
-                                    </div>
+                                  <div key={index} style={thumbItem}>
+                                    <div style={thumbName}>{file.name}</div>
                                     <button
                                       type="button"
                                       onClick={() => removeEditNewImage(index)}
@@ -898,226 +677,95 @@ export default function ProductsPage() {
                               </div>
                             )}
 
-                            <div
-                              style={{
-                                display: 'flex',
-                                gap: '10px',
-                                flexWrap: 'wrap',
-                              }}
-                            >
-                              <button onClick={() => saveEdit(product)} style={darkButton}>
+                            <div style={actionRowStack}>
+                              <button onClick={() => saveEdit(product)} style={primaryHalfButton}>
                                 Save
                               </button>
-                              <button onClick={cancelEdit} style={lightButton}>
+                              <button onClick={cancelEdit} style={secondaryHalfButton}>
                                 Cancel
                               </button>
                             </div>
                           </div>
                         ) : (
                           <>
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '16px',
-                                right: '16px',
-                                display: 'flex',
-                                gap: '8px',
-                                flexWrap: 'wrap',
-                                justifyContent: 'flex-end',
-                                maxWidth: '220px',
-                              }}
-                            >
-                              <span
-                                style={{
-                                  display: 'inline-block',
-                                  padding: '6px 10px',
-                                  borderRadius: '999px',
-                                  background: product.is_active ? '#dcfce7' : '#f3f4f6',
-                                  color: product.is_active ? '#166534' : '#374151',
-                                  fontSize: '12px',
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {product.is_active ? 'Active' : 'Inactive'}
-                              </span>
-
-                              {product.sold_out ? (
-                                <span
-                                  style={{
-                                    display: 'inline-block',
-                                    padding: '6px 10px',
-                                    borderRadius: '999px',
-                                    background: '#fee2e2',
-                                    color: '#b91c1c',
-                                    fontSize: '12px',
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  Sold Out
-                                </span>
-                              ) : null}
-                            </div>
-
-                            <div
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: thumb ? '92px minmax(0,1fr)' : '1fr',
-                                gap: '14px',
-                                marginBottom: '12px',
-                                paddingRight: '120px',
-                              }}
-                            >
-                              {thumb && (
+                            <div style={productTopRow}>
+                              {thumb ? (
                                 <img
                                   src={thumb}
                                   alt={product.name}
-                                  style={{
-                                    width: '92px',
-                                    height: '92px',
-                                    objectFit: 'cover',
-                                    borderRadius: '14px',
-                                    border: '1px solid #e2e8f0',
-                                  }}
+                                  style={productThumb}
                                 />
+                              ) : (
+                                <div style={productThumbPlaceholder}>No image</div>
                               )}
 
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gap: '8px',
-                                  minWidth: 0,
-                                }}
-                              >
-                                <div>
-                                  <h3
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={badgeRow}>
+                                  <span
                                     style={{
-                                      margin: '0 0 6px 0',
-                                      fontSize: '20px',
-                                      color: '#0f172a',
-                                      fontWeight: 800,
+                                      ...statusBadge,
+                                      background: product.is_active ? '#dcfce7' : '#f3f4f6',
+                                      color: product.is_active ? '#166534' : '#374151',
                                     }}
                                   >
-                                    {product.name}
-                                  </h3>
+                                    {product.is_active ? 'Active' : 'Inactive'}
+                                  </span>
 
-                                  <p
-                                    style={{
-                                      margin: '0 0 6px 0',
-                                      color: '#1d4ed8',
-                                      fontSize: '18px',
-                                      fontWeight: 800,
-                                    }}
-                                  >
-                                    RM {Number(product.price).toFixed(2)}
-                                  </p>
-
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      gap: '8px',
-                                      flexWrap: 'wrap',
-                                      marginBottom: product.description ? '8px' : '0',
-                                    }}
-                                  >
+                                  {product.sold_out ? (
                                     <span
                                       style={{
-                                        display: 'inline-block',
-                                        padding: '6px 10px',
-                                        borderRadius: '999px',
-                                        background: '#f8fafc',
-                                        border: '1px solid #e2e8f0',
-                                        color: '#334155',
-                                        fontSize: '12px',
-                                        fontWeight: 700,
+                                        ...statusBadge,
+                                        background: '#fee2e2',
+                                        color: '#b91c1c',
                                       }}
                                     >
-                                      {product.track_stock
-                                        ? `Stock: ${product.stock_quantity ?? 0}`
-                                        : 'Stock tracking off'}
+                                      Sold Out
                                     </span>
-                                  </div>
-
-                                  {product.description && (
-                                    <p
-                                      style={{
-                                        margin: 0,
-                                        color: '#64748b',
-                                        fontSize: '14px',
-                                        lineHeight: 1.7,
-                                      }}
-                                    >
-                                      {product.description}
-                                    </p>
-                                  )}
+                                  ) : null}
                                 </div>
+
+                                <h3 style={productTitle}>{product.name}</h3>
+                                <p style={productPrice}>RM {Number(product.price).toFixed(2)}</p>
+
+                                <div style={tagRow}>
+                                  <span style={tagStyle}>
+                                    {product.track_stock
+                                      ? `Stock: ${product.stock_quantity ?? 0}`
+                                      : 'Stock tracking off'}
+                                  </span>
+                                </div>
+
+                                {product.description && (
+                                  <p style={productDescription}>{product.description}</p>
+                                )}
                               </div>
                             </div>
 
-                            <div
-                              style={{
-                                padding: '12px 14px',
-                                borderRadius: '14px',
-                                background: '#f8fafc',
-                                border: '1px solid #e2e8f0',
-                                fontSize: '13px',
-                                color: '#475569',
-                                wordBreak: 'break-all',
-                                marginBottom: '10px',
-                              }}
-                            >
-                              {link}
-                            </div>
+                            <div style={linkBox}>{link}</div>
 
-                            <div
-                              style={{
-                                display: 'flex',
-                                gap: '8px',
-                                flexWrap: 'wrap',
-                                marginBottom: '12px',
-                              }}
-                            >
-                              <button onClick={() => copyLink(product.slug)} style={smallActionButton}>
+                            <div style={actionRowStack}>
+                              <button onClick={() => copyLink(product.slug)} style={secondaryActionButton}>
                                 📋 Copy
                               </button>
-                              <button onClick={() => shareLink(product.slug)} style={smallActionButton}>
+                              <button onClick={() => shareLink(product.slug)} style={secondaryActionButton}>
                                 🔗 Share
                               </button>
-                              <button onClick={() => startEdit(product)} style={smallActionButton}>
+                              <button onClick={() => startEdit(product)} style={secondaryActionButton}>
                                 ✏️ Edit
                               </button>
                             </div>
 
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: '10px',
-                                borderTop: '1px solid #f1f5f9',
-                                paddingTop: '10px',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontSize: '13px',
-                                  color: '#64748b',
-                                }}
-                              >
-                                Public visibility: <strong>{product.is_active ? 'Visible' : 'Hidden'}</strong>
+                            <div style={bottomRow}>
+                              <div style={mutedSmall}>
+                                Public visibility:{' '}
+                                <strong>{product.is_active ? 'Visible' : 'Hidden'}</strong>
                               </div>
 
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  gap: '8px',
-                                  flexWrap: 'wrap',
-                                }}
-                              >
-                                <button onClick={() => toggleActive(product)} style={smallActionButton}>
+                              <div style={actionRowStack}>
+                                <button onClick={() => toggleActive(product)} style={secondaryActionButton}>
                                   {product.is_active ? 'Set Inactive' : 'Set Active'}
                                 </button>
-                                <button onClick={() => deleteProduct(product.id)} style={smallDangerButton}>
+                                <button onClick={() => deleteProduct(product.id)} style={dangerActionButton}>
                                   Delete
                                 </button>
                               </div>
@@ -1134,35 +782,111 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <footer
-        style={{
-          marginTop: '20px',
-          borderTop: '1px solid #e5e7eb',
-          background: '#ffffff',
-          padding: '16px 24px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1100px',
-            margin: '0 auto',
-            textAlign: 'center',
-            color: '#64748b',
-            fontSize: '13px',
-          }}
-        >
-          © 2026 All rights reserved. Neugens Solution.
-        </div>
+      <footer style={footerStyle}>
+        <div style={footerInner}>© 2026 All rights reserved. Neugens Solution.</div>
       </footer>
     </main>
   )
 }
 
+const pageWrap = {
+  minHeight: '100vh',
+  background: '#f8fafc',
+  display: 'flex',
+  flexDirection: 'column' as const,
+} as const
+
+const headerStyle = {
+  background: '#ffffff',
+  borderBottom: '1px solid #e5e7eb',
+  padding: '14px 16px',
+} as const
+
+const headerInner = {
+  maxWidth: '1100px',
+  margin: '0 auto',
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: '12px',
+} as const
+
+const brandWrap = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+} as const
+
+const brandLogo = {
+  height: '38px',
+  width: 'auto',
+  display: 'block',
+} as const
+
+const mobileNavWrap = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: '8px',
+} as const
+
+const contentWrap = {
+  flex: 1,
+  padding: '16px',
+} as const
+
+const contentInner = {
+  maxWidth: '1100px',
+  margin: '0 auto',
+} as const
+
+const pageTitleWrap = {
+  marginBottom: '16px',
+} as const
+
+const pageTitle = {
+  margin: '0 0 6px 0',
+  fontSize: '28px',
+  color: '#0f172a',
+  fontWeight: 800,
+} as const
+
+const pageSubTitle = {
+  margin: 0,
+  color: '#64748b',
+  fontSize: '14px',
+  lineHeight: 1.6,
+} as const
+
+const mobileStackLayout = {
+  display: 'grid',
+  gridTemplateColumns: '1fr',
+  gap: '16px',
+} as const
+
+const sectionCard = {
+  background: '#ffffff',
+  borderRadius: '20px',
+  padding: '16px',
+  border: '1px solid #e5e7eb',
+  boxShadow: '0 10px 24px rgba(15,23,42,0.05)',
+} as const
+
+const sectionTitle = {
+  margin: '0 0 14px 0',
+  fontSize: '20px',
+  color: '#0f172a',
+  fontWeight: 800,
+} as const
+
+const formGrid = {
+  display: 'grid',
+  gap: '12px',
+} as const
+
 const labelStyle = {
   fontSize: '13px',
   color: '#475569',
   fontWeight: 700,
-}
+} as const
 
 const inputStyle = {
   width: '100%',
@@ -1172,10 +896,72 @@ const inputStyle = {
   fontSize: '14px',
   outline: 'none',
   background: '#fff',
+  boxSizing: 'border-box' as const,
 } as const
 
-const darkButton = {
-  padding: '10px 14px',
+const switchLabel = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  fontSize: '14px',
+  color: '#334155',
+  fontWeight: 600,
+} as const
+
+const infoBox = {
+  padding: '12px 14px',
+  borderRadius: '14px',
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  color: '#475569',
+  fontSize: '13px',
+  lineHeight: 1.6,
+} as const
+
+const thumbGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: '10px',
+} as const
+
+const thumbItem = {
+  border: '1px solid #e2e8f0',
+  borderRadius: '12px',
+  padding: '8px',
+  background: '#f8fafc',
+} as const
+
+const thumbName = {
+  fontSize: '11px',
+  color: '#475569',
+  marginBottom: '6px',
+  textAlign: 'center' as const,
+  wordBreak: 'break-word' as const,
+} as const
+
+const thumbPreview = {
+  width: '100%',
+  height: '78px',
+  objectFit: 'cover' as const,
+  borderRadius: '10px',
+  marginBottom: '6px',
+} as const
+
+const primaryButton = {
+  width: '100%',
+  padding: '15px 18px',
+  borderRadius: '14px',
+  background: '#0f172a',
+  color: '#ffffff',
+  border: 'none',
+  fontSize: '15px',
+  fontWeight: 800,
+  boxShadow: '0 12px 24px rgba(15,23,42,0.12)',
+} as const
+
+const primaryHalfButton = {
+  width: '100%',
+  padding: '12px 14px',
   borderRadius: '12px',
   border: 'none',
   background: '#0f172a',
@@ -1184,36 +970,15 @@ const darkButton = {
   cursor: 'pointer',
 } as const
 
-const lightButton = {
-  padding: '10px 14px',
+const secondaryHalfButton = {
+  width: '100%',
+  padding: '12px 14px',
   borderRadius: '12px',
   border: '1px solid #cbd5e1',
   background: '#fff',
   color: '#0f172a',
   fontWeight: 700,
   cursor: 'pointer',
-} as const
-
-const smallActionButton = {
-  padding: '8px 12px',
-  borderRadius: '12px',
-  border: '1px solid #cbd5e1',
-  background: '#fff',
-  color: '#0f172a',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontSize: '13px',
-} as const
-
-const smallDangerButton = {
-  padding: '8px 12px',
-  borderRadius: '12px',
-  border: '1px solid #fecaca',
-  background: '#fff1f2',
-  color: '#b91c1c',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontSize: '13px',
 } as const
 
 const miniDangerButton = {
@@ -1228,11 +993,176 @@ const miniDangerButton = {
   fontSize: '12px',
 } as const
 
+const mutedText = {
+  margin: 0,
+  color: '#64748b',
+  fontSize: '14px',
+} as const
+
+const mutedSmall = {
+  margin: 0,
+  color: '#64748b',
+  fontSize: '13px',
+  lineHeight: 1.5,
+} as const
+
+const errorText = {
+  margin: 0,
+  color: '#b91c1c',
+  fontSize: '14px',
+} as const
+
+const productListWrap = {
+  display: 'grid',
+  gap: '14px',
+} as const
+
+const productCard = {
+  border: '1px solid #e5e7eb',
+  borderRadius: '18px',
+  padding: '14px',
+  background: '#ffffff',
+  display: 'grid',
+  gap: '12px',
+} as const
+
+const productTopRow = {
+  display: 'flex',
+  gap: '12px',
+  alignItems: 'flex-start',
+} as const
+
+const productThumb = {
+  width: '84px',
+  height: '84px',
+  objectFit: 'cover' as const,
+  borderRadius: '14px',
+  border: '1px solid #e2e8f0',
+  flexShrink: 0,
+} as const
+
+const productThumbPlaceholder = {
+  width: '84px',
+  height: '84px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#f1f5f9',
+  color: '#94a3b8',
+  fontSize: '12px',
+  borderRadius: '14px',
+  border: '1px solid #e2e8f0',
+  flexShrink: 0,
+} as const
+
+const badgeRow = {
+  display: 'flex',
+  gap: '8px',
+  flexWrap: 'wrap' as const,
+  marginBottom: '8px',
+} as const
+
+const statusBadge = {
+  display: 'inline-block',
+  padding: '6px 10px',
+  borderRadius: '999px',
+  fontSize: '12px',
+  fontWeight: 700,
+} as const
+
+const productTitle = {
+  margin: '0 0 6px 0',
+  fontSize: '18px',
+  color: '#0f172a',
+  fontWeight: 800,
+  lineHeight: 1.4,
+} as const
+
+const productPrice = {
+  margin: '0 0 8px 0',
+  color: '#1d4ed8',
+  fontSize: '17px',
+  fontWeight: 800,
+} as const
+
+const tagRow = {
+  display: 'flex',
+  gap: '8px',
+  flexWrap: 'wrap' as const,
+  marginBottom: '8px',
+} as const
+
+const tagStyle = {
+  display: 'inline-block',
+  padding: '6px 10px',
+  borderRadius: '999px',
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  color: '#334155',
+  fontSize: '12px',
+  fontWeight: 700,
+} as const
+
+const productDescription = {
+  margin: 0,
+  color: '#64748b',
+  fontSize: '14px',
+  lineHeight: 1.7,
+} as const
+
+const linkBox = {
+  padding: '12px 14px',
+  borderRadius: '14px',
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  fontSize: '13px',
+  color: '#475569',
+  wordBreak: 'break-all' as const,
+} as const
+
+const actionRowStack = {
+  display: 'grid',
+  gridTemplateColumns: '1fr',
+  gap: '8px',
+} as const
+
+const secondaryActionButton = {
+  width: '100%',
+  padding: '11px 12px',
+  borderRadius: '12px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#0f172a',
+  fontWeight: 700,
+  cursor: 'pointer',
+  fontSize: '13px',
+} as const
+
+const dangerActionButton = {
+  width: '100%',
+  padding: '11px 12px',
+  borderRadius: '12px',
+  border: '1px solid #fecaca',
+  background: '#fff1f2',
+  color: '#b91c1c',
+  fontWeight: 700,
+  cursor: 'pointer',
+  fontSize: '13px',
+} as const
+
+const bottomRow = {
+  display: 'grid',
+  gap: '10px',
+  borderTop: '1px solid #f1f5f9',
+  paddingTop: '12px',
+} as const
+
 const navLinkStyle = {
   display: 'inline-block',
-  padding: '10px 14px',
+  padding: '11px 12px',
   borderRadius: '12px',
   textDecoration: 'none',
+  textAlign: 'center' as const,
   color: '#334155',
   background: '#f8fafc',
   border: '1px solid #e2e8f0',
@@ -1245,4 +1175,19 @@ const navLinkActiveStyle = {
   background: '#0f172a',
   color: '#ffffff',
   border: '1px solid #0f172a',
+} as const
+
+const footerStyle = {
+  marginTop: '20px',
+  borderTop: '1px solid #e5e7eb',
+  background: '#ffffff',
+  padding: '16px',
+} as const
+
+const footerInner = {
+  maxWidth: '1100px',
+  margin: '0 auto',
+  textAlign: 'center' as const,
+  color: '#64748b',
+  fontSize: '13px',
 } as const
