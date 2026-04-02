@@ -10,6 +10,9 @@ type ProductRow = {
   description: string | null
   price: number
   is_active: boolean
+  track_stock: boolean
+  stock_quantity: number
+  sold_out: boolean
   store_name: string | null
   seller_profile_id: string | null
   created_at?: string
@@ -57,12 +60,16 @@ export default function ProductsPage() {
   const [price, setPrice] = useState('')
   const [customSlug, setCustomSlug] = useState('')
   const [productImages, setProductImages] = useState<File[]>([])
+  const [trackStock, setTrackStock] = useState(true)
+  const [stockQuantity, setStockQuantity] = useState('0')
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [editingDescription, setEditingDescription] = useState('')
   const [editingPrice, setEditingPrice] = useState('')
   const [editingIsActive, setEditingIsActive] = useState(true)
+  const [editingTrackStock, setEditingTrackStock] = useState(true)
+  const [editingStockQuantity, setEditingStockQuantity] = useState('0')
   const [editingExistingImages, setEditingExistingImages] = useState<string[]>([])
   const [editingNewImages, setEditingNewImages] = useState<File[]>([])
 
@@ -223,6 +230,8 @@ export default function ProductsPage() {
         description: description.trim() || null,
         price: Number(price),
         is_active: true,
+        track_stock: trackStock,
+        stock_quantity: trackStock ? Math.max(0, Number(stockQuantity || 0)) : 0,
         store_name: sellerProfile.store_name || null,
         seller_profile_id: sellerProfile.id,
         image_1: uploadedUrls[0] || null,
@@ -243,6 +252,8 @@ export default function ProductsPage() {
       setPrice('')
       setCustomSlug('')
       setProductImages([])
+      setTrackStock(true)
+      setStockQuantity('0')
       await loadProductsPage()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Image upload failed'
@@ -258,6 +269,8 @@ export default function ProductsPage() {
     setEditingDescription(product.description || '')
     setEditingPrice(String(product.price))
     setEditingIsActive(product.is_active)
+    setEditingTrackStock(product.track_stock ?? true)
+    setEditingStockQuantity(String(product.stock_quantity ?? 0))
     setEditingExistingImages(getProductImages(product))
     setEditingNewImages([])
   }
@@ -268,6 +281,8 @@ export default function ProductsPage() {
     setEditingDescription('')
     setEditingPrice('')
     setEditingIsActive(true)
+    setEditingTrackStock(true)
+    setEditingStockQuantity('0')
     setEditingExistingImages([])
     setEditingNewImages([])
   }
@@ -294,6 +309,8 @@ export default function ProductsPage() {
           description: editingDescription.trim() || null,
           price: Number(editingPrice),
           is_active: editingIsActive,
+          track_stock: editingTrackStock,
+          stock_quantity: editingTrackStock ? Math.max(0, Number(editingStockQuantity || 0)) : 0,
           image_1: finalImages[0] || null,
           image_2: finalImages[1] || null,
           image_3: finalImages[2] || null,
@@ -527,6 +544,52 @@ export default function ProductsPage() {
                   style={inputStyle}
                 />
 
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    fontSize: '14px',
+                    color: '#334155',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={trackStock}
+                    onChange={(e) => setTrackStock(e.target.checked)}
+                  />
+                  Track Stock Quantity
+                </label>
+
+                <label style={labelStyle}>Stock Quantity</label>
+                <input
+                  value={stockQuantity}
+                  onChange={(e) => setStockQuantity(e.target.value.replace(/[^\d]/g, ''))}
+                  placeholder="0"
+                  disabled={!trackStock}
+                  style={{
+                    ...inputStyle,
+                    background: trackStock ? '#fff' : '#f1f5f9',
+                    color: trackStock ? '#0f172a' : '#94a3b8',
+                  }}
+                />
+
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '14px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    color: '#475569',
+                    fontSize: '13px',
+                  }}
+                >
+                  <strong style={{ color: '#0f172a' }}>Stock note:</strong>
+                  <div style={{ marginTop: '6px' }}>
+                    If stock tracking is ON and quantity is 0, product will become sold out automatically.
+                  </div>
+                </div>
+
                 <label style={labelStyle}>Upload Product Images (Max 5)</label>
                 <input
                   type="file"
@@ -700,6 +763,38 @@ export default function ProductsPage() {
                               Active
                             </label>
 
+                            <label
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                fontSize: '14px',
+                                color: '#334155',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={editingTrackStock}
+                                onChange={(e) => setEditingTrackStock(e.target.checked)}
+                              />
+                              Track Stock Quantity
+                            </label>
+
+                            <label style={labelStyle}>Stock Quantity</label>
+                            <input
+                              value={editingStockQuantity}
+                              onChange={(e) =>
+                                setEditingStockQuantity(e.target.value.replace(/[^\d]/g, ''))
+                              }
+                              placeholder="0"
+                              disabled={!editingTrackStock}
+                              style={{
+                                ...inputStyle,
+                                background: editingTrackStock ? '#fff' : '#f1f5f9',
+                                color: editingTrackStock ? '#0f172a' : '#94a3b8',
+                              }}
+                            />
+
                             <label style={labelStyle}>Existing Images</label>
                             {editingExistingImages.length > 0 ? (
                               <div
@@ -818,6 +913,11 @@ export default function ProductsPage() {
                                 position: 'absolute',
                                 top: '16px',
                                 right: '16px',
+                                display: 'flex',
+                                gap: '8px',
+                                flexWrap: 'wrap',
+                                justifyContent: 'flex-end',
+                                maxWidth: '220px',
                               }}
                             >
                               <span
@@ -833,6 +933,22 @@ export default function ProductsPage() {
                               >
                                 {product.is_active ? 'Active' : 'Inactive'}
                               </span>
+
+                              {product.sold_out ? (
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '6px 10px',
+                                    borderRadius: '999px',
+                                    background: '#fee2e2',
+                                    color: '#b91c1c',
+                                    fontSize: '12px',
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  Sold Out
+                                </span>
+                              ) : null}
                             </div>
 
                             <div
@@ -841,7 +957,7 @@ export default function ProductsPage() {
                                 gridTemplateColumns: thumb ? '92px minmax(0,1fr)' : '1fr',
                                 gap: '14px',
                                 marginBottom: '12px',
-                                paddingRight: '90px',
+                                paddingRight: '120px',
                               }}
                             >
                               {thumb && (
@@ -887,6 +1003,32 @@ export default function ProductsPage() {
                                   >
                                     RM {Number(product.price).toFixed(2)}
                                   </p>
+
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      gap: '8px',
+                                      flexWrap: 'wrap',
+                                      marginBottom: product.description ? '8px' : '0',
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        display: 'inline-block',
+                                        padding: '6px 10px',
+                                        borderRadius: '999px',
+                                        background: '#f8fafc',
+                                        border: '1px solid #e2e8f0',
+                                        color: '#334155',
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      {product.track_stock
+                                        ? `Stock: ${product.stock_quantity ?? 0}`
+                                        : 'Stock tracking off'}
+                                    </span>
+                                  </div>
 
                                   {product.description && (
                                     <p
