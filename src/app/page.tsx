@@ -263,7 +263,7 @@ export default function HomePage() {
               Pricing
             </p>
             <h2 className="mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">
-              Mula percuma. Bayar bila ada jualan.
+              Tiada bayaran. Mula dengan ZERO Kos!
             </h2>
             <p className="mt-4 text-slate-600">
               Lebih banyak anda jual, lebih rendah fee anda. Pilih plan yang sesuai dengan tahap bisnes anda.
@@ -272,8 +272,8 @@ export default function HomePage() {
 
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-900">Free</h3>
-              <p className="mt-2 text-sm text-slate-500">Untuk mula berniaga</p>
+              <h3 className="text-xl font-bold text-slate-900">Free (Beta)</h3>
+              <p className="mt-2 text-sm text-slate-500">Sesuai untuk peniaga baru, kecil dan sederhana</p>
 
               <div className="mt-6">
                 <span className="text-4xl font-extrabold">RM0</span>
@@ -309,7 +309,7 @@ export default function HomePage() {
               </div>
 
               <h3 className="text-xl font-bold text-slate-900">Pro</h3>
-              <p className="mt-2 text-sm text-slate-500">Untuk seller aktif</p>
+              <p className="mt-2 text-sm text-slate-500">Sesuai untuk peniaga aktif dan nak scale up</p>
 
               <div className="mt-6">
                 <span className="text-4xl font-extrabold">RM19</span>
@@ -336,13 +336,13 @@ export default function HomePage() {
                 href="/signup"
                 className="mt-8 block rounded-xl bg-violet-600 py-3 text-center font-semibold text-white transition hover:bg-violet-700"
               >
-                Upgrade to Pro
+                Coming Soon
               </a>
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="text-xl font-bold text-slate-900">Growth</h3>
-              <p className="mt-2 text-sm text-slate-500">Untuk scale bisnes</p>
+              <p className="mt-2 text-sm text-slate-500">Sesuai untuk nak scale up bisnes</p>
 
               <div className="mt-6">
                 <span className="text-4xl font-extrabold">RM49</span>
@@ -369,7 +369,7 @@ export default function HomePage() {
                 href="/signup"
                 className="mt-8 block rounded-xl bg-slate-900 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
               >
-                Go Growth
+                Coming Soon
               </a>
             </div>
           </div>
@@ -388,7 +388,7 @@ export default function HomePage() {
               FAQ
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Soalan yang seller selalu tanya
+              Soalan yang selalu ditanya
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
               Ini antara soalan paling biasa sebelum orang mula guna GoBayar.
@@ -427,7 +427,7 @@ export default function HomePage() {
           <h2 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
             Tak payah pening lagi.
             <br />
-            Start jual cara lebih smart.
+            Start jual cara lebih bijak.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600">
             Buat shop link sendiri, share terus di WhatsApp, dan bagi customer
