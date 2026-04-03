@@ -1,5 +1,6 @@
 'use client'
 
+import Layout from '../../../components/Layout'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
@@ -7,8 +8,11 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const [sellerId, setSellerId] = useState<string | null>(null)
+  const [accountEmail, setAccountEmail] = useState('')
 
   const [storeName, setStoreName] = useState('')
   const [email, setEmail] = useState('')
@@ -23,6 +27,8 @@ export default function SettingsPage() {
   const [accountHolderName, setAccountHolderName] = useState('')
 
   const [profileImage, setProfileImage] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   useEffect(() => {
     loadProfile()
@@ -39,6 +45,8 @@ export default function SettingsPage() {
       setLoading(false)
       return
     }
+
+    setAccountEmail(user.email || '')
 
     const { data } = await supabase
       .from('seller_profiles')
@@ -123,44 +131,87 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleChangePassword() {
+    if (!newPassword || !confirmPassword) {
+      alert('Please fill in new password and confirm password.')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      alert('Password must be at least 6 characters.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert('Password confirmation does not match.')
+      return
+    }
+
+    setPasswordSaving(true)
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    })
+
+    setPasswordSaving(false)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    setNewPassword('')
+    setConfirmPassword('')
+    alert('Password updated successfully!')
+  }
+
+  async function handleLogout() {
+    const confirmed = window.confirm('Log out from your account?')
+    if (!confirmed) return
+
+    setLoggingOut(true)
+
+    const { error } = await supabase.auth.signOut()
+
+    setLoggingOut(false)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    window.location.href = '/login'
+  }
+
   return (
-    <main style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <header style={headerStyle}>
-        <div style={containerStyle}>
-          <img
-            src="/BayarLink Logo 01.svg"
-            alt="bayarlink"
-            style={{ height: 40 }}
-          />
+    <Layout>
+      <div className="mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+          Settings
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
+          Manage your store, payout details, daily message, and account settings.
+        </p>
+      </div>
 
-          <nav style={navStyle}>
-            <a href="/dashboard" style={navLinkStyle}>Dashboard</a>
-            <a href="/dashboard/products" style={navLinkStyle}>Products</a>
-            <a href="/dashboard/orders" style={navLinkStyle}>Orders</a>
-            <a href="/dashboard/settings" style={navLinkActiveStyle}>Settings</a>
-          </nav>
+      {loading ? (
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Loading...</p>
         </div>
-      </header>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_0.85fr]">
+          <div className="space-y-5">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Seller Profile</h2>
 
-      <div style={wrapperStyle}>
-        <div style={cardStyle}>
-          <h1 style={titleStyle}>Seller Profile</h1>
-          <p style={subtitleStyle}>
-            Manage your store, payout details, and customer-facing message.
-          </p>
-
-          {loading ? (
-            <p>Loading...</p>
-          ) : (
-            <>
-              <div style={{ marginBottom: 20 }}>
-                <p style={labelStyle}>Profile Image</p>
+              <div className="mb-5">
+                <p className="mb-2 text-sm font-bold text-slate-700">Profile Image</p>
 
                 {profileImage ? (
                   <img
                     src={profileImage}
                     alt="Seller profile"
-                    style={profilePreviewStyle}
+                    className="mb-3 h-20 w-20 rounded-full object-cover"
                   />
                 ) : null}
 
@@ -172,257 +223,194 @@ export default function SettingsPage() {
                       uploadImage(e.target.files[0])
                     }
                   }}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
                 />
 
                 {uploading ? (
-                  <p style={smallNoteStyle}>Uploading...</p>
+                  <p className="mt-2 text-xs text-slate-500">Uploading...</p>
                 ) : null}
               </div>
 
-              <div style={sectionStyle}>
-                <p style={sectionTitleStyle}>Basic Info</p>
+              <div className="space-y-5">
+                <div>
+                  <p className="mb-3 text-sm font-extrabold text-slate-900">Basic Info</p>
 
-                <input
-                  placeholder="Store Name"
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  style={inputStyle}
-                />
+                  <div className="grid gap-3">
+                    <input
+                      placeholder="Store Name"
+                      value={storeName}
+                      onChange={(e) => setStoreName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
 
-                <input
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={inputStyle}
-                />
+                    <input
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
 
-                <input
-                  placeholder="WhatsApp Number"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
+                    <input
+                      placeholder="WhatsApp Number"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+                  </div>
+                </div>
 
-              <div style={sectionStyle}>
-                <p style={sectionTitleStyle}>Business Info</p>
+                <div>
+                  <p className="mb-3 text-sm font-extrabold text-slate-900">Business Info</p>
 
-                <input
-                  placeholder="Company Name"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  style={inputStyle}
-                />
+                  <div className="grid gap-3">
+                    <input
+                      placeholder="Company Name"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
 
-                <input
-                  placeholder="Company Registration No"
-                  value={companyReg}
-                  onChange={(e) => setCompanyReg(e.target.value)}
-                  style={inputStyle}
-                />
+                    <input
+                      placeholder="Company Registration No"
+                      value={companyReg}
+                      onChange={(e) => setCompanyReg(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
 
-                <textarea
-                  placeholder="Business Address"
-                  value={businessAddress}
-                  onChange={(e) => setBusinessAddress(e.target.value)}
-                  style={textareaStyle}
-                />
-              </div>
+                    <textarea
+                      placeholder="Business Address"
+                      value={businessAddress}
+                      onChange={(e) => setBusinessAddress(e.target.value)}
+                      rows={4}
+                      className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+                  </div>
+                </div>
 
-              <div style={sectionStyle}>
-                <p style={sectionTitleStyle}>Message</p>
+                <div>
+                  <p className="mb-3 text-sm font-extrabold text-slate-900">Message</p>
 
-                <textarea
-                  placeholder={`Contoh:
+                  <textarea
+                    placeholder={`Contoh:
 Delivery start 12 tengahari 😊
 Self pickup available
 Area delivery: Setia Alam sahaja`}
-                  value={dailyNote}
-                  onChange={(e) => setDailyNote(e.target.value)}
-                  style={dailyNoteStyle}
-                />
+                    value={dailyNote}
+                    onChange={(e) => setDailyNote(e.target.value)}
+                    rows={6}
+                    className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                  />
 
-                <p style={smallNoteStyle}>
-                  Message ini akan dimasukkan secara automatik dalam WhatsApp share.
-                </p>
-                <p style={smallNoteStyle}>
-                  Product list pula akan ikut produk yang active sahaja. Kalau nak ubah senarai produk, sila update di page Products.
+                  <p className="mt-2 text-xs text-slate-500">
+                    Message ini akan dimasukkan secara automatik dalam WhatsApp share.
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Product list pula akan ikut produk yang active sahaja. Kalau nak ubah senarai produk, sila update di page Products.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-sm font-extrabold text-slate-900">Payout Details</p>
+
+                  <div className="grid gap-3">
+                    <input
+                      placeholder="Bank Name"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+
+                    <input
+                      placeholder="Account Number"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+
+                    <input
+                      placeholder="Account Holder Name"
+                      value={accountHolderName}
+                      onChange={(e) => setAccountHolderName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {saving ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <div className="space-y-5">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Account</h2>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-bold text-slate-700">Login Email</p>
+                <p className="mt-1 break-all text-sm text-slate-600">
+                  {accountEmail || '-'}
                 </p>
               </div>
 
-              <div style={sectionStyle}>
-                <p style={sectionTitleStyle}>Payout Details</p>
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-extrabold text-slate-900">Change Password</p>
 
                 <input
-                  placeholder="Bank Name"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  style={inputStyle}
+                  type="password"
+                  placeholder="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                 />
 
                 <input
-                  placeholder="Account Number"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  style={inputStyle}
+                  type="password"
+                  placeholder="Confirm New Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                 />
 
-                <input
-                  placeholder="Account Holder Name"
-                  value={accountHolderName}
-                  onChange={(e) => setAccountHolderName(e.target.value)}
-                  style={inputStyle}
-                />
+                <button
+                  type="button"
+                  onClick={handleChangePassword}
+                  disabled={passwordSaving}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {passwordSaving ? 'Updating Password...' : 'Update Password'}
+                </button>
+
+                <p className="text-xs text-slate-500">
+                  Gunakan password sekurang-kurangnya 6 aksara.
+                </p>
               </div>
+            </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Session</h2>
+
+              <p className="mb-4 text-sm leading-6 text-slate-500">
+                Log out jika anda ingin keluar dari akaun seller ini.
+              </p>
 
               <button
-                onClick={handleSave}
-                disabled={saving}
-                style={saveBtnStyle}
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="w-full rounded-2xl border border-red-200 bg-rose-50 px-4 py-3 text-sm font-extrabold text-red-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {saving ? 'Saving...' : 'Save Settings'}
+                {loggingOut ? 'Logging Out...' : 'Log Out'}
               </button>
-            </>
-          )}
+            </section>
+          </div>
         </div>
-      </div>
-    </main>
+      )}
+    </Layout>
   )
 }
-
-const headerStyle = {
-  background: '#fff',
-  borderBottom: '1px solid #e5e7eb',
-  padding: '14px 24px',
-} as const
-
-const containerStyle = {
-  maxWidth: '1100px',
-  margin: '0 auto',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '16px',
-  flexWrap: 'wrap' as const,
-} as const
-
-const navStyle = {
-  display: 'flex',
-  gap: '10px',
-  flexWrap: 'wrap' as const,
-} as const
-
-const navLinkStyle = {
-  padding: '10px 14px',
-  borderRadius: '12px',
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  textDecoration: 'none',
-  color: '#334155',
-  fontWeight: 600,
-} as const
-
-const navLinkActiveStyle = {
-  ...navLinkStyle,
-  background: '#0f172a',
-  color: '#fff',
-} as const
-
-const wrapperStyle = {
-  maxWidth: '760px',
-  margin: '40px auto',
-  padding: '0 20px',
-} as const
-
-const cardStyle = {
-  background: '#fff',
-  borderRadius: '20px',
-  padding: '30px',
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
-} as const
-
-const titleStyle = {
-  fontSize: '26px',
-  fontWeight: 800,
-  marginBottom: '6px',
-  color: '#0f172a',
-} as const
-
-const subtitleStyle = {
-  color: '#64748b',
-  marginBottom: '20px',
-} as const
-
-const sectionStyle = {
-  marginBottom: '20px',
-} as const
-
-const sectionTitleStyle = {
-  fontWeight: 700,
-  marginBottom: '10px',
-  color: '#0f172a',
-} as const
-
-const inputStyle = {
-  width: '100%',
-  padding: '12px',
-  marginBottom: '10px',
-  borderRadius: '10px',
-  border: '1px solid #d1d5db',
-  fontSize: '14px',
-} as const
-
-const textareaStyle = {
-  width: '100%',
-  minHeight: '90px',
-  padding: '12px',
-  marginBottom: '10px',
-  borderRadius: '10px',
-  border: '1px solid #d1d5db',
-  fontSize: '14px',
-  resize: 'vertical' as const,
-} as const
-
-const dailyNoteStyle = {
-  width: '100%',
-  minHeight: '120px',
-  padding: '12px',
-  marginBottom: '8px',
-  borderRadius: '10px',
-  border: '1px solid #d1d5db',
-  fontSize: '14px',
-  resize: 'vertical' as const,
-  lineHeight: 1.6,
-} as const
-
-const labelStyle = {
-  fontWeight: 600,
-  marginBottom: 6,
-  color: '#0f172a',
-} as const
-
-const smallNoteStyle = {
-  fontSize: '12px',
-  color: '#64748b',
-  marginTop: '4px',
-} as const
-
-const profilePreviewStyle = {
-  width: 80,
-  height: 80,
-  borderRadius: '50%',
-  objectFit: 'cover' as const,
-  marginBottom: 10,
-  display: 'block',
-} as const
-
-const saveBtnStyle = {
-  width: '100%',
-  padding: '14px',
-  borderRadius: '12px',
-  background: '#0f172a',
-  color: '#fff',
-  border: 'none',
-  fontWeight: 700,
-} as const
