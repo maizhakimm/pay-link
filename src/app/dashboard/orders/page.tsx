@@ -1,13 +1,17 @@
 'use client'
 
 import Layout from "@/components/Layout"
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { supabase } from '../../../lib/supabase'
 
-export default function Dashboard() {
+// type dan function lain kekal
+
+export default function OrdersPage() {
+  // logic lama kekal
+
   return (
     <Layout>
-
-      <h1 className="text-xl font-bold">Dashboard</h1>
-
+      {/* content orders lama */}
     </Layout>
   )
 }
