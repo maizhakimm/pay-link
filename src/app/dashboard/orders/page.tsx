@@ -1,5 +1,17 @@
 'use client'
 
+import Layout from "@/components/Layout"
+
+export default function Dashboard() {
+  return (
+    <Layout>
+
+      <h1 className="text-xl font-bold">Dashboard</h1>
+
+    </Layout>
+  )
+}
+
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
