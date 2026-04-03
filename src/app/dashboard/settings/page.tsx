@@ -62,7 +62,7 @@ export default function SettingsPage() {
       setCompanyName(data.company_name || '')
       setCompanyReg(data.company_registration || '')
       setBusinessAddress(data.business_address || '')
-      setDailyNote(data.daily_note || '')
+      
 
       setBankName(data.bank_name || '')
       setAccountNumber(data.account_number || '')
