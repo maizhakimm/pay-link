@@ -1,10 +1,64 @@
-const { data: { user } } = await supabase.auth.getUser()
-
-if (!user) {
-  window.location.href = '/login'
-}
-
 'use client'
+
+const loadDashboard = useCallback(async () => {
+  setLoading(true)
+  setError('')
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    window.location.href = '/login'
+    return
+  }
+
+  const { data: sellerData, error: sellerError } = await supabase
+    .from('seller_profiles')
+    .select('id, store_name, daily_note')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (sellerError || !sellerData) {
+    setError('Seller profile not found. Please complete your settings first.')
+    setLoading(false)
+    return
+  }
+
+  const typedSeller = sellerData as SellerProfileRow
+  setSellerProfile(typedSeller)
+  setDailyNote(typedSeller.daily_note || '')
+
+  const [{ data: productData, error: productError }, { data: orderData, error: orderError }] =
+    await Promise.all([
+      supabase
+        .from('products')
+        .select('id, name, is_active, price')
+        .eq('seller_profile_id', typedSeller.id),
+      supabase
+        .from('orders')
+        .select('id, amount, payment_status, created_at, product_name, buyer_name')
+        .eq('seller_profile_id', typedSeller.id)
+        .order('created_at', { ascending: false }),
+    ])
+
+  if (productError) {
+    setError(productError.message)
+    setLoading(false)
+    return
+  }
+
+  if (orderError) {
+    setError(orderError.message)
+    setLoading(false)
+    return
+  }
+
+  setProducts((productData || []) as ProductRow[])
+  setOrders((orderData || []) as OrderRow[])
+  setLoading(false)
+}, [])
 
 import Layout from '../../components/Layout'
 import { useCallback, useEffect, useState } from 'react'
