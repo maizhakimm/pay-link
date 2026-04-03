@@ -98,7 +98,7 @@ export default function HomePage() {
   {/* image wrapper */}
   <div className="relative">
     <Image
-      src="/Hero Image 01.webp"
+      src="/Hero Image 01.png"
       alt="GoBayar Preview"
       width={700}
       height={1400}
