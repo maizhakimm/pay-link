@@ -90,21 +90,31 @@ export default function HomePage() {
           </div>
 
           {/* Hero Image */}
-          <div className="relative flex justify-center lg:justify-end">
-            <div className="absolute -top-6 right-4 hidden h-28 w-28 rounded-full bg-violet-200/40 blur-3xl sm:block" />
-            <div className="absolute -bottom-4 left-6 hidden h-24 w-24 rounded-full bg-blue-200/40 blur-3xl sm:block" />
+<div className="relative flex justify-center lg:justify-end">
+  {/* glow background */}
+  <div className="absolute -top-10 right-10 h-32 w-32 rounded-full bg-violet-300/30 blur-3xl" />
+  <div className="absolute -bottom-10 left-10 h-32 w-32 rounded-full bg-blue-300/30 blur-3xl" />
 
-            <div className="relative w-full max-w-[300px] sm:max-w-[340px]">
-              <Image
-                src="/Hero Image 01.svg"
-                alt="GoBayar Hero Preview"
-                width={680}
-                height={1200}
-                priority
-                className="h-auto w-full rounded-[2rem] shadow-[0_25px_80px_rgba(15,23,42,0.22)]"
-              />
-            </div>
-          </div>
+  {/* image wrapper */}
+  <div className="relative">
+    <Image
+      src="/Hero Image 01.webp"
+      alt="GoBayar Preview"
+      width={700}
+      height={1400}
+      priority
+      className="
+        w-[240px] 
+        md:w-[280px] 
+        lg:w-[320px] 
+        mx-auto
+        object-contain
+        drop-shadow-[0_30px_80px_rgba(0,0,0,0.25)]
+        scale-[1.08]
+      "
+    />
+  </div>
+</div>
         </div>
       </section>
 
