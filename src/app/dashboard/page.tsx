@@ -1,5 +1,6 @@
 'use client'
 
+import Layout from '../../components/Layout'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
@@ -146,7 +147,7 @@ export default function DashboardPage() {
 
   const stats = useMemo(() => {
     const totalProducts = products.length
-    const activeProducts = products.filter((p) => Boolean(p.is_active)).length
+    const activeProductsCount = products.filter((p) => Boolean(p.is_active)).length
 
     const totalOrders = orders.length
     const paidOrders = orders.filter((o) => isPaidStatus(getMainPaymentStatus(o))).length
@@ -161,7 +162,7 @@ export default function DashboardPage() {
 
     return {
       totalProducts,
-      activeProducts,
+      activeProductsCount,
       totalOrders,
       paidOrders,
       revenue,
@@ -227,580 +228,211 @@ ${sellerProfile.store_name}`
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#f8fafc',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <header
-        style={{
-          background: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '14px 24px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1100px',
-            margin: '0 auto',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '16px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img
-              src="/BayarLink Logo 01.svg"
-              alt="bayarlink"
-              style={{ height: '40px', width: 'auto', display: 'block' }}
-            />
-          </div>
-
-          <nav
-            style={{
-              display: 'flex',
-              gap: '10px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <a href="/dashboard" style={navLinkActiveStyle}>
-              Dashboard
-            </a>
-            <a href="/dashboard/products" style={navLinkStyle}>
-              Products
-            </a>
-            <a href="/dashboard/orders" style={navLinkStyle}>
-              Orders
-            </a>
-            <a href="/dashboard/settings" style={navLinkStyle}>
-              Settings
-            </a>
-          </nav>
-        </div>
-      </header>
-
-      <div style={{ flex: 1, padding: '24px' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '20px' }}>
-            <h1
-              style={{
-                margin: '0 0 8px 0',
-                fontSize: '32px',
-                color: '#0f172a',
-                fontWeight: 800,
-              }}
-            >
-              Welcome{sellerProfile?.store_name ? `, ${sellerProfile.store_name}` : ''}
-            </h1>
-
-            <p
-              style={{
-                margin: 0,
-                color: '#64748b',
-                fontSize: '15px',
-              }}
-            >
-              Track your products, orders, payouts, and recent activity in one place.
-            </p>
-          </div>
-
-          {loading ? (
-            <div style={panelStyle}>
-              <p style={{ margin: 0, color: '#64748b' }}>Loading dashboard...</p>
-            </div>
-          ) : error ? (
-            <div style={panelStyle}>
-              <p style={{ margin: 0, color: '#b91c1c' }}>{error}</p>
-            </div>
-          ) : (
-            <>
-              <section style={sharePanelStyle}>
-                <div style={sharePanelLeft}>
-                  <div>
-                    <h2 style={shareTitleStyle}>Shop Link</h2>
-                    <p style={shareSubStyle}>
-                      Share satu link sahaja kepada pelanggan untuk order menu anda.
-                    </p>
-                  </div>
-
-                  <div style={shopLinkBox}>
-                    {shopLink || 'Complete your seller profile first'}
-                  </div>
-
-                  <div style={menuPreviewBox}>
-                    <div style={menuPreviewTitle}>Preview WhatsApp message</div>
-
-                    <div style={previewInfoBox}>
-                      Message dan product list ini akan ikut data secara automatik.
-                      Product list hanya akan ambil produk yang active sahaja.
-                      Kalau nak ubah senarai produk, sila update di page Products.
-                    </div>
-
-                    {activeProducts.length === 0 ? (
-                      <div style={menuPreviewText}>Tiada menu aktif buat masa ini.</div>
-                    ) : (
-                      <div style={menuPreviewText}>
-                        {activeProducts.map((product, index) => (
-                          <div key={product.id}>
-                            {index + 1}. {product.name || 'Menu'} - {formatMoney(product.price)}
-                          </div>
-                        ))}
-
-                        {sellerProfile?.daily_note?.trim() ? (
-                          <div style={dailyNotePreviewStyle}>
-                            {sellerProfile.daily_note.trim()}
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div style={shareActions}>
-                  <button
-                    type="button"
-                    onClick={handleCopyLink}
-                    disabled={!shopLink}
-                    style={{
-                      ...actionButtonStyle,
-                      opacity: shopLink ? 1 : 0.5,
-                      cursor: shopLink ? 'pointer' : 'not-allowed',
-                    }}
-                  >
-                    {copied ? 'Copied' : 'Copy Link'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleShareWhatsApp}
-                    disabled={!shopLink}
-                    style={{
-                      ...whatsAppButtonStyle,
-                      opacity: shopLink ? 1 : 0.5,
-                      cursor: shopLink ? 'pointer' : 'not-allowed',
-                    }}
-                  >
-                    Share WhatsApp
-                  </button>
-                </div>
-              </section>
-
-              <section
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-                  gap: '14px',
-                  marginBottom: '18px',
-                }}
-              >
-                <div style={statCardStyle}>
-                  <div style={statLabelStyle}>Total Products</div>
-                  <div style={statValueStyle}>{stats.totalProducts}</div>
-                </div>
-
-                <div style={statCardStyle}>
-                  <div style={statLabelStyle}>Active Products</div>
-                  <div style={statValueStyle}>{stats.activeProducts}</div>
-                </div>
-
-                <div style={statCardStyle}>
-                  <div style={statLabelStyle}>Total Orders</div>
-                  <div style={statValueStyle}>{stats.totalOrders}</div>
-                </div>
-
-                <div style={statCardStyle}>
-                  <div style={statLabelStyle}>Paid Orders</div>
-                  <div style={statValueStyle}>{stats.paidOrders}</div>
-                </div>
-
-                <div style={statCardStyle}>
-                  <div style={statLabelStyle}>Revenue</div>
-                  <div style={statValueStyle}>{formatMoney(stats.revenue)}</div>
-                </div>
-
-                <div style={statCardStyle}>
-                  <div style={statLabelStyle}>Payout Eligible</div>
-                  <div style={statValueStyle}>{stats.eligiblePayouts}</div>
-                </div>
-              </section>
-
-              <section
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1.2fr 0.8fr',
-                  gap: '18px',
-                }}
-              >
-                <div style={panelStyle}>
-                  <div style={sectionHeaderStyle}>
-                    <div>
-                      <h2 style={sectionTitleStyle}>Recent Orders</h2>
-                      <p style={sectionSubtitleStyle}>
-                        Latest incoming order activity
-                      </p>
-                    </div>
-
-                    <a href="/dashboard/orders" style={miniLinkStyle}>
-                      View all
-                    </a>
-                  </div>
-
-                  {recentOrders.length === 0 ? (
-                    <p style={{ margin: 0, color: '#64748b' }}>No orders yet.</p>
-                  ) : (
-                    <div style={{ display: 'grid', gap: '12px' }}>
-                      {recentOrders.map((order) => {
-                        const paymentStatus = getMainPaymentStatus(order)
-                        return (
-                          <div key={order.id} style={orderCardStyle}>
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                gap: '10px',
-                                flexWrap: 'wrap',
-                              }}
-                            >
-                              <div>
-                                <div style={orderTitleStyle}>
-                                  {order.product_name || 'Order'}
-                                </div>
-                                <div style={orderMetaStyle}>
-                                  Buyer: {order.buyer_name || '-'}
-                                </div>
-                                <div style={orderMetaStyle}>
-                                  {formatDate(order.created_at)}
-                                </div>
-                              </div>
-
-                              <div style={{ textAlign: 'right' }}>
-                                <div style={orderAmountStyle}>
-                                  {formatMoney(order.amount)}
-                                </div>
-                                <div
-                                  style={{
-                                    ...badgeStyle,
-                                    ...(isPaidStatus(paymentStatus)
-                                      ? paidBadgeStyle
-                                      : pendingBadgeStyle),
-                                  }}
-                                >
-                                  {paymentStatus}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div style={panelStyle}>
-                  <div style={sectionHeaderStyle}>
-                    <div>
-                      <h2 style={sectionTitleStyle}>Quick Actions</h2>
-                      <p style={sectionSubtitleStyle}>
-                        Common shortcuts for faster workflow
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gap: '10px' }}>
-                    <a href="/dashboard/products" style={quickLinkStyle}>
-                      Manage Products
-                    </a>
-                    <a href="/dashboard/orders" style={quickLinkStyle}>
-                      View Orders
-                    </a>
-                    <a href="/dashboard/settings" style={quickLinkStyle}>
-                      Update Settings
-                    </a>
-                    <a href="/dashboard/products/new" style={quickLinkPrimaryStyle}>
-                      Create New Product
-                    </a>
-                  </div>
-                </div>
-              </section>
-            </>
-          )}
-        </div>
+    <Layout>
+      <div className="mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+          Welcome{sellerProfile?.store_name ? `, ${sellerProfile.store_name}` : ''}
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
+          Track your products, orders, payouts, and recent activity in one place.
+        </p>
       </div>
 
-      <footer
-        style={{
-          marginTop: '20px',
-          borderTop: '1px solid #e5e7eb',
-          background: '#ffffff',
-          padding: '16px 24px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1100px',
-            margin: '0 auto',
-            textAlign: 'center',
-            color: '#64748b',
-            fontSize: '13px',
-          }}
-        >
-          © 2026 All rights reserved. Neugens Solution.
+      {loading ? (
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="m-0 text-sm text-slate-500">Loading dashboard...</p>
         </div>
-      </footer>
-    </main>
+      ) : error ? (
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="m-0 text-sm text-red-700">{error}</p>
+        </div>
+      ) : (
+        <>
+          <section className="mb-6 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 flex-1">
+              <h2 className="mb-1 text-2xl font-extrabold text-slate-900">Shop Link</h2>
+              <p className="mb-4 text-sm text-slate-500">
+                Share satu link sahaja kepada pelanggan untuk order menu anda.
+              </p>
+
+              <div className="mb-3 break-all rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-900">
+                {shopLink || 'Complete your seller profile first'}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-2 text-sm font-extrabold text-slate-900">
+                  Preview WhatsApp message
+                </div>
+
+                <div className="mb-3 rounded-2xl border border-slate-200 bg-white p-3 text-sm leading-7 text-slate-600">
+                  Message dan product list ini akan ikut data secara automatik.
+                  Product list hanya akan ambil produk yang active sahaja.
+                  Kalau nak ubah senarai produk, sila update di page Products.
+                </div>
+
+                {activeProducts.length === 0 ? (
+                  <div className="text-sm text-slate-600">Tiada menu aktif buat masa ini.</div>
+                ) : (
+                  <div className="space-y-1 text-sm leading-7 text-slate-600">
+                    {activeProducts.map((product, index) => (
+                      <div key={product.id}>
+                        {index + 1}. {product.name || 'Menu'} - {formatMoney(product.price)}
+                      </div>
+                    ))}
+
+                    {sellerProfile?.daily_note?.trim() ? (
+                      <div className="mt-3 border-t border-dashed border-slate-300 pt-3 whitespace-pre-line text-slate-700">
+                        {sellerProfile.daily_note.trim()}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row lg:flex-col">
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                disabled={!shopLink}
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {copied ? 'Copied' : 'Copy Link'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShareWhatsApp}
+                disabled={!shopLink}
+                className="inline-flex items-center justify-center rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Share WhatsApp
+              </button>
+            </div>
+          </section>
+
+          <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <StatCard label="Total Products" value={String(stats.totalProducts)} />
+            <StatCard label="Active Products" value={String(stats.activeProductsCount)} />
+            <StatCard label="Total Orders" value={String(stats.totalOrders)} />
+            <StatCard label="Paid Orders" value={String(stats.paidOrders)} />
+            <StatCard label="Revenue" value={formatMoney(stats.revenue)} />
+            <StatCard label="Payout Eligible" value={String(stats.eligiblePayouts)} />
+          </section>
+
+          <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-extrabold text-slate-900">Recent Orders</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Latest incoming order activity
+                  </p>
+                </div>
+
+                <a
+                  href="/dashboard/orders"
+                  className="text-sm font-bold text-blue-700 hover:text-blue-800"
+                >
+                  View all
+                </a>
+              </div>
+
+              {recentOrders.length === 0 ? (
+                <p className="m-0 text-sm text-slate-500">No orders yet.</p>
+              ) : (
+                <div className="grid gap-3">
+                  {recentOrders.map((order) => {
+                    const paymentStatus = getMainPaymentStatus(order)
+
+                    return (
+                      <div
+                        key={order.id}
+                        className="rounded-2xl border border-slate-200 bg-white p-4"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="mb-1 font-bold text-slate-900">
+                              {order.product_name || 'Order'}
+                            </div>
+                            <div className="text-sm leading-6 text-slate-500">
+                              Buyer: {order.buyer_name || '-'}
+                            </div>
+                            <div className="text-sm leading-6 text-slate-500">
+                              {formatDate(order.created_at)}
+                            </div>
+                          </div>
+
+                          <div className="sm:text-right">
+                            <div className="mb-2 font-extrabold text-slate-900">
+                              {formatMoney(order.amount)}
+                            </div>
+                            <div
+                              className={[
+                                'inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize',
+                                isPaidStatus(paymentStatus)
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-amber-100 text-amber-700',
+                              ].join(' ')}
+                            >
+                              {paymentStatus}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4">
+                <h2 className="text-2xl font-extrabold text-slate-900">Quick Actions</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Common shortcuts for faster workflow
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                <a
+                  href="/dashboard/products"
+                  className="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 font-bold text-slate-900 transition hover:bg-slate-100"
+                >
+                  Manage Products
+                </a>
+                <a
+                  href="/dashboard/orders"
+                  className="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 font-bold text-slate-900 transition hover:bg-slate-100"
+                >
+                  View Orders
+                </a>
+                <a
+                  href="/dashboard/settings"
+                  className="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 font-bold text-slate-900 transition hover:bg-slate-100"
+                >
+                  Update Settings
+                </a>
+                <a
+                  href="/dashboard/products/new"
+                  className="block rounded-2xl border border-slate-900 bg-slate-900 px-4 py-4 font-bold text-white transition hover:bg-slate-800"
+                >
+                  Create New Product
+                </a>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+    </Layout>
   )
 }
 
-const panelStyle = {
-  background: '#ffffff',
-  borderRadius: '22px',
-  padding: '22px',
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
-} as const
-
-const sharePanelStyle = {
-  background: '#ffffff',
-  borderRadius: '22px',
-  padding: '22px',
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
-  marginBottom: '18px',
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: '18px',
-  alignItems: 'flex-start',
-  flexWrap: 'wrap',
-} as const
-
-const sharePanelLeft = {
-  flex: 1,
-  minWidth: 0,
-} as const
-
-const shareTitleStyle = {
-  margin: '0 0 4px 0',
-  fontSize: '22px',
-  color: '#0f172a',
-  fontWeight: 800,
-} as const
-
-const shareSubStyle = {
-  margin: '0 0 14px 0',
-  color: '#64748b',
-  fontSize: '14px',
-} as const
-
-const shopLinkBox = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '14px',
-  padding: '14px',
-  color: '#0f172a',
-  fontWeight: 600,
-  wordBreak: 'break-all' as const,
-  marginBottom: '12px',
-} as const
-
-const menuPreviewBox = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '14px',
-  padding: '14px',
-} as const
-
-const menuPreviewTitle = {
-  fontSize: '13px',
-  fontWeight: 800,
-  color: '#0f172a',
-  marginBottom: '8px',
-} as const
-
-const previewInfoBox = {
-  background: '#ffffff',
-  border: '1px solid #dbe2ea',
-  borderRadius: '12px',
-  padding: '12px',
-  color: '#475569',
-  fontSize: '13px',
-  lineHeight: 1.7,
-  marginBottom: '10px',
-} as const
-
-const menuPreviewText = {
-  color: '#475569',
-  fontSize: '14px',
-  lineHeight: 1.8,
-} as const
-
-const dailyNotePreviewStyle = {
-  marginTop: '10px',
-  paddingTop: '10px',
-  borderTop: '1px dashed #cbd5e1',
-  whiteSpace: 'pre-line' as const,
-  color: '#334155',
-} as const
-
-const shareActions = {
-  display: 'flex',
-  gap: '10px',
-  flexWrap: 'wrap',
-} as const
-
-const actionButtonStyle = {
-  padding: '12px 16px',
-  borderRadius: '14px',
-  border: '1px solid #cbd5e1',
-  background: '#ffffff',
-  color: '#0f172a',
-  fontWeight: 700,
-} as const
-
-const whatsAppButtonStyle = {
-  padding: '12px 16px',
-  borderRadius: '14px',
-  border: '1px solid #bbf7d0',
-  background: '#f0fdf4',
-  color: '#166534',
-  fontWeight: 700,
-} as const
-
-const statCardStyle = {
-  background: '#ffffff',
-  borderRadius: '18px',
-  padding: '18px',
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 12px 32px rgba(15,23,42,0.06)',
-} as const
-
-const statLabelStyle = {
-  color: '#64748b',
-  fontSize: '13px',
-  fontWeight: 700,
-  marginBottom: '10px',
-} as const
-
-const statValueStyle = {
-  color: '#0f172a',
-  fontSize: '26px',
-  fontWeight: 800,
-} as const
-
-const navLinkStyle = {
-  display: 'inline-block',
-  padding: '10px 14px',
-  borderRadius: '12px',
-  textDecoration: 'none',
-  color: '#334155',
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  fontSize: '14px',
-  fontWeight: 700,
-} as const
-
-const navLinkActiveStyle = {
-  ...navLinkStyle,
-  background: '#0f172a',
-  color: '#ffffff',
-  border: '1px solid #0f172a',
-} as const
-
-const sectionHeaderStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  gap: '12px',
-  marginBottom: '16px',
-} as const
-
-const sectionTitleStyle = {
-  margin: '0 0 4px 0',
-  fontSize: '22px',
-  color: '#0f172a',
-  fontWeight: 800,
-} as const
-
-const sectionSubtitleStyle = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: '14px',
-} as const
-
-const miniLinkStyle = {
-  display: 'inline-block',
-  textDecoration: 'none',
-  color: '#1d4ed8',
-  fontWeight: 700,
-  fontSize: '14px',
-} as const
-
-const orderCardStyle = {
-  border: '1px solid #e5e7eb',
-  borderRadius: '16px',
-  padding: '14px',
-  background: '#fff',
-} as const
-
-const orderTitleStyle = {
-  fontWeight: 700,
-  color: '#0f172a',
-  marginBottom: '6px',
-} as const
-
-const orderMetaStyle = {
-  color: '#64748b',
-  fontSize: '13px',
-  lineHeight: 1.6,
-} as const
-
-const orderAmountStyle = {
-  color: '#0f172a',
-  fontWeight: 800,
-  marginBottom: '6px',
-} as const
-
-const badgeStyle = {
-  display: 'inline-block',
-  padding: '6px 10px',
-  borderRadius: '999px',
-  fontSize: '12px',
-  fontWeight: 700,
-  textTransform: 'capitalize' as const,
-} as const
-
-const paidBadgeStyle = {
-  background: '#dcfce7',
-  color: '#166534',
-} as const
-
-const pendingBadgeStyle = {
-  background: '#fef3c7',
-  color: '#92400e',
-} as const
-
-const quickLinkStyle = {
-  display: 'block',
-  padding: '14px 16px',
-  borderRadius: '14px',
-  textDecoration: 'none',
-  color: '#0f172a',
-  border: '1px solid #e2e8f0',
-  background: '#f8fafc',
-  fontWeight: 700,
-} as const
-
-const quickLinkPrimaryStyle = {
-  display: 'block',
-  padding: '14px 16px',
-  borderRadius: '14px',
-  textDecoration: 'none',
-  color: '#ffffff',
-  border: '1px solid #0f172a',
-  background: '#0f172a',
-  fontWeight: 700,
-} as const
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="text-sm font-semibold text-slate-500">{label}</div>
+      <div className="mt-3 text-2xl font-extrabold text-slate-900">{value}</div>
+    </div>
+  )
+}
