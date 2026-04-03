@@ -8,7 +8,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <a href="/" className="flex items-center gap-3">
             <Image
-              src="/bayarlink Logo 01 800px.svg"
+              src="/BayarLink Logo 01.svg"
               alt="bayarlink Logo"
               width={160}
               height={40}
