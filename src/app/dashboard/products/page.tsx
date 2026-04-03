@@ -441,8 +441,8 @@ export default function ProductsPage() {
         <div style={headerInner}>
           <div style={brandWrap}>
             <img
-              src="/GoBayar%20Logo%2001%20800px.svg"
-              alt="GoBayar"
+              src="/BayarLink Logo 01.svg"
+              alt="bayarlink"
               style={brandLogo}
             />
           </div>
