@@ -8,8 +8,8 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <a href="/" className="flex items-center gap-3">
             <Image
-              src="/GoBayar Logo 01 800px.svg"
-              alt="GoBayar Logo"
+              src="/bayarlink Logo 01 800px.svg"
+              alt="bayarlink Logo"
               width={160}
               height={40}
               priority
@@ -53,7 +53,7 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              Jual dan promote perniagaan anda di mana2 platform dengan lebih mudah dengan link GoBayar. Mudah nak jual dan mudah customer nak bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO kos!
+              Jual dan promote perniagaan anda di mana2 platform dengan lebih mudah dengan link bayarlink. Mudah nak jual dan mudah customer nak bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO kos!
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -103,7 +103,7 @@ export default function HomePage() {
             <div className="relative">
               <Image
                 src="/Hero Image 01.png"
-                alt="GoBayar Preview"
+                alt="bayarlink Preview"
                 width={700}
                 height={1400}
                 priority
@@ -162,7 +162,7 @@ export default function HomePage() {
               Penyelesaian
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Share 1 link GoBayar!
+              Share 1 link bayarlink!
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
               Satu tempat untuk susun produk/ Menu, kumpul order, dan bagi customer
@@ -213,7 +213,7 @@ export default function HomePage() {
               Sesuai untuk
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
-              GoBayar ni untuk siapa?
+              bayarlink ni untuk siapa?
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
               Sangat sesuai untuk peniaga online kecil dan sederhana yang nak
@@ -391,14 +391,14 @@ export default function HomePage() {
               Soalan yang selalu ditanya
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Ini antara soalan paling biasa sebelum orang mula guna GoBayar.
+              Ini antara soalan paling biasa sebelum orang mula guna bayarlink.
             </p>
           </div>
 
           <div className="mt-12 grid gap-4">
             <FaqCard
               question="Perlu install app ke?"
-              answer="Tak perlu. GoBayar ialah sistem berasaskan web, jadi anda boleh terus guna dari phone atau laptop."
+              answer="Tak perlu. bayarlink ialah sistem berasaskan web, jadi anda boleh terus guna dari phone atau laptop."
             />
             <FaqCard
               question="Berapa lama nak setup shop?"
@@ -414,7 +414,7 @@ export default function HomePage() {
             />
             <FaqCard
               question="Kalau saya jual servis pun boleh?"
-              answer="Boleh. GoBayar bukan untuk produk sahaja, malah sesuai juga untuk seller yang jual servis atau pakej."
+              answer="Boleh. bayarlink bukan untuk produk sahaja, malah sesuai juga untuk seller yang jual servis atau pakej."
             />
           </div>
         </div>
@@ -456,8 +456,8 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 py-10 text-center sm:px-6 lg:px-8">
           <div className="flex justify-center">
             <Image
-              src="/GoBayar Logo 01 800px.svg"
-              alt="GoBayar Logo"
+              src="/bayarlink Logo 01 800px.svg"
+              alt="bayarlink Logo"
               width={150}
               height={40}
               className="h-8 w-auto opacity-90"
@@ -465,7 +465,7 @@ export default function HomePage() {
           </div>
 
           <p className="mt-5 text-[11px] text-slate-400">
-            Copyright Reserved @2026 GoBayar by Neugens Solution (202503301282
+            Copyright Reserved @2026 bayarlink by Neugens Solution (202503301282
             (AS0504872-V))
           </p>
         </div>
