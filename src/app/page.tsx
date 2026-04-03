@@ -310,7 +310,7 @@ export default function HomePage() {
                 href={primaryCtaHref}
                 className="mt-8 block rounded-xl bg-slate-900 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
               >
-                Start Free
+                Get Started
               </a>
             </div>
 
