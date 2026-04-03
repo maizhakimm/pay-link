@@ -84,7 +84,7 @@ export default function ShopPayButton({
     try {
       setLoading(true)
 
-      const res = await fetch('/api/payments/bayarcash/create-shop', {
+      const res = await fetch('/api/orders/create-from-cart', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,36 +92,40 @@ export default function ShopPayButton({
         body: JSON.stringify({
           sellerId,
           shopSlug,
-          name,
-          email,
-          phone,
-          items,
-          needsDelivery,
-          address: {
-            address1,
-            address2,
-            postcode,
-            city,
-            district,
-            state,
+          customer: {
+            name,
+            email,
+            phone,
           },
+          items,
+          total,
+          delivery: needsDelivery
+            ? {
+                address1,
+                address2,
+                postcode,
+                city,
+                district,
+                state,
+              }
+            : null,
         }),
       })
 
       const data = await res.json()
 
-      if (!res.ok || !data.ok) {
-        alert(data.error || 'Payment failed')
+      if (!res.ok) {
+        throw new Error(data.error || 'Order failed')
+      }
+
+      if (data.whatsappUrl) {
+        window.location.href = data.whatsappUrl
         return
       }
 
-      const parsed = JSON.parse(data.raw_response)
-
-      if (parsed.url) {
-        window.location.href = parsed.url
-      }
-    } catch {
-      alert('Something went wrong')
+      alert('Order berjaya!')
+    } catch (err: any) {
+      alert(err.message || 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -246,7 +250,7 @@ export default function ShopPayButton({
       </div>
 
       <button onClick={handleClick} disabled={loading} style={buttonStyle}>
-        {loading ? 'Redirecting...' : 'Pay Now'}
+        {loading ? 'Processing order...' : 'Order via WhatsApp'}
       </button>
     </div>
   )
@@ -288,4 +292,6 @@ const buttonStyle = {
   color: '#fff',
   fontWeight: 800,
   border: 'none',
+  cursor: 'pointer',
+  opacity: 1,
 } as const
