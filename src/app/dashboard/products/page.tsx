@@ -1,5 +1,6 @@
 'use client'
 
+import Layout from '../../../components/Layout'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
@@ -46,6 +47,10 @@ function getProductImages(product: ProductRow) {
     product.image_4,
     product.image_5,
   ].filter(Boolean) as string[]
+}
+
+function formatMoney(value?: number | null) {
+  return `RM ${Number(value || 0).toFixed(2)}`
 }
 
 export default function ProductsPage() {
@@ -340,53 +345,23 @@ export default function ProductsPage() {
   }
 
   async function deleteProduct(productId: string) {
-    console.log('Delete clicked for product id:', productId)
-
-    const confirmed = window.confirm(`Delete this product?\n\nID: ${productId}`)
-    if (!confirmed) {
-      console.log('Delete cancelled by user')
-      return
-    }
+    const confirmed = window.confirm('Delete this product?')
+    if (!confirmed) return
 
     try {
-      const { data: beforeData, error: beforeError } = await supabase
-        .from('products')
-        .select('id, name')
-        .eq('id', productId)
-        .maybeSingle()
-
-      console.log('Before delete check:', { beforeData, beforeError })
-
       const { error: deleteError } = await supabase
         .from('products')
         .delete()
         .eq('id', productId)
-
-      console.log('Delete response:', { deleteError })
 
       if (deleteError) {
         alert(`Delete failed: ${deleteError.message}`)
         return
       }
 
-      const { data: afterData, error: afterError } = await supabase
-        .from('products')
-        .select('id')
-        .eq('id', productId)
-        .maybeSingle()
-
-      console.log('After delete check:', { afterData, afterError })
-
-      if (afterData) {
-        alert('Delete request sent, but product still exists in database. This is usually a Supabase RLS policy issue.')
-        return
-      }
-
-      alert('Product deleted successfully')
       await loadProductsPage()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unexpected delete error'
-      console.error('Delete catch error:', err)
       alert(`Delete failed: ${message}`)
     }
   }
@@ -436,845 +411,409 @@ export default function ProductsPage() {
   }
 
   return (
-    <main style={pageWrap}>
-      <header style={headerStyle}>
-        <div style={headerInner}>
-          <div style={brandWrap}>
-            <img
-              src="/BayarLink Logo 01.svg"
-              alt="bayarlink"
-              style={brandLogo}
-            />
-          </div>
-
-          <nav style={mobileNavWrap}>
-            <a href="/dashboard" style={navLinkStyle}>
-              Dashboard
-            </a>
-            <a href="/dashboard/products" style={navLinkActiveStyle}>
-              Products
-            </a>
-            <a href="/dashboard/orders" style={navLinkStyle}>
-              Orders
-            </a>
-            <a href="/dashboard/settings" style={navLinkStyle}>
-              Settings
-            </a>
-          </nav>
-        </div>
-      </header>
-
-      <div style={contentWrap}>
-        <div style={contentInner}>
-          <div style={pageTitleWrap}>
-            <h1 style={pageTitle}>Products</h1>
-            <p style={pageSubTitle}>
-              Add, edit, and manage products easily from your phone.
-            </p>
-          </div>
-
-          <div style={mobileStackLayout}>
-            <section style={sectionCard}>
-              <h2 style={sectionTitle}>Create Product</h2>
-
-              <div style={formGrid}>
-                <label style={labelStyle}>Product Name</label>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Example: Nasi Lemak Ayam"
-                  style={inputStyle}
-                />
-
-                <label style={labelStyle}>Description</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Short product description"
-                  rows={4}
-                  style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-                />
-
-                <label style={labelStyle}>Price (RM)</label>
-                <input
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
-                  placeholder="0.00"
-                  style={inputStyle}
-                />
-
-                <label style={labelStyle}>Custom Slug (optional)</label>
-                <input
-                  value={customSlug}
-                  onChange={(e) => setCustomSlug(e.target.value)}
-                  placeholder="leave blank to auto-generate"
-                  style={inputStyle}
-                />
-
-                <label style={switchLabel}>
-                  <input
-                    type="checkbox"
-                    checked={trackStock}
-                    onChange={(e) => setTrackStock(e.target.checked)}
-                  />
-                  <span>Track Stock Quantity</span>
-                </label>
-
-                <label style={labelStyle}>Stock Quantity</label>
-                <input
-                  value={stockQuantity}
-                  onChange={(e) => setStockQuantity(e.target.value.replace(/[^\d]/g, ''))}
-                  placeholder="0"
-                  disabled={!trackStock}
-                  style={{
-                    ...inputStyle,
-                    background: trackStock ? '#fff' : '#f1f5f9',
-                    color: trackStock ? '#0f172a' : '#94a3b8',
-                  }}
-                />
-
-                <div style={infoBox}>
-                  <strong style={{ color: '#0f172a' }}>Stock note:</strong>
-                  <div style={{ marginTop: 6 }}>
-                    If stock tracking is on and quantity is 0, the product will become sold out automatically.
-                  </div>
-                </div>
-
-                <label style={labelStyle}>Upload Product Images (Max 5)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => appendCreateImages(e.target.files)}
-                  style={inputStyle}
-                />
-
-                {productImages.length > 0 && (
-                  <div style={thumbGrid}>
-                    {productImages.map((file, index) => (
-                      <div key={index} style={thumbItem}>
-                        <div style={thumbName}>{file.name}</div>
-                        <button
-                          type="button"
-                          onClick={() => removeCreateImage(index)}
-                          style={miniDangerButton}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div style={infoBox}>
-                  <strong style={{ color: '#0f172a' }}>Preview link:</strong>
-                  <div style={{ marginTop: 6, wordBreak: 'break-all' }}>
-                    {generatedSlug
-                      ? `${appUrl}/pay-link/${generatedSlug}`
-                      : 'Enter product name to generate pay link'}
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleCreateProduct}
-                  disabled={saving}
-                  style={{
-                    ...primaryButton,
-                    opacity: saving ? 0.7 : 1,
-                    cursor: saving ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {saving ? 'Saving...' : 'Create Product'}
-                </button>
-              </div>
-            </section>
-
-            <section style={sectionCard}>
-              <h2 style={sectionTitle}>Your Products</h2>
-
-              {loading ? (
-                <p style={mutedText}>Loading products...</p>
-              ) : error ? (
-                <p style={errorText}>{error}</p>
-              ) : products.length === 0 ? (
-                <p style={mutedText}>No products yet.</p>
-              ) : (
-                <div style={productListWrap}>
-                  {products.map((product) => {
-                    const link = `${appUrl}/pay-link/${product.slug}`
-                    const images = getProductImages(product)
-                    const thumb = images[0]
-
-                    return (
-                      <div key={product.id} style={productCard}>
-                        {editingId === product.id ? (
-                          <div style={formGrid}>
-                            <input
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              style={inputStyle}
-                              placeholder="Product name"
-                            />
-
-                            <textarea
-                              value={editingDescription}
-                              onChange={(e) => setEditingDescription(e.target.value)}
-                              rows={3}
-                              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-                              placeholder="Description"
-                            />
-
-                            <input
-                              value={editingPrice}
-                              onChange={(e) =>
-                                setEditingPrice(e.target.value.replace(/[^\d.]/g, ''))
-                              }
-                              style={inputStyle}
-                              placeholder="Price"
-                            />
-
-                            <label style={switchLabel}>
-                              <input
-                                type="checkbox"
-                                checked={editingIsActive}
-                                onChange={(e) => setEditingIsActive(e.target.checked)}
-                              />
-                              <span>Active</span>
-                            </label>
-
-                            <label style={switchLabel}>
-                              <input
-                                type="checkbox"
-                                checked={editingTrackStock}
-                                onChange={(e) => setEditingTrackStock(e.target.checked)}
-                              />
-                              <span>Track Stock Quantity</span>
-                            </label>
-
-                            <input
-                              value={editingStockQuantity}
-                              onChange={(e) =>
-                                setEditingStockQuantity(e.target.value.replace(/[^\d]/g, ''))
-                              }
-                              placeholder="Stock quantity"
-                              disabled={!editingTrackStock}
-                              style={{
-                                ...inputStyle,
-                                background: editingTrackStock ? '#fff' : '#f1f5f9',
-                                color: editingTrackStock ? '#0f172a' : '#94a3b8',
-                              }}
-                            />
-
-                            <label style={labelStyle}>Existing Images</label>
-                            {editingExistingImages.length > 0 ? (
-                              <div style={thumbGrid}>
-                                {editingExistingImages.map((image, index) => (
-                                  <div key={index} style={thumbItem}>
-                                    <img
-                                      src={image}
-                                      alt={`Existing ${index + 1}`}
-                                      style={thumbPreview}
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => removeEditExistingImage(index)}
-                                      style={miniDangerButton}
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p style={mutedSmall}>No existing images</p>
-                            )}
-
-                            <label style={labelStyle}>Add More Images (Max total 5)</label>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              onChange={(e) => appendEditImages(e.target.files)}
-                              style={inputStyle}
-                            />
-
-                            {editingNewImages.length > 0 && (
-                              <div style={thumbGrid}>
-                                {editingNewImages.map((file, index) => (
-                                  <div key={index} style={thumbItem}>
-                                    <div style={thumbName}>{file.name}</div>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeEditNewImage(index)}
-                                      style={miniDangerButton}
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            <div style={actionRow}>
-                              <button type="button" onClick={() => saveEdit(product)} style={primaryInlineButton}>
-                                Save
-                              </button>
-                              <button type="button" onClick={cancelEdit} style={secondaryInlineButton}>
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div style={badgeCornerWrap}>
-                              <span
-                                style={{
-                                  ...statusBadge,
-                                  background: product.is_active ? '#dcfce7' : '#f3f4f6',
-                                  color: product.is_active ? '#166534' : '#374151',
-                                }}
-                              >
-                                {product.is_active ? 'Active' : 'Inactive'}
-                              </span>
-
-                              {product.sold_out ? (
-                                <span
-                                  style={{
-                                    ...statusBadge,
-                                    background: '#fee2e2',
-                                    color: '#b91c1c',
-                                  }}
-                                >
-                                  Sold Out
-                                </span>
-                              ) : null}
-                            </div>
-
-                            <div style={productTopRow}>
-                              {thumb ? (
-                                <img
-                                  src={thumb}
-                                  alt={product.name}
-                                  style={productThumb}
-                                />
-                              ) : (
-                                <div style={productThumbPlaceholder}>No image</div>
-                              )}
-
-                              <div style={productInfoWrap}>
-                                <h3 style={productTitle}>{product.name}</h3>
-                                <p style={productPrice}>RM {Number(product.price).toFixed(2)}</p>
-
-                                <div style={tagRow}>
-                                  <span style={tagStyle}>
-                                    {product.track_stock
-                                      ? `Stock: ${product.stock_quantity ?? 0}`
-                                      : 'Stock tracking off'}
-                                  </span>
-                                </div>
-
-                                {product.description && (
-                                  <p style={productDescription}>{product.description}</p>
-                                )}
-                              </div>
-                            </div>
-
-                            <div style={linkBox}>{link}</div>
-
-                            <div style={actionRow}>
-                              <button
-                                type="button"
-                                onClick={() => copyLink(product.slug)}
-                                style={secondaryActionButton}
-                              >
-                                📋 Copy
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => shareLink(product.slug)}
-                                style={secondaryActionButton}
-                              >
-                                🔗 Share
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => startEdit(product)}
-                                style={secondaryActionButton}
-                              >
-                                ✏️ Edit
-                              </button>
-                            </div>
-
-                            <div style={bottomRow}>
-                              <div style={mutedSmall}>
-                                Public visibility:{' '}
-                                <strong>{product.is_active ? 'Visible' : 'Hidden'}</strong>
-                              </div>
-
-                              <div style={actionRow}>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleActive(product)}
-                                  style={secondaryActionButton}
-                                >
-                                  {product.is_active ? 'Set Inactive' : 'Set Active'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={async (e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    await deleteProduct(product.id)
-                                  }}
-                                  style={dangerActionButton}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
+    <Layout>
+      <div className="mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+          Products
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
+          Add, edit, and manage products easily from your phone.
+        </p>
       </div>
 
-      <footer style={footerStyle}>
-        <div style={footerInner}>© 2026 All rights reserved. Neugens Solution.</div>
-      </footer>
-    </main>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Create Product</h2>
+
+          <div className="grid gap-3">
+            <label className="text-sm font-bold text-slate-600">Product Name</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Example: Nasi Lemak Ayam"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+            />
+
+            <label className="text-sm font-bold text-slate-600">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Short product description"
+              rows={4}
+              className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+            />
+
+            <label className="text-sm font-bold text-slate-600">Price (RM)</label>
+            <input
+              value={price}
+              onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
+              placeholder="0.00"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+            />
+
+            <label className="text-sm font-bold text-slate-600">Custom Slug (optional)</label>
+            <input
+              value={customSlug}
+              onChange={(e) => setCustomSlug(e.target.value)}
+              placeholder="leave blank to auto-generate"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+            />
+
+            <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={trackStock}
+                onChange={(e) => setTrackStock(e.target.checked)}
+              />
+              <span>Track Stock Quantity</span>
+            </label>
+
+            <label className="text-sm font-bold text-slate-600">Stock Quantity</label>
+            <input
+              value={stockQuantity}
+              onChange={(e) => setStockQuantity(e.target.value.replace(/[^\d]/g, ''))}
+              placeholder="0"
+              disabled={!trackStock}
+              className={[
+                'w-full rounded-2xl border px-4 py-3 text-sm outline-none transition',
+                trackStock
+                  ? 'border-slate-200 bg-white text-slate-900 focus:border-slate-400'
+                  : 'border-slate-200 bg-slate-100 text-slate-400',
+              ].join(' ')}
+            />
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              <strong className="text-slate-900">Stock note:</strong>
+              <div className="mt-1">
+                If stock tracking is on and quantity is 0, the product will become sold out automatically.
+              </div>
+            </div>
+
+            <label className="text-sm font-bold text-slate-600">Upload Product Images (Max 5)</label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => appendCreateImages(e.target.files)}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+            />
+
+            {productImages.length > 0 && (
+              <div className="grid grid-cols-2 gap-3">
+                {productImages.map((file, index) => (
+                  <div
+                    key={index}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                  >
+                    <div className="mb-2 break-words text-center text-xs text-slate-600">
+                      {file.name}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeCreateImage(index)}
+                      className="w-full rounded-xl border border-red-200 bg-rose-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-rose-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              <strong className="text-slate-900">Preview link:</strong>
+              <div className="mt-1 break-all">
+                {generatedSlug
+                  ? `${appUrl}/pay-link/${generatedSlug}`
+                  : 'Enter product name to generate pay link'}
+              </div>
+            </div>
+
+            <button
+              onClick={handleCreateProduct}
+              disabled={saving}
+              className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {saving ? 'Saving...' : 'Create Product'}
+            </button>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Your Products</h2>
+
+          {loading ? (
+            <p className="text-sm text-slate-500">Loading products...</p>
+          ) : error ? (
+            <p className="text-sm text-red-700">{error}</p>
+          ) : products.length === 0 ? (
+            <p className="text-sm text-slate-500">No products yet.</p>
+          ) : (
+            <div className="grid gap-4">
+              {products.map((product) => {
+                const link = `${appUrl}/pay-link/${product.slug}`
+                const images = getProductImages(product)
+                const thumb = images[0]
+
+                return (
+                  <div
+                    key={product.id}
+                    className="relative grid gap-3 rounded-3xl border border-slate-200 bg-white p-4"
+                  >
+                    {editingId === product.id ? (
+                      <div className="grid gap-3">
+                        <input
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          placeholder="Product name"
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                        />
+
+                        <textarea
+                          value={editingDescription}
+                          onChange={(e) => setEditingDescription(e.target.value)}
+                          rows={3}
+                          placeholder="Description"
+                          className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                        />
+
+                        <input
+                          value={editingPrice}
+                          onChange={(e) =>
+                            setEditingPrice(e.target.value.replace(/[^\d.]/g, ''))
+                          }
+                          placeholder="Price"
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                        />
+
+                        <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={editingIsActive}
+                            onChange={(e) => setEditingIsActive(e.target.checked)}
+                          />
+                          <span>Active</span>
+                        </label>
+
+                        <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={editingTrackStock}
+                            onChange={(e) => setEditingTrackStock(e.target.checked)}
+                          />
+                          <span>Track Stock Quantity</span>
+                        </label>
+
+                        <input
+                          value={editingStockQuantity}
+                          onChange={(e) =>
+                            setEditingStockQuantity(e.target.value.replace(/[^\d]/g, ''))
+                          }
+                          placeholder="Stock quantity"
+                          disabled={!editingTrackStock}
+                          className={[
+                            'w-full rounded-2xl border px-4 py-3 text-sm outline-none transition',
+                            editingTrackStock
+                              ? 'border-slate-200 bg-white text-slate-900 focus:border-slate-400'
+                              : 'border-slate-200 bg-slate-100 text-slate-400',
+                          ].join(' ')}
+                        />
+
+                        <label className="text-sm font-bold text-slate-600">Existing Images</label>
+                        {editingExistingImages.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-3">
+                            {editingExistingImages.map((image, index) => (
+                              <div
+                                key={index}
+                                className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                              >
+                                <img
+                                  src={image}
+                                  alt={`Existing ${index + 1}`}
+                                  className="mb-2 h-24 w-full rounded-xl object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeEditExistingImage(index)}
+                                  className="w-full rounded-xl border border-red-200 bg-rose-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-rose-100"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-500">No existing images</p>
+                        )}
+
+                        <label className="text-sm font-bold text-slate-600">Add More Images (Max total 5)</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => appendEditImages(e.target.files)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+                        />
+
+                        {editingNewImages.length > 0 && (
+                          <div className="grid grid-cols-2 gap-3">
+                            {editingNewImages.map((file, index) => (
+                              <div
+                                key={index}
+                                className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                              >
+                                <div className="mb-2 break-words text-center text-xs text-slate-600">
+                                  {file.name}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeEditNewImage(index)}
+                                  className="w-full rounded-xl border border-red-200 bg-rose-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-rose-100"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => saveEdit(product)}
+                            className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="absolute right-4 top-4 flex max-w-[180px] flex-wrap justify-end gap-2">
+                          <span
+                            className={[
+                              'inline-flex rounded-full px-3 py-1 text-xs font-bold',
+                              product.is_active
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-slate-100 text-slate-700',
+                            ].join(' ')}
+                          >
+                            {product.is_active ? 'Active' : 'Inactive'}
+                          </span>
+
+                          {product.sold_out ? (
+                            <span className="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
+                              Sold Out
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="flex items-start gap-3 pt-8">
+                          {thumb ? (
+                            <img
+                              src={thumb}
+                              alt={product.name}
+                              className="h-20 w-20 shrink-0 rounded-2xl border border-slate-200 object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-xs text-slate-400">
+                              No image
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1 pr-2">
+                            <h3 className="mb-1 text-lg font-extrabold leading-6 text-slate-900">
+                              {product.name}
+                            </h3>
+                            <p className="mb-2 text-lg font-extrabold text-blue-700">
+                              RM {Number(product.price).toFixed(2)}
+                            </p>
+
+                            <div className="mb-2 flex flex-wrap gap-2">
+                              <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
+                                {product.track_stock
+                                  ? `Stock: ${product.stock_quantity ?? 0}`
+                                  : 'Stock tracking off'}
+                              </span>
+                            </div>
+
+                            {product.description && (
+                              <p className="text-sm leading-6 text-slate-500">
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="break-all rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                          {link}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => copyLink(product.slug)}
+                            className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-xs font-bold text-slate-900 transition hover:bg-slate-50 sm:text-sm"
+                          >
+                            📋 Copy
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => shareLink(product.slug)}
+                            className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-xs font-bold text-slate-900 transition hover:bg-slate-50 sm:text-sm"
+                          >
+                            🔗 Share
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(product)}
+                            className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-xs font-bold text-slate-900 transition hover:bg-slate-50 sm:text-sm"
+                          >
+                            ✏️ Edit
+                          </button>
+                        </div>
+
+                        <div className="flex flex-col gap-3 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="text-sm text-slate-500">
+                            Public visibility:{' '}
+                            <strong className="text-slate-700">
+                              {product.is_active ? 'Visible' : 'Hidden'}
+                            </strong>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 sm:flex">
+                            <button
+                              type="button"
+                              onClick={() => toggleActive(product)}
+                              className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-xs font-bold text-slate-900 transition hover:bg-slate-50 sm:text-sm"
+                            >
+                              {product.is_active ? 'Set Inactive' : 'Set Active'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteProduct(product.id)}
+                              className="rounded-2xl border border-red-200 bg-rose-50 px-4 py-3 text-xs font-bold text-red-700 transition hover:bg-rose-100 sm:text-sm"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+    </Layout>
   )
 }
-
-const pageWrap = {
-  minHeight: '100vh',
-  background: '#f8fafc',
-  display: 'flex',
-  flexDirection: 'column' as const,
-} as const
-
-const headerStyle = {
-  background: '#ffffff',
-  borderBottom: '1px solid #e5e7eb',
-  padding: '14px 16px',
-} as const
-
-const headerInner = {
-  maxWidth: '780px',
-  margin: '0 auto',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '12px',
-} as const
-
-const brandWrap = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-} as const
-
-const brandLogo = {
-  height: '38px',
-  width: 'auto',
-  display: 'block',
-} as const
-
-const mobileNavWrap = {
-  display: 'flex',
-  gap: '8px',
-  overflowX: 'auto' as const,
-  WebkitOverflowScrolling: 'touch' as const,
-} as const
-
-const contentWrap = {
-  flex: 1,
-  padding: '16px',
-} as const
-
-const contentInner = {
-  maxWidth: '780px',
-  margin: '0 auto',
-} as const
-
-const pageTitleWrap = {
-  marginBottom: '16px',
-} as const
-
-const pageTitle = {
-  margin: '0 0 6px 0',
-  fontSize: '28px',
-  color: '#0f172a',
-  fontWeight: 800,
-} as const
-
-const pageSubTitle = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: '14px',
-  lineHeight: 1.6,
-} as const
-
-const mobileStackLayout = {
-  display: 'grid',
-  gridTemplateColumns: '1fr',
-  gap: '16px',
-} as const
-
-const sectionCard = {
-  background: '#ffffff',
-  borderRadius: '20px',
-  padding: '16px',
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 10px 24px rgba(15,23,42,0.05)',
-} as const
-
-const sectionTitle = {
-  margin: '0 0 14px 0',
-  fontSize: '20px',
-  color: '#0f172a',
-  fontWeight: 800,
-} as const
-
-const formGrid = {
-  display: 'grid',
-  gap: '12px',
-} as const
-
-const labelStyle = {
-  fontSize: '13px',
-  color: '#475569',
-  fontWeight: 700,
-} as const
-
-const inputStyle = {
-  width: '100%',
-  padding: '13px 14px',
-  borderRadius: '12px',
-  border: '1px solid #dbe2ea',
-  fontSize: '14px',
-  outline: 'none',
-  background: '#fff',
-  boxSizing: 'border-box' as const,
-} as const
-
-const switchLabel = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  fontSize: '14px',
-  color: '#334155',
-  fontWeight: 600,
-} as const
-
-const infoBox = {
-  padding: '12px 14px',
-  borderRadius: '14px',
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  color: '#475569',
-  fontSize: '13px',
-  lineHeight: 1.6,
-} as const
-
-const thumbGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  gap: '10px',
-} as const
-
-const thumbItem = {
-  border: '1px solid #e2e8f0',
-  borderRadius: '12px',
-  padding: '8px',
-  background: '#f8fafc',
-} as const
-
-const thumbName = {
-  fontSize: '11px',
-  color: '#475569',
-  marginBottom: '6px',
-  textAlign: 'center' as const,
-  wordBreak: 'break-word' as const,
-} as const
-
-const thumbPreview = {
-  width: '100%',
-  height: '78px',
-  objectFit: 'cover' as const,
-  borderRadius: '10px',
-  marginBottom: '6px',
-} as const
-
-const primaryButton = {
-  width: '100%',
-  padding: '15px 18px',
-  borderRadius: '14px',
-  background: '#0f172a',
-  color: '#ffffff',
-  border: 'none',
-  fontSize: '15px',
-  fontWeight: 800,
-  boxShadow: '0 12px 24px rgba(15,23,42,0.12)',
-} as const
-
-const primaryInlineButton = {
-  flex: 1,
-  padding: '11px 12px',
-  borderRadius: '12px',
-  border: 'none',
-  background: '#0f172a',
-  color: '#fff',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontSize: '13px',
-} as const
-
-const secondaryInlineButton = {
-  flex: 1,
-  padding: '11px 12px',
-  borderRadius: '12px',
-  border: '1px solid #cbd5e1',
-  background: '#fff',
-  color: '#0f172a',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontSize: '13px',
-} as const
-
-const miniDangerButton = {
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: '10px',
-  border: '1px solid #fecaca',
-  background: '#fff1f2',
-  color: '#b91c1c',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontSize: '12px',
-} as const
-
-const mutedText = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: '14px',
-} as const
-
-const mutedSmall = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: '13px',
-  lineHeight: 1.5,
-} as const
-
-const errorText = {
-  margin: 0,
-  color: '#b91c1c',
-  fontSize: '14px',
-} as const
-
-const productListWrap = {
-  display: 'grid',
-  gap: '14px',
-} as const
-
-const productCard = {
-  position: 'relative' as const,
-  border: '1px solid #e5e7eb',
-  borderRadius: '18px',
-  padding: '14px',
-  background: '#ffffff',
-  display: 'grid',
-  gap: '12px',
-} as const
-
-const badgeCornerWrap = {
-  position: 'absolute' as const,
-  top: '12px',
-  right: '12px',
-  display: 'flex',
-  gap: '8px',
-  flexWrap: 'wrap' as const,
-  justifyContent: 'flex-end' as const,
-  maxWidth: '180px',
-  zIndex: 2,
-} as const
-
-const productTopRow = {
-  display: 'flex',
-  gap: '12px',
-  alignItems: 'flex-start',
-  paddingTop: '26px',
-} as const
-
-const productInfoWrap = {
-  flex: 1,
-  minWidth: 0,
-  paddingRight: '10px',
-} as const
-
-const productThumb = {
-  width: '84px',
-  height: '84px',
-  objectFit: 'cover' as const,
-  borderRadius: '14px',
-  border: '1px solid #e2e8f0',
-  flexShrink: 0,
-} as const
-
-const productThumbPlaceholder = {
-  width: '84px',
-  height: '84px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: '#f1f5f9',
-  color: '#94a3b8',
-  fontSize: '12px',
-  borderRadius: '14px',
-  border: '1px solid #e2e8f0',
-  flexShrink: 0,
-} as const
-
-const statusBadge = {
-  display: 'inline-block',
-  padding: '6px 10px',
-  borderRadius: '999px',
-  fontSize: '12px',
-  fontWeight: 700,
-} as const
-
-const productTitle = {
-  margin: '0 0 6px 0',
-  fontSize: '18px',
-  color: '#0f172a',
-  fontWeight: 800,
-  lineHeight: 1.4,
-} as const
-
-const productPrice = {
-  margin: '0 0 8px 0',
-  color: '#1d4ed8',
-  fontSize: '17px',
-  fontWeight: 800,
-} as const
-
-const tagRow = {
-  display: 'flex',
-  gap: '8px',
-  flexWrap: 'wrap' as const,
-  marginBottom: '8px',
-} as const
-
-const tagStyle = {
-  display: 'inline-block',
-  padding: '6px 10px',
-  borderRadius: '999px',
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  color: '#334155',
-  fontSize: '12px',
-  fontWeight: 700,
-} as const
-
-const productDescription = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: '14px',
-  lineHeight: 1.7,
-} as const
-
-const linkBox = {
-  padding: '12px 14px',
-  borderRadius: '14px',
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  fontSize: '13px',
-  color: '#475569',
-  wordBreak: 'break-all' as const,
-} as const
-
-const actionRow = {
-  display: 'flex',
-  gap: '8px',
-  flexWrap: 'nowrap' as const,
-} as const
-
-const secondaryActionButton = {
-  flex: 1,
-  width: '100%',
-  padding: '11px 10px',
-  borderRadius: '12px',
-  border: '1px solid #cbd5e1',
-  background: '#fff',
-  color: '#0f172a',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontSize: '12px',
-  whiteSpace: 'nowrap' as const,
-} as const
-
-const dangerActionButton = {
-  flex: 1,
-  width: '100%',
-  padding: '11px 10px',
-  borderRadius: '12px',
-  border: '1px solid #fecaca',
-  background: '#fff1f2',
-  color: '#b91c1c',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontSize: '12px',
-  whiteSpace: 'nowrap' as const,
-} as const
-
-const bottomRow = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '10px',
-  flexWrap: 'wrap' as const,
-  borderTop: '1px solid #f1f5f9',
-  paddingTop: '12px',
-} as const
-
-const navLinkStyle = {
-  display: 'inline-block',
-  padding: '8px 10px',
-  borderRadius: '10px',
-  textDecoration: 'none',
-  textAlign: 'center' as const,
-  color: '#334155',
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  fontSize: '13px',
-  fontWeight: 700,
-  whiteSpace: 'nowrap' as const,
-  flexShrink: 0,
-} as const
-
-const navLinkActiveStyle = {
-  ...navLinkStyle,
-  background: '#0f172a',
-  color: '#ffffff',
-  border: '1px solid #0f172a',
-} as const
-
-const footerStyle = {
-  marginTop: '20px',
-  borderTop: '1px solid #e5e7eb',
-  background: '#ffffff',
-  padding: '16px',
-} as const
-
-const footerInner = {
-  maxWidth: '780px',
-  margin: '0 auto',
-  textAlign: 'center' as const,
-  color: '#64748b',
-  fontSize: '13px',
-} as const
