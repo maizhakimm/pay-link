@@ -42,9 +42,36 @@ type BayarcashResponse = {
   message?: string
 }
 
+type DeliveryPayload = {
+  address1?: string
+  address2?: string
+  postcode?: string
+  city?: string
+  district?: string
+  state?: string
+} | null
+
 function isReservationExpired(reservedUntil?: string | null) {
   if (!reservedUntil) return true
   return new Date(reservedUntil).getTime() <= Date.now()
+}
+
+function buildBuyerAddress(delivery: DeliveryPayload) {
+  if (!delivery) return null
+
+  const parts = [
+    delivery.address1,
+    delivery.address2,
+    delivery.postcode,
+    delivery.city,
+    delivery.district,
+    delivery.state,
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+
+  return parts.length ? parts.join(', ') : null
 }
 
 export async function POST(req: NextRequest) {
@@ -56,6 +83,8 @@ export async function POST(req: NextRequest) {
     const email = body.email as string
     const phone = body.phone as string
     const items = (body.items || []) as RequestItem[]
+    const delivery = (body.delivery || null) as DeliveryPayload
+    const paymentChannel = Number(body.paymentChannel || BAYARCASH_CHANNELS.FPX)
 
     if (!sellerId) {
       return NextResponse.json(
@@ -73,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     const productIds = items.map((item) => item.product_id)
 
-   const { data: products, error: productError } = await supabase
+    const { data: products, error: productError } = await supabase
       .from('products')
       .select(
         'id, name, slug, price, is_active, seller_profile_id, track_stock, stock_quantity, sold_out, reserved_quantity, reserved_until'
@@ -192,7 +221,7 @@ export async function POST(req: NextRequest) {
     const firstProduct = validItems[0].product
     const orderNumber = `ORD-${Date.now()}`
     const amount = totalAmount.toFixed(2)
-    const paymentChannel = BAYARCASH_CHANNELS.FPX
+    const buyerAddress = buildBuyerAddress(delivery)
 
     const { data: insertedOrder, error: orderInsertError } = await supabase
       .from('orders')
@@ -208,6 +237,7 @@ export async function POST(req: NextRequest) {
         buyer_name: name || 'Customer',
         buyer_email: email || 'customer@example.com',
         buyer_phone: phone || '',
+        buyer_address: buyerAddress,
 
         quantity: totalQuantity,
         amount,
@@ -217,6 +247,7 @@ export async function POST(req: NextRequest) {
         payment_channel: paymentChannel,
 
         status: 'pending',
+        payment_status: 'pending',
         fulfillment_status: 'pending',
         payout_status: 'unpaid',
       })
@@ -302,6 +333,7 @@ export async function POST(req: NextRequest) {
         .from('orders')
         .update({
           status: 'failed',
+          payment_status: 'failed',
           updated_at: new Date().toISOString(),
         })
         .eq('id', insertedOrder.id)
@@ -320,6 +352,7 @@ export async function POST(req: NextRequest) {
       .update({
         gateway_payment_intent_id: parsedResponse?.id || null,
         status: 'awaiting_payment',
+        payment_status: 'awaiting_payment',
         updated_at: new Date().toISOString(),
       })
       .eq('id', insertedOrder.id)
@@ -329,6 +362,7 @@ export async function POST(req: NextRequest) {
       order_id: insertedOrder.id,
       order_number: orderNumber,
       payment_intent_id: parsedResponse?.id || null,
+      payment_url: parsedResponse?.url || null,
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error'
