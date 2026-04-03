@@ -20,7 +20,6 @@ export default function SettingsPage() {
   const [companyName, setCompanyName] = useState('')
   const [companyReg, setCompanyReg] = useState('')
   const [businessAddress, setBusinessAddress] = useState('')
-  const [dailyNote, setDailyNote] = useState('')
 
   const [bankName, setBankName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
