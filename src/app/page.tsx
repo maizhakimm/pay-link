@@ -1,6 +1,8 @@
 import Image from "next/image";
 
 export default function HomePage() {
+  const primaryCtaHref = "/login";
+
   return (
     <main className="min-h-screen bg-white text-slate-900">
       {/* Header */}
@@ -9,7 +11,7 @@ export default function HomePage() {
           <a href="/" className="flex items-center gap-3">
             <Image
               src="/BayarLink Logo 01.svg"
-              alt="bayarlink Logo"
+              alt="BayarLink Logo"
               width={160}
               height={40}
               priority
@@ -25,7 +27,7 @@ export default function HomePage() {
               Login
             </a>
             <a
-              href="/signup"
+              href={primaryCtaHref}
               className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
               Sign Up
@@ -53,12 +55,15 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              Jual dan promote perniagaan anda di mana2 platform dengan BayarLink. Lebih mudah nak jual dan lebih mudah customer nak bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO kos!
+              Jual dan promote perniagaan anda di mana2 platform dengan
+              BayarLink. Lebih mudah nak jual dan lebih mudah customer nak
+              bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO
+              kos!
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
-                href="/signup"
+                href={primaryCtaHref}
                 className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
               >
                 Start Free
@@ -103,7 +108,7 @@ export default function HomePage() {
             <div className="relative">
               <Image
                 src="/Hero Image 01.png"
-                alt="bayarlink Preview"
+                alt="BayarLink Preview"
                 width={700}
                 height={1400}
                 priority
@@ -125,7 +130,8 @@ export default function HomePage() {
               Makin banyak order makin pening?
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Bila dah banyak order memang akan pening kalau masih lagi guna cara manual..
+              Bila dah banyak order memang akan pening kalau masih lagi guna
+              cara manual..
             </p>
           </div>
 
@@ -162,11 +168,12 @@ export default function HomePage() {
               Penyelesaian
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Share 1 link bayarlink!
+              Share 1 link BayarLink!
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Satu tempat untuk susun produk/ Menu, kumpul order, dan bagi customer
-              order dengan lebih mudah, bagi banyak pilihan cara bayaran kepada Customer.
+              Satu tempat untuk susun produk/menu, kumpul order, dan bagi
+              customer order dengan lebih mudah, serta banyak pilihan cara
+              bayaran.
             </p>
           </div>
 
@@ -213,12 +220,12 @@ export default function HomePage() {
               Sesuai untuk
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
-              bayarlink ni untuk siapa?
+              BayarLink ni untuk siapa?
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
               Sangat sesuai untuk peniaga online kecil dan sederhana yang nak
-              urus order dengan lebih mudah, nak jimat masa, nak nampak lebih gempak
-              dan nak mudahkan urusan Customer!
+              urus order dengan lebih mudah, jimat masa, nampak lebih gempak,
+              dan mudahkan urusan customer.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -226,7 +233,7 @@ export default function HomePage() {
               <MiniPill text="Penjual makanan" />
               <MiniPill text="Agent / dropshipper" />
               <MiniPill text="Jual servis dan perkhidmatan" />
-              <MiniPill text="Online Seller" />
+              <MiniPill text="Online seller" />
               <MiniPill text="Seller part-time" />
             </div>
           </div>
@@ -241,8 +248,9 @@ export default function HomePage() {
               customer lebih yakin.
             </h2>
             <p className="mt-4 max-w-xl text-base leading-7 text-white/75">
-              Dengan 1 link shop yang lebih tersusun, customer lebih senang
-              nak pilih dan order, lebih mudah nak bayar dengan pelbagai pilihan bayaran.
+              Dengan 1 link shop yang lebih tersusun, customer lebih senang nak
+              pilih dan order, dan lebih mudah nak bayar dengan pelbagai pilihan
+              bayaran.
             </p>
 
             <div className="mt-8 grid grid-cols-2 gap-4">
@@ -266,14 +274,17 @@ export default function HomePage() {
               Tiada bayaran. Mula dengan ZERO Kos!
             </h2>
             <p className="mt-4 text-slate-600">
-              Lebih banyak anda jual, lebih rendah fee anda. Pilih plan yang sesuai dengan tahap bisnes anda.
+              Lebih banyak anda jual, lebih rendah fee anda. Pilih plan yang
+              sesuai dengan tahap bisnes anda.
             </p>
           </div>
 
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="text-xl font-bold text-slate-900">Free (Beta)</h3>
-              <p className="mt-2 text-sm text-slate-500">Sesuai untuk peniaga baru, kecil dan sederhana</p>
+              <p className="mt-2 text-sm text-slate-500">
+                Sesuai untuk peniaga baru, kecil dan sederhana
+              </p>
 
               <div className="mt-6">
                 <span className="text-4xl font-extrabold">RM0</span>
@@ -296,7 +307,7 @@ export default function HomePage() {
               </div>
 
               <a
-                href="/signup"
+                href={primaryCtaHref}
                 className="mt-8 block rounded-xl bg-slate-900 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
               >
                 Start Free
@@ -309,7 +320,9 @@ export default function HomePage() {
               </div>
 
               <h3 className="text-xl font-bold text-slate-900">Pro</h3>
-              <p className="mt-2 text-sm text-slate-500">Sesuai untuk peniaga aktif dan nak scale up</p>
+              <p className="mt-2 text-sm text-slate-500">
+                Sesuai untuk peniaga aktif dan nak scale up
+              </p>
 
               <div className="mt-6">
                 <span className="text-4xl font-extrabold">RM19</span>
@@ -332,17 +345,20 @@ export default function HomePage() {
                 <p>✔ Auto WhatsApp summary</p>
               </div>
 
-              <a
-                href="/signup"
-                className="mt-8 block rounded-xl bg-violet-600 py-3 text-center font-semibold text-white transition hover:bg-violet-700"
+              <button
+                type="button"
+                disabled
+                className="mt-8 block w-full cursor-not-allowed rounded-xl bg-violet-200 py-3 text-center font-semibold text-violet-700 opacity-80"
               >
                 Coming Soon
-              </a>
+              </button>
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="text-xl font-bold text-slate-900">Growth</h3>
-              <p className="mt-2 text-sm text-slate-500">Sesuai untuk nak scale up bisnes</p>
+              <p className="mt-2 text-sm text-slate-500">
+                Sesuai untuk nak scale up bisnes
+              </p>
 
               <div className="mt-6">
                 <span className="text-4xl font-extrabold">RM49</span>
@@ -365,17 +381,19 @@ export default function HomePage() {
                 <p>✔ Inventory tracking</p>
               </div>
 
-              <a
-                href="/signup"
-                className="mt-8 block rounded-xl bg-slate-900 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
+              <button
+                type="button"
+                disabled
+                className="mt-8 block w-full cursor-not-allowed rounded-xl bg-slate-200 py-3 text-center font-semibold text-slate-600 opacity-80"
               >
                 Coming Soon
-              </a>
+              </button>
             </div>
           </div>
 
           <p className="mt-10 text-center text-sm text-slate-500">
-            Tiada caj setup. Tiada kontrak. Hanya bayar bila anda dah berjaya menjual.
+            Tiada caj setup. Tiada kontrak. Hanya bayar bila anda dah berjaya
+            menjual.
           </p>
         </div>
       </section>
@@ -391,14 +409,14 @@ export default function HomePage() {
               Soalan yang selalu ditanya
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Ini antara soalan paling biasa sebelum orang mula guna bayarlink.
+              Ini antara soalan paling biasa sebelum orang mula guna BayarLink.
             </p>
           </div>
 
           <div className="mt-12 grid gap-4">
             <FaqCard
               question="Perlu install app ke?"
-              answer="Tak perlu. bayarlink ialah sistem berasaskan web, jadi anda boleh terus guna dari phone atau laptop."
+              answer="Tak perlu. BayarLink ialah sistem berasaskan web, jadi anda boleh terus guna dari phone atau laptop."
             />
             <FaqCard
               question="Berapa lama nak setup shop?"
@@ -410,11 +428,11 @@ export default function HomePage() {
             />
             <FaqCard
               question="Customer order macam mana?"
-              answer="Customer buka link shop anda, pilih produk yang aktif, kemudian terus hantar order melalui WhatsApp."
+              answer="Customer buka link shop anda, pilih produk yang aktif, kemudian terus buat order dan pembayaran dengan flow yang lebih kemas."
             />
             <FaqCard
               question="Kalau saya jual servis pun boleh?"
-              answer="Boleh. bayarlink bukan untuk produk sahaja, malah sesuai juga untuk seller yang jual servis atau pakej."
+              answer="Boleh. BayarLink bukan untuk produk sahaja, malah sesuai juga untuk seller yang jual servis atau pakej."
             />
           </div>
         </div>
@@ -436,7 +454,7 @@ export default function HomePage() {
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <a
-              href="/signup"
+              href={primaryCtaHref}
               className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
               Sign Up Free
@@ -456,8 +474,8 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 py-10 text-center sm:px-6 lg:px-8">
           <div className="flex justify-center">
             <Image
-              src="/bayarlink Logo 01 800px.svg"
-              alt="bayarlink Logo"
+              src="/BayarLink Logo 01.svg"
+              alt="BayarLink Logo"
               width={150}
               height={40}
               className="h-8 w-auto opacity-90"
@@ -465,8 +483,8 @@ export default function HomePage() {
           </div>
 
           <p className="mt-5 text-[11px] text-slate-400">
-            Copyright Reserved @2026 bayarlink by Neugens Solution (202503301282
-            (AS0504872-V))
+            Copyright Reserved @2026 BayarLink by Neugens Solution
+            (202503301282 (AS0504872-V))
           </p>
         </div>
       </footer>
