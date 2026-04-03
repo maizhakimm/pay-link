@@ -25,8 +25,6 @@ type ProductRow = {
   image_5?: string | null
   is_active?: boolean | null
   seller_profile_id?: string | null
-
-  // ✅ NEW
   track_stock?: boolean
   stock_quantity?: number
   sold_out?: boolean
@@ -55,7 +53,6 @@ export default function ShopPageClient({
   const [cart, setCart] = useState<Record<string, number>>({})
 
   function increase(product: ProductRow) {
-    // ❌ BLOCK kalau sold out
     if (product.sold_out) return
 
     setCart((prev) => ({
@@ -166,7 +163,6 @@ export default function ShopPageClient({
                       <div style={productImagePlaceholder}>No image</div>
                     )}
 
-                    {/* 🔴 SOLD OUT BADGE */}
                     {product.sold_out && (
                       <div style={soldOutBadge}>Sold Out</div>
                     )}
@@ -176,7 +172,6 @@ export default function ShopPageClient({
                     <div style={productName}>{product.name}</div>
                     <div style={productPrice}>RM {product.price.toFixed(2)}</div>
 
-                    {/* OPTIONAL STOCK DISPLAY */}
                     {product.track_stock && (
                       <div style={stockText}>
                         Stock: {product.stock_quantity ?? 0}
@@ -265,7 +260,6 @@ export default function ShopPageClient({
   )
 }
 
-/* NEW STYLE */
 const soldOutBadge = {
   position: 'absolute' as const,
   top: 6,
@@ -284,7 +278,6 @@ const stockText = {
   marginBottom: 4,
 } as const
 
-/* ORIGINAL STYLES BELOW */
 const main = { minHeight: '100vh', background: '#f8fafc', padding: 16 } as const
 const container = { maxWidth: 760, margin: '0 auto' } as const
 const logoWrap = { textAlign: 'center' as const, marginBottom: 16 } as const
@@ -334,28 +327,6 @@ const shopTitle = {
 } as const
 
 const shopSub = { margin: 0, color: '#64748b', fontSize: 14 } as const
-
-const shopLinkBox = {
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  padding: 12,
-} as const
-
-const shopLinkLabel = {
-  display: 'block',
-  fontSize: 12,
-  fontWeight: 700,
-  color: '#64748b',
-  marginBottom: 4,
-} as const
-
-const shopLinkValue = {
-  fontSize: 14,
-  color: '#0f172a',
-  fontWeight: 600,
-  wordBreak: 'break-all' as const,
-} as const
 
 const sectionTitleWrap = { marginBottom: 12 } as const
 
