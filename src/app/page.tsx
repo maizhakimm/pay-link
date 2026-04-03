@@ -45,17 +45,15 @@ export default function HomePage() {
             </div>
 
             <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              Jual di WhatsApp
+              Mudah Urus,
               <br />
               <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                hanya dengan 1 link
+                Mudah Bayar!
               </span>
             </h1>
 
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              Mudahkan orang order dengan satu link yang terus bawa mereka ke
-              shop anda. Tak perlu lagi layan PM bercampur-campur, check order
-              manual, atau pening nak susun semuanya.
+              Jual dan promote perniagaan anda di mana2 platform dengan lebih mudah dengan link GoBayar. Mudah nak jual dan mudah customer nak bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO kos!
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -76,15 +74,23 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-slate-500">
               <div className="inline-flex items-center gap-2">
                 <CheckIcon />
-                Setup kurang 5 minit
+                WhatsApp
               </div>
               <div className="inline-flex items-center gap-2">
                 <CheckIcon />
-                Mobile friendly
+                TikTok
               </div>
               <div className="inline-flex items-center gap-2">
                 <CheckIcon />
-                Terus boleh jual
+                Telegram
+              </div>
+              <div className="inline-flex items-center gap-2">
+                <CheckIcon />
+                Facebook
+              </div>
+              <div className="inline-flex items-center gap-2">
+                <CheckIcon />
+                Instagram
               </div>
             </div>
           </div>
@@ -126,11 +132,10 @@ export default function HomePage() {
               Masalah
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Masalah biasa seller
+              Makin banyak order makin pening?
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Ramai penjual mula dengan WhatsApp group dan chat peribadi. Bila
-              order makin banyak, semua jadi serabut dan susah nak track.
+              Bila dah banyak order memang akan pening kalau masih lagi guna cara manual..
             </p>
           </div>
 
@@ -164,14 +169,14 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-              Solution
+              Penyelesaian
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              GoBayar selesaikan semua
+              Share 1 link GoBayar!
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Satu tempat untuk susun produk, kumpul order, dan bagi customer
-              order dengan lebih mudah terus dari WhatsApp.
+              Satu tempat untuk susun produk/ Menu, kumpul order, dan bagi customer
+              order dengan lebih mudah, bagi banyak pilihan cara bayaran kepada Customer.
             </p>
           </div>
 
@@ -222,95 +227,179 @@ export default function HomePage() {
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
               Sangat sesuai untuk peniaga online kecil dan sederhana yang nak
-              nampak lebih kemas bila menjual di WhatsApp.
+              urus order dengan lebih mudah, nak jimat masa, nak nampak lebih gempak
+              dan nak mudahkan urusan Customer!
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <MiniPill text="Home-based seller" />
               <MiniPill text="Penjual makanan" />
               <MiniPill text="Agent / dropshipper" />
-              <MiniPill text="Peniaga servis" />
-              <MiniPill text="Bisnes preorder" />
+              <MiniPill text="Jual servis dan perkhidmatan" />
+              <MiniPill text="Online Seller" />
               <MiniPill text="Seller part-time" />
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 to-slate-800 p-8 text-white shadow-sm">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-300">
-              Kenapa penting
+              Perlu ke?
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight">
-              Bila seller nampak kemas,
+              Bila dapat urus order dengan baik,
               <br />
               customer lebih yakin.
             </h2>
             <p className="mt-4 max-w-xl text-base leading-7 text-white/75">
               Dengan 1 link shop yang lebih tersusun, customer lebih senang
-              tengok, lebih mudah order, dan seller pun nampak lebih proper.
+              nak pilih dan order, lebih mudah nak bayar dengan pelbagai pilihan bayaran.
             </p>
 
             <div className="mt-8 grid grid-cols-2 gap-4">
-              <DarkStat title="Lebih kemas" subtitle="berbanding PM manual" />
+              <DarkStat title="Lebih terurus" subtitle="berbanding PM manual" />
               <DarkStat title="Lebih mudah" subtitle="untuk customer order" />
-              <DarkStat title="Lebih cepat" subtitle="untuk seller urus" />
+              <DarkStat title="Lebih cepat" subtitle="untuk seller urus order" />
               <DarkStat title="Lebih yakin" subtitle="untuk scale bisnes" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-              Pricing
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Tunggu apa lagi?
-            </h2>
-            <p className="mt-4 text-base leading-7 text-slate-600">
-              Daftar dan guna. Bukan kena bayar pun!
-              <br />
-              GoBayar tidak mengenakan apa-apa bayaran cuma terdapat transaksi fi
-              yang dikenakan.
-            </p>
-          </div>
+     {/* Pricing Section */}
+<section className="py-20 bg-white border-t border-slate-200">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          <div className="mx-auto mt-12 max-w-lg">
-            <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-              <div className="absolute right-5 top-5 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
-                Intro Plan (Beta)
-              </div>
+    {/* Header */}
+    <div className="text-center max-w-2xl mx-auto">
+      <p className="text-sm font-semibold text-violet-600 uppercase tracking-widest">
+        Pricing
+      </p>
+      <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900">
+        Mula percuma. Bayar bila ada jualan.
+      </h2>
+      <p className="mt-4 text-slate-600">
+        Lebih banyak anda jual, lebih rendah fee anda. Pilih plan yang sesuai dengan tahap bisnes anda.
+      </p>
+    </div>
 
-              <h3 className="text-2xl font-bold text-slate-950">Starter</h3>
-              <div className="mt-4 flex items-end gap-2">
-                <span className="text-5xl font-extrabold tracking-tight">
-                  FREE
-                </span>
-              </div>
+    {/* Cards */}
+    <div className="mt-14 grid gap-6 md:grid-cols-3">
 
-              <p className="mt-4 text-sm leading-6 text-slate-600">
-                Sesuai untuk home-based seller, peniaga kecil, dropshipper, dan
-                sesiapa yang nak mula jual dengan sistem lebih kemas.
-              </p>
+      {/* FREE */}
+      <div className="rounded-3xl border border-slate-200 p-6 shadow-sm bg-white">
+        <h3 className="text-xl font-bold text-slate-900">Free</h3>
+        <p className="mt-2 text-sm text-slate-500">Untuk mula berniaga</p>
 
-              <div className="mt-8 space-y-3">
-                <PriceItem text="Shop link sendiri" />
-                <PriceItem text="WhatsApp order flow" />
-                <PriceItem text="Basic dashboard" />
-              </div>
-
-              <a
-                href="/signup"
-                className="mt-8 inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
-                Start Free
-              </a>
-            </div>
-          </div>
+        <div className="mt-6">
+          <span className="text-4xl font-extrabold">RM0</span>
+          <span className="text-slate-500">/month</span>
         </div>
-      </section>
+
+        <p className="mt-4 text-sm text-slate-600">
+          Transaction fee standard:
+        </p>
+        <ul className="mt-2 text-sm text-slate-700 space-y-1">
+          <li>• FPX: RM1.50</li>
+          <li>• QR: 2.5%</li>
+          <li>• Card: RM1 + 2.5%</li>
+        </ul>
+
+        <div className="mt-6 space-y-2 text-sm text-slate-700">
+          <p>✔ Shop link sendiri</p>
+          <p>✔ Unlimited produk</p>
+          <p>✔ WhatsApp order flow</p>
+        </div>
+
+        <a
+          href="/signup"
+          className="mt-8 block text-center bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800 transition"
+        >
+          Start Free
+        </a>
+      </div>
+
+      {/* PRO (Coming Soont) */}
+      <div className="relative rounded-3xl border-2 border-violet-600 p-6 shadow-xl bg-white scale-[1.03]">
+        
+        <div className="absolute top-0 right-0 bg-violet-600 text-white text-xs px-3 py-1 rounded-bl-xl rounded-tr-3xl">
+          Popular
+        </div>
+
+        <h3 className="text-xl font-bold text-slate-900">Pro</h3>
+        <p className="mt-2 text-sm text-slate-500">Untuk seller aktif</p>
+
+        <div className="mt-6">
+          <span className="text-4xl font-extrabold">RM19</span>
+          <span className="text-slate-500">/month</span>
+        </div>
+
+        <p className="mt-4 text-sm text-slate-600">
+          Lower transaction fee:
+        </p>
+        <ul className="mt-2 text-sm text-slate-700 space-y-1">
+          <li>• FPX: RM1.30</li>
+          <li>• QR: 2.2%</li>
+          <li>• Card: RM1 + 2.2%</li>
+        </ul>
+
+        <div className="mt-6 space-y-2 text-sm text-slate-700">
+          <p>✔ Semua dalam Free</p>
+          <p>✔ Remove watermark</p>
+          <p>✔ Analytics asas</p>
+          <p>✔ Auto WhatsApp summary</p>
+        </div>
+
+        <a
+          href="/signup"
+          className="mt-8 block text-center bg-violet-600 text-white py-3 rounded-xl font-semibold hover:bg-violet-700 transition"
+        >
+          Upgrade to Pro
+        </a>
+      </div>
+
+      {/* GROWTH (Coming Soon) */}
+      <div className="rounded-3xl border border-slate-200 p-6 shadow-sm bg-white">
+        <h3 className="text-xl font-bold text-slate-900">Growth</h3>
+        <p className="mt-2 text-sm text-slate-500">Untuk scale bisnes</p>
+
+        <div className="mt-6">
+          <span className="text-4xl font-extrabold">RM49</span>
+          <span className="text-slate-500">/month</span>
+        </div>
+
+        <p className="mt-4 text-sm text-slate-600">
+          Lowest transaction fee:
+        </p>
+        <ul className="mt-2 text-sm text-slate-700 space-y-1">
+          <li>• FPX: RM1.10</li>
+          <li>• QR: 1.9%</li>
+          <li>• Card: RM1 + 1.9%</li>
+        </ul>
+
+        <div className="mt-6 space-y-2 text-sm text-slate-700">
+          <p>✔ Semua dalam Pro</p>
+          <p>✔ Multi staff</p>
+          <p>✔ Advanced automation</p>
+          <p>✔ Inventory tracking</p>
+        </div>
+
+        <a
+          href="/signup"
+          className="mt-8 block text-center bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800 transition"
+        >
+          Go Growth
+        </a>
+      </div>
+
+    </div>
+
+    {/* Bottom Note */}
+    <p className="text-center text-sm text-slate-500 mt-10">
+      Tiada caj setup. Tiada kontrak. Hanya bayar bila anda dah berjaya menjual.
+    </p>
+
+  </div>
+</section>
 
       {/* FAQ */}
       <section className="border-t border-slate-200 bg-slate-50 py-16 sm:py-20">
