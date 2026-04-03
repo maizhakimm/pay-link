@@ -106,8 +106,8 @@ export default function ShopPageClient({
       <div style={container}>
         <div style={logoWrap}>
           <img
-            src="/GoBayar%20Logo%2001%20800px.svg"
-            alt="GoBayar"
+            src="/BayarLink Logo 01.svg"
+            alt="bayarlink"
             style={logo}
           />
         </div>
