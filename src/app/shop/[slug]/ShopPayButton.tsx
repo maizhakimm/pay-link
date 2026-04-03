@@ -124,9 +124,11 @@ export default function ShopPayButton({
       }
 
       alert('Order berjaya!')
-    } catch (err: any) {
-      alert(err.message || 'Something went wrong')
-    } finally {
+  } catch (err) {
+  const message =
+    err instanceof Error ? err.message : 'Something went wrong'
+  alert(message)
+} finally {
       setLoading(false)
     }
   }
