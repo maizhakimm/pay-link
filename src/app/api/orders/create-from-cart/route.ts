@@ -91,7 +91,7 @@ export async function POST(req: Request) {
 
     // 💾 save order
     const { error: insertError } = await supabase
-      .from('orders')
+      .from('shop_orders')
       .insert({
         order_number: orderNo,
         seller_id: sellerId,
