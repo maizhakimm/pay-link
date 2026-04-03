@@ -96,7 +96,7 @@ export default function HomePage() {
 
             <div className="relative w-full max-w-[300px] sm:max-w-[340px]">
               <Image
-                src="/Hero Image 01.webp"
+                src="/Hero Image 01.svg"
                 alt="GoBayar Hero Preview"
                 width={680}
                 height={1200}
