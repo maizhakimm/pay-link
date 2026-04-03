@@ -54,6 +54,9 @@ export default function PaymentReturnPage({
   searchParams,
 }: PaymentReturnPageProps) {
   const statusInfo = getStatusDetails(searchParams.status)
+  const isSuccess = Number(searchParams.status) === 3
+  const isFailed = Number(searchParams.status) === 2
+  const isCancelled = Number(searchParams.status) === 4
 
   return (
     <main
@@ -100,7 +103,7 @@ export default function PaymentReturnPage({
               fontWeight: 800,
             }}
           >
-            {statusInfo.title}
+            {isSuccess ? '🎉 Payment Successful' : statusInfo.title}
           </h1>
 
           <p
@@ -112,6 +115,18 @@ export default function PaymentReturnPage({
             }}
           >
             {searchParams.status_description || statusInfo.message}
+          </p>
+
+          <p
+            style={{
+              margin: '12px 0 0 0',
+              color: '#9ca3af',
+              fontSize: '13px',
+              lineHeight: 1.7,
+            }}
+          >
+            Final payment confirmation may take a few seconds. Please do not
+            refresh this page repeatedly.
           </p>
         </div>
 
@@ -136,41 +151,135 @@ export default function PaymentReturnPage({
 
           <div style={{ display: 'grid', gap: '12px' }}>
             <div>
-              <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  marginBottom: '4px',
+                }}
+              >
                 Order Number
               </div>
-              <div style={{ fontSize: '15px', color: '#111827', fontWeight: 600 }}>
+              <div
+                style={{
+                  fontSize: '15px',
+                  color: '#111827',
+                  fontWeight: 600,
+                }}
+              >
                 {searchParams.order_number || '-'}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  marginBottom: '4px',
+                }}
+              >
                 Amount
               </div>
-              <div style={{ fontSize: '15px', color: '#111827', fontWeight: 600 }}>
+              <div
+                style={{
+                  fontSize: '15px',
+                  color: '#111827',
+                  fontWeight: 600,
+                }}
+              >
                 {searchParams.amount ? `MYR ${searchParams.amount}` : '-'}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  marginBottom: '4px',
+                }}
+              >
                 Customer
               </div>
-              <div style={{ fontSize: '15px', color: '#111827', fontWeight: 600 }}>
+              <div
+                style={{
+                  fontSize: '15px',
+                  color: '#111827',
+                  fontWeight: 600,
+                }}
+              >
                 {searchParams.payer_name || '-'}
               </div>
             </div>
 
             <div>
-              <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  marginBottom: '4px',
+                }}
+              >
                 Payment Status Code
               </div>
-              <div style={{ fontSize: '15px', color: '#111827', fontWeight: 600 }}>
+              <div
+                style={{
+                  fontSize: '15px',
+                  color: '#111827',
+                  fontWeight: 600,
+                }}
+              >
                 {searchParams.status || '-'}
               </div>
             </div>
           </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: '20px',
+            display: 'grid',
+            gap: '10px',
+          }}
+        >
+          <button
+            onClick={() => {
+              window.location.href = '/'
+            }}
+            style={{
+              width: '100%',
+              padding: '14px',
+              borderRadius: '12px',
+              background: '#0f172a',
+              color: '#fff',
+              fontWeight: 700,
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Back to Shop
+          </button>
+
+          {(isFailed || isCancelled) && (
+            <button
+              onClick={() => {
+                window.history.back()
+              }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                background: '#ffffff',
+                color: '#111827',
+                fontWeight: 700,
+                border: '1px solid #d1d5db',
+                cursor: 'pointer',
+              }}
+            >
+              Try Again
+            </button>
+          )}
         </div>
 
         <p
@@ -182,7 +291,7 @@ export default function PaymentReturnPage({
             lineHeight: 1.7,
           }}
         >
-          Thank you for using our secure checkout.
+          Thank you for using BayarLink secure checkout.
         </p>
       </div>
     </main>
