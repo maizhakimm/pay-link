@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// 🔐 server side only
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+// ✅ TYPES (replace all "any")
+type CartItem = {
+  product_id: string
+  quantity: number
+}
+
+type Product = {
+  id: string
+  name: string
+  price: number
+}
 
 function generateOrderNo() {
   const now = new Date()
@@ -29,7 +40,6 @@ export async function POST(req: Request) {
 
     const {
       sellerId,
-      shopSlug,
       customer,
       items,
       total,
@@ -43,8 +53,10 @@ export async function POST(req: Request) {
       )
     }
 
-    // 🔎 get products info
-    const productIds = items.map((i: any) => i.product_id)
+    // ✅ typed items
+    const typedItems: CartItem[] = items
+
+    const productIds = typedItems.map((i) => i.product_id)
 
     const { data: products, error: productError } = await supabase
       .from('products')
@@ -58,16 +70,20 @@ export async function POST(req: Request) {
       )
     }
 
-    // 🧮 map items + calculate total
-    const enrichedItems = items.map((item: any) => {
-      const product = products.find(p => p.id === item.product_id)
+    const productList = products as Product[]
+
+    // ✅ enrich items
+    const enrichedItems = typedItems.map((item) => {
+      const product = productList.find(p => p.id === item.product_id)
+
+      const price = product?.price || 0
 
       return {
         product_id: item.product_id,
         name: product?.name || 'Unknown',
-        price: product?.price || 0,
+        price,
         quantity: item.quantity,
-        line_total: (product?.price || 0) * item.quantity,
+        line_total: price * item.quantity,
       }
     })
 
@@ -95,7 +111,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 📞 get seller whatsapp
+    // 📞 seller
     const { data: seller } = await supabase
       .from('seller_profiles')
       .select('whatsapp, store_name')
@@ -104,10 +120,10 @@ export async function POST(req: Request) {
 
     const sellerPhone = normalizePhone(seller?.whatsapp || '')
 
-    // 💬 generate WhatsApp message
+    // 💬 WhatsApp message
     const itemText = enrichedItems
       .map(
-        (i: any) =>
+        (i) =>
           `• ${i.name} x${i.quantity} = RM ${i.line_total.toFixed(2)}`
       )
       .join('\n')
