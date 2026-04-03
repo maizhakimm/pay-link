@@ -1,19 +1,15 @@
 export default function HomePage() {
   return (
-    <main style={pageWrap}>
+    <main style={wrap}>
       {/* HEADER */}
       <header style={header}>
         <div style={container}>
-          <div style={headerInner}>
-            <img
-              src="/GoBayar%20Logo%2001%20800px.svg"
-              alt="GoBayar"
-              style={logo}
-            />
+          <div style={nav}>
+            <div style={logo}>GoBayar</div>
 
-            <div style={headerActions}>
-              <a href="/login" style={headerLogin}>Login</a>
-              <a href="/signup" style={headerSignup}>Sign Up</a>
+            <div style={navActions}>
+              <a href="/login" style={navLink}>Login</a>
+              <a href="/signup" style={navBtn}>Sign Up</a>
             </div>
           </div>
         </div>
@@ -22,24 +18,34 @@ export default function HomePage() {
       {/* HERO */}
       <section style={hero}>
         <div style={container}>
-          <div style={heroBox}>
-            <p style={beta}>Beta</p>
+          <div style={heroInner}>
+            <div style={badge}>Beta</div>
 
-            <h1 style={title}>
-              Menjual dengan mudah di WhatsApp hanya dengan 1 link.
-              <br />
-              Mudah untuk anda, mudah untuk customer!
+            <h1 style={heroTitle}>
+              Jual di WhatsApp<br />
+              <span style={{ color: '#6366f1' }}>hanya dengan 1 link</span>
             </h1>
 
-            <div style={heroButtons}>
-              <a href="/signup" style={primaryBtn}>Sign Up</a>
-              <a href="/login" style={secondaryBtn}>Login</a>
+            <p style={heroSub}>
+              Mudah untuk anda, mudah untuk customer.  
+              Tak perlu pening urus PM, payment dan order lagi.
+            </p>
+
+            <div style={ctaRow}>
+              <a href="/signup" style={primaryBtn}>Start Free</a>
+              <a
+                href="/shop/maiz-kitchen"
+                target="_blank"
+                style={ghostBtn}
+              >
+                View Demo Shop
+              </a>
             </div>
 
             <div style={trust}>
-              ✔ Produk Makanan  
-              ✔ Barangan  
-              ✔ Servis Perkhidmatan
+              ✔ Setup kurang 5 minit  
+              ✔ Mobile friendly  
+              ✔ Terus boleh jual
             </div>
           </div>
         </div>
@@ -48,30 +54,24 @@ export default function HomePage() {
       {/* PROBLEM */}
       <section style={section}>
         <div style={container}>
-          <h2 style={sectionTitle}>Masalah</h2>
-
-          <p style={sectionText}>
-            Order dah makin banyak… Susah nak track PM satu-satu check order.
-            Nak kena cross check payment lagi. Kadang payment terlepas pandang,
-            ada yang belum bayar lagi.
-          </p>
+          <h2 style={sectionTitle}>Masalah biasa seller</h2>
 
           <div style={grid}>
             <Card
               title="Customer PM satu-satu"
-              text="Nak urus order susah sebab bercampur aduk dengan chat customer semua."
+              text="Order bercampur dengan chat, susah nak urus dengan kemas."
             />
             <Card
-              title="Susah nak check payment"
-              text="Bila customer buat payment, kena check bank satu-satu. Memang leceh."
+              title="Susah check payment"
+              text="Setiap kali bayar, kena buka bank dan semak satu-satu."
             />
             <Card
-              title="Susah nak track order"
-              text="Bila order bersepah, pening nak check satu-satu PM untuk track semua order."
+              title="Track order serabut"
+              text="Order bersepah dalam PM, susah nak cari semula."
             />
             <Card
               title="Risau double order"
-              text="Kalau stock tak update betul, mudah jadi terlebih jual tanpa sedar."
+              text="Stock tak update, mudah terlebih jual tanpa sedar."
             />
           </div>
         </div>
@@ -80,17 +80,14 @@ export default function HomePage() {
       {/* SOLUTION */}
       <section style={sectionAlt}>
         <div style={container}>
-          <h2 style={sectionTitle}>Solusi</h2>
+          <h2 style={sectionTitle}>GoBayar selesaikan semua</h2>
 
           <div style={grid}>
-            <Card title="1 link semua produk" text="Letak semua menu dalam satu link." />
-            <Card title="Tak perlu check PM" text="Semua order tersusun dalam sistem." />
-            <Card title="Track order mudah" text="Tak perlu scroll chat panjang lagi." />
-            <Card title="Ada stock control" text="Elak double order secara automatik." />
-            <Card
-              title="Banyak payment method"
-              text="Customer boleh bayar guna FPX, Kad dan PayLater."
-            />
+            <Card title="1 link semua produk" text="Share sekali, terus boleh order." />
+            <Card title="Auto collect order" text="Tak perlu check PM satu-satu." />
+            <Card title="Payment auto track" text="Tak perlu check bank manual." />
+            <Card title="Stock auto update" text="Elak oversell dan double order." />
+            <Card title="Multi payment" text="FPX, Kad & PayLater tersedia." />
           </div>
         </div>
       </section>
@@ -99,47 +96,39 @@ export default function HomePage() {
       <section style={cta}>
         <div style={container}>
           <h2 style={ctaTitle}>
-            Tunggu apa lagi?
+            Tak payah pening lagi.
             <br />
-            Tak payah pening. Daftar dulu GoBayar.
+            Start jual cara lebih smart.
           </h2>
 
-          <p style={ctaSub}>Tak kena bayar pun!</p>
-
-          <div style={heroButtons}>
-            <a href="/signup" style={primaryBtn}>Sign Up</a>
-            <a href="/login" style={secondaryBtnDark}>Login</a>
+          <div style={ctaRow}>
+            <a href="/signup" style={primaryBtn}>Sign Up Free</a>
+            <a href="/login" style={ghostBtnDark}>Login</a>
           </div>
-
-          <div style={trustSmall}>
-            ✔ Daftar percuma ✔ Setup kurang 5 minit ✔ Terus boleh jual
-          </div>
-        </div>
-      </section>
-
-      {/* TARGET */}
-      <section style={section}>
-        <div style={container}>
-          <h2 style={sectionTitle}>GoBayar ni untuk siapa?</h2>
-          <p style={sectionText}>
-            Sesuai untuk peniaga yang online kecil dan sederhana.
-          </p>
         </div>
       </section>
 
       {/* FOOTER */}
       <footer style={footer}>
-        <div style={container}>
-          <p>GoBayar</p>
-          <p>NEUGENS SOLUTION</p>
-          <p>[MASUKKAN NO PENDAFTARAN SYARIKAT]</p>
-        </div>
+        <p>GoBayar</p>
+        <p>NEUGENS SOLUTION</p>
+        <p>SSM: [MASUKKAN NO PENDAFTARAN]</p>
       </footer>
+
+      {/* FLOATING WHATSAPP */}
+      <a
+        href="https://wa.me/60163352087"
+        target="_blank"
+        style={whatsapp}
+      >
+        💬
+      </a>
     </main>
   )
 }
 
-function Card({ title, text }: { title: string; text: string }) {
+/* COMPONENT */
+function Card({ title, text }: any) {
   return (
     <div style={card}>
       <h3 style={cardTitle}>{title}</h3>
@@ -150,122 +139,152 @@ function Card({ title, text }: { title: string; text: string }) {
 
 /* STYLES */
 
-const pageWrap = { fontFamily: 'sans-serif' }
+const wrap = { fontFamily: 'system-ui, sans-serif', color: '#111' }
 
 const container = {
   maxWidth: 1000,
   margin: '0 auto',
-  padding: '0 16px',
+  padding: '0 20px',
 }
 
 const header = {
-  position: 'sticky' as const,
-  top: 0,
-  background: '#fff',
   borderBottom: '1px solid #eee',
+  background: '#fff',
 }
 
-const headerInner = {
+const nav = {
   display: 'flex',
   justifyContent: 'space-between',
-  padding: '12px 0',
+  padding: '16px 0',
 }
 
-const logo = { height: 36 }
+const logo = { fontWeight: 800 }
 
-const headerActions = { display: 'flex', gap: 10 }
+const navActions = { display: 'flex', gap: 12 }
 
-const headerLogin = { textDecoration: 'none', color: '#333' }
+const navLink = { textDecoration: 'none', color: '#333' }
 
-const headerSignup = {
-  background: '#000',
+const navBtn = {
+  background: '#111',
   color: '#fff',
   padding: '6px 12px',
   borderRadius: 8,
   textDecoration: 'none',
 }
 
-const hero = { padding: '60px 0', textAlign: 'center' as const }
+const hero = { padding: '80px 0', textAlign: 'center' }
 
-const heroBox = { maxWidth: 700, margin: '0 auto' }
+const heroInner = { maxWidth: 600, margin: '0 auto' }
 
-const beta = { color: 'blue', fontWeight: 700 }
+const badge = {
+  display: 'inline-block',
+  background: '#eef2ff',
+  padding: '4px 10px',
+  borderRadius: 999,
+  fontSize: 12,
+  marginBottom: 16,
+}
 
-const title = { fontSize: 32, fontWeight: 800 }
+const heroTitle = {
+  fontSize: 40,
+  fontWeight: 800,
+  marginBottom: 16,
+}
 
-const heroButtons = {
-  marginTop: 20,
+const heroSub = {
+  color: '#555',
+  marginBottom: 20,
+}
+
+const ctaRow = {
   display: 'flex',
-  gap: 10,
   justifyContent: 'center',
+  gap: 10,
+  flexWrap: 'wrap',
 }
 
 const primaryBtn = {
-  background: '#000',
+  background: '#111',
   color: '#fff',
-  padding: '12px 16px',
+  padding: '12px 18px',
   borderRadius: 10,
   textDecoration: 'none',
 }
 
-const secondaryBtn = {
-  border: '1px solid #ccc',
-  padding: '12px 16px',
+const ghostBtn = {
+  border: '1px solid #ddd',
+  padding: '12px 18px',
   borderRadius: 10,
   textDecoration: 'none',
 }
 
-const secondaryBtnDark = {
-  background: '#333',
-  color: '#fff',
-  padding: '12px 16px',
+const ghostBtnDark = {
+  background: '#eee',
+  padding: '12px 18px',
   borderRadius: 10,
   textDecoration: 'none',
 }
 
-const trust = { marginTop: 20, fontSize: 14 }
+const trust = {
+  marginTop: 16,
+  fontSize: 13,
+  color: '#666',
+}
 
 const section = { padding: '60px 0' }
+const sectionAlt = { padding: '60px 0', background: '#f9fafb' }
 
-const sectionAlt = { padding: '60px 0', background: '#f5f5f5' }
-
-const sectionTitle = { textAlign: 'center' as const, marginBottom: 20 }
-
-const sectionText = {
-  textAlign: 'center' as const,
-  marginBottom: 20,
+const sectionTitle = {
+  textAlign: 'center',
+  marginBottom: 30,
+  fontSize: 24,
 }
 
 const grid = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))',
-  gap: 12,
+  gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))',
+  gap: 16,
 }
 
 const card = {
-  padding: 16,
-  background: '#fff',
-  borderRadius: 12,
+  padding: 18,
   border: '1px solid #eee',
+  borderRadius: 12,
+  background: '#fff',
 }
 
-const cardTitle = { fontWeight: 700 }
-
-const cardText = { fontSize: 14 }
+const cardTitle = { fontWeight: 700, marginBottom: 6 }
+const cardText = { fontSize: 14, color: '#555' }
 
 const cta = {
   padding: '60px 0',
-  textAlign: 'center' as const,
+  textAlign: 'center',
 }
 
-const ctaTitle = { fontSize: 28, fontWeight: 800 }
-
-const ctaSub = { marginTop: 10 }
-
-const trustSmall = { marginTop: 16, fontSize: 13 }
+const ctaTitle = {
+  fontSize: 28,
+  fontWeight: 800,
+  marginBottom: 20,
+}
 
 const footer = {
   padding: '40px 0',
-  textAlign: 'center' as const,
+  textAlign: 'center',
   borderTop: '1px solid #eee',
+}
+
+const whatsapp = {
+  position: 'fixed',
+  bottom: 20,
+  right: 20,
+  background: '#25D366',
+  color: '#fff',
+  width: 55,
+  height: 55,
+  borderRadius: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 24,
+  textDecoration: 'none',
 }
