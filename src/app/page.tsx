@@ -53,9 +53,9 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              Mudah untuk anda, mudah untuk customer. Tak perlu lagi pening urus
-              PM, semak payment, dan track order satu-satu. GoBayar bantu seller
-              nampak lebih kemas, lebih laju, dan lebih senang dijual.
+              Mudahkan orang order dengan satu link yang terus bawa mereka ke
+              shop anda. Tak perlu lagi layan PM bercampur-campur, check order
+              manual, atau pening nak susun semuanya.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -94,9 +94,9 @@ export default function HomePage() {
             <div className="absolute -top-6 right-4 hidden h-28 w-28 rounded-full bg-violet-200/40 blur-3xl sm:block" />
             <div className="absolute -bottom-4 left-6 hidden h-24 w-24 rounded-full bg-blue-200/40 blur-3xl sm:block" />
 
-            <div className="relative w-[300px] rounded-[2.8rem] bg-slate-950 p-3 shadow-[0_25px_80px_rgba(15,23,42,0.22)] sm:w-[340px]">
-              <div className="absolute left-1/2 top-3 h-6 w-32 -translate-x-1/2 rounded-full bg-slate-950" />
-              <div className="overflow-hidden rounded-[2.2rem] border border-slate-200 bg-white">
+            <div className="relative w-[250px] rounded-[2.6rem] bg-slate-950 p-3 shadow-[0_25px_80px_rgba(15,23,42,0.22)] sm:w-[285px]">
+              <div className="absolute left-1/2 top-3 h-6 w-28 -translate-x-1/2 rounded-full bg-slate-950" />
+              <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white">
                 <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-5 pb-5 pt-10 text-white">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -116,7 +116,7 @@ export default function HomePage() {
 
                 <div className="space-y-4 p-4">
                   <div className="rounded-2xl border border-slate-200 p-3 shadow-sm">
-                    <div className="mb-3 flex h-32 items-center justify-center rounded-xl bg-slate-100 text-4xl">
+                    <div className="mb-3 flex h-28 items-center justify-center rounded-xl bg-slate-100 text-4xl">
                       🍱
                     </div>
                     <div className="flex items-start justify-between gap-3">
@@ -135,7 +135,7 @@ export default function HomePage() {
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 p-3 shadow-sm">
-                    <div className="mb-3 flex h-32 items-center justify-center rounded-xl bg-slate-100 text-4xl">
+                    <div className="mb-3 flex h-28 items-center justify-center rounded-xl bg-slate-100 text-4xl">
                       🧋
                     </div>
                     <div className="flex items-start justify-between gap-3">
@@ -185,8 +185,8 @@ export default function HomePage() {
               Masalah biasa seller
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Ramai penjual bermula dengan WhatsApp group dan chat peribadi.
-              Bila order makin banyak, semuanya jadi serabut dan susah nak track.
+              Ramai penjual mula dengan WhatsApp group dan chat peribadi. Bila
+              order makin banyak, semua jadi serabut dan susah nak track.
             </p>
           </div>
 
@@ -226,8 +226,8 @@ export default function HomePage() {
               GoBayar selesaikan semua
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Bina shop link sendiri, kumpul order dengan lebih kemas, dan bantu
-              seller nampak lebih profesional walaupun jual terus dari WhatsApp.
+              Satu tempat untuk susun produk, kumpul order, dan bagi customer
+              order dengan lebih mudah terus dari WhatsApp.
             </p>
           </div>
 
@@ -301,9 +301,8 @@ export default function HomePage() {
               customer lebih yakin.
             </h2>
             <p className="mt-4 max-w-xl text-base leading-7 text-white/75">
-              Dengan 1 link shop yang lebih teratur, seller boleh nampak lebih
-              professional, lebih mudah dihubungi, dan lebih senang diorder oleh
-              customer.
+              Dengan 1 link shop yang lebih tersusun, customer lebih senang
+              tengok, lebih mudah order, dan seller pun nampak lebih proper.
             </p>
 
             <div className="mt-8 grid grid-cols-2 gap-4">
@@ -324,18 +323,20 @@ export default function HomePage() {
               Pricing
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Simple pricing untuk mula cepat
+              Tunggu apa lagi?
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Orang memang akan tanya harga. Jadi kita letak awal-awal supaya
-              lebih jelas dan lebih senang mereka buat keputusan.
+              Daftar dan guna. Bukan kena bayar pun!
+              <br />
+              GoBayar tidak mengenakan apa-apa bayaran cuma terdapat transaksi fi
+              yang dikenakan.
             </p>
           </div>
 
           <div className="mx-auto mt-12 max-w-lg">
             <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
               <div className="absolute right-5 top-5 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
-                Intro Plan
+                Intro Plan (Beta)
               </div>
 
               <h3 className="text-2xl font-bold text-slate-950">Starter</h3>
@@ -352,10 +353,8 @@ export default function HomePage() {
 
               <div className="mt-8 space-y-3">
                 <PriceItem text="Shop link sendiri" />
-                <PriceItem text="Unlimited produk aktif" />
                 <PriceItem text="WhatsApp order flow" />
                 <PriceItem text="Basic dashboard" />
-                <PriceItem text="Mobile friendly" />
               </div>
 
               <a
@@ -380,8 +379,7 @@ export default function HomePage() {
               Soalan yang seller selalu tanya
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Ini antara soalan paling common sebelum orang decide nak mula guna
-              GoBayar.
+              Ini antara soalan paling biasa sebelum orang mula guna GoBayar.
             </p>
           </div>
 
@@ -420,8 +418,8 @@ export default function HomePage() {
             Start jual cara lebih smart.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600">
-            Bina shop link anda sendiri, share terus di WhatsApp, dan mudahkan
-            customer order dengan lebih tersusun.
+            Buat shop link sendiri, share terus di WhatsApp, dan bagi customer
+            order dengan cara yang lebih mudah.
           </p>
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
@@ -454,15 +452,9 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="mt-4 space-y-1 text-[12px] text-slate-500">
-            <p>NEUGENS SOLUTION</p>
-            <p>No Reg : 202503301282 (AS0504872-V)</p>
-          </div>
-
           <p className="mt-5 text-[11px] text-slate-400">
-            Copyright Reserved @2026 GoBayar by Neugens Solution
-            {" "}
-            (202503301282 (AS0504872-V))
+            Copyright Reserved @2026 GoBayar by Neugens Solution (202503301282
+            (AS0504872-V))
           </p>
         </div>
       </footer>
