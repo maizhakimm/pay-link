@@ -138,15 +138,6 @@ export default function ShopPageClient({
               )}
             </div>
           </div>
-
-          <div style={shopLinkBox}>
-            <span style={shopLinkLabel}>Link kedai</span>
-            <div style={shopLinkValue}>
-              {typeof window !== 'undefined'
-                ? `${window.location.origin}/shop/${shopSlug}`
-                : `/shop/${shopSlug}`}
-            </div>
-          </div>
         </div>
 
         <div style={sectionTitleWrap}>
