@@ -49,10 +49,6 @@ function getProductImages(product: ProductRow) {
   ].filter(Boolean) as string[]
 }
 
-function formatMoney(value?: number | null) {
-  return `RM ${Number(value || 0).toFixed(2)}`
-}
-
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([])
   const [sellerProfile, setSellerProfile] = useState<SellerProfileRow | null>(null)
