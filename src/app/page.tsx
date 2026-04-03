@@ -281,7 +281,7 @@ export default function HomePage() {
 
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-900">Free (Beta)</h3>
+              <h3 className="text-xl font-bold text-slate-900">Basic (Beta)</h3>
               <p className="mt-2 text-sm text-slate-500">
                 Sesuai untuk peniaga baru, kecil dan sederhana
               </p>
