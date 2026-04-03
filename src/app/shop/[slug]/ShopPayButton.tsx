@@ -26,6 +26,13 @@ const STATES = [
   'Sarawak',
 ]
 
+const PAYMENT_METHODS = [
+  { label: 'FPX (Online Banking)', value: 1 },
+  { label: 'Card (Visa / Mastercard)', value: 4 },
+  { label: 'SPayLater', value: 7 },
+  { label: 'Boost PayFlex', value: 8 },
+]
+
 export default function ShopPayButton({
   sellerId,
   shopSlug,
@@ -42,6 +49,7 @@ export default function ShopPayButton({
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('+60')
+  const [paymentMethod, setPaymentMethod] = useState(1)
 
   const [needsDelivery, setNeedsDelivery] = useState(false)
 
@@ -84,7 +92,7 @@ export default function ShopPayButton({
     try {
       setLoading(true)
 
-      const res = await fetch('/api/orders/create-from-cart', {
+      const res = await fetch('/api/payments/bayarcash/create-shop', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,13 +100,11 @@ export default function ShopPayButton({
         body: JSON.stringify({
           sellerId,
           shopSlug,
-          customer: {
-            name,
-            email,
-            phone,
-          },
+          name,
+          email,
+          phone,
           items,
-          total,
+          paymentChannel: paymentMethod,
           delivery: needsDelivery
             ? {
                 address1,
@@ -114,21 +120,21 @@ export default function ShopPayButton({
 
       const data = await res.json()
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Order failed')
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Payment failed')
       }
 
-      if (data.whatsappUrl) {
-        window.location.href = data.whatsappUrl
+      if (data.payment_url) {
+        window.location.href = data.payment_url
         return
       }
 
-      alert('Order berjaya!')
-  } catch (err) {
-  const message =
-    err instanceof Error ? err.message : 'Something went wrong'
-  alert(message)
-} finally {
+      alert('Payment link not available')
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Something went wrong'
+      alert(message)
+    } finally {
       setLoading(false)
     }
   }
@@ -158,6 +164,19 @@ export default function ShopPayButton({
           onChange={(e) => handlePhoneChange(e.target.value)}
           style={inputStyle}
         />
+
+        <label>Payment Method</label>
+        <select
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(Number(e.target.value))}
+          style={inputStyle}
+        >
+          {PAYMENT_METHODS.map((method) => (
+            <option key={method.value} value={method.value}>
+              {method.label}
+            </option>
+          ))}
+        </select>
 
         <div style={toggleBox}>
           <label style={toggleLabel}>
@@ -252,7 +271,7 @@ export default function ShopPayButton({
       </div>
 
       <button onClick={handleClick} disabled={loading} style={buttonStyle}>
-        {loading ? 'Processing order...' : 'Order via WhatsApp'}
+        {loading ? 'Processing payment...' : 'Proceed to Payment'}
       </button>
     </div>
   )
