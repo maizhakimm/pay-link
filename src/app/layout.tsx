@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pay Link",
+  title: "BayarLink",
   description: "Minimal Next.js App Router starter"
 };
 
