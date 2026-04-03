@@ -9,6 +9,7 @@ const supabase = createClient(
 type OrderRow = {
   id: string
   status: string | null
+  payment_status: string | null
   gateway_transaction_id: string | null
 }
 
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     const { data: existingOrder, error: existingOrderError } = await supabase
       .from('orders')
-      .select('id, status, gateway_transaction_id')
+      .select('id, status, payment_status, gateway_transaction_id')
       .eq('order_number', orderNumber)
       .maybeSingle()
 
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     // Prevent duplicate webhook
     if (
-      order.status === 'paid' &&
+      order.payment_status === 'paid' &&
       order.gateway_transaction_id &&
       order.gateway_transaction_id === transactionId
     ) {
@@ -108,7 +109,9 @@ export async function POST(req: NextRequest) {
               .from('orders')
               .update({
                 status: 'failed',
+                payment_status: 'failed',
                 gateway_status_description: 'Stock conflict during payment',
+                updated_at: new Date().toISOString(),
               })
               .eq('order_number', orderNumber)
 
@@ -149,6 +152,43 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 🔥 HANDLE FAILED / CANCELLED PAYMENT
+    if (statusNumber === 2 || statusNumber === 4) {
+      const { data: orderItems } = await supabase
+        .from('order_items')
+        .select('product_id, quantity, product_name')
+        .eq('order_id', order.id)
+
+      const productIds = (orderItems || []).map((item) => item.product_id)
+
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, name, track_stock, stock_quantity, sold_out, reserved_quantity')
+        .in('id', productIds)
+
+      const productMap = new Map(
+        (products || []).map((product) => [product.id, product as ProductRow])
+      )
+
+      for (const item of orderItems as OrderItemRow[]) {
+        const product = productMap.get(item.product_id)
+
+        if (!product || !product.track_stock) continue
+
+        const newReserved = Math.max(
+          0,
+          (product.reserved_quantity || 0) - item.quantity
+        )
+
+        await supabase
+          .from('products')
+          .update({
+            reserved_quantity: newReserved,
+          })
+          .eq('id', product.id)
+      }
+    }
+
     // UPDATE ORDER STATUS
     await supabase
       .from('orders')
@@ -157,6 +197,7 @@ export async function POST(req: NextRequest) {
         gateway_status: statusNumber,
         gateway_status_description: statusDescription,
         status: newStatus,
+        payment_status: newStatus,
         updated_at: new Date().toISOString(),
       })
       .eq('order_number', orderNumber)
