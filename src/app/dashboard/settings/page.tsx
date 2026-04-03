@@ -290,16 +290,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="mb-3 text-sm font-extrabold text-slate-900">Message</p>
 
-                  <textarea
-                    placeholder={`Contoh:
-Delivery start 12 tengahari 😊
-Self pickup available
-Area delivery: Setia Alam sahaja`}
-                    value={dailyNote}
-                    onChange={(e) => setDailyNote(e.target.value)}
-                    rows={6}
-                    className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                  />
+    
 
                   <p className="mt-2 text-xs text-slate-500">
                     Message ini akan dimasukkan secara automatik dalam WhatsApp share.
