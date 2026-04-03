@@ -96,31 +96,21 @@ export default function HomePage() {
           </div>
 
           {/* Hero Image */}
-<div className="relative flex justify-center lg:justify-end">
-  {/* glow background */}
-  <div className="absolute -top-10 right-10 h-32 w-32 rounded-full bg-violet-300/30 blur-3xl" />
-  <div className="absolute -bottom-10 left-10 h-32 w-32 rounded-full bg-blue-300/30 blur-3xl" />
+          <div className="relative flex justify-center lg:justify-end">
+            <div className="absolute -top-10 right-10 h-32 w-32 rounded-full bg-violet-300/30 blur-3xl" />
+            <div className="absolute -bottom-10 left-10 h-32 w-32 rounded-full bg-blue-300/30 blur-3xl" />
 
-  {/* image wrapper */}
-  <div className="relative">
-    <Image
-      src="/Hero Image 01.png"
-      alt="GoBayar Preview"
-      width={700}
-      height={1400}
-      priority
-      className="
-        w-[240px] 
-        md:w-[280px] 
-        lg:w-[320px] 
-        mx-auto
-        object-contain
-        drop-shadow-[0_30px_80px_rgba(0,0,0,0.25)]
-        scale-[1.08]
-      "
-    />
-  </div>
-</div>
+            <div className="relative">
+              <Image
+                src="/Hero Image 01.png"
+                alt="GoBayar Preview"
+                width={700}
+                height={1400}
+                priority
+                className="mx-auto w-[240px] object-contain drop-shadow-[0_30px_80px_rgba(0,0,0,0.25)] scale-[1.08] md:w-[280px] lg:w-[320px]"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -265,141 +255,130 @@ export default function HomePage() {
         </div>
       </section>
 
-     {/* Pricing Section */}
-<section className="py-20 bg-white border-t border-slate-200">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Pricing Section */}
+      <section className="border-t border-slate-200 bg-white py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-widest text-violet-600">
+              Pricing
+            </p>
+            <h2 className="mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">
+              Mula percuma. Bayar bila ada jualan.
+            </h2>
+            <p className="mt-4 text-slate-600">
+              Lebih banyak anda jual, lebih rendah fee anda. Pilih plan yang sesuai dengan tahap bisnes anda.
+            </p>
+          </div>
 
-    {/* Header */}
-    <div className="text-center max-w-2xl mx-auto">
-      <p className="text-sm font-semibold text-violet-600 uppercase tracking-widest">
-        Pricing
-      </p>
-      <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900">
-        Mula percuma. Bayar bila ada jualan.
-      </h2>
-      <p className="mt-4 text-slate-600">
-        Lebih banyak anda jual, lebih rendah fee anda. Pilih plan yang sesuai dengan tahap bisnes anda.
-      </p>
-    </div>
+          <div className="mt-14 grid gap-6 md:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-bold text-slate-900">Free</h3>
+              <p className="mt-2 text-sm text-slate-500">Untuk mula berniaga</p>
 
-    {/* Cards */}
-    <div className="mt-14 grid gap-6 md:grid-cols-3">
+              <div className="mt-6">
+                <span className="text-4xl font-extrabold">RM0</span>
+                <span className="text-slate-500">/month</span>
+              </div>
 
-      {/* FREE */}
-      <div className="rounded-3xl border border-slate-200 p-6 shadow-sm bg-white">
-        <h3 className="text-xl font-bold text-slate-900">Free</h3>
-        <p className="mt-2 text-sm text-slate-500">Untuk mula berniaga</p>
+              <p className="mt-4 text-sm text-slate-600">
+                Transaction fee standard:
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                <li>• FPX: RM1.50</li>
+                <li>• QR: 2.5%</li>
+                <li>• Card: RM1 + 2.5%</li>
+              </ul>
 
-        <div className="mt-6">
-          <span className="text-4xl font-extrabold">RM0</span>
-          <span className="text-slate-500">/month</span>
+              <div className="mt-6 space-y-2 text-sm text-slate-700">
+                <p>✔ Shop link sendiri</p>
+                <p>✔ Unlimited produk</p>
+                <p>✔ WhatsApp order flow</p>
+              </div>
+
+              <a
+                href="/signup"
+                className="mt-8 block rounded-xl bg-slate-900 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
+              >
+                Start Free
+              </a>
+            </div>
+
+            <div className="relative scale-[1.03] rounded-3xl border-2 border-violet-600 bg-white p-6 shadow-xl">
+              <div className="absolute right-0 top-0 rounded-bl-xl rounded-tr-3xl bg-violet-600 px-3 py-1 text-xs text-white">
+                Popular
+              </div>
+
+              <h3 className="text-xl font-bold text-slate-900">Pro</h3>
+              <p className="mt-2 text-sm text-slate-500">Untuk seller aktif</p>
+
+              <div className="mt-6">
+                <span className="text-4xl font-extrabold">RM19</span>
+                <span className="text-slate-500">/month</span>
+              </div>
+
+              <p className="mt-4 text-sm text-slate-600">
+                Lower transaction fee:
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                <li>• FPX: RM1.30</li>
+                <li>• QR: 2.2%</li>
+                <li>• Card: RM1 + 2.2%</li>
+              </ul>
+
+              <div className="mt-6 space-y-2 text-sm text-slate-700">
+                <p>✔ Semua dalam Free</p>
+                <p>✔ Remove watermark</p>
+                <p>✔ Analytics asas</p>
+                <p>✔ Auto WhatsApp summary</p>
+              </div>
+
+              <a
+                href="/signup"
+                className="mt-8 block rounded-xl bg-violet-600 py-3 text-center font-semibold text-white transition hover:bg-violet-700"
+              >
+                Upgrade to Pro
+              </a>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-bold text-slate-900">Growth</h3>
+              <p className="mt-2 text-sm text-slate-500">Untuk scale bisnes</p>
+
+              <div className="mt-6">
+                <span className="text-4xl font-extrabold">RM49</span>
+                <span className="text-slate-500">/month</span>
+              </div>
+
+              <p className="mt-4 text-sm text-slate-600">
+                Lowest transaction fee:
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                <li>• FPX: RM1.10</li>
+                <li>• QR: 1.9%</li>
+                <li>• Card: RM1 + 1.9%</li>
+              </ul>
+
+              <div className="mt-6 space-y-2 text-sm text-slate-700">
+                <p>✔ Semua dalam Pro</p>
+                <p>✔ Multi staff</p>
+                <p>✔ Advanced automation</p>
+                <p>✔ Inventory tracking</p>
+              </div>
+
+              <a
+                href="/signup"
+                className="mt-8 block rounded-xl bg-slate-900 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
+              >
+                Go Growth
+              </a>
+            </div>
+          </div>
+
+          <p className="mt-10 text-center text-sm text-slate-500">
+            Tiada caj setup. Tiada kontrak. Hanya bayar bila anda dah berjaya menjual.
+          </p>
         </div>
-
-        <p className="mt-4 text-sm text-slate-600">
-          Transaction fee standard:
-        </p>
-        <ul className="mt-2 text-sm text-slate-700 space-y-1">
-          <li>• FPX: RM1.50</li>
-          <li>• QR: 2.5%</li>
-          <li>• Card: RM1 + 2.5%</li>
-        </ul>
-
-        <div className="mt-6 space-y-2 text-sm text-slate-700">
-          <p>✔ Shop link sendiri</p>
-          <p>✔ Unlimited produk</p>
-          <p>✔ WhatsApp order flow</p>
-        </div>
-
-        <a
-          href="/signup"
-          className="mt-8 block text-center bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800 transition"
-        >
-          Start Free
-        </a>
-      </div>
-
-      {/* PRO (Coming Soont) */}
-      <div className="relative rounded-3xl border-2 border-violet-600 p-6 shadow-xl bg-white scale-[1.03]">
-        
-        <div className="absolute top-0 right-0 bg-violet-600 text-white text-xs px-3 py-1 rounded-bl-xl rounded-tr-3xl">
-          Popular
-        </div>
-
-        <h3 className="text-xl font-bold text-slate-900">Pro</h3>
-        <p className="mt-2 text-sm text-slate-500">Untuk seller aktif</p>
-
-        <div className="mt-6">
-          <span className="text-4xl font-extrabold">RM19</span>
-          <span className="text-slate-500">/month</span>
-        </div>
-
-        <p className="mt-4 text-sm text-slate-600">
-          Lower transaction fee:
-        </p>
-        <ul className="mt-2 text-sm text-slate-700 space-y-1">
-          <li>• FPX: RM1.30</li>
-          <li>• QR: 2.2%</li>
-          <li>• Card: RM1 + 2.2%</li>
-        </ul>
-
-        <div className="mt-6 space-y-2 text-sm text-slate-700">
-          <p>✔ Semua dalam Free</p>
-          <p>✔ Remove watermark</p>
-          <p>✔ Analytics asas</p>
-          <p>✔ Auto WhatsApp summary</p>
-        </div>
-
-        <a
-          href="/signup"
-          className="mt-8 block text-center bg-violet-600 text-white py-3 rounded-xl font-semibold hover:bg-violet-700 transition"
-        >
-          Upgrade to Pro
-        </a>
-      </div>
-
-      {/* GROWTH (Coming Soon) */}
-      <div className="rounded-3xl border border-slate-200 p-6 shadow-sm bg-white">
-        <h3 className="text-xl font-bold text-slate-900">Growth</h3>
-        <p className="mt-2 text-sm text-slate-500">Untuk scale bisnes</p>
-
-        <div className="mt-6">
-          <span className="text-4xl font-extrabold">RM49</span>
-          <span className="text-slate-500">/month</span>
-        </div>
-
-        <p className="mt-4 text-sm text-slate-600">
-          Lowest transaction fee:
-        </p>
-        <ul className="mt-2 text-sm text-slate-700 space-y-1">
-          <li>• FPX: RM1.10</li>
-          <li>• QR: 1.9%</li>
-          <li>• Card: RM1 + 1.9%</li>
-        </ul>
-
-        <div className="mt-6 space-y-2 text-sm text-slate-700">
-          <p>✔ Semua dalam Pro</p>
-          <p>✔ Multi staff</p>
-          <p>✔ Advanced automation</p>
-          <p>✔ Inventory tracking</p>
-        </div>
-
-        <a
-          href="/signup"
-          className="mt-8 block text-center bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800 transition"
-        >
-          Go Growth
-        </a>
-      </div>
-
-    </div>
-
-    {/* Bottom Note */}
-    <p className="text-center text-sm text-slate-500 mt-10">
-      Tiada caj setup. Tiada kontrak. Hanya bayar bila anda dah berjaya menjual.
-    </p>
-
-  </div>
-</section>
+      </section>
 
       {/* FAQ */}
       <section className="border-t border-slate-200 bg-slate-50 py-16 sm:py-20">
@@ -565,17 +544,6 @@ function DarkStat({
     <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
       <p className="text-lg font-bold">{title}</p>
       <p className="mt-1 text-xs text-white/65">{subtitle}</p>
-    </div>
-  );
-}
-
-function PriceItem({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-3 text-sm text-slate-700">
-      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-100 text-violet-700">
-        <CheckIcon />
-      </span>
-      <span>{text}</span>
     </div>
   );
 }
