@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     const { error: insertError } = await supabase
       .from('orders')
       .insert({
-        order_no: orderNo,
+        order_number: orderNo,
         seller_id: sellerId,
         items: enrichedItems,
         total_amount: total,
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
         customer_phone: customer.phone,
         delivery_info: delivery || null,
         status: 'pending',
-      })
+        })
 
     if (insertError) {
       return NextResponse.json(
