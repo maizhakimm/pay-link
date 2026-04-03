@@ -53,7 +53,7 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-              Jual dan promote perniagaan anda di mana2 platform dengan lebih mudah dengan link bayarlink. Mudah nak jual dan mudah customer nak bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO kos!
+              Jual dan promote perniagaan anda di mana2 platform dengan BayarLink. Lebih mudah nak jual dan lebih mudah customer nak bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO kos!
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
