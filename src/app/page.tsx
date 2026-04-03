@@ -128,7 +128,12 @@ export default function HomePage() {
 }
 
 /* COMPONENT */
-function Card({ title, text }: any) {
+type CardProps = {
+  title: string
+  text: string
+}
+
+function Card({ title, text }: CardProps) {
   return (
     <div style={card}>
       <h3 style={cardTitle}>{title}</h3>
