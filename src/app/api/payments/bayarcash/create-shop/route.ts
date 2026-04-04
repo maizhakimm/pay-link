@@ -78,25 +78,15 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-/**
- * Seller bears the gateway fee.
- * Adjust this later if you want dynamic fee by channel.
- */
-function estimateGatewayFee(paymentChannel: number, _subtotal: number) {
+function estimateGatewayFee(paymentChannel: number) {
   if (paymentChannel === BAYARCASH_CHANNELS.FPX) {
     return 1.0
   }
 
-  // fallback for now
   return 1.0
 }
 
-/**
- * BayarLink platform fee.
- * Currently set to 0 so system stays safe first.
- * Change later when ready.
- */
-function estimatePlatformFee(_subtotal: number) {
+function estimatePlatformFee() {
   return 0
 }
 
@@ -143,7 +133,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 1) RELEASE EXPIRED RESERVATIONS FIRST
     for (const product of products as ProductRow[]) {
       const reservedQty = product.reserved_quantity || 0
       const expired = isReservationExpired(product.reserved_until)
@@ -159,7 +148,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2) RELOAD PRODUCTS AFTER RELEASE
     const { data: refreshedProducts, error: refreshedError } = await supabase
       .from('products')
       .select(
@@ -217,7 +205,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 3) RESERVE STOCK FOR 10 MINUTES
     const reserveUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
     for (const item of validItems) {
@@ -247,8 +234,8 @@ export async function POST(req: NextRequest) {
     const totalAmount = subtotal
     const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0)
 
-    const gatewayFee = roundMoney(estimateGatewayFee(paymentChannel, subtotal))
-    const platformFee = roundMoney(estimatePlatformFee(subtotal))
+    const gatewayFee = roundMoney(estimateGatewayFee(paymentChannel))
+    const platformFee = roundMoney(estimatePlatformFee())
     const sellerNet = roundMoney(subtotal - gatewayFee - platformFee)
 
     const firstProduct = validItems[0].product
