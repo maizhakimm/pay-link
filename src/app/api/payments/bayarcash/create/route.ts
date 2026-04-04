@@ -21,6 +21,11 @@ type ProductRow = {
   seller_profile_id: string | null
 }
 
+type SellerProfileRow = {
+  id: string
+  store_name?: string | null
+}
+
 type BayarcashResponse = {
   id?: string
   url?: string
@@ -29,6 +34,15 @@ type BayarcashResponse = {
 
 function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
 }
 
 function estimateGatewayFee(paymentChannel: number) {
@@ -46,19 +60,53 @@ function estimatePlatformFee() {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const slug = searchParams.get('slug')
 
-    if (!slug) {
+    const productSlug = searchParams.get('productSlug')
+    const shopSlug = searchParams.get('shopSlug')
+
+    if (!productSlug) {
       return NextResponse.json(
         { ok: false, error: 'Missing product slug' },
         { status: 400 }
       )
     }
 
+    if (!shopSlug) {
+      return NextResponse.json(
+        { ok: false, error: 'Missing shop slug' },
+        { status: 400 }
+      )
+    }
+
+    const { data: sellers, error: sellerError } = await supabase
+      .from('seller_profiles')
+      .select('id, store_name')
+
+    if (sellerError || !sellers || sellers.length === 0) {
+      return NextResponse.json(
+        { ok: false, error: 'Seller not found' },
+        { status: 404 }
+      )
+    }
+
+    const matchedSeller =
+      (sellers as SellerProfileRow[]).find((seller) => {
+        return slugify(seller.store_name || '') === shopSlug
+      }) || null
+
+    if (!matchedSeller) {
+      return NextResponse.json(
+        { ok: false, error: 'Shop not found' },
+        { status: 404 }
+      )
+    }
+
     const { data: product, error: productError } = await supabase
       .from('products')
       .select('*')
-      .eq('slug', slug)
+      .eq('slug', productSlug)
+      .eq('seller_profile_id', matchedSeller.id)
+      .eq('is_active', true)
       .maybeSingle()
 
     if (productError || !product) {
@@ -99,6 +147,9 @@ export async function GET(req: NextRequest) {
     const payerEmail = searchParams.get('email') || 'customer@example.com'
     const payerTelephoneNumber = searchParams.get('phone') || ''
 
+    const needsDelivery = searchParams.get('needs_delivery') === '1'
+    const deliveryAddress = searchParams.get('address') || null
+
     const { data: insertedOrder, error: orderInsertError } = await supabase
       .from('orders')
       .insert({
@@ -112,6 +163,7 @@ export async function GET(req: NextRequest) {
         buyer_name: payerName,
         buyer_email: payerEmail,
         buyer_phone: payerTelephoneNumber,
+        buyer_address: needsDelivery ? deliveryAddress : null,
 
         customer_name: payerName,
         customer_email: payerEmail,
@@ -131,6 +183,12 @@ export async function GET(req: NextRequest) {
 
         payment_provider: 'bayarcash',
         payment_channel: paymentChannel,
+
+        delivery_info: needsDelivery
+          ? {
+              address: deliveryAddress,
+            }
+          : null,
 
         status: 'pending',
         payment_status: 'pending',
