@@ -274,8 +274,8 @@ export default function HomePage() {
               Tiada bayaran. Mula dengan ZERO Kos!
             </h2>
             <p className="mt-4 text-slate-600">
-              Lebih banyak anda jual, lebih rendah fee anda. Pilih plan yang
-              sesuai dengan tahap bisnes anda.
+              Pilih plan yang sesuai dengan tahap bisnes anda.
+              (Buat masa ini hanya ada pakej Basic)
             </p>
           </div>
 
@@ -298,6 +298,7 @@ export default function HomePage() {
                 <li>• FPX: RM1.50</li>
                 <li>• QR: 2.5%</li>
                 <li>• Card: RM1 + 2.5%</li>
+                <li>•T+1 payout to merchant account</li>
               </ul>
 
               <div className="mt-6 space-y-2 text-sm text-slate-700">
