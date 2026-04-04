@@ -156,20 +156,32 @@ export default function ShopPageClient({
 
               return (
                 <div key={product.id} style={productCard}>
-                  <div style={productImageWrap}>
-                    {image ? (
-                      <img src={image} alt={product.name} style={productImage} />
-                    ) : (
-                      <div style={productImagePlaceholder}>No image</div>
-                    )}
+                  <a
+                    href={`/s/${shopSlug}/${product.slug}`}
+                    style={productPreviewLink}
+                    aria-label={`Open ${product.name}`}
+                  >
+                    <div style={productImageWrap}>
+                      {image ? (
+                        <img src={image} alt={product.name} style={productImage} />
+                      ) : (
+                        <div style={productImagePlaceholder}>No image</div>
+                      )}
 
-                    {product.sold_out && (
-                      <div style={soldOutBadge}>Sold Out</div>
-                    )}
-                  </div>
+                      {product.sold_out && (
+                        <div style={soldOutBadge}>Sold Out</div>
+                      )}
+                    </div>
+                  </a>
 
                   <div style={{ flex: 1 }}>
-                    <div style={productName}>{product.name}</div>
+                    <a
+                      href={`/s/${shopSlug}/${product.slug}`}
+                      style={productTextLink}
+                    >
+                      <div style={productName}>{product.name}</div>
+                    </a>
+
                     <div style={productPrice}>RM {product.price.toFixed(2)}</div>
 
                     {product.track_stock && (
@@ -181,6 +193,13 @@ export default function ShopPageClient({
                     <div style={productDesc}>
                       {product.description || 'Tiada deskripsi.'}
                     </div>
+
+                    <a
+                      href={`/s/${shopSlug}/${product.slug}`}
+                      style={viewProductLink}
+                    >
+                      View product page
+                    </a>
                   </div>
 
                   <div style={qtyPanel}>
@@ -358,6 +377,26 @@ const productCard = {
   gap: 12,
   alignItems: 'flex-start',
   position: 'relative' as const,
+} as const
+
+const productPreviewLink = {
+  textDecoration: 'none',
+  color: 'inherit',
+  flexShrink: 0,
+} as const
+
+const productTextLink = {
+  textDecoration: 'none',
+  color: 'inherit',
+} as const
+
+const viewProductLink = {
+  display: 'inline-block',
+  marginTop: 10,
+  fontSize: 13,
+  fontWeight: 700,
+  color: '#1d4ed8',
+  textDecoration: 'none',
 } as const
 
 const productImageWrap = {
