@@ -11,6 +11,7 @@ type OrderRow = {
   status: string | null
   payment_status: string | null
   gateway_transaction_id: string | null
+  gateway_fee: number | null
 }
 
 type OrderItemRow = {
@@ -28,11 +29,19 @@ type ProductRow = {
   reserved_quantity?: number | null
 }
 
+type ExistingPaymentRow = {
+  id: string
+}
+
 function mapBayarcashStatus(status: number) {
   if (status === 3) return 'paid'
   if (status === 2) return 'failed'
   if (status === 4) return 'cancelled'
   return 'awaiting_payment'
+}
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
 export async function POST(req: NextRequest) {
@@ -45,6 +54,12 @@ export async function POST(req: NextRequest) {
     const statusDescription = payload.status_description || null
     const newStatus = mapBayarcashStatus(statusNumber)
 
+    const paidAmount = roundMoney(Number(payload.amount || 0))
+    const paymentChannel =
+      payload.payment_channel !== undefined && payload.payment_channel !== null
+        ? Number(payload.payment_channel)
+        : null
+
     if (!orderNumber) {
       return NextResponse.json(
         { ok: false, error: 'Missing order_number' },
@@ -54,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     const { data: existingOrder, error: existingOrderError } = await supabase
       .from('orders')
-      .select('id, status, payment_status, gateway_transaction_id')
+      .select('id, status, payment_status, gateway_transaction_id, gateway_fee')
       .eq('order_number', orderNumber)
       .maybeSingle()
 
@@ -67,7 +82,6 @@ export async function POST(req: NextRequest) {
 
     const order = existingOrder as OrderRow
 
-    // Prevent duplicate webhook
     if (
       order.payment_status === 'paid' &&
       order.gateway_transaction_id &&
@@ -76,35 +90,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, duplicate: true })
     }
 
-    // 🔥 HANDLE SUCCESS PAYMENT
     if (statusNumber === 3) {
       const { data: orderItems } = await supabase
         .from('order_items')
         .select('product_id, quantity, product_name')
         .eq('order_id', order.id)
 
-      const productIds = (orderItems || []).map((item) => item.product_id)
+      const typedOrderItems = (orderItems || []) as OrderItemRow[]
+      const productIds = typedOrderItems.map((item) => item.product_id).filter(Boolean)
 
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, name, track_stock, stock_quantity, sold_out, reserved_quantity')
-        .in('id', productIds)
+      if (productIds.length > 0) {
+        const { data: products } = await supabase
+          .from('products')
+          .select('id, name, track_stock, stock_quantity, sold_out, reserved_quantity')
+          .in('id', productIds)
 
-      const productMap = new Map(
-        (products || []).map((product) => [product.id, product as ProductRow])
-      )
+        const productMap = new Map(
+          (products || []).map((product) => [product.id, product as ProductRow])
+        )
 
-      // CHECK AGAIN (ANTI OVERSELL)
-      for (const item of orderItems as OrderItemRow[]) {
-        const product = productMap.get(item.product_id)
+        for (const item of typedOrderItems) {
+          const product = productMap.get(item.product_id)
 
-        if (!product) continue
+          if (!product || !product.track_stock) continue
 
-        if (product.track_stock) {
-          const reserved = product.reserved_quantity || 0
-          const available = product.stock_quantity - reserved
-
-          if (available < 0) {
+          if (product.stock_quantity < item.quantity) {
             await supabase
               .from('orders')
               .update({
@@ -121,75 +131,110 @@ export async function POST(req: NextRequest) {
             )
           }
         }
-      }
 
-      // 🔥 FINAL STOCK UPDATE
-      for (const item of orderItems as OrderItemRow[]) {
-        const product = productMap.get(item.product_id)
+        for (const item of typedOrderItems) {
+          const product = productMap.get(item.product_id)
 
-        if (!product || !product.track_stock) continue
+          if (!product || !product.track_stock) continue
 
-        const newStock = Math.max(
-          0,
-          product.stock_quantity - item.quantity
-        )
+          const newStock = Math.max(0, product.stock_quantity - item.quantity)
+          const newReserved = Math.max(
+            0,
+            (product.reserved_quantity || 0) - item.quantity
+          )
+          const newSoldOut = newStock <= 0
 
-        const newReserved = Math.max(
-          0,
-          (product.reserved_quantity || 0) - item.quantity
-        )
-
-        const newSoldOut = newStock <= 0
-
-        await supabase
-          .from('products')
-          .update({
-            stock_quantity: newStock,
-            reserved_quantity: newReserved,
-            sold_out: newSoldOut,
-          })
-          .eq('id', product.id)
+          await supabase
+            .from('products')
+            .update({
+              stock_quantity: newStock,
+              reserved_quantity: newReserved,
+              sold_out: newSoldOut,
+              reserved_until: null,
+            })
+            .eq('id', product.id)
+        }
       }
     }
 
-    // 🔥 HANDLE FAILED / CANCELLED PAYMENT
     if (statusNumber === 2 || statusNumber === 4) {
       const { data: orderItems } = await supabase
         .from('order_items')
         .select('product_id, quantity, product_name')
         .eq('order_id', order.id)
 
-      const productIds = (orderItems || []).map((item) => item.product_id)
+      const typedOrderItems = (orderItems || []) as OrderItemRow[]
+      const productIds = typedOrderItems.map((item) => item.product_id).filter(Boolean)
 
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, name, track_stock, stock_quantity, sold_out, reserved_quantity')
-        .in('id', productIds)
+      if (productIds.length > 0) {
+        const { data: products } = await supabase
+          .from('products')
+          .select('id, name, track_stock, stock_quantity, sold_out, reserved_quantity')
+          .in('id', productIds)
 
-      const productMap = new Map(
-        (products || []).map((product) => [product.id, product as ProductRow])
-      )
-
-      for (const item of orderItems as OrderItemRow[]) {
-        const product = productMap.get(item.product_id)
-
-        if (!product || !product.track_stock) continue
-
-        const newReserved = Math.max(
-          0,
-          (product.reserved_quantity || 0) - item.quantity
+        const productMap = new Map(
+          (products || []).map((product) => [product.id, product as ProductRow])
         )
 
-        await supabase
-          .from('products')
-          .update({
-            reserved_quantity: newReserved,
-          })
-          .eq('id', product.id)
+        for (const item of typedOrderItems) {
+          const product = productMap.get(item.product_id)
+
+          if (!product || !product.track_stock) continue
+
+          const newReserved = Math.max(
+            0,
+            (product.reserved_quantity || 0) - item.quantity
+          )
+
+          await supabase
+            .from('products')
+            .update({
+              reserved_quantity: newReserved,
+              reserved_until: null,
+            })
+            .eq('id', product.id)
+        }
       }
     }
 
-    // UPDATE ORDER STATUS
+    if (transactionId) {
+      const { data: existingPayment } = await supabase
+        .from('payments')
+        .select('id')
+        .eq('gateway_transaction_id', transactionId)
+        .maybeSingle()
+
+      if (!existingPayment) {
+        await supabase.from('payments').insert({
+          order_id: order.id,
+          gateway_name: 'BayarCash',
+          gateway_transaction_id: transactionId,
+          payment_channel: paymentChannel,
+          paid_amount: paidAmount,
+          gateway_fee: order.gateway_fee || 0,
+          gateway_status: String(statusNumber),
+          payment_status: newStatus,
+          raw_response_json: payload,
+          paid_at: statusNumber === 3 ? new Date().toISOString() : null,
+        })
+      } else {
+        const typedExistingPayment = existingPayment as ExistingPaymentRow
+
+        await supabase
+          .from('payments')
+          .update({
+            payment_channel: paymentChannel,
+            paid_amount: paidAmount,
+            gateway_fee: order.gateway_fee || 0,
+            gateway_status: String(statusNumber),
+            payment_status: newStatus,
+            raw_response_json: payload,
+            paid_at: statusNumber === 3 ? new Date().toISOString() : null,
+          })
+          .eq('id', typedExistingPayment.id)
+      }
+    }
+
     await supabase
       .from('orders')
       .update({
@@ -198,6 +243,7 @@ export async function POST(req: NextRequest) {
         gateway_status_description: statusDescription,
         status: newStatus,
         payment_status: newStatus,
+        payout_status: statusNumber === 3 ? 'eligible' : 'unpaid',
         updated_at: new Date().toISOString(),
       })
       .eq('order_number', orderNumber)
