@@ -31,10 +31,6 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-/**
- * Seller bears gateway fee.
- * Keep simple first. Can upgrade later by channel.
- */
 function estimateGatewayFee(paymentChannel: number) {
   if (paymentChannel === BAYARCASH_CHANNELS.FPX) {
     return 1.0
@@ -43,10 +39,6 @@ function estimateGatewayFee(paymentChannel: number) {
   return 1.0
 }
 
-/**
- * BayarLink platform fee.
- * Keep 0 for now so current rollout stays safe.
- */
 function estimatePlatformFee() {
   return 0
 }
@@ -96,8 +88,8 @@ export async function GET(req: NextRequest) {
     const totalAmount = subtotal
 
     const paymentChannel = BAYARCASH_CHANNELS.FPX
-    const gatewayFee = roundMoney(estimateGatewayFee(paymentChannel, subtotal))
-    const platformFee = roundMoney(estimatePlatformFee(subtotal))
+    const gatewayFee = roundMoney(estimateGatewayFee(paymentChannel))
+    const platformFee = roundMoney(estimatePlatformFee())
     const sellerNet = roundMoney(subtotal - gatewayFee - platformFee)
 
     const orderNumber = `ORD-${Date.now()}`
