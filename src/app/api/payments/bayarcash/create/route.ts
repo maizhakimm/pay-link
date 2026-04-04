@@ -35,7 +35,7 @@ function roundMoney(value: number) {
  * Seller bears gateway fee.
  * Keep simple first. Can upgrade later by channel.
  */
-function estimateGatewayFee(paymentChannel: number, _subtotal: number) {
+function estimateGatewayFee(paymentChannel: number) {
   if (paymentChannel === BAYARCASH_CHANNELS.FPX) {
     return 1.0
   }
@@ -47,7 +47,7 @@ function estimateGatewayFee(paymentChannel: number, _subtotal: number) {
  * BayarLink platform fee.
  * Keep 0 for now so current rollout stays safe.
  */
-function estimatePlatformFee(_subtotal: number) {
+function estimatePlatformFee() {
   return 0
 }
 
