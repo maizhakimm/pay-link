@@ -8,6 +8,30 @@ type PageProps = {
   }
 }
 
+type SellerProfileRow = {
+  id: string
+  store_name?: string | null
+  profile_image?: string | null
+  email?: string | null
+  whatsapp?: string | null
+  company_name?: string | null
+}
+
+type ProductRow = {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  price: number
+  image_1?: string | null
+  image_2?: string | null
+  image_3?: string | null
+  image_4?: string | null
+  image_5?: string | null
+  store_name?: string | null
+  seller_profile_id?: string | null
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -23,31 +47,30 @@ export default async function Page({ params }: PageProps) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  // 1️⃣ get seller by shopSlug
   const { data: sellers } = await supabase
     .from('seller_profiles')
     .select('*')
 
-  const seller = sellers?.find(
-    (s) => slugify(s.store_name || '') === params.shopSlug
-  )
+  const seller =
+    (sellers as SellerProfileRow[] | null)?.find((item) => {
+      return slugify(item.store_name || '') === params.shopSlug
+    }) || null
 
   if (!seller) {
     return <div>Shop not found</div>
   }
 
-  // 2️⃣ get product by slug + seller
   const { data: product } = await supabase
     .from('products')
     .select('*')
     .eq('slug', params.productSlug)
     .eq('seller_profile_id', seller.id)
     .eq('is_active', true)
-    .single()
+    .maybeSingle()
 
   if (!product) {
     return <div>Product not found</div>
   }
 
-  return <CheckoutCard product={product} seller={seller} />
+  return <CheckoutCard product={product as ProductRow} seller={seller} />
 }
