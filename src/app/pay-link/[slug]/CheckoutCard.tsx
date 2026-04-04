@@ -26,6 +26,15 @@ type Product = {
   store_name?: string | null
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
 export default function CheckoutCard({
   product,
   seller,
@@ -57,6 +66,8 @@ export default function CheckoutCard({
 
   const current = images[index] || null
   const total = useMemo(() => product.price * qty, [product.price, qty])
+
+  const shopSlug = slugify(sellerName)
 
   function nextImage() {
     if (images.length <= 1) return
@@ -176,7 +187,8 @@ export default function CheckoutCard({
 
         <div style={card}>
           <PayButton
-            slug={product.slug}
+            productSlug={product.slug}
+            shopSlug={shopSlug}
             unitPrice={product.price}
             quantity={qty}
             total={total}
