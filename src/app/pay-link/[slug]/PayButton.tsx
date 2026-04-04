@@ -3,7 +3,8 @@
 import { useState } from 'react'
 
 type PayButtonProps = {
-  slug: string
+  productSlug: string
+  shopSlug: string
   unitPrice: number
   quantity: number
   total: number
@@ -29,7 +30,8 @@ const STATES = [
 ]
 
 export default function PayButton({
-  slug,
+  productSlug,
+  shopSlug,
   quantity,
   total,
 }: PayButtonProps) {
@@ -82,8 +84,10 @@ export default function PayButton({
       const fullAddress = `${address1} ${address2}, ${postcode} ${city}, ${district}, ${state}`
 
       const res = await fetch(
-        `/api/payments/bayarcash/create?slug=${encodeURIComponent(
-          slug
+        `/api/payments/bayarcash/create?productSlug=${encodeURIComponent(
+          productSlug
+        )}&shopSlug=${encodeURIComponent(
+          shopSlug
         )}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(
           email
         )}&phone=${encodeURIComponent(phone)}&quantity=${quantity}&needs_delivery=${
@@ -98,12 +102,21 @@ export default function PayButton({
         return
       }
 
-      const parsed = JSON.parse(data.raw_response)
-
-      if (parsed.url) {
-        window.location.href = parsed.url
+      if (data.payment_url) {
+        window.location.href = data.payment_url
+        return
       }
-    } catch  {
+
+      if (data.raw_response) {
+        const parsed = JSON.parse(data.raw_response)
+        if (parsed.url) {
+          window.location.href = parsed.url
+          return
+        }
+      }
+
+      alert('Payment link not available')
+    } catch {
       alert('Something went wrong')
     } finally {
       setLoading(false)
@@ -113,7 +126,6 @@ export default function PayButton({
   return (
     <div style={{ maxWidth: '520px', margin: '0 auto' }}>
       <div style={{ display: 'grid', gap: '10px', marginBottom: '14px' }}>
-        {/* NAME */}
         <label>Full Name</label>
         <input
           value={name}
@@ -122,7 +134,6 @@ export default function PayButton({
           style={inputStyle}
         />
 
-        {/* EMAIL */}
         <label>Email Address</label>
         <input
           value={email}
@@ -131,7 +142,6 @@ export default function PayButton({
           style={inputStyle}
         />
 
-        {/* PHONE */}
         <label>Phone Number</label>
         <input
           value={phone}
@@ -139,7 +149,6 @@ export default function PayButton({
           style={inputStyle}
         />
 
-        {/* DELIVERY TOGGLE */}
         <div style={toggleBox}>
           <label style={toggleLabel}>
             <div>
@@ -175,7 +184,6 @@ export default function PayButton({
           </label>
         </div>
 
-        {/* DELIVERY FORM */}
         {needsDelivery && (
           <>
             <label>Address Line 1</label>
@@ -204,13 +212,11 @@ export default function PayButton({
         )}
       </div>
 
-      {/* TOTAL */}
       <div style={totalRow}>
         <span>Total</span>
         <strong>RM {total.toFixed(2)}</strong>
       </div>
 
-      {/* BUTTON */}
       <button onClick={handleClick} disabled={loading} style={buttonStyle}>
         {loading ? 'Redirecting...' : 'Pay Now'}
       </button>
@@ -218,7 +224,6 @@ export default function PayButton({
   )
 }
 
-/* STYLES */
 const inputStyle = {
   width: '100%',
   padding: '13px',
