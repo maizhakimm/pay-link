@@ -74,6 +74,32 @@ function buildBuyerAddress(delivery: DeliveryPayload) {
   return parts.length ? parts.join(', ') : null
 }
 
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+/**
+ * Seller bears the gateway fee.
+ * Adjust this later if you want dynamic fee by channel.
+ */
+function estimateGatewayFee(paymentChannel: number, _subtotal: number) {
+  if (paymentChannel === BAYARCASH_CHANNELS.FPX) {
+    return 1.0
+  }
+
+  // fallback for now
+  return 1.0
+}
+
+/**
+ * BayarLink platform fee.
+ * Currently set to 0 so system stays safe first.
+ * Change later when ready.
+ */
+function estimatePlatformFee(_subtotal: number) {
+  return 0
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -215,13 +241,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const totalAmount = validItems.reduce((sum, item) => sum + item.line_total, 0)
+    const subtotal = roundMoney(
+      validItems.reduce((sum, item) => sum + item.line_total, 0)
+    )
+    const totalAmount = subtotal
     const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0)
+
+    const gatewayFee = roundMoney(estimateGatewayFee(paymentChannel, subtotal))
+    const platformFee = roundMoney(estimatePlatformFee(subtotal))
+    const sellerNet = roundMoney(subtotal - gatewayFee - platformFee)
 
     const firstProduct = validItems[0].product
     const orderNumber = `ORD-${Date.now()}`
     const amount = totalAmount.toFixed(2)
     const buyerAddress = buildBuyerAddress(delivery)
+
+    const itemsSnapshot = validItems.map((item) => ({
+      product_id: item.product.id,
+      product_name: item.product.name,
+      product_slug: item.product.slug,
+      unit_price: item.unit_price,
+      quantity: item.quantity,
+      line_total: item.line_total,
+    }))
 
     const { data: insertedOrder, error: orderInsertError } = await supabase
       .from('orders')
@@ -232,16 +274,33 @@ export async function POST(req: NextRequest) {
           validItems.length === 1
             ? firstProduct.name
             : `${validItems.length} menu items`,
+
         seller_profile_id: sellerId,
+        seller_id: sellerId,
 
         buyer_name: name || 'Customer',
         buyer_email: email || 'customer@example.com',
         buyer_phone: phone || '',
         buyer_address: buyerAddress,
 
+        customer_name: name || 'Customer',
+        customer_email: email || 'customer@example.com',
+        customer_phone: phone || '',
+
+        delivery_info: delivery,
+        items: itemsSnapshot,
+
         quantity: totalQuantity,
         amount,
+        total_amount: totalAmount,
+        subtotal,
+        gateway_fee: gatewayFee,
+        platform_fee: platformFee,
+        seller_net: sellerNet,
+        currency: 'MYR',
+
         order_number: orderNumber,
+        order_no: orderNumber,
 
         payment_provider: 'bayarcash',
         payment_channel: paymentChannel,
