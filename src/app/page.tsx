@@ -47,7 +47,7 @@ export default function HomePage() {
             </div>
 
             <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              Mudah Urus,
+              Mudah Jual,
               <br />
               <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
                 Mudah Bayar!
