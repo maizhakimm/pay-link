@@ -170,6 +170,68 @@ export default function SettingsPage() {
   }
 
   async function loadProfile() {
+  setLoading(true)
+
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError) throw new Error(authError.message)
+    if (!user) return
+
+    setUserId(user.id)
+    setAccountEmail(user.email || '')
+
+    // 🔥 FORCE GET PROFILE FIRST
+    let { data: profile, error } = await supabase
+      .from('seller_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    // 🔥 IF NOT EXIST → CREATE
+    if (!profile) {
+      const { data: newProfile, error: insertError } = await supabase
+        .from('seller_profiles')
+        .insert({
+          user_id: user.id,
+          store_name: 'My Store',
+          email: user.email || null,
+        })
+        .select()
+        .single()
+
+      if (insertError) throw new Error(insertError.message)
+
+      profile = newProfile
+    }
+
+    // 🔥 NOW GUARANTEED EXIST
+    setSellerId(profile.id)
+
+    setStoreName(profile.store_name || '')
+    setShopSlug(profile.shop_slug || '')
+    setEmail(profile.email || '')
+    setWhatsapp(profile.whatsapp || '')
+    setCompanyName(profile.company_name || '')
+    setCompanyReg(profile.company_registration || '')
+    setBusinessAddress(profile.business_address || '')
+
+    setBankName(profile.bank_name || '')
+    setAccountNumber(profile.account_number || '')
+    setAccountHolderName(profile.account_holder_name || '')
+
+    setProfileImage(profile.profile_image || '')
+
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to load profile'
+    alert(message)
+  } finally {
+    setLoading(false)
+  }
+} {
     setLoading(true)
 
     try {
@@ -238,6 +300,12 @@ export default function SettingsPage() {
 
     setProfileImage(data.publicUrl)
   }
+
+  console.log('SAVE DEBUG', {
+  sellerId,
+  storeName,
+  shopSlug,
+})
 
   async function handleSave() {
     if (!userId) {
