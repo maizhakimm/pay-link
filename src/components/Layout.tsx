@@ -32,7 +32,7 @@ export default function Layout({ children }: LayoutProps) {
           <Link href="/dashboard" className="shrink-0">
             <div className="relative h-11 w-[170px] sm:h-12 sm:w-[190px]">
               <Image
-                src="/public/BayarLink Logo 01.svg"
+                src="/BayarLink Logo 01.svg"
                 alt="BayarLink"
                 fill
                 priority
