@@ -4,6 +4,29 @@ import Layout from '../../../components/Layout'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
+const MALAYSIAN_BANKS = [
+  'Affin Bank',
+  'Agrobank',
+  'Alliance Bank',
+  'AmBank',
+  'Bank Islam',
+  'Bank Muamalat',
+  'Bank Rakyat',
+  'BSN',
+  'CIMB Bank',
+  'Citibank',
+  'Hong Leong Bank',
+  'HSBC',
+  'Kuwait Finance House',
+  'Maybank',
+  'MBSB Bank',
+  'OCBC Bank',
+  'Public Bank',
+  'RHB Bank',
+  'Standard Chartered',
+  'UOB Bank',
+]
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -118,7 +141,6 @@ export default function SettingsPage() {
 
       setProfileImage(data.profile_image || '')
 
-      // Auto create slug only once if missing
       if (!data.shop_slug && data.store_name) {
         try {
           const newSlug = await generateUniqueShopSlug(data.store_name, data.id)
@@ -176,7 +198,6 @@ export default function SettingsPage() {
     let finalShopSlug = shopSlug
 
     try {
-      // Generate slug only if seller still doesn't have one
       if (!finalShopSlug) {
         finalShopSlug = await generateUniqueShopSlug(storeName, sellerId)
       }
@@ -190,9 +211,9 @@ export default function SettingsPage() {
           company_name: companyName || null,
           company_registration: companyReg || null,
           business_address: businessAddress || null,
-          bank_name: bankName,
-          account_number: accountNumber,
-          account_holder_name: accountHolderName,
+          bank_name: bankName || null,
+          account_number: accountNumber || null,
+          account_holder_name: accountHolderName || null,
           profile_image: profileImage,
           shop_slug: finalShopSlug,
         })
@@ -384,12 +405,18 @@ export default function SettingsPage() {
                   <p className="mb-3 text-sm font-extrabold text-slate-900">Payout Details</p>
 
                   <div className="grid gap-3">
-                    <input
-                      placeholder="Bank Name"
+                    <select
                       value={bankName}
                       onChange={(e) => setBankName(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                    >
+                      <option value="">Select Bank</option>
+                      {MALAYSIAN_BANKS.map((bank) => (
+                        <option key={bank} value={bank}>
+                          {bank}
+                        </option>
+                      ))}
+                    </select>
 
                     <input
                       placeholder="Account Number"
