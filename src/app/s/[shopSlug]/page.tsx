@@ -51,7 +51,7 @@ export default async function Page({ params }: PageProps) {
   const { data: seller, error: sellerError } = await supabase
     .from('seller_profiles')
     .select('id, store_name, shop_slug, profile_image, email, whatsapp, business_address')
-    .eq('shop_slug', requestedSlug)
+    .ilike('shop_slug', requestedSlug)
     .maybeSingle()
 
   if (sellerError) {
