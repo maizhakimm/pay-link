@@ -36,6 +36,10 @@ function slugify(value: string) {
     .replace(/-+/g, '-')
 }
 
+function getDefaultStoreNameFromEmail(email: string) {
+  return email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim() || ''
+}
+
 async function generateUniqueShopSlug(base: string, currentSellerId?: string | null) {
   const cleanBase = slugify(base || 'shop')
   let candidate = cleanBase || 'shop'
@@ -110,7 +114,7 @@ export default function SettingsPage() {
   const previewBaseUrl =
     (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
 
-  const previewSlug = useMemo(() => {
+  const livePreviewSlug = useMemo(() => {
     if (slugLocked && savedShopSlug) {
       return savedShopSlug
     }
@@ -169,7 +173,6 @@ export default function SettingsPage() {
       }
 
       if (!user) {
-        alert('User session not found. Please log in again.')
         return
       }
 
@@ -178,9 +181,12 @@ export default function SettingsPage() {
 
       const profile = await ensureSellerProfile(user.id, user.email || '')
 
+      const existingSlug = profile.shop_slug || ''
+      const existingStoreName = profile.store_name || ''
+      const defaultStoreName = getDefaultStoreNameFromEmail(user.email || '')
+
       setSellerId(profile.id)
-      setStoreName(profile.store_name || '')
-      setSavedShopSlug(profile.shop_slug || '')
+      setSavedShopSlug(existingSlug)
       setEmail(profile.email || '')
       setWhatsapp(profile.whatsapp || '')
       setCompanyName(profile.company_name || '')
@@ -190,7 +196,15 @@ export default function SettingsPage() {
       setAccountNumber(profile.account_number || '')
       setAccountHolderName(profile.account_holder_name || '')
       setProfileImage(profile.profile_image || '')
-      setSlugLocked(Boolean(profile.shop_slug))
+
+      const shouldTreatAsUnconfiguredName =
+        !existingSlug &&
+        existingStoreName &&
+        defaultStoreName &&
+        existingStoreName.trim().toLowerCase() === defaultStoreName.trim().toLowerCase()
+
+      setStoreName(shouldTreatAsUnconfiguredName ? '' : existingStoreName)
+      setSlugLocked(Boolean(existingSlug))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load profile'
       alert(message)
@@ -217,7 +231,9 @@ export default function SettingsPage() {
       return
     }
 
-    const { data } = supabase.storage.from('product-images').getPublicUrl(filePath)
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath)
 
     setProfileImage(data.publicUrl)
   }
@@ -254,23 +270,21 @@ export default function SettingsPage() {
         finalShopSlug = await generateUniqueShopSlug(trimmedStoreName, currentSellerId)
       }
 
-      const payload = {
-        store_name: trimmedStoreName,
-        email: email.trim() || null,
-        whatsapp: whatsapp.trim() || null,
-        company_name: companyName.trim() || null,
-        company_registration: companyReg.trim() || null,
-        business_address: businessAddress.trim() || null,
-        bank_name: bankName || null,
-        account_number: accountNumber.trim() || null,
-        account_holder_name: accountHolderName.trim() || null,
-        profile_image: profileImage || null,
-        shop_slug: finalShopSlug,
-      }
-
       const { error } = await supabase
         .from('seller_profiles')
-        .update(payload)
+        .update({
+          store_name: trimmedStoreName,
+          email: email.trim() || null,
+          whatsapp: whatsapp.trim() || null,
+          company_name: companyName.trim() || null,
+          company_registration: companyReg.trim() || null,
+          business_address: businessAddress.trim() || null,
+          bank_name: bankName || null,
+          account_number: accountNumber.trim() || null,
+          account_holder_name: accountHolderName.trim() || null,
+          profile_image: profileImage || null,
+          shop_slug: finalShopSlug,
+        })
         .eq('id', currentSellerId)
 
       if (error) {
@@ -397,13 +411,13 @@ export default function SettingsPage() {
                         </p>
 
                         <p className="mt-1 break-all text-sm font-bold text-slate-900">
-                          {previewBaseUrl}/s/{previewSlug}
+                          {previewBaseUrl}/s/{livePreviewSlug}
                         </p>
 
                         <p className="mt-1 text-xs text-slate-500">
                           {slugLocked
                             ? 'Your shop URL is locked after first successful save.'
-                            : 'Preview only. Your shop URL will be generated and locked only after you click Save.'}
+                            : 'Preview only. Type your store name to preview your future shop URL.'}
                         </p>
                       </div>
                     </div>
