@@ -133,7 +133,7 @@ export default async function Page({ params }: PageProps) {
     <ShopPageClient
       seller={seller}
       products={(products || []) as ProductRow[]}
-      shopSlug={requestedSlug}
+      shopSlug={seller.shop_slug}
     />
   )
 }
