@@ -26,12 +26,6 @@ export default function LoginPage() {
     return isLogin ? 'Sign in ke BayarLink' : 'Cipta akaun BayarLink'
   }, [isLogin])
 
-  const pageSubtitle = useMemo(() => {
-    return isLogin
-      ? 'Masuk dan urus produk, order, dan pembayaran anda dengan lebih mudah.'
-      : 'Daftar akaun baru dan mula guna BayarLink untuk jualan yang lebih tersusun.'
-  }, [isLogin])
-
   function resetMessages() {
     setErrorMsg('')
     setSuccessMsg('')
@@ -52,26 +46,19 @@ export default function LoginPage() {
       return false
     }
 
-    const trimmedEmail = email.trim()
-
-    if (!trimmedEmail.includes('@')) {
-      setErrorMsg('Please enter a valid email address.')
+    if (!email.includes('@')) {
+      setErrorMsg('Please enter a valid email.')
       return false
     }
 
     if (!isLogin) {
-      if (!confirmPassword) {
-        setErrorMsg('Please confirm your password.')
-        return false
-      }
-
       if (password.length < 6) {
         setErrorMsg('Password must be at least 6 characters.')
         return false
       }
 
       if (password !== confirmPassword) {
-        setErrorMsg('Password and confirm password do not match.')
+        setErrorMsg('Password not match.')
         return false
       }
     }
@@ -88,7 +75,7 @@ export default function LoginPage() {
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
+          email,
           password,
         })
 
@@ -103,7 +90,7 @@ export default function LoginPage() {
       }
 
       const { error } = await supabase.auth.signUp({
-        email: email.trim(),
+        email,
         password,
       })
 
@@ -113,267 +100,159 @@ export default function LoginPage() {
         return
       }
 
-      setSuccessMsg('Account created successfully. Please sign in to continue.')
+      setSuccessMsg(
+        'Account created! Please check your email to verify your account before login.'
+      )
+
       setIsLogin(true)
-      setPassword('')
-      setConfirmPassword('')
-    } catch (error) {
-      console.error(error)
-      setErrorMsg('Something went wrong. Please try again.')
+    } catch (err) {
+      setErrorMsg('Something went wrong.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] lg:grid-cols-2">
-          <div className="relative hidden bg-slate-950 p-8 text-white lg:flex lg:flex-col lg:justify-between xl:p-10">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center px-4">
+
+        <div className="grid w-full rounded-3xl border bg-white shadow-lg lg:grid-cols-2 overflow-hidden">
+
+          {/* LEFT */}
+          <div className="hidden lg:flex flex-col justify-between bg-slate-900 text-white p-8">
+
             <div>
-              <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/80">
-                BayarLink Seller Portal
-              </div>
+              {/* Beta badge */}
+              <span className="inline-block text-xs bg-white/10 px-3 py-1 rounded-full mb-4">
+                🚀 Beta Version
+              </span>
 
-              <div className="mt-6">
-                <Image
-                  src="/BayarLink-Logo-01.svg"
-                  alt="BayarLink Logo"
-                  width={190}
-                  height={52}
-                  className="h-auto w-auto"
-                  priority
-                />
-              </div>
+              <Image
+                src="/BayarLink-Logo-01.svg"
+                alt="BayarLink"
+                width={160}
+                height={40}
+              />
 
-              <h1 className="mt-8 max-w-md text-3xl font-bold leading-tight xl:text-4xl">
-                Jual lebih tersusun. Terima bayaran dengan lebih mudah.
+              <h1 className="mt-6 text-2xl font-semibold leading-snug">
+                Jual lebih tersusun. Terima bayaran dengan mudah.
               </h1>
 
-              <p className="mt-4 max-w-md text-sm leading-6 text-slate-300 xl:text-base">
-                BayarLink membantu seller urus produk, order, dan pembayaran dalam satu tempat
-                yang ringkas, kemas, dan mesra mobile.
+              <p className="mt-3 text-sm text-slate-300">
+                Sistem mudah untuk urus produk, order dan pembayaran dalam satu tempat.
               </p>
             </div>
 
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" />
-                  <div>
-                    <p className="font-semibold">Satu link untuk jualan anda</p>
-                    <p className="mt-1 text-sm text-slate-300">
-                      Kongsi dengan mudah melalui WhatsApp, TikTok, atau media sosial.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" />
-                  <div>
-                    <p className="font-semibold">Pantau order dengan lebih jelas</p>
-                    <p className="mt-1 text-sm text-slate-300">
-                      Semak status order, bayaran, dan prestasi jualan dengan lebih teratur.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" />
-                  <div>
-                    <p className="font-semibold">Direka untuk mobile</p>
-                    <p className="mt-1 text-sm text-slate-300">
-                      Sesuai untuk seller yang urus bisnes terus dari telefon.
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="space-y-3">
+              <Feature text="Satu link untuk jualan" />
+              <Feature text="Track order dengan jelas" />
+              <Feature text="Mobile friendly" />
             </div>
           </div>
 
-          <div className="flex items-center justify-center p-4 sm:p-6 lg:p-8 xl:p-10">
+          {/* RIGHT */}
+          <div className="p-6 flex items-center justify-center">
             <div className="w-full max-w-md">
-              <div className="mb-6 flex flex-col items-center text-center lg:hidden">
+
+              {/* Mobile logo */}
+              <div className="lg:hidden text-center mb-6">
                 <Image
                   src="/BayarLink-Logo-01.svg"
-                  alt="BayarLink Logo"
-                  width={180}
-                  height={50}
-                  className="h-auto w-auto"
-                  priority
+                  alt="BayarLink"
+                  width={150}
+                  height={40}
                 />
-                <p className="mt-3 text-sm text-slate-500">Mudah Jual. Mudah Bayar.</p>
+                <p className="text-xs text-slate-400 mt-2">🚀 Beta Version</p>
               </div>
 
-              <div className="mb-6 rounded-2xl bg-slate-100 p-1">
-                <div className="grid grid-cols-2 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => switchMode(true)}
-                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                      isLogin
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => switchMode(false)}
-                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                      !isLogin
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    Sign Up
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">{pageTitle}</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500">{pageSubtitle}</p>
-              </div>
+              <h2 className="text-xl font-bold text-center mb-4">
+                {isLogin ? 'Sign In' : 'Create Account'}
+              </h2>
 
               {errorMsg && (
-                <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {errorMsg}
-                </div>
+                <div className="mb-3 text-sm text-red-500">{errorMsg}</div>
               )}
 
               {successMsg && (
-                <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                  {successMsg}
-                </div>
+                <div className="mb-3 text-sm text-green-600">{successMsg}</div>
               )}
 
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                    />
-                  </div>
-                </div>
+              <div className="space-y-3">
 
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full border rounded-xl px-4 py-3"
+                />
+
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-3"
+                  />
+                  <button
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-xs"
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
                 </div>
 
                 {!isLogin && (
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Confirm Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Re-enter your password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
+                  <input
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-3"
+                  />
                 )}
 
                 <button
-                  type="button"
                   onClick={handleAuth}
                   disabled={loading}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      {isLogin ? 'Sign In' : 'Create Account'}
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
+                  {loading ? 'Loading...' : isLogin ? 'Login' : 'Sign Up'}
                 </button>
               </div>
 
-              <div className="mt-5 text-center text-sm text-slate-500">
+              <div className="text-center mt-4 text-sm">
                 {isLogin ? (
                   <>
-                    Belum ada akaun?{' '}
-                    <button
-                      type="button"
-                      onClick={() => switchMode(false)}
-                      className="font-semibold text-blue-600 hover:text-blue-700"
-                    >
-                      Create account
+                    No account?{' '}
+                    <button onClick={() => switchMode(false)} className="text-blue-600">
+                      Sign Up
                     </button>
                   </>
                 ) : (
                   <>
-                    Dah ada akaun?{' '}
-                    <button
-                      type="button"
-                      onClick={() => switchMode(true)}
-                      className="font-semibold text-blue-600 hover:text-blue-700"
-                    >
-                      Sign in
+                    Already have account?{' '}
+                    <button onClick={() => switchMode(true)} className="text-blue-600">
+                      Login
                     </button>
                   </>
                 )}
               </div>
 
-              <p className="mt-6 text-center text-xs leading-5 text-slate-400">
-                Dengan meneruskan, anda bersetuju untuk menggunakan platform ini bagi tujuan
-                mengurus jualan, order, dan pembayaran secara lebih teratur.
-              </p>
             </div>
           </div>
+
         </div>
       </div>
+    </div>
+  )
+}
+
+function Feature({ text }: { text: string }) {
+  return (
+    <div className="text-sm text-slate-300 flex items-center gap-2">
+      <span>✓</span> {text}
     </div>
   )
 }
