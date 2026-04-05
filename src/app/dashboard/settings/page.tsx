@@ -90,7 +90,7 @@ export default function SettingsPage() {
   const [userId, setUserId] = useState<string | null>(null)
 
   const [storeName, setStoreName] = useState('')
-  const [shopSlug, setShopSlug] = useState('')
+  const [savedShopSlug, setSavedShopSlug] = useState('')
   const [slugLocked, setSlugLocked] = useState(false)
 
   const [email, setEmail] = useState('')
@@ -107,12 +107,16 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  const previewSlug = useMemo(() => {
-    return slugify(storeName || 'your-shop')
-  }, [storeName])
-
   const previewBaseUrl =
     (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
+
+  const previewSlug = useMemo(() => {
+    if (slugLocked && savedShopSlug) {
+      return savedShopSlug
+    }
+
+    return slugify(storeName || 'your-shop')
+  }, [slugLocked, savedShopSlug, storeName])
 
   useEffect(() => {
     loadProfile()
@@ -133,15 +137,13 @@ export default function SettingsPage() {
       return existing as SellerProfileRow
     }
 
-    const initialStoreName =
-      currentUserEmail?.split('@')[0]?.replace(/[._-]+/g, ' ').trim() || 'My Store'
-
     const { data: inserted, error: insertError } = await supabase
       .from('seller_profiles')
       .insert({
         user_id: currentUserId,
-        store_name: initialStoreName,
         email: currentUserEmail || null,
+        store_name: null,
+        shop_slug: null,
       })
       .select('*')
       .single()
@@ -167,6 +169,7 @@ export default function SettingsPage() {
       }
 
       if (!user) {
+        alert('User session not found. Please log in again.')
         return
       }
 
@@ -177,7 +180,7 @@ export default function SettingsPage() {
 
       setSellerId(profile.id)
       setStoreName(profile.store_name || '')
-      setShopSlug(profile.shop_slug || '')
+      setSavedShopSlug(profile.shop_slug || '')
       setEmail(profile.email || '')
       setWhatsapp(profile.whatsapp || '')
       setCompanyName(profile.company_name || '')
@@ -187,14 +190,7 @@ export default function SettingsPage() {
       setAccountNumber(profile.account_number || '')
       setAccountHolderName(profile.account_holder_name || '')
       setProfileImage(profile.profile_image || '')
-
-      // Only lock after a real save state exists:
-      // if user already has both store name and slug, we consider it locked.
-      if (profile.store_name && profile.shop_slug) {
-        setSlugLocked(true)
-      } else {
-        setSlugLocked(false)
-      }
+      setSlugLocked(Boolean(profile.shop_slug))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load profile'
       alert(message)
@@ -221,20 +217,22 @@ export default function SettingsPage() {
       return
     }
 
-    const { data } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(filePath)
+    const { data } = supabase.storage.from('product-images').getPublicUrl(filePath)
 
     setProfileImage(data.publicUrl)
   }
 
   async function handleSave() {
+    if (saving) return
+
     if (!userId) {
       alert('User session not found. Please log in again.')
       return
     }
 
-    if (!storeName.trim()) {
+    const trimmedStoreName = storeName.trim()
+
+    if (!trimmedStoreName) {
       alert('Store Name is required')
       return
     }
@@ -243,46 +241,46 @@ export default function SettingsPage() {
 
     try {
       let currentSellerId = sellerId
-      let finalShopSlug = shopSlug
 
       if (!currentSellerId) {
         const profile = await ensureSellerProfile(userId, accountEmail || '')
         currentSellerId = profile.id
         setSellerId(profile.id)
-
-        if (!finalShopSlug) {
-          finalShopSlug = profile.shop_slug || ''
-        }
       }
 
-      // Generate slug only if still missing
+      let finalShopSlug = savedShopSlug
+
       if (!finalShopSlug) {
-        finalShopSlug = await generateUniqueShopSlug(storeName, currentSellerId)
+        finalShopSlug = await generateUniqueShopSlug(trimmedStoreName, currentSellerId)
+      }
+
+      const payload = {
+        store_name: trimmedStoreName,
+        email: email.trim() || null,
+        whatsapp: whatsapp.trim() || null,
+        company_name: companyName.trim() || null,
+        company_registration: companyReg.trim() || null,
+        business_address: businessAddress.trim() || null,
+        bank_name: bankName || null,
+        account_number: accountNumber.trim() || null,
+        account_holder_name: accountHolderName.trim() || null,
+        profile_image: profileImage || null,
+        shop_slug: finalShopSlug,
       }
 
       const { error } = await supabase
         .from('seller_profiles')
-        .update({
-          store_name: storeName,
-          email: email || null,
-          whatsapp: whatsapp || null,
-          company_name: companyName || null,
-          company_registration: companyReg || null,
-          business_address: businessAddress || null,
-          bank_name: bankName || null,
-          account_number: accountNumber || null,
-          account_holder_name: accountHolderName || null,
-          profile_image: profileImage || null,
-          shop_slug: finalShopSlug,
-        })
+        .update(payload)
         .eq('id', currentSellerId)
 
       if (error) {
         throw new Error(error.message)
       }
 
-      setShopSlug(finalShopSlug)
+      setStoreName(trimmedStoreName)
+      setSavedShopSlug(finalShopSlug)
       setSlugLocked(true)
+
       alert('Settings updated successfully!')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save settings'
@@ -399,13 +397,13 @@ export default function SettingsPage() {
                         </p>
 
                         <p className="mt-1 break-all text-sm font-bold text-slate-900">
-                          {previewBaseUrl}/s/{shopSlug || previewSlug}
+                          {previewBaseUrl}/s/{previewSlug}
                         </p>
 
                         <p className="mt-1 text-xs text-slate-500">
                           {slugLocked
-                            ? 'Your shop URL is locked after first save.'
-                            : 'Your store name will generate your shop URL when you click Save.'}
+                            ? 'Your shop URL is locked after first successful save.'
+                            : 'Preview only. Your shop URL will be generated and locked only after you click Save.'}
                         </p>
                       </div>
                     </div>
@@ -493,6 +491,7 @@ export default function SettingsPage() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={saving}
                   className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
