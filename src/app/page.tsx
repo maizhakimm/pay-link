@@ -549,7 +549,7 @@ export default function HomePage() {
   <a href="/privacy" className="hover:text-slate-700">
     Privacy Policy
   </a>
-</div>
+</div></div>
             Copyright Reserved @2026 BayarLink by Neugens Solution
             (202503301282 (AS0504872-V))
           </p>
