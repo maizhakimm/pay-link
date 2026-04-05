@@ -27,6 +27,7 @@ type ProductRow = {
 type SellerProfileRow = {
   id: string
   store_name: string | null
+  shop_slug?: string | null
 }
 
 function createSlug(value: string) {
@@ -37,6 +38,37 @@ function createSlug(value: string) {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .slice(0, 60)
+}
+
+async function generateUniqueProductSlug(base: string, sellerProfileId: string, productId?: string) {
+  const cleanBase = createSlug(base || 'product')
+  let candidate = cleanBase || 'product'
+  let counter = 1
+
+  while (true) {
+    let query = supabase
+      .from('products')
+      .select('id')
+      .eq('seller_profile_id', sellerProfileId)
+      .eq('slug', candidate)
+
+    if (productId) {
+      query = query.neq('id', productId)
+    }
+
+    const { data, error } = await query.maybeSingle()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    if (!data) {
+      return candidate
+    }
+
+    counter += 1
+    candidate = `${cleanBase}-${counter}`
+  }
 }
 
 function getProductImages(product: ProductRow) {
@@ -59,7 +91,6 @@ export default function ProductsPage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
-  const [customSlug, setCustomSlug] = useState('')
   const [productImages, setProductImages] = useState<File[]>([])
   const [trackStock, setTrackStock] = useState(true)
   const [stockQuantity, setStockQuantity] = useState('0')
@@ -80,9 +111,17 @@ export default function ProductsPage() {
       : process.env.NEXT_PUBLIC_APP_URL || ''
 
   const generatedSlug = useMemo(() => {
-    if (customSlug.trim()) return createSlug(customSlug)
     return createSlug(name)
-  }, [customSlug, name])
+  }, [name])
+
+  const buildProductLink = useCallback(
+    (productSlug: string) => {
+      const sellerShopSlug = sellerProfile?.shop_slug?.trim()
+      if (!sellerShopSlug) return ''
+      return `${appUrl}/p/${sellerShopSlug}/${productSlug}`
+    },
+    [appUrl, sellerProfile?.shop_slug]
+  )
 
   const loadProductsPage = useCallback(async () => {
     setLoading(true)
@@ -101,12 +140,18 @@ export default function ProductsPage() {
 
     const { data: sellerData, error: sellerError } = await supabase
       .from('seller_profiles')
-      .select('id, store_name')
+      .select('id, store_name, shop_slug')
       .eq('user_id', user.id)
       .maybeSingle()
 
     if (sellerError || !sellerData) {
       setError('Seller profile not found. Please complete your settings first.')
+      setLoading(false)
+      return
+    }
+
+    if (!sellerData.shop_slug) {
+      setError('Shop URL not found. Please complete your settings first.')
       setLoading(false)
       return
     }
@@ -210,19 +255,21 @@ export default function ProductsPage() {
       return
     }
 
-    const finalSlug = generatedSlug
-    if (!finalSlug) {
-      alert('Please enter a valid product name or slug.')
-      return
-    }
-
     setSaving(true)
 
     try {
+      const finalSlug = await generateUniqueProductSlug(name.trim(), sellerProfile.id)
+
+      if (!finalSlug) {
+        alert('Please enter a valid product name.')
+        setSaving(false)
+        return
+      }
+
       let uploadedUrls: string[] = []
 
       if (productImages.length > 0) {
-        uploadedUrls = await uploadProductImages(productImages, finalSlug)
+        uploadedUrls = await uploadProductImages(productImages, `${sellerProfile.id}/${finalSlug}`)
       }
 
       const safeStock = trackStock ? Math.max(0, Number(stockQuantity || 0)) : 0
@@ -255,7 +302,6 @@ export default function ProductsPage() {
       setName('')
       setDescription('')
       setPrice('')
-      setCustomSlug('')
       setProductImages([])
       setTrackStock(true)
       setStockQuantity('0')
@@ -293,16 +339,29 @@ export default function ProductsPage() {
   }
 
   async function saveEdit(product: ProductRow) {
+    if (!sellerProfile) {
+      alert('Seller profile not ready yet.')
+      return
+    }
+
     if (!editingName.trim() || !editingPrice.trim()) {
       alert('Please fill in product name and price.')
       return
     }
 
     try {
+      const nextSlug =
+        editingName.trim() === product.name.trim()
+          ? product.slug
+          : await generateUniqueProductSlug(editingName.trim(), sellerProfile.id, product.id)
+
       let newUploadedUrls: string[] = []
 
       if (editingNewImages.length > 0) {
-        newUploadedUrls = await uploadProductImages(editingNewImages, product.slug)
+        newUploadedUrls = await uploadProductImages(
+          editingNewImages,
+          `${sellerProfile.id}/${nextSlug}`
+        )
       }
 
       const finalImages = [...editingExistingImages, ...newUploadedUrls].slice(0, 5)
@@ -313,6 +372,7 @@ export default function ProductsPage() {
         .from('products')
         .update({
           name: editingName.trim(),
+          slug: nextSlug,
           description: editingDescription.trim() || null,
           price: Number(editingPrice),
           is_active: editingIsActive,
@@ -379,8 +439,15 @@ export default function ProductsPage() {
   }
 
   async function copyLink(slug: string) {
+    const link = buildProductLink(slug)
+
+    if (!link) {
+      alert('Shop URL not ready yet.')
+      return
+    }
+
     try {
-      await navigator.clipboard.writeText(`${appUrl}/pay-link/${slug}`)
+      await navigator.clipboard.writeText(link)
       alert('Payment link copied')
     } catch {
       alert('Unable to copy link')
@@ -388,7 +455,12 @@ export default function ProductsPage() {
   }
 
   async function shareLink(slug: string) {
-    const shareUrl = `${appUrl}/pay-link/${slug}`
+    const shareUrl = buildProductLink(slug)
+
+    if (!shareUrl) {
+      alert('Shop URL not ready yet.')
+      return
+    }
 
     try {
       if (navigator.share) {
@@ -444,14 +516,6 @@ export default function ProductsPage() {
               value={price}
               onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
               placeholder="0.00"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-            />
-
-            <label className="text-sm font-bold text-slate-600">Custom Slug (optional)</label>
-            <input
-              value={customSlug}
-              onChange={(e) => setCustomSlug(e.target.value)}
-              placeholder="leave blank to auto-generate"
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
             />
 
@@ -519,9 +583,9 @@ export default function ProductsPage() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
               <strong className="text-slate-900">Preview link:</strong>
               <div className="mt-1 break-all">
-                {generatedSlug
-                  ? `${appUrl}/pay-link/${generatedSlug}`
-                  : 'Enter product name to generate pay link'}
+                {generatedSlug && sellerProfile?.shop_slug
+                  ? `${appUrl}/p/${sellerProfile.shop_slug}/${generatedSlug}`
+                  : 'Enter product name to generate product link'}
               </div>
             </div>
 
@@ -547,7 +611,7 @@ export default function ProductsPage() {
           ) : (
             <div className="grid gap-4">
               {products.map((product) => {
-                const link = `${appUrl}/pay-link/${product.slug}`
+                const link = buildProductLink(product.slug)
                 const images = getProductImages(product)
                 const thumb = images[0]
 
@@ -749,7 +813,7 @@ export default function ProductsPage() {
                         </div>
 
                         <div className="break-all rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                          {link}
+                          {link || 'Shop URL not ready yet'}
                         </div>
 
                         <div className="grid grid-cols-3 gap-2">
