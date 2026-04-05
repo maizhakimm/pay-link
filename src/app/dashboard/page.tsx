@@ -52,13 +52,13 @@ export default function DashboardPage() {
       return
     }
 
-    const { data: sellerData } = await supabase
+    const { data: sellerData, error: sellerError } = await supabase
       .from('seller_profiles')
       .select('id, store_name, shop_slug, profile_image, daily_note')
       .eq('user_id', user.id)
       .single()
 
-    if (!sellerData) {
+    if (sellerError || !sellerData) {
       window.location.href = '/dashboard/settings'
       return
     }
@@ -92,7 +92,7 @@ export default function DashboardPage() {
 
   const shopLink =
     seller?.shop_slug && typeof window !== 'undefined'
-      ? `${window.location.origin}/shop/${seller.shop_slug}`
+      ? `${window.location.origin}/s/${seller.shop_slug}`
       : ''
 
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.amount || 0), 0)
