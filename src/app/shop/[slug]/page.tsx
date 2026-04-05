@@ -7,6 +7,7 @@ export const revalidate = 0
 type SellerProfile = {
   id: string
   store_name: string | null
+  shop_slug?: string | null
   profile_image?: string | null
   email?: string | null
   whatsapp?: string | null
@@ -60,13 +61,13 @@ export default async function Page({ params }: PageProps) {
 
   const { data: sellers, error: sellerError } = await supabase
     .from('seller_profiles')
-    .select('id, store_name, profile_image, email, whatsapp, business_address')
+    .select('id, store_name, shop_slug, profile_image, email, whatsapp, business_address')
 
   if (!sellerError && sellers && sellers.length > 0) {
     seller =
       (sellers as SellerProfile[]).find((item) => {
         if (!item.store_name) return false
-        item.shop_slug === requestedSlug
+        return item.shop_slug === requestedSlug
       }) || null
   }
 
@@ -88,6 +89,7 @@ export default async function Page({ params }: PageProps) {
         seller = {
           id: matchedProduct.seller_profile_id || '',
           store_name: matchedProduct.store_name || 'Shop',
+          shop_slug: requestedSlug,
           profile_image: null,
           email: null,
           whatsapp: null,
@@ -133,7 +135,7 @@ export default async function Page({ params }: PageProps) {
     <ShopPageClient
       seller={seller}
       products={(products || []) as ProductRow[]}
-      shopSlug={seller.shop_slug}
+      shopSlug={seller.shop_slug || requestedSlug}
     />
   )
 }
