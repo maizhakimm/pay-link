@@ -66,7 +66,7 @@ export default async function Page({ params }: PageProps) {
     seller =
       (sellers as SellerProfile[]).find((item) => {
         if (!item.store_name) return false
-        return slugify(item.store_name) === requestedSlug
+        item.shop_slug === requestedSlug
       }) || null
   }
 
