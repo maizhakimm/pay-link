@@ -4,6 +4,8 @@ import Layout from '../../../components/Layout'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
+type JsonRecord = Record<string, unknown>
+
 type OrderItem = {
   name: string
   quantity: number
@@ -24,8 +26,6 @@ type OrderRow = {
   buyer_phone?: string | null
   buyer_email?: string | null
   created_at?: string | null
-
-  // Optional flexible fields for item detail support
   items?: unknown
   order_items?: unknown
   cart_items?: unknown
@@ -86,7 +86,7 @@ function statusBadgeClass(status: string) {
   return 'bg-slate-100 text-slate-700'
 }
 
-function safeParseJson(value: unknown) {
+function safeParseJson(value: unknown): unknown {
   if (typeof value !== 'string') return value
 
   try {
@@ -98,9 +98,7 @@ function safeParseJson(value: unknown) {
 
 function toArray(value: unknown): unknown[] {
   const parsed = safeParseJson(value)
-
-  if (Array.isArray(parsed)) return parsed
-  return []
+  return Array.isArray(parsed) ? parsed : []
 }
 
 function toNumber(value: unknown, fallback = 0) {
@@ -108,84 +106,118 @@ function toNumber(value: unknown, fallback = 0) {
   return Number.isFinite(num) ? num : fallback
 }
 
-function normalizeItem(raw: any): OrderItem | null {
-  if (!raw || typeof raw !== 'object') return null
+function getObjectValue(
+  source: JsonRecord,
+  keys: string[],
+  fallback?: unknown
+): unknown {
+  for (const key of keys) {
+    if (key in source) return source[key]
+  }
+  return fallback
+}
 
-  const name =
-    raw.name ||
-    raw.product_name ||
-    raw.title ||
-    raw.productTitle ||
-    raw.item_name ||
-    raw.label ||
-    'Untitled Item'
+function normalizeItem(raw: unknown): OrderItem | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+
+  const item = raw as JsonRecord
+
+  const nameValue = getObjectValue(item, [
+    'name',
+    'product_name',
+    'title',
+    'productTitle',
+    'item_name',
+    'label',
+  ], 'Untitled Item')
 
   const quantity = Math.max(
     1,
-    toNumber(raw.quantity ?? raw.qty ?? raw.count ?? raw.item_quantity, 1)
+    toNumber(
+      getObjectValue(item, ['quantity', 'qty', 'count', 'item_quantity'], 1),
+      1
+    )
   )
 
   const price = toNumber(
-    raw.price ??
-      raw.unit_price ??
-      raw.unitPrice ??
-      raw.amount ??
-      raw.item_price ??
-      raw.sale_price,
+    getObjectValue(item, [
+      'price',
+      'unit_price',
+      'unitPrice',
+      'amount',
+      'item_price',
+      'sale_price',
+    ], 0),
     0
   )
 
   const total = toNumber(
-    raw.total ??
-      raw.line_total ??
-      raw.lineTotal ??
-      raw.subtotal ??
-      raw.item_total,
+    getObjectValue(item, [
+      'total',
+      'line_total',
+      'lineTotal',
+      'subtotal',
+      'item_total',
+    ], price * quantity),
     price * quantity
   )
 
-  const slug = raw.slug || raw.product_slug || null
+  const slugValue = getObjectValue(item, ['slug', 'product_slug'], null)
 
   return {
-    name: String(name),
+    name: String(nameValue || 'Untitled Item'),
     quantity,
     price,
     total,
-    slug,
+    slug: slugValue ? String(slugValue) : null,
   }
 }
 
-function extractOrderItems(order: OrderRow): OrderItem[] {
-  const metadata = safeParseJson(order.metadata)
-  const payload = safeParseJson(order.payload)
+function extractItemsFromObject(value: unknown): OrderItem[] {
+  const parsed = safeParseJson(value)
 
-  const candidates: unknown[] = [
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return []
+  }
+
+  const record = parsed as JsonRecord
+  const nestedItems = record.items
+
+  if (!nestedItems) return []
+
+  const arr = toArray(nestedItems)
+  return arr
+    .map((item) => normalizeItem(item))
+    .filter((item): item is OrderItem => item !== null)
+}
+
+function extractOrderItems(order: OrderRow): OrderItem[] {
+  const directCandidates: unknown[] = [
     order.order_items,
     order.items,
     order.cart_items,
     order.checkout_items,
-    metadata &&
-    typeof metadata === 'object' &&
-    'items' in (metadata as Record<string, unknown>)
-      ? (metadata as Record<string, unknown>).items
-      : null,
-    payload &&
-    typeof payload === 'object' &&
-    'items' in (payload as Record<string, unknown>)
-      ? (payload as Record<string, unknown>).items
-      : null,
   ]
 
-  for (const candidate of candidates) {
+  for (const candidate of directCandidates) {
     const arr = toArray(candidate)
     if (arr.length > 0) {
       const normalized = arr
         .map((item) => normalizeItem(item))
-        .filter(Boolean) as OrderItem[]
+        .filter((item): item is OrderItem => item !== null)
 
       if (normalized.length > 0) {
         return normalized
       }
+    }
+  }
+
+  const objectCandidates: unknown[] = [order.metadata, order.payload]
+
+  for (const candidate of objectCandidates) {
+    const normalized = extractItemsFromObject(candidate)
+    if (normalized.length > 0) {
+      return normalized
     }
   }
 
