@@ -28,8 +28,8 @@ export default function CheckoutCard({
   product: Product
   seller: Seller | null
 }) {
-  const shopSlug = slugify(seller?.store_name || 'shop')
-
+  const shopSlug = seller?.shop_slug || 'shop'
+  
   return (
     <div style={{ padding: 20 }}>
       <h2>{product.name}</h2>
