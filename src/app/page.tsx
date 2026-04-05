@@ -212,6 +212,64 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Features */}
+<section className="border-t border-slate-200 bg-white py-16 sm:py-20">
+  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+    <div className="mx-auto max-w-3xl text-center">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
+        Features
+      </p>
+      <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+        Semua dalam satu sistem
+      </h2>
+      <p className="mt-4 text-base leading-7 text-slate-600">
+        Bukan sekadar link. BayarLink bantu anda urus bisnes dengan lebih tersusun dan profesional.
+      </p>
+    </div>
+
+    <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+
+      <FeatureCard
+        icon={<SystemIcon />}
+        title="Dashboard Analytics"
+        description="Lihat total order, paid, pending dan revenue dalam satu dashboard."
+      />
+
+      <FeatureCard
+        icon={<ChatIcon />}
+        title="Auto WhatsApp Message"
+        description="Message customer terus siap dengan order details. Tak perlu copy paste."
+      />
+
+      <FeatureCard
+        icon={<FormIcon />}
+        title="Auto Order Tracking"
+        description="Tahu siapa dah bayar, siapa pending, dan siapa dah complete."
+      />
+
+      <FeatureCard
+        icon={<StockIcon />}
+        title="Stock Control"
+        description="Auto update stock untuk elak oversell dan double order."
+      />
+
+      <FeatureCard
+        icon={<PhoneIcon />}
+        title="Mobile First System"
+        description="Urus semua dari phone tanpa perlu laptop."
+      />
+
+      <FeatureCard
+        icon={<LinkIcon />}
+        title="Smart Shop Link"
+        description="Satu link untuk semua produk — nampak lebih professional."
+      />
+
+    </div>
+  </div>
+</section>
+
       {/* Who is it for */}
       <section className="bg-slate-50 py-16 sm:py-20">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
@@ -484,6 +542,14 @@ export default function HomePage() {
           </div>
 
           <p className="mt-5 text-[11px] text-slate-400">
+            <div className="mt-6 flex justify-center gap-6 text-sm text-slate-500">
+  <a href="/terms" className="hover:text-slate-700">
+    Terms & Conditions
+  </a>
+  <a href="/privacy" className="hover:text-slate-700">
+    Privacy Policy
+  </a>
+</div>
             Copyright Reserved @2026 BayarLink by Neugens Solution
             (202503301282 (AS0504872-V))
           </p>
