@@ -69,7 +69,7 @@ export default function HomePage() {
                 Start Free
               </a>
               <a
-                href="/shop/maiz-kitchen"
+                href="/s/dana-store"
                 className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 View Demo Shop
