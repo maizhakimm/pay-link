@@ -7,6 +7,7 @@ export const revalidate = 0
 type SellerProfile = {
   id: string
   store_name: string | null
+  shop_slug?: string | null
   profile_image?: string | null
   email?: string | null
   whatsapp?: string | null
@@ -39,15 +40,6 @@ type PageProps = {
   }
 }
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-}
-
 export default async function Page({ params }: PageProps) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -56,18 +48,21 @@ export default async function Page({ params }: PageProps) {
 
   const requestedSlug = params.shopSlug.toLowerCase().trim()
 
-  let seller: SellerProfile | null = null
-
-  const { data: sellers } = await supabase
+  const { data: seller, error: sellerError } = await supabase
     .from('seller_profiles')
-    .select('*')
+    .select('id, store_name, shop_slug, profile_image, email, whatsapp, business_address')
+    .eq('shop_slug', requestedSlug)
+    .maybeSingle()
 
-  if (sellers && sellers.length > 0) {
-    seller =
-      (sellers as SellerProfile[]).find((item) => {
-        if (!item.store_name) return false
-        return slugify(item.store_name) === requestedSlug
-      }) || null
+  if (sellerError) {
+    return (
+      <main style={errorMain}>
+        <div style={errorBox}>
+          <h2 style={errorTitle}>Unable to load shop</h2>
+          <p style={errorText}>{sellerError.message}</p>
+        </div>
+      </main>
+    )
   }
 
   if (!seller) {
@@ -101,7 +96,7 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <ShopPageClient
-      seller={seller}
+      seller={seller as SellerProfile}
       products={(products || []) as ProductRow[]}
       shopSlug={requestedSlug}
     />
