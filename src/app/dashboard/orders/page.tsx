@@ -38,6 +38,7 @@ type OrderRow = {
 type StatProps = {
   label: string
   value: string | number
+  helper?: string
 }
 
 type InfoProps = {
@@ -58,6 +59,7 @@ function normalizeStatus(value?: string | null) {
 
 function normalizeSellerStatus(value?: string | null) {
   const normalized = normalizeStatus(value)
+
   if (
     ['pending', 'processing', 'completed', 'cancelled', 'canceled'].includes(
       normalized
@@ -65,6 +67,7 @@ function normalizeSellerStatus(value?: string | null) {
   ) {
     return normalized === 'canceled' ? 'cancelled' : normalized
   }
+
   return 'pending'
 }
 
@@ -110,6 +113,24 @@ function statusBadgeClass(status: string) {
   return 'bg-slate-100 text-slate-700'
 }
 
+function sellerStatusBadgeClass(status: string) {
+  const normalized = normalizeSellerStatus(status)
+
+  if (normalized === 'completed') {
+    return 'bg-green-100 text-green-700'
+  }
+
+  if (normalized === 'processing') {
+    return 'bg-blue-100 text-blue-700'
+  }
+
+  if (normalized === 'cancelled') {
+    return 'bg-red-100 text-red-700'
+  }
+
+  return 'bg-amber-100 text-amber-700'
+}
+
 function safeParseJson(value: unknown): unknown {
   if (typeof value !== 'string') return value
 
@@ -142,7 +163,7 @@ function getObjectValue(
 }
 
 function normalizeItem(raw: unknown): OrderItem | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
 
   const item = raw as JsonRecord
 
@@ -261,6 +282,21 @@ function getOrderTotal(order: OrderRow, items: OrderItem[]) {
   return Number(order.amount || 0)
 }
 
+function isToday(dateValue?: string | null) {
+  if (!dateValue) return false
+
+  const date = new Date(dateValue)
+  if (Number.isNaN(date.getTime())) return false
+
+  const now = new Date()
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  )
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -353,6 +389,10 @@ export default function OrdersPage() {
   const stats = useMemo(() => {
     const totalOrders = orders.length
 
+    const completedOrders = orders.filter(
+      (order) => normalizeSellerStatus(order.status) === 'completed'
+    ).length
+
     const paidOrders = orders.filter((order) =>
       ['paid', 'success', 'completed'].includes(
         normalizePaymentStatus(order.payment_status)
@@ -382,12 +422,29 @@ export default function OrdersPage() {
         return sum + getOrderTotal(order, items)
       }, 0)
 
+    const todayOrdersList = orders.filter((order) => isToday(order.created_at))
+    const todayOrders = todayOrdersList.length
+
+    const todayRevenue = todayOrdersList
+      .filter((order) =>
+        ['paid', 'success', 'completed'].includes(
+          normalizePaymentStatus(order.payment_status)
+        )
+      )
+      .reduce((sum, order) => {
+        const items = extractOrderItems(order)
+        return sum + getOrderTotal(order, items)
+      }, 0)
+
     return {
       totalOrders,
+      completedOrders,
       paidOrders,
       pendingOrders,
       failedOrders,
       revenue,
+      todayOrders,
+      todayRevenue,
     }
   }, [orders])
 
@@ -402,12 +459,45 @@ export default function OrdersPage() {
         </p>
       </div>
 
-      <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-        <StatCard label="Total Orders" value={String(stats.totalOrders)} />
-        <StatCard label="Paid Orders" value={String(stats.paidOrders)} />
-        <StatCard label="Pending Payment" value={String(stats.pendingOrders)} />
-        <StatCard label="Failed / Expired" value={String(stats.failedOrders)} />
-        <StatCard label="Revenue" value={formatMoney(stats.revenue)} />
+      <section className="mb-6">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-8">
+          <StatCard label="Total Orders" value={String(stats.totalOrders)} />
+          <StatCard
+            label="Completed Orders"
+            value={String(stats.completedOrders)}
+            helper="Seller completed"
+          />
+          <StatCard
+            label="Paid Orders"
+            value={String(stats.paidOrders)}
+            helper="Payment received"
+          />
+          <StatCard
+            label="Pending Payment"
+            value={String(stats.pendingOrders)}
+            helper="Awaiting payment"
+          />
+          <StatCard
+            label="Failed / Expired"
+            value={String(stats.failedOrders)}
+            helper="Payment issue"
+          />
+          <StatCard
+            label="Revenue"
+            value={formatMoney(stats.revenue)}
+            helper="Paid only"
+          />
+          <StatCard
+            label="Today Orders"
+            value={String(stats.todayOrders)}
+            helper="Created today"
+          />
+          <StatCard
+            label="Today Revenue"
+            value={formatMoney(stats.todayRevenue)}
+            helper="Paid today"
+          />
+        </div>
       </section>
 
       <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -502,7 +592,7 @@ export default function OrdersPage() {
                           </div>
 
                           <div
-                            className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeClass(
+                            className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${sellerStatusBadgeClass(
                               sellerStatus
                             )}`}
                           >
@@ -715,11 +805,18 @@ export default function OrdersPage() {
   )
 }
 
-function StatCard({ label, value }: StatProps) {
+function StatCard({ label, value, helper }: StatProps) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="text-sm font-semibold text-slate-500">{label}</div>
-      <div className="mt-3 text-2xl font-extrabold text-slate-900">{value}</div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
+      <div className="mt-2 break-words text-xl font-extrabold text-slate-900 sm:text-2xl">
+        {value}
+      </div>
+      {helper ? (
+        <div className="mt-1 text-xs text-slate-500">{helper}</div>
+      ) : null}
     </div>
   )
 }
