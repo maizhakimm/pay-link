@@ -65,12 +65,29 @@ async function generateUniqueShopSlug(base: string, currentSellerId?: string | n
   }
 }
 
+type SellerProfileRow = {
+  id: string
+  user_id: string
+  store_name?: string | null
+  shop_slug?: string | null
+  email?: string | null
+  whatsapp?: string | null
+  company_name?: string | null
+  company_registration?: string | null
+  business_address?: string | null
+  bank_name?: string | null
+  account_number?: string | null
+  account_holder_name?: string | null
+  profile_image?: string | null
+}
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const [sellerId, setSellerId] = useState<string | null>(null)
   const [accountEmail, setAccountEmail] = useState('')
+  const [userId, setUserId] = useState<string | null>(null)
 
   const [storeName, setStoreName] = useState('')
   const [shopSlug, setShopSlug] = useState('')
@@ -99,72 +116,109 @@ export default function SettingsPage() {
     loadProfile()
   }, [])
 
+  async function ensureSellerProfile(currentUserId: string, currentUserEmail: string) {
+    const { data: existing, error: existingError } = await supabase
+      .from('seller_profiles')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .maybeSingle()
+
+    if (existingError) {
+      throw new Error(existingError.message)
+    }
+
+    if (existing) {
+      return existing as SellerProfileRow
+    }
+
+    const initialStoreName =
+      currentUserEmail?.split('@')[0]?.replace(/[._-]+/g, ' ').trim() || 'My Shop'
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('seller_profiles')
+      .insert({
+        user_id: currentUserId,
+        store_name: initialStoreName,
+        email: currentUserEmail || null,
+      })
+      .select('*')
+      .single()
+
+    if (insertError || !inserted) {
+      throw new Error(insertError?.message || 'Failed to create seller profile')
+    }
+
+    const insertedRow = inserted as SellerProfileRow
+
+    const newSlug = await generateUniqueShopSlug(
+      insertedRow.store_name || initialStoreName,
+      insertedRow.id
+    )
+
+    const { data: updated, error: updateError } = await supabase
+      .from('seller_profiles')
+      .update({ shop_slug: newSlug })
+      .eq('id', insertedRow.id)
+      .select('*')
+      .single()
+
+    if (updateError || !updated) {
+      throw new Error(updateError?.message || 'Failed to initialize shop slug')
+    }
+
+    return updated as SellerProfileRow
+  }
+
   async function loadProfile() {
     setLoading(true)
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
 
-    if (!user) {
-      setLoading(false)
-      return
-    }
-
-    setAccountEmail(user.email || '')
-
-    const { data, error } = await supabase
-      .from('seller_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (error) {
-      alert(error.message)
-      setLoading(false)
-      return
-    }
-
-    if (data) {
-      setSellerId(data.id)
-      setStoreName(data.store_name || '')
-      setShopSlug(data.shop_slug || '')
-      setEmail(data.email || '')
-      setWhatsapp(data.whatsapp || '')
-      setCompanyName(data.company_name || '')
-      setCompanyReg(data.company_registration || '')
-      setBusinessAddress(data.business_address || '')
-
-      setBankName(data.bank_name || '')
-      setAccountNumber(data.account_number || '')
-      setAccountHolderName(data.account_holder_name || '')
-
-      setProfileImage(data.profile_image || '')
-
-      if (!data.shop_slug && data.store_name) {
-        try {
-          const newSlug = await generateUniqueShopSlug(data.store_name, data.id)
-
-          const { error: slugError } = await supabase
-            .from('seller_profiles')
-            .update({ shop_slug: newSlug })
-            .eq('id', data.id)
-
-          if (!slugError) {
-            setShopSlug(newSlug)
-          }
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'Failed to generate shop slug'
-          alert(message)
-        }
+      if (authError) {
+        throw new Error(authError.message)
       }
-    }
 
-    setLoading(false)
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      setUserId(user.id)
+      setAccountEmail(user.email || '')
+
+      const profile = await ensureSellerProfile(user.id, user.email || '')
+
+      setSellerId(profile.id)
+      setStoreName(profile.store_name || '')
+      setShopSlug(profile.shop_slug || '')
+      setEmail(profile.email || '')
+      setWhatsapp(profile.whatsapp || '')
+      setCompanyName(profile.company_name || '')
+      setCompanyReg(profile.company_registration || '')
+      setBusinessAddress(profile.business_address || '')
+
+      setBankName(profile.bank_name || '')
+      setAccountNumber(profile.account_number || '')
+      setAccountHolderName(profile.account_holder_name || '')
+
+      setProfileImage(profile.profile_image || '')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load profile'
+      alert(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function uploadImage(file: File) {
-    if (!sellerId) return
+    if (!sellerId) {
+      alert('Seller profile not ready yet. Please refresh and try again.')
+      return
+    }
 
     const ext = file.name.split('.').pop() || 'jpg'
     const filePath = `seller-${sellerId}-${Date.now()}.${ext}`
@@ -186,7 +240,10 @@ export default function SettingsPage() {
   }
 
   async function handleSave() {
-    if (!sellerId) return
+    if (!userId) {
+      alert('User session not found. Please log in again.')
+      return
+    }
 
     if (!storeName.trim()) {
       alert('Store Name is required')
@@ -195,42 +252,52 @@ export default function SettingsPage() {
 
     setSaving(true)
 
-    let finalShopSlug = shopSlug
-
     try {
+      let currentSellerId = sellerId
+      let finalShopSlug = shopSlug
+
+      // Safety: if seller row somehow still missing, create it here as well
+      if (!currentSellerId) {
+        const profile = await ensureSellerProfile(userId, accountEmail || '')
+        currentSellerId = profile.id
+        setSellerId(profile.id)
+        if (!finalShopSlug) {
+          finalShopSlug = profile.shop_slug || ''
+        }
+      }
+
       if (!finalShopSlug) {
-        finalShopSlug = await generateUniqueShopSlug(storeName, sellerId)
+        finalShopSlug = await generateUniqueShopSlug(storeName, currentSellerId)
       }
 
       const { error } = await supabase
         .from('seller_profiles')
         .update({
           store_name: storeName,
-          email,
-          whatsapp,
+          email: email || null,
+          whatsapp: whatsapp || null,
           company_name: companyName || null,
           company_registration: companyReg || null,
           business_address: businessAddress || null,
           bank_name: bankName || null,
           account_number: accountNumber || null,
           account_holder_name: accountHolderName || null,
-          profile_image: profileImage,
+          profile_image: profileImage || null,
           shop_slug: finalShopSlug,
         })
-        .eq('id', sellerId)
-
-      setSaving(false)
+        .eq('id', currentSellerId)
 
       if (error) {
-        alert(error.message)
-      } else {
-        setShopSlug(finalShopSlug)
-        alert('Settings updated successfully!')
+        throw new Error(error.message)
       }
+
+      setShopSlug(finalShopSlug)
+      alert('Settings updated successfully!')
     } catch (err) {
-      setSaving(false)
       const message = err instanceof Error ? err.message : 'Failed to save settings'
       alert(message)
+    } finally {
+      setSaving(false)
     }
   }
 
