@@ -112,7 +112,7 @@ export default function ShopPageClient({
     <main style={main}>
       <div style={container}>
         <div style={logoWrap}>
-          <img src="/BayarLink Logo 01.svg" alt="bayarlink" style={logo} />
+          <img src="/BayarLink_Logo_01.svg" alt="bayarlink" style={logo} />
         </div>
 
         <div style={heroCard}>
