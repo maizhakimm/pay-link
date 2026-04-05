@@ -529,32 +529,43 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-10 text-center sm:px-6 lg:px-8">
-          <div className="flex justify-center">
-            <Image
-              src="/BayarLink-Logo-01.svg"
-              alt="BayarLink Logo"
-              width={150}
-              height={40}
-              className="h-8 w-auto opacity-90"
-            />
-          </div>
+<footer className="border-t border-slate-200 bg-white">
+  <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 
-          <p className="mt-5 text-[11px] text-slate-400">
-            <div className="mt-6 flex justify-center gap-6 text-sm text-slate-500">
-  <a href="/terms" className="hover:text-slate-700">
-    Terms & Conditions
-  </a>
-  <a href="/privacy" className="hover:text-slate-700">
-    Privacy Policy
-  </a>
-</div></div>
-            Copyright Reserved @2026 BayarLink by Neugens Solution
-            (202503301282 (AS0504872-V))
-          </p>
-        </div>
-      </footer>
+    <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+
+      {/* LEFT: Brand */}
+      <div className="text-center md:text-left">
+        <h3 className="text-lg font-semibold text-slate-900">
+          BayarLink <span className="text-xs text-amber-500 font-medium">BETA</span>
+        </h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Mudah jual. Mudah bayar. Semua dalam satu link.
+        </p>
+      </div>
+
+      {/* RIGHT: Links */}
+      <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
+        <a href="/terms" className="hover:text-slate-900 transition">
+          Terms & Conditions
+        </a>
+        <a href="/privacy" className="hover:text-slate-900 transition">
+          Privacy Policy
+        </a>
+        <a href="/login" className="hover:text-slate-900 transition">
+          Login
+        </a>
+      </div>
+
+    </div>
+
+    {/* Bottom */}
+    <div className="mt-6 border-t border-slate-100 pt-6 text-center text-xs text-slate-400">
+      © {new Date().getFullYear()} BayarLink. All rights reserved.
+    </div>
+
+  </div>
+</footer>
 
       {/* WhatsApp Floating Button */}
       <a
