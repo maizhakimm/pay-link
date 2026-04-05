@@ -4,6 +4,14 @@ import Layout from '../../../components/Layout'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
+type OrderItem = {
+  name: string
+  quantity: number
+  price: number
+  total: number
+  slug?: string | null
+}
+
 type OrderRow = {
   id: string
   order_number?: string | null
@@ -14,7 +22,17 @@ type OrderRow = {
   payment_status?: string | null
   buyer_name?: string | null
   buyer_phone?: string | null
+  buyer_email?: string | null
   created_at?: string | null
+
+  // Optional flexible fields for item detail support
+  items?: unknown
+  order_items?: unknown
+  cart_items?: unknown
+  checkout_items?: unknown
+  metadata?: unknown
+  payload?: unknown
+  customer_details?: unknown
 }
 
 type StatProps = {
@@ -68,11 +86,139 @@ function statusBadgeClass(status: string) {
   return 'bg-slate-100 text-slate-700'
 }
 
+function safeParseJson(value: unknown) {
+  if (typeof value !== 'string') return value
+
+  try {
+    return JSON.parse(value)
+  } catch {
+    return value
+  }
+}
+
+function toArray(value: unknown): unknown[] {
+  const parsed = safeParseJson(value)
+
+  if (Array.isArray(parsed)) return parsed
+  return []
+}
+
+function toNumber(value: unknown, fallback = 0) {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : fallback
+}
+
+function normalizeItem(raw: any): OrderItem | null {
+  if (!raw || typeof raw !== 'object') return null
+
+  const name =
+    raw.name ||
+    raw.product_name ||
+    raw.title ||
+    raw.productTitle ||
+    raw.item_name ||
+    raw.label ||
+    'Untitled Item'
+
+  const quantity = Math.max(
+    1,
+    toNumber(raw.quantity ?? raw.qty ?? raw.count ?? raw.item_quantity, 1)
+  )
+
+  const price = toNumber(
+    raw.price ??
+      raw.unit_price ??
+      raw.unitPrice ??
+      raw.amount ??
+      raw.item_price ??
+      raw.sale_price,
+    0
+  )
+
+  const total = toNumber(
+    raw.total ??
+      raw.line_total ??
+      raw.lineTotal ??
+      raw.subtotal ??
+      raw.item_total,
+    price * quantity
+  )
+
+  const slug = raw.slug || raw.product_slug || null
+
+  return {
+    name: String(name),
+    quantity,
+    price,
+    total,
+    slug,
+  }
+}
+
+function extractOrderItems(order: OrderRow): OrderItem[] {
+  const metadata = safeParseJson(order.metadata)
+  const payload = safeParseJson(order.payload)
+
+  const candidates: unknown[] = [
+    order.order_items,
+    order.items,
+    order.cart_items,
+    order.checkout_items,
+    metadata &&
+    typeof metadata === 'object' &&
+    'items' in (metadata as Record<string, unknown>)
+      ? (metadata as Record<string, unknown>).items
+      : null,
+    payload &&
+    typeof payload === 'object' &&
+    'items' in (payload as Record<string, unknown>)
+      ? (payload as Record<string, unknown>).items
+      : null,
+  ]
+
+  for (const candidate of candidates) {
+    const arr = toArray(candidate)
+    if (arr.length > 0) {
+      const normalized = arr
+        .map((item) => normalizeItem(item))
+        .filter(Boolean) as OrderItem[]
+
+      if (normalized.length > 0) {
+        return normalized
+      }
+    }
+  }
+
+  if (order.product_name || order.amount) {
+    return [
+      {
+        name: order.product_name || 'Untitled Product',
+        quantity: 1,
+        price: Number(order.amount || 0),
+        total: Number(order.amount || 0),
+        slug: order.product_slug || null,
+      },
+    ]
+  }
+
+  return []
+}
+
+function getOrderTotal(order: OrderRow, items: OrderItem[]) {
+  if (items.length > 0) {
+    const itemsTotal = items.reduce((sum, item) => sum + Number(item.total || 0), 0)
+    if (itemsTotal > 0) return itemsTotal
+  }
+
+  return Number(order.amount || 0)
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({})
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -93,8 +239,22 @@ export default function OrdersPage() {
     fetchOrders()
   }, [fetchOrders])
 
+  const toggleOrderExpanded = (orderId: string) => {
+    setExpandedOrders((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId],
+    }))
+  }
+
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
+      const items = extractOrderItems(order)
+
+      const itemText = items
+        .map((item) => `${item.name} ${item.slug || ''}`)
+        .join(' ')
+        .toLowerCase()
+
       const keyword = search.toLowerCase().trim()
       const haystack = [
         order.order_number,
@@ -105,6 +265,8 @@ export default function OrdersPage() {
         order.payment_status,
         order.buyer_name,
         order.buyer_phone,
+        order.buyer_email,
+        itemText,
       ]
         .filter(Boolean)
         .join(' ')
@@ -147,7 +309,10 @@ export default function OrdersPage() {
           normalizeStatus(order.payment_status || order.status)
         )
       )
-      .reduce((sum, order) => sum + Number(order.amount || 0), 0)
+      .reduce((sum, order) => {
+        const items = extractOrderItems(order)
+        return sum + getOrderTotal(order, items)
+      }, 0)
 
     return {
       totalOrders,
@@ -224,56 +389,195 @@ export default function OrdersPage() {
           <div className="space-y-4">
             {filteredOrders.map((order) => {
               const status = normalizeStatus(order.payment_status || order.status)
+              const items = extractOrderItems(order)
+              const totalQuantity = items.reduce(
+                (sum, item) => sum + Number(item.quantity || 0),
+                0
+              )
+              const orderTotal = getOrderTotal(order, items)
+              const isExpanded = expandedOrders[order.id] ?? true
 
               return (
                 <div
                   key={order.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                 >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <h3 className="text-lg font-bold text-slate-900">
-                        {order.product_name || 'Untitled Product'}
-                      </h3>
+                  <div className="p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <h3 className="text-lg font-bold text-slate-900">
+                          {order.order_number || `Order ${order.id.slice(0, 8)}`}
+                        </h3>
 
-                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 sm:text-sm">
-                        <span>Order No: {order.order_number || order.id}</span>
-                        <span className="hidden sm:inline">•</span>
-                        <span>{formatDate(order.created_at)}</span>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 sm:text-sm">
+                          <span>{formatDate(order.created_at)}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span>
+                            {items.length} item{items.length === 1 ? '' : 's'}
+                          </span>
+                          <span className="hidden sm:inline">•</span>
+                          <span>
+                            Qty {totalQuantity > 0 ? totalQuantity : items.length}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div
+                          className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeClass(
+                            status
+                          )}`}
+                        >
+                          {status}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleOrderExpanded(order.id)}
+                          className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          {isExpanded ? 'Hide Details' : 'View Details'}
+                        </button>
                       </div>
                     </div>
 
-                    <div
-                      className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeClass(
-                        status
-                      )}`}
-                    >
-                      {status}
+                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <InfoCard
+                        label="Customer"
+                        value={order.buyer_name || '-'}
+                        subValue={order.buyer_phone || order.buyer_email || '-'}
+                      />
+                      <InfoCard
+                        label="Items"
+                        value={`${items.length} item${items.length === 1 ? '' : 's'}`}
+                        subValue={`${totalQuantity || items.length} total quantity`}
+                      />
+                      <InfoCard
+                        label="Order Total"
+                        value={formatMoney(orderTotal)}
+                        subValue="Total for this order"
+                      />
+                      <InfoCard
+                        label="Payment"
+                        value={status}
+                        subValue={formatDate(order.created_at)}
+                      />
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <InfoCard
-                      label="Customer"
-                      value={order.buyer_name || '-'}
-                      subValue={order.buyer_phone || '-'}
-                    />
-                    <InfoCard
-                      label="Product"
-                      value={order.product_name || '-'}
-                      subValue={order.product_slug || '-'}
-                    />
-                    <InfoCard
-                      label="Amount"
-                      value={formatMoney(order.amount)}
-                      subValue="Order amount"
-                    />
-                    <InfoCard
-                      label="Payment"
-                      value={status}
-                      subValue={formatDate(order.created_at)}
-                    />
-                  </div>
+                  {isExpanded && (
+                    <div className="border-t border-slate-200 bg-slate-50/70 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900">
+                            Order Details
+                          </h4>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Item details for this order.
+                          </p>
+                        </div>
+                      </div>
+
+                      {items.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
+                          No item details available for this order.
+                        </div>
+                      ) : (
+                        <>
+                          <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
+                            <div className="grid grid-cols-12 gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              <div className="col-span-5">Item</div>
+                              <div className="col-span-2 text-center">Qty</div>
+                              <div className="col-span-2 text-right">Price</div>
+                              <div className="col-span-3 text-right">Total</div>
+                            </div>
+
+                            <div>
+                              {items.map((item, index) => (
+                                <div
+                                  key={`${order.id}-item-${index}`}
+                                  className="grid grid-cols-12 gap-3 px-4 py-3 text-sm text-slate-700 not-last:border-b not-last:border-slate-100"
+                                >
+                                  <div className="col-span-5 min-w-0">
+                                    <div className="font-semibold text-slate-900">
+                                      {item.name}
+                                    </div>
+                                    <div className="mt-1 text-xs text-slate-500">
+                                      {item.slug || '—'}
+                                    </div>
+                                  </div>
+                                  <div className="col-span-2 text-center font-medium">
+                                    {item.quantity}
+                                  </div>
+                                  <div className="col-span-2 text-right font-medium">
+                                    {formatMoney(item.price)}
+                                  </div>
+                                  <div className="col-span-3 text-right font-semibold text-slate-900">
+                                    {formatMoney(item.total)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-3 md:hidden">
+                            {items.map((item, index) => (
+                              <div
+                                key={`${order.id}-item-mobile-${index}`}
+                                className="rounded-2xl border border-slate-200 bg-white p-4"
+                              >
+                                <div className="text-sm font-bold text-slate-900">
+                                  {item.name}
+                                </div>
+                                <div className="mt-1 text-xs text-slate-500">
+                                  {item.slug || '—'}
+                                </div>
+
+                                <div className="mt-3 grid grid-cols-3 gap-3">
+                                  <MiniInfo label="Qty" value={String(item.quantity)} />
+                                  <MiniInfo
+                                    label="Price"
+                                    value={formatMoney(item.price)}
+                                  />
+                                  <MiniInfo
+                                    label="Total"
+                                    value={formatMoney(item.total)}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-4 flex justify-end">
+                            <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 sm:max-w-sm">
+                              <div className="flex items-center justify-between text-sm text-slate-500">
+                                <span>Total Items</span>
+                                <span className="font-semibold text-slate-900">
+                                  {items.length}
+                                </span>
+                              </div>
+                              <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                                <span>Total Quantity</span>
+                                <span className="font-semibold text-slate-900">
+                                  {totalQuantity || items.length}
+                                </span>
+                              </div>
+                              <div className="mt-3 border-t border-slate-200 pt-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-semibold text-slate-600">
+                                    Order Total
+                                  </span>
+                                  <span className="text-lg font-extrabold text-slate-900">
+                                    {formatMoney(orderTotal)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -301,6 +605,17 @@ function InfoCard({ label, value, subValue }: InfoProps & { subValue: string }) 
         {value}
       </div>
       <div className="mt-1 break-words text-xs text-slate-500">{subValue}</div>
+    </div>
+  )
+}
+
+function MiniInfo({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-bold text-slate-900">{value}</div>
     </div>
   )
 }
