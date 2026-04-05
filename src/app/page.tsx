@@ -200,7 +200,7 @@ export default function HomePage() {
             />
             <SolutionCard
               icon={<PhoneIcon />}
-              title="Mobile friendly"
+              title="Tak perlu laptop atau PC"
               description="Sesuai untuk seller yang urus bisnes sepenuhnya dari phone."
             />
             <SolutionCard
