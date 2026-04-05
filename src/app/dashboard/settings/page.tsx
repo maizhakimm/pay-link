@@ -36,10 +36,6 @@ function slugify(value: string) {
     .replace(/-+/g, '-')
 }
 
-function getDefaultStoreNameFromEmail(email: string) {
-  return email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim() || ''
-}
-
 async function generateUniqueShopSlug(base: string, currentSellerId?: string | null) {
   const cleanBase = slugify(base || 'shop')
   let candidate = cleanBase || 'shop'
@@ -141,12 +137,14 @@ export default function SettingsPage() {
       return existing as SellerProfileRow
     }
 
+    const fallbackStoreName = 'My Store'
+
     const { data: inserted, error: insertError } = await supabase
       .from('seller_profiles')
       .insert({
         user_id: currentUserId,
         email: currentUserEmail || null,
-        store_name: null,
+        store_name: fallbackStoreName,
         shop_slug: null,
       })
       .select('*')
@@ -183,7 +181,7 @@ export default function SettingsPage() {
 
       const existingSlug = profile.shop_slug || ''
       const existingStoreName = profile.store_name || ''
-      const defaultStoreName = getDefaultStoreNameFromEmail(user.email || '')
+      const isDefaultName = existingStoreName === 'My Store'
 
       setSellerId(profile.id)
       setSavedShopSlug(existingSlug)
@@ -197,13 +195,7 @@ export default function SettingsPage() {
       setAccountHolderName(profile.account_holder_name || '')
       setProfileImage(profile.profile_image || '')
 
-      const shouldTreatAsUnconfiguredName =
-        !existingSlug &&
-        existingStoreName &&
-        defaultStoreName &&
-        existingStoreName.trim().toLowerCase() === defaultStoreName.trim().toLowerCase()
-
-      setStoreName(shouldTreatAsUnconfiguredName ? '' : existingStoreName)
+      setStoreName(!existingSlug && isDefaultName ? '' : existingStoreName)
       setSlugLocked(Boolean(existingSlug))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load profile'
