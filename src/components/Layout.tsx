@@ -1,394 +1,165 @@
 'use client'
 
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
-import { Eye, EyeOff, Loader2, Lock, Mail, ArrowRight, CheckCircle2 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import type { ReactNode } from 'react'
 
-export default function LoginPage() {
-  const router = useRouter()
+type LayoutProps = {
+  children: ReactNode
+}
 
-  const [isLogin, setIsLogin] = useState(true)
+const navItems = [
+  { label: 'Dashboard', href: '/dashboard', icon: 'home' },
+  { label: 'Products', href: '/dashboard/products', icon: 'box' },
+  { label: 'Orders', href: '/dashboard/orders', icon: 'receipt' },
+  { label: 'Settings', href: '/dashboard/settings', icon: 'settings' },
+] as const
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+export default function Layout({ children }: LayoutProps) {
+  const pathname = usePathname()
 
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-
-  const [loading, setLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
-
-  const pageTitle = useMemo(() => {
-    return isLogin ? 'Sign in ke BayarLink' : 'Cipta akaun BayarLink'
-  }, [isLogin])
-
-  const pageSubtitle = useMemo(() => {
-    return isLogin
-      ? 'Masuk dan urus order, produk, dan link pembayaran anda dengan mudah.'
-      : 'Daftar akaun baru dan mula jual dengan lebih tersusun.'
-  }, [isLogin])
-
-  function resetMessages() {
-    setErrorMsg('')
-    setSuccessMsg('')
-  }
-
-  function validateForm() {
-    resetMessages()
-
-    if (!email || !password) {
-      setErrorMsg('Please fill in all required fields.')
-      return false
-    }
-
-    const trimmedEmail = email.trim()
-
-    if (!trimmedEmail.includes('@')) {
-      setErrorMsg('Please enter a valid email address.')
-      return false
-    }
-
-    if (!isLogin) {
-      if (!confirmPassword) {
-        setErrorMsg('Please confirm your password.')
-        return false
-      }
-
-      if (password.length < 6) {
-        setErrorMsg('Password must be at least 6 characters.')
-        return false
-      }
-
-      if (password !== confirmPassword) {
-        setErrorMsg('Password and confirm password do not match.')
-        return false
-      }
-    }
-
-    return true
-  }
-
-  async function handleAuth() {
-    if (!validateForm()) return
-
-    setLoading(true)
-    resetMessages()
-
-    try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        })
-
-        if (error) {
-          setErrorMsg(error.message)
-          setLoading(false)
-          return
-        }
-
-        router.replace('/dashboard')
-        return
-      }
-
-      const { error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-      })
-
-      if (error) {
-        setErrorMsg(error.message)
-        setLoading(false)
-        return
-      }
-
-      setSuccessMsg('Account created successfully. Please sign in to continue.')
-      setIsLogin(true)
-      setPassword('')
-      setConfirmPassword('')
-    } catch (err) {
-      setErrorMsg('Something went wrong. Please try again.')
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function switchMode(loginMode: boolean) {
-    setIsLogin(loginMode)
-    setPassword('')
-    setConfirmPassword('')
-    resetMessages()
+  function isActive(href: string) {
+    if (!pathname) return false
+    if (href === '/dashboard') return pathname === '/dashboard'
+    return pathname.startsWith(href)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] lg:grid-cols-2">
-          
-          {/* LEFT SIDE */}
-          <div className="relative hidden bg-slate-950 p-8 text-white lg:flex lg:flex-col lg:justify-between xl:p-10">
-            <div>
-              <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/80">
-                BayarLink Seller Portal
-              </div>
-
-              <div className="mt-6">
-                <Image
-                  src="/BayarLink%20Logo%2001.svg"
-                  alt="BayarLink Logo"
-                  width={180}
-                  height={48}
-                  className="h-auto w-auto"
-                  priority
-                />
-              </div>
-
-              <h1 className="mt-8 max-w-md text-3xl font-bold leading-tight xl:text-4xl">
-                Jual lebih tersusun. Terima bayaran dengan lebih mudah.
-              </h1>
-
-              <p className="mt-4 max-w-md text-sm leading-6 text-slate-300 xl:text-base">
-                BayarLink membantu seller urus produk, order, dan pembayaran dalam satu tempat yang ringkas dan mesra mobile.
-              </p>
+    <div className="min-h-screen bg-slate-50">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <Link href="/dashboard" className="shrink-0">
+            <div className="relative h-11 w-[170px] sm:h-12 sm:w-[190px]">
+              <Image
+                src="/BayarLink-Logo-01.svg"
+                alt="BayarLink"
+                fill
+                priority
+                className="object-contain object-left"
+              />
             </div>
+          </Link>
 
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" />
-                  <div>
-                    <p className="font-semibold">Satu link untuk jualan anda</p>
-                    <p className="mt-1 text-sm text-slate-300">
-                      Mudah kongsi kepada customer melalui WhatsApp, TikTok, atau media sosial.
-                    </p>
-                  </div>
-                </div>
-              </div>
+          <nav className="hidden items-center gap-2 md:flex">
+            {navItems.map((item) => {
+              const active = isActive(item.href)
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" />
-                  <div>
-                    <p className="font-semibold">Pantau order dengan lebih jelas</p>
-                    <p className="mt-1 text-sm text-slate-300">
-                      Seller boleh semak status order, bayaran, dan prestasi jualan dengan lebih teratur.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-400" />
-                  <div>
-                    <p className="font-semibold">Mobile friendly</p>
-                    <p className="mt-1 text-sm text-slate-300">
-                      Direka supaya senang digunakan di telefon, sesuai untuk seller yang urus bisnes on the go.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT SIDE */}
-          <div className="flex items-center justify-center p-4 sm:p-6 lg:p-8 xl:p-10">
-            <div className="w-full max-w-md">
-              
-              {/* MOBILE LOGO */}
-              <div className="mb-6 flex flex-col items-center text-center lg:hidden">
-                <Image
-                  src="/BayarLink%20Logo%2001.svg"
-                  alt="BayarLink Logo"
-                  width={170}
-                  height={44}
-                  className="h-auto w-auto"
-                  priority
-                />
-                <p className="mt-3 text-sm text-slate-500">Mudah Jual. Mudah Bayar.</p>
-              </div>
-
-              {/* SWITCH */}
-              <div className="mb-6 rounded-2xl bg-slate-100 p-1">
-                <div className="grid grid-cols-2 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => switchMode(true)}
-                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                      isLogin
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => switchMode(false)}
-                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                      !isLogin
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    Sign Up
-                  </button>
-                </div>
-              </div>
-
-              {/* TITLE */}
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                  {pageTitle}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {pageSubtitle}
-                </p>
-              </div>
-
-              {/* ALERT */}
-              {errorMsg && (
-                <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {errorMsg}
-                </div>
-              )}
-
-              {successMsg && (
-                <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                  {successMsg}
-                </div>
-              )}
-
-              {/* FORM */}
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                {!isLogin && (
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Confirm Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Re-enter your password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword((prev) => !prev)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleAuth}
-                  disabled={loading}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={[
+                    'inline-flex items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-semibold transition',
+                    active
+                      ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100',
+                  ].join(' ')}
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      {isLogin ? 'Sign In' : 'Create Account'}
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* FOOTNOTE */}
-              <div className="mt-5 text-center text-sm text-slate-500">
-                {isLogin ? (
-                  <>
-                    Belum ada akaun?{' '}
-                    <button
-                      type="button"
-                      onClick={() => switchMode(false)}
-                      className="font-semibold text-blue-600 hover:text-blue-700"
-                    >
-                      Create account
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Dah ada akaun?{' '}
-                    <button
-                      type="button"
-                      onClick={() => switchMode(true)}
-                      className="font-semibold text-blue-600 hover:text-blue-700"
-                    >
-                      Sign in
-                    </button>
-                  </>
-                )}
-              </div>
-
-              <p className="mt-6 text-center text-xs leading-5 text-slate-400">
-                Dengan meneruskan, anda bersetuju untuk menggunakan platform ini bagi tujuan
-                mengurus jualan, order, dan pembayaran secara lebih teratur.
-              </p>
-            </div>
-          </div>
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
         </div>
-      </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-6xl px-4 py-6 pb-24 sm:px-6 lg:px-8 md:pb-6">
+        {children}
+      </main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-3 py-2 backdrop-blur md:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-4 gap-2">
+          {navItems.map((item) => {
+            const active = isActive(item.href)
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={[
+                  'flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-[11px] font-semibold transition',
+                  active
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100',
+                ].join(' ')}
+              >
+                <span className="mb-1 inline-flex h-5 w-5 items-center justify-center">
+                  <NavIcon type={item.icon} active={active} />
+                </span>
+                <span className="truncate">{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
     </div>
+  )
+}
+
+function NavIcon({
+  type,
+  active,
+}: {
+  type: 'home' | 'box' | 'receipt' | 'settings'
+  active: boolean
+}) {
+  const className = active ? 'h-5 w-5' : 'h-5 w-5'
+  const stroke = active ? 'currentColor' : 'currentColor'
+
+  if (type === 'home') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+        <path
+          d="M3 10.5L12 3l9 7.5M5.25 9.75V21h13.5V9.75"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  if (type === 'box') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+        <path
+          d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18m8-13.5l-8 4.5-8-4.5"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  if (type === 'receipt') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+        <path
+          d="M7 3h10a2 2 0 012 2v16l-3-1.5L12 21l-4-1.5L5 21V5a2 2 0 012-2zm2 5h6M9 12h6M9 16h4"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 9.75a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5zm7.5 2.25l1.5-1.5-1.5-2.598-2.04.33a7.967 7.967 0 00-1.29-.75L15.75 4.5h-3.0l-.42 2.232c-.45.174-.882.42-1.29.75l-2.04-.33L7.5 9.75 9 11.25a7.95 7.95 0 000 1.5L7.5 14.25l1.5 2.598 2.04-.33c.408.33.84.576 1.29.75l.42 2.232h3l.42-2.232c.45-.174.882-.42 1.29-.75l2.04.33 1.5-2.598-1.5-1.5c.048-.246.072-.498.072-.75s-.024-.504-.072-.75z"
+        stroke={stroke}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
