@@ -91,6 +91,8 @@ export default function SettingsPage() {
 
   const [storeName, setStoreName] = useState('')
   const [shopSlug, setShopSlug] = useState('')
+  const [slugLocked, setSlugLocked] = useState(false)
+
   const [email, setEmail] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -128,29 +130,7 @@ export default function SettingsPage() {
     }
 
     if (existing) {
-      const existingRow = existing as SellerProfileRow
-
-      if (!existingRow.shop_slug) {
-        const generatedSlug = await generateUniqueShopSlug(
-          existingRow.store_name || 'My Store',
-          existingRow.id
-        )
-
-        const { data: updated, error: updateError } = await supabase
-          .from('seller_profiles')
-          .update({ shop_slug: generatedSlug })
-          .eq('id', existingRow.id)
-          .select('*')
-          .single()
-
-        if (updateError || !updated) {
-          throw new Error(updateError?.message || 'Failed to initialize shop slug')
-        }
-
-        return updated as SellerProfileRow
-      }
-
-      return existingRow
+      return existing as SellerProfileRow
     }
 
     const initialStoreName =
@@ -170,25 +150,7 @@ export default function SettingsPage() {
       throw new Error(insertError?.message || 'Failed to create seller profile')
     }
 
-    const insertedRow = inserted as SellerProfileRow
-
-    const newSlug = await generateUniqueShopSlug(
-      insertedRow.store_name || initialStoreName,
-      insertedRow.id
-    )
-
-    const { data: updated, error: updateError } = await supabase
-      .from('seller_profiles')
-      .update({ shop_slug: newSlug })
-      .eq('id', insertedRow.id)
-      .select('*')
-      .single()
-
-    if (updateError || !updated) {
-      throw new Error(updateError?.message || 'Failed to initialize shop slug')
-    }
-
-    return updated as SellerProfileRow
+    return inserted as SellerProfileRow
   }
 
   async function loadProfile() {
@@ -225,6 +187,14 @@ export default function SettingsPage() {
       setAccountNumber(profile.account_number || '')
       setAccountHolderName(profile.account_holder_name || '')
       setProfileImage(profile.profile_image || '')
+
+      // Only lock after a real save state exists:
+      // if user already has both store name and slug, we consider it locked.
+      if (profile.store_name && profile.shop_slug) {
+        setSlugLocked(true)
+      } else {
+        setSlugLocked(false)
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load profile'
       alert(message)
@@ -285,6 +255,7 @@ export default function SettingsPage() {
         }
       }
 
+      // Generate slug only if still missing
       if (!finalShopSlug) {
         finalShopSlug = await generateUniqueShopSlug(storeName, currentSellerId)
       }
@@ -311,6 +282,7 @@ export default function SettingsPage() {
       }
 
       setShopSlug(finalShopSlug)
+      setSlugLocked(true)
       alert('Settings updated successfully!')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save settings'
@@ -423,7 +395,7 @@ export default function SettingsPage() {
 
                       <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                          Shop URL {shopSlug ? 'Locked' : 'Preview'}
+                          Shop URL {slugLocked ? 'Locked' : 'Preview'}
                         </p>
 
                         <p className="mt-1 break-all text-sm font-bold text-slate-900">
@@ -431,9 +403,9 @@ export default function SettingsPage() {
                         </p>
 
                         <p className="mt-1 text-xs text-slate-500">
-                          {shopSlug
-                            ? 'Your public shop URL is already locked for link stability.'
-                            : 'Your store name will influence your shop URL when it is created for the first time.'}
+                          {slugLocked
+                            ? 'Your shop URL is locked after first save.'
+                            : 'Your store name will generate your shop URL when you click Save.'}
                         </p>
                       </div>
                     </div>
