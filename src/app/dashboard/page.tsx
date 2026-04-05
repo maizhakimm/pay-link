@@ -1,12 +1,14 @@
 'use client'
 
 import Layout from '../../components/Layout'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 type SellerProfile = {
   id: string
   store_name: string | null
+  shop_slug?: string | null
+  profile_image?: string | null
   daily_note?: string | null
 }
 
@@ -27,10 +29,6 @@ function formatMoney(value?: number) {
   return `RM ${Number(value || 0).toFixed(2)}`
 }
 
-function slugify(value: string) {
-  return value.toLowerCase().replace(/\s+/g, '-')
-}
-
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
@@ -40,12 +38,14 @@ export default function DashboardPage() {
 
   const [dailyNote, setDailyNote] = useState('')
   const [copied, setCopied] = useState(false)
+  const [savingNote, setSavingNote] = useState(false)
 
-  // ✅ FIX: hook dalam component
   const loadDashboard = useCallback(async () => {
     setLoading(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
       window.location.href = '/login'
@@ -54,7 +54,7 @@ export default function DashboardPage() {
 
     const { data: sellerData } = await supabase
       .from('seller_profiles')
-      .select('*')
+      .select('id, store_name, shop_slug, profile_image, daily_note')
       .eq('user_id', user.id)
       .single()
 
@@ -79,7 +79,6 @@ export default function DashboardPage() {
 
     setProducts(productData || [])
     setOrders(orderData || [])
-
     setLoading(false)
   }, [])
 
@@ -87,41 +86,64 @@ export default function DashboardPage() {
     loadDashboard()
   }, [loadDashboard])
 
-  const activeProducts = products.filter(p => p.is_active)
+  const activeProducts = useMemo(() => {
+    return products.filter((p) => p.is_active)
+  }, [products])
 
-  const shopLink = seller?.store_name
-    ? `${window.location.origin}/shop/${slugify(seller.store_name)}`
-    : ''
+  const shopLink =
+    seller?.shop_slug && typeof window !== 'undefined'
+      ? `${window.location.origin}/shop/${seller.shop_slug}`
+      : ''
 
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.amount || 0), 0)
 
-  const message = `Salam 😊
+  const productLines = activeProducts.length
+    ? activeProducts
+        .map((p, i) => `${i + 1}. ${p.name} - ${formatMoney(p.price)}`)
+        .join('\n')
+    : 'Tiada produk aktif buat masa ini.'
 
-Open order hari ini:
+  const message = useMemo(() => {
+    const customBlock = dailyNote.trim()
 
-${activeProducts.map((p, i) => `${i + 1}. ${p.name} - ${formatMoney(p.price)}`).join('\n')}
+    return `Salam 😊
 
-${dailyNote}
+${customBlock ? `${customBlock}\n\n` : ''}Open order hari ini:
+
+${productLines}
 
 Order sini:
-${shopLink}
-`
+${shopLink}`.trim()
+  }, [dailyNote, productLines, shopLink])
 
   async function saveNote() {
     if (!seller) return
 
-    await supabase
+    setSavingNote(true)
+
+    const { error } = await supabase
       .from('seller_profiles')
       .update({ daily_note: dailyNote })
       .eq('id', seller.id)
+
+    setSavingNote(false)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
 
     alert('Saved')
   }
 
   async function copyMessage() {
-    await navigator.clipboard.writeText(message)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    try {
+      await navigator.clipboard.writeText(message)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      alert('Unable to copy message')
+    }
   }
 
   function shareWhatsApp() {
@@ -135,84 +157,104 @@ ${shopLink}
 
   return (
     <Layout>
+      <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-4">
+          {seller?.profile_image ? (
+            <img
+              src={seller.profile_image}
+              alt={seller.store_name || 'Seller profile'}
+              className="h-16 w-16 rounded-full border border-slate-200 object-cover"
+            />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-500">
+              {(seller?.store_name || 'S').slice(0, 1).toUpperCase()}
+            </div>
+          )}
 
-      {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">
-          Welcome {seller?.store_name}
-        </h1>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">
+              Welcome {seller?.store_name || 'Seller'}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              {shopLink || 'Complete your settings to activate your shop link.'}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="mb-6 grid grid-cols-2 gap-3">
         <Card title="Products" value={products.length} />
         <Card title="Revenue" value={formatMoney(totalRevenue)} />
       </div>
 
-      {/* DAILY NOTE */}
-      <div className="bg-white p-4 rounded-xl mb-6 border">
-        <h2 className="font-bold mb-2">Daily Note</h2>
+      <div className="mb-6 rounded-xl border bg-white p-4">
+        <h2 className="mb-2 font-bold">Daily Note / Copywriting</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Ini optional. Seller boleh tulis ayat sendiri di sini. Sistem tetap akan auto senaraikan produk aktif di bawah mesej WhatsApp.
+        </p>
+
         <textarea
           value={dailyNote}
           onChange={(e) => setDailyNote(e.target.value)}
-          className="w-full border p-2 rounded"
+          placeholder="Contoh: Open order hari ini untuk delivery petang. COD area Shah Alam sahaja."
+          rows={4}
+          className="w-full rounded border p-3 outline-none"
         />
+
         <button
           onClick={saveNote}
-          className="mt-2 bg-black text-white px-4 py-2 rounded"
+          disabled={savingNote}
+          className="mt-3 rounded bg-black px-4 py-2 text-white disabled:opacity-70"
         >
-          Save
+          {savingNote ? 'Saving...' : 'Save'}
         </button>
       </div>
 
-      {/* WHATSAPP */}
-      <div className="bg-white p-4 rounded-xl border mb-6">
-        <h2 className="font-bold mb-2">WhatsApp Message</h2>
+      <div className="mb-6 rounded-xl border bg-white p-4">
+        <h2 className="mb-2 font-bold">WhatsApp Message</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Produk di bawah ini dijana automatik berdasarkan produk yang aktif sahaja.
+        </p>
 
-        <div className="bg-gray-50 p-3 rounded text-sm whitespace-pre-line">
+        <div className="whitespace-pre-line rounded bg-gray-50 p-3 text-sm">
           {message}
         </div>
 
-        <div className="flex gap-2 mt-3">
-          <button onClick={copyMessage} className="border px-3 py-2 rounded">
+        <div className="mt-3 flex gap-2">
+          <button onClick={copyMessage} className="rounded border px-3 py-2">
             {copied ? 'Copied' : 'Copy'}
           </button>
 
           <button
             onClick={shareWhatsApp}
-            className="bg-green-500 text-white px-3 py-2 rounded"
+            className="rounded bg-green-500 px-3 py-2 text-white"
           >
             WhatsApp
           </button>
         </div>
       </div>
 
-      {/* ORDERS */}
-      <div className="bg-white p-4 rounded-xl border">
-        <h2 className="font-bold mb-3">Recent Orders</h2>
+      <div className="rounded-xl border bg-white p-4">
+        <h2 className="mb-3 font-bold">Recent Orders</h2>
 
         {orders.length === 0 ? (
           <p>No orders yet</p>
         ) : (
-          orders.slice(0, 5).map(order => (
-            <div key={order.id} className="border-b py-2">
+          orders.slice(0, 5).map((order) => (
+            <div key={order.id} className="border-b py-2 last:border-b-0">
               <div>{order.product_name}</div>
-              <div className="text-sm text-gray-500">
-                {formatMoney(order.amount)}
-              </div>
+              <div className="text-sm text-gray-500">{formatMoney(order.amount)}</div>
             </div>
           ))
         )}
       </div>
-
     </Layout>
   )
 }
 
-// ✅ FIX TYPE (NO ANY)
 function Card({ title, value }: { title: string; value: string | number }) {
   return (
-    <div className="bg-white p-4 rounded-xl border">
+    <div className="rounded-xl border bg-white p-4">
       <div className="text-sm text-gray-500">{title}</div>
       <div className="text-xl font-bold">{value}</div>
     </div>
