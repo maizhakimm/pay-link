@@ -41,17 +41,35 @@ type PageProps = {
 }
 
 export default async function Page({ params }: PageProps) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  const requestedSlug = params.shopSlug.toLowerCase().trim()
+  if (!supabaseUrl || !serviceRoleKey) {
+    return (
+      <main style={errorMain}>
+        <div style={errorBox}>
+          <h2 style={errorTitle}>Server configuration error</h2>
+          <p style={errorText}>
+            Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
+
+  const requestedSlug = decodeURIComponent(params.shopSlug).toLowerCase().trim()
 
   const { data: seller, error: sellerError } = await supabase
     .from('seller_profiles')
     .select('id, store_name, shop_slug, profile_image, email, whatsapp, business_address')
-    .ilike('shop_slug', requestedSlug)
+    .eq('shop_slug', requestedSlug)
     .maybeSingle()
 
   if (sellerError) {
@@ -76,19 +94,19 @@ export default async function Page({ params }: PageProps) {
     )
   }
 
-  const { data: products, error } = await supabase
+  const { data: products, error: productError } = await supabase
     .from('products')
     .select('*')
     .eq('seller_profile_id', seller.id)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
-  if (error) {
+  if (productError) {
     return (
       <main style={errorMain}>
         <div style={errorBox}>
           <h2 style={errorTitle}>Unable to load products</h2>
-          <p style={errorText}>{error.message}</p>
+          <p style={errorText}>{productError.message}</p>
         </div>
       </main>
     )
