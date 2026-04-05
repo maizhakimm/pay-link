@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
@@ -29,12 +30,14 @@ export default function Layout({ children }: LayoutProps) {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/dashboard" className="shrink-0">
-            <div className="text-2xl font-extrabold leading-none">
-              <span className="text-pink-500">Bayar</span>
-              <span className="text-blue-600">Link</span>
-            </div>
-            <div className="mt-1 text-[11px] text-slate-500">
-              Mudah Jual. Mudah Bayar
+            <div className="relative h-11 w-[170px] sm:h-12 sm:w-[190px]">
+              <Image
+                src="/BayarLink Logo 01.svg"
+                alt="BayarLink"
+                fill
+                priority
+                className="object-contain object-left"
+              />
             </div>
           </Link>
 
