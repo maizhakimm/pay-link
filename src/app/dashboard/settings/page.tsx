@@ -1,8 +1,46 @@
 'use client'
 
 import Layout from '../../../components/Layout'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
+async function generateUniqueShopSlug(base: string, currentSellerId?: string | null) {
+  const cleanBase = slugify(base || 'shop')
+  let candidate = cleanBase || 'shop'
+  let counter = 1
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('seller_profiles')
+      .select('id')
+      .eq('shop_slug', candidate)
+      .maybeSingle()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    if (!data) {
+      return candidate
+    }
+
+    if (currentSellerId && data.id === currentSellerId) {
+      return candidate
+    }
+
+    counter += 1
+    candidate = `${cleanBase}-${counter}`
+  }
+}
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
@@ -12,6 +50,7 @@ export default function SettingsPage() {
   const [accountEmail, setAccountEmail] = useState('')
 
   const [storeName, setStoreName] = useState('')
+  const [shopSlug, setShopSlug] = useState('')
   const [email, setEmail] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -25,6 +64,13 @@ export default function SettingsPage() {
   const [profileImage, setProfileImage] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+
+  const previewSlug = useMemo(() => {
+    return slugify(storeName || 'your-shop')
+  }, [storeName])
+
+  const previewBaseUrl =
+    (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
 
   useEffect(() => {
     loadProfile()
@@ -44,15 +90,22 @@ export default function SettingsPage() {
 
     setAccountEmail(user.email || '')
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('seller_profiles')
       .select('*')
       .eq('user_id', user.id)
       .maybeSingle()
 
+    if (error) {
+      alert(error.message)
+      setLoading(false)
+      return
+    }
+
     if (data) {
       setSellerId(data.id)
       setStoreName(data.store_name || '')
+      setShopSlug(data.shop_slug || '')
       setEmail(data.email || '')
       setWhatsapp(data.whatsapp || '')
       setCompanyName(data.company_name || '')
@@ -64,6 +117,25 @@ export default function SettingsPage() {
       setAccountHolderName(data.account_holder_name || '')
 
       setProfileImage(data.profile_image || '')
+
+      // Auto create slug only once if missing
+      if (!data.shop_slug && data.store_name) {
+        try {
+          const newSlug = await generateUniqueShopSlug(data.store_name, data.id)
+
+          const { error: slugError } = await supabase
+            .from('seller_profiles')
+            .update({ shop_slug: newSlug })
+            .eq('id', data.id)
+
+          if (!slugError) {
+            setShopSlug(newSlug)
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to generate shop slug'
+          alert(message)
+        }
+      }
     }
 
     setLoading(false)
@@ -94,30 +166,50 @@ export default function SettingsPage() {
   async function handleSave() {
     if (!sellerId) return
 
+    if (!storeName.trim()) {
+      alert('Store Name is required')
+      return
+    }
+
     setSaving(true)
 
-    const { error } = await supabase
-      .from('seller_profiles')
-      .update({
-        store_name: storeName,
-        email,
-        whatsapp,
-        company_name: companyName,
-        company_registration: companyReg,
-        business_address: businessAddress,
-        bank_name: bankName,
-        account_number: accountNumber,
-        account_holder_name: accountHolderName,
-        profile_image: profileImage,
-      })
-      .eq('id', sellerId)
+    let finalShopSlug = shopSlug
 
-    setSaving(false)
+    try {
+      // Generate slug only if seller still doesn't have one
+      if (!finalShopSlug) {
+        finalShopSlug = await generateUniqueShopSlug(storeName, sellerId)
+      }
 
-    if (error) {
-      alert(error.message)
-    } else {
-      alert('Settings updated successfully!')
+      const { error } = await supabase
+        .from('seller_profiles')
+        .update({
+          store_name: storeName,
+          email,
+          whatsapp,
+          company_name: companyName || null,
+          company_registration: companyReg || null,
+          business_address: businessAddress || null,
+          bank_name: bankName,
+          account_number: accountNumber,
+          account_holder_name: accountHolderName,
+          profile_image: profileImage,
+          shop_slug: finalShopSlug,
+        })
+        .eq('id', sellerId)
+
+      setSaving(false)
+
+      if (error) {
+        alert(error.message)
+      } else {
+        setShopSlug(finalShopSlug)
+        alert('Settings updated successfully!')
+      }
+    } catch (err) {
+      setSaving(false)
+      const message = err instanceof Error ? err.message : 'Failed to save settings'
+      alert(message)
     }
   }
 
@@ -214,12 +306,30 @@ export default function SettingsPage() {
                   <p className="mb-3 text-sm font-extrabold text-slate-900">Basic Info</p>
 
                   <div className="grid gap-3">
-                    <input
-                      placeholder="Store Name"
-                      value={storeName}
-                      onChange={(e) => setStoreName(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
+                    <div>
+                      <input
+                        placeholder="Store Name"
+                        value={storeName}
+                        onChange={(e) => setStoreName(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
+
+                      <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                          Shop URL {shopSlug ? 'Locked' : 'Preview'}
+                        </p>
+
+                        <p className="mt-1 break-all text-sm font-bold text-slate-900">
+                          {previewBaseUrl}/s/{shopSlug || previewSlug}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          {shopSlug
+                            ? 'Your public shop URL is already locked for link stability.'
+                            : 'Your store name will influence your shop URL when it is created for the first time.'}
+                        </p>
+                      </div>
+                    </div>
 
                     <input
                       placeholder="Email"
@@ -238,25 +348,30 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <p className="mb-3 text-sm font-extrabold text-slate-900">Business Info</p>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-extrabold text-slate-900">Company Info</p>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                      Optional
+                    </span>
+                  </div>
 
                   <div className="grid gap-3">
                     <input
-                      placeholder="Company Name"
+                      placeholder="Company Name (Optional)"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                     />
 
                     <input
-                      placeholder="Company Registration No"
+                      placeholder="Company Registration No (Optional)"
                       value={companyReg}
                       onChange={(e) => setCompanyReg(e.target.value)}
                       className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                     />
 
                     <textarea
-                      placeholder="Business Address"
+                      placeholder="Business Address (Optional)"
                       value={businessAddress}
                       onChange={(e) => setBusinessAddress(e.target.value)}
                       rows={4}
