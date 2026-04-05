@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { Eye, EyeOff, Loader2, Lock, Mail, ArrowRight, CheckCircle2 } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
