@@ -128,11 +128,33 @@ export default function SettingsPage() {
     }
 
     if (existing) {
-      return existing as SellerProfileRow
+      const existingRow = existing as SellerProfileRow
+
+      if (!existingRow.shop_slug) {
+        const generatedSlug = await generateUniqueShopSlug(
+          existingRow.store_name || 'My Store',
+          existingRow.id
+        )
+
+        const { data: updated, error: updateError } = await supabase
+          .from('seller_profiles')
+          .update({ shop_slug: generatedSlug })
+          .eq('id', existingRow.id)
+          .select('*')
+          .single()
+
+        if (updateError || !updated) {
+          throw new Error(updateError?.message || 'Failed to initialize shop slug')
+        }
+
+        return updated as SellerProfileRow
+      }
+
+      return existingRow
     }
 
     const initialStoreName =
-      currentUserEmail?.split('@')[0]?.replace(/[._-]+/g, ' ').trim() || 'My Shop'
+      currentUserEmail?.split('@')[0]?.replace(/[._-]+/g, ' ').trim() || 'My Store'
 
     const { data: inserted, error: insertError } = await supabase
       .from('seller_profiles')
@@ -170,68 +192,6 @@ export default function SettingsPage() {
   }
 
   async function loadProfile() {
-  setLoading(true)
-
-  try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError) throw new Error(authError.message)
-    if (!user) return
-
-    setUserId(user.id)
-    setAccountEmail(user.email || '')
-
-    // 🔥 FORCE GET PROFILE FIRST
-    let { data: profile, error } = await supabase
-      .from('seller_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    // 🔥 IF NOT EXIST → CREATE
-    if (!profile) {
-      const { data: newProfile, error: insertError } = await supabase
-        .from('seller_profiles')
-        .insert({
-          user_id: user.id,
-          store_name: 'My Store',
-          email: user.email || null,
-        })
-        .select()
-        .single()
-
-      if (insertError) throw new Error(insertError.message)
-
-      profile = newProfile
-    }
-
-    // 🔥 NOW GUARANTEED EXIST
-    setSellerId(profile.id)
-
-    setStoreName(profile.store_name || '')
-    setShopSlug(profile.shop_slug || '')
-    setEmail(profile.email || '')
-    setWhatsapp(profile.whatsapp || '')
-    setCompanyName(profile.company_name || '')
-    setCompanyReg(profile.company_registration || '')
-    setBusinessAddress(profile.business_address || '')
-
-    setBankName(profile.bank_name || '')
-    setAccountNumber(profile.account_number || '')
-    setAccountHolderName(profile.account_holder_name || '')
-
-    setProfileImage(profile.profile_image || '')
-
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to load profile'
-    alert(message)
-  } finally {
-    setLoading(false)
-  }
-} {
     setLoading(true)
 
     try {
@@ -245,7 +205,6 @@ export default function SettingsPage() {
       }
 
       if (!user) {
-        setLoading(false)
         return
       }
 
@@ -262,11 +221,9 @@ export default function SettingsPage() {
       setCompanyName(profile.company_name || '')
       setCompanyReg(profile.company_registration || '')
       setBusinessAddress(profile.business_address || '')
-
       setBankName(profile.bank_name || '')
       setAccountNumber(profile.account_number || '')
       setAccountHolderName(profile.account_holder_name || '')
-
       setProfileImage(profile.profile_image || '')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load profile'
@@ -301,12 +258,6 @@ export default function SettingsPage() {
     setProfileImage(data.publicUrl)
   }
 
-  console.log('SAVE DEBUG', {
-  sellerId,
-  storeName,
-  shopSlug,
-})
-
   async function handleSave() {
     if (!userId) {
       alert('User session not found. Please log in again.')
@@ -324,11 +275,11 @@ export default function SettingsPage() {
       let currentSellerId = sellerId
       let finalShopSlug = shopSlug
 
-      // Safety: if seller row somehow still missing, create it here as well
       if (!currentSellerId) {
         const profile = await ensureSellerProfile(userId, accountEmail || '')
         currentSellerId = profile.id
         setSellerId(profile.id)
+
         if (!finalShopSlug) {
           finalShopSlug = profile.shop_slug || ''
         }
