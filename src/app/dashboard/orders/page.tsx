@@ -460,22 +460,33 @@ export default function OrdersPage() {
       </div>
 
       <section className="mb-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-8">
-          <StatCard label="Total Orders" value={String(stats.totalOrders)} />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard
-            label="Completed Orders"
-            value={String(stats.completedOrders)}
-            helper="Seller completed"
+            label="Today Orders"
+            value={String(stats.todayOrders)}
+            helper="Created today"
           />
           <StatCard
-            label="Paid Orders"
-            value={String(stats.paidOrders)}
-            helper="Payment received"
+            label="Today Revenue"
+            value={formatMoney(stats.todayRevenue)}
+            helper="Paid today"
           />
           <StatCard
             label="Pending Payment"
             value={String(stats.pendingOrders)}
             helper="Awaiting payment"
+          />
+          <StatCard
+            label="Completed Orders"
+            value={String(stats.completedOrders)}
+            helper="Seller completed"
+          />
+
+          <StatCard label="Total Orders" value={String(stats.totalOrders)} />
+          <StatCard
+            label="Paid Orders"
+            value={String(stats.paidOrders)}
+            helper="Payment received"
           />
           <StatCard
             label="Failed / Expired"
@@ -486,16 +497,6 @@ export default function OrdersPage() {
             label="Revenue"
             value={formatMoney(stats.revenue)}
             helper="Paid only"
-          />
-          <StatCard
-            label="Today Orders"
-            value={String(stats.todayOrders)}
-            helper="Created today"
-          />
-          <StatCard
-            label="Today Revenue"
-            value={formatMoney(stats.todayRevenue)}
-            helper="Paid today"
           />
         </div>
       </section>
