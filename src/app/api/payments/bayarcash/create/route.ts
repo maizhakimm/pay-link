@@ -6,13 +6,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
+type SellerProfileRow = {
+  id: string
+  store_name?: string | null
+  shop_slug?: string | null
+}
+
+type ProductRow = {
+  id: string
+  name: string
+  slug: string
+  price: number
+  seller_profile_id: string | null
 }
 
 export async function GET(req: NextRequest) {
@@ -25,52 +30,72 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing params' }, { status: 400 })
   }
 
-  // 1. get seller
-  const { data: sellers } = await supabase
+  // 1. get seller by permanent shop_slug
+  const { data: sellers, error: sellerError } = await supabase
     .from('seller_profiles')
-    .select('*')
+    .select('id, store_name, shop_slug')
 
-  const seller = sellers?.find(
-    (s) => slugify(s.store_name || '') === shopSlug
-  )
+  if (sellerError || !sellers) {
+    return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
+  }
+
+  const seller =
+    (sellers as SellerProfileRow[]).find(
+      (s) => s.shop_slug === shopSlug
+    ) || null
 
   if (!seller) {
     return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
   }
 
-  // 2. get product
-  const { data: product } = await supabase
+  // 2. get product under that seller
+  const { data: product, error: productError } = await supabase
     .from('products')
-    .select('*')
+    .select('id, name, slug, price, seller_profile_id')
     .eq('slug', productSlug)
     .eq('seller_profile_id', seller.id)
     .single()
 
-  if (!product) {
+  if (productError || !product) {
     return NextResponse.json({ error: 'Product not found' }, { status: 404 })
   }
+
+  const typedProduct = product as ProductRow
 
   // 3. create order
   const orderNumber = 'ORD-' + Date.now()
 
-  const { data: order } = await supabase
+  const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
       order_number: orderNumber,
-      product_id: product.id,
+      order_no: orderNumber,
+      product_id: typedProduct.id,
       seller_profile_id: seller.id,
-      product_name: product.name,
-      product_slug: product.slug,
-      amount: product.price,
+      seller_id: seller.id,
+      product_name: typedProduct.name,
+      product_slug: typedProduct.slug,
+      amount: typedProduct.price,
+      total_amount: typedProduct.price,
+      subtotal: typedProduct.price,
+      gateway_fee: 0,
+      platform_fee: 0,
+      seller_net: typedProduct.price,
+      currency: 'MYR',
       status: 'pending',
       payment_status: 'pending',
+      fulfillment_status: 'pending',
       payout_status: 'unpaid',
     })
     .select()
     .single()
 
-  // 4. call bayarcash (dummy for now)
+  if (orderError || !order) {
+    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
+  }
+
+  // 4. dummy response for now
   return NextResponse.json({
-    url: `/payment-success?order=${order?.order_number}`,
+    url: `/payment-success?order=${order.order_number}`,
   })
 }
