@@ -10,6 +10,7 @@ type Product = {
 
 type Seller = {
   store_name?: string | null
+  shop_slug?: string | null
 }
 
 export default function CheckoutCard({
