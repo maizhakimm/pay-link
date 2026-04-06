@@ -40,8 +40,8 @@ export default function HomePage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.14),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.10),_transparent_28%)]" />
         <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 py-16 sm:px-6 md:py-20 lg:grid-cols-2 lg:px-8 lg:py-24">
-          <div className="relative">
-            <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+          <div className="relative text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 mx-auto lg:mx-0">
               <span className="inline-block h-2 w-2 rounded-full bg-violet-500" />
               Beta
             </div>
@@ -54,29 +54,29 @@ export default function HomePage() {
               </span>
             </h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg mx-auto lg:mx-0">
               Jual dan promote perniagaan anda di mana2 platform dengan
               BayarLink. Lebih mudah nak jual dan lebih mudah customer nak
               bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO
               kos!
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
               <a
                 href={primaryCtaHref}
-                className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                className="inline-flex w-full max-w-[280px] items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 sm:w-auto"
               >
                 Start Free
               </a>
               <a
                 href="/s/dana-store"
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex w-full max-w-[280px] items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
               >
                 View Demo Shop
               </a>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-slate-500">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-sm text-slate-500 lg:justify-start">
               <div className="inline-flex items-center gap-2">
                 <CheckIcon />
                 WhatsApp
@@ -112,7 +112,7 @@ export default function HomePage() {
                 width={700}
                 height={1400}
                 priority
-                className="mx-auto w-[240px] object-contain drop-shadow-[0_30px_80px_rgba(0,0,0,0.25)] scale-[1.08] md:w-[280px] lg:w-[320px]"
+                className="mx-auto w-[300px] object-contain drop-shadow-[0_30px_80px_rgba(0,0,0,0.25)] scale-[1.1] sm:w-[340px] md:w-[380px] lg:w-[420px]"
               />
             </div>
           </div>
@@ -220,11 +220,11 @@ export default function HomePage() {
         Features
       </p>
       <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-        Bukan sekadar link — ini sistem untuk bantu anda jual dengan lebih tersusun
+        Mudah dan memudahkan. Direka khas untuk anda.
       </h2>
       <p className="mt-4 text-base leading-7 text-slate-600">
-        Daripada tambah produk, terima order, kawal waktu tempahan hingga urus
-        follow up — semuanya dalam satu tempat.
+        Cara setup yang simple untuk tambah produk, semak order, 
+        kawal waktu tempahan hingga template untuk share ke social platform lain.
       </p>
     </div>
 
@@ -253,8 +253,8 @@ export default function HomePage() {
       <FeatureImageCard
         imageSrc="/Dashboard-Daily Note-Whatsapp-Template.svg"
         imageAlt="BayarLink Dashboard and WhatsApp Feature"
-        title="Urus Jualan Dengan Lebih Profesional"
-        description="Lihat ringkasan order, guna daily note, dan mudahkan follow up melalui template WhatsApp yang lebih tersusun."
+        title="Ada template yang memudahkan"
+        description="Hanya pilih dan paparkan produk aktif, automatik akan update di template Daily Note, dan share!"
       />
     </div>
   </div>
