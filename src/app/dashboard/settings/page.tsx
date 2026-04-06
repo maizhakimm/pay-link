@@ -230,6 +230,53 @@ export default function SettingsPage() {
     setProfileImage(data.publicUrl)
   }
 
+  <div>
+  <p className="mb-3 text-sm font-extrabold text-slate-900">
+    Order Availability
+  </p>
+
+  <div className="grid gap-3">
+    
+    <label className="flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={acceptOrdersAnytime}
+        onChange={(e) => setAcceptOrdersAnytime(e.target.checked)}
+      />
+      Accept orders anytime
+    </label>
+
+    {!acceptOrdersAnytime && (
+      <>
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            type="time"
+            value={openingTime}
+            onChange={(e) => setOpeningTime(e.target.value)}
+            className="w-full rounded-2xl border px-4 py-3 text-sm"
+          />
+
+          <input
+            type="time"
+            value={closingTime}
+            onChange={(e) => setClosingTime(e.target.value)}
+            className="w-full rounded-2xl border px-4 py-3 text-sm"
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={temporarilyClosed}
+            onChange={(e) => setTemporarilyClosed(e.target.checked)}
+          />
+          Temporarily closed
+        </label>
+      </>
+    )}
+  </div>
+</div>
+
   async function handleSave() {
     if (saving) return
 
