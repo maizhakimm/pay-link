@@ -1,4 +1,4 @@
-import SimpleHeader from "@/components/SimpleHeader"
+import SimpleHeader from "../../components/SimpleHeader"
 
 export default function PrivacyPage() {
   return (
