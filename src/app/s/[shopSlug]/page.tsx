@@ -12,6 +12,11 @@ type SellerProfile = {
   email?: string | null
   whatsapp?: string | null
   business_address?: string | null
+  accept_orders_anytime?: boolean | null
+  opening_time?: string | null
+  closing_time?: string | null
+  temporarily_closed?: boolean | null
+  closed_message?: string | null
 }
 
 type ProductRow = {
@@ -68,7 +73,22 @@ export default async function Page({ params }: PageProps) {
 
   const { data: seller, error: sellerError } = await supabase
     .from('seller_profiles')
-    .select('id, store_name, shop_slug, profile_image, email, whatsapp, business_address')
+    .select(
+      `
+        id,
+        store_name,
+        shop_slug,
+        profile_image,
+        email,
+        whatsapp,
+        business_address,
+        accept_orders_anytime,
+        opening_time,
+        closing_time,
+        temporarily_closed,
+        closed_message
+      `
+    )
     .eq('shop_slug', requestedSlug)
     .maybeSingle()
 
