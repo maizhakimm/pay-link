@@ -251,7 +251,7 @@ export default function HomePage() {
       />
 
       <FeatureImageCard
-        imageSrc="/Dashboard-Daily Note-Whatsapp-Template.svg"
+        imageSrc="/Dashboard-Daily-Note-Whatsapp-Template.svg"
         imageAlt="BayarLink Dashboard and WhatsApp Feature"
         title="Ada template yang memudahkan"
         description="Hanya pilih dan paparkan produk aktif, automatik akan update di template Daily Note, dan share!"
