@@ -109,6 +109,74 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 🔥 CHECK SHOP AVAILABILITY (SERVER SIDE)
+const { data: seller, error: sellerError } = await supabase
+  .from('seller_profiles')
+  .select(`
+    accept_orders_anytime,
+    opening_time,
+    closing_time,
+    temporarily_closed,
+    closed_message
+  `)
+  .eq('id', sellerId)
+  .maybeSingle()
+
+if (sellerError || !seller) {
+  return NextResponse.json(
+    { ok: false, error: 'Seller not found' },
+    { status: 404 }
+  )
+}
+
+// TEMPORARILY CLOSED
+if (seller.temporarily_closed) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error:
+        seller.closed_message ||
+        'Kedai kini ditutup sementara. Sila cuba lagi nanti.',
+    },
+    { status: 400 }
+  )
+}
+
+// ACCEPT ANYTIME → skip check
+if (!seller.accept_orders_anytime) {
+  if (seller.opening_time && seller.closing_time) {
+    const now = new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+    const [openH, openM] = seller.opening_time.split(':').map(Number)
+    const [closeH, closeM] = seller.closing_time.split(':').map(Number)
+
+    const open = openH * 60 + openM
+    const close = closeH * 60 + closeM
+
+    let isOpen = false
+
+    if (open < close) {
+      isOpen = currentMinutes >= open && currentMinutes <= close
+    } else {
+      // overnight case (contoh 10pm - 2am)
+      isOpen = currentMinutes >= open || currentMinutes <= close
+    }
+
+    if (!isOpen) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            seller.closed_message ||
+            `Kedai hanya menerima tempahan dari ${seller.opening_time} hingga ${seller.closing_time}`,
+        },
+        { status: 400 }
+      )
+    }
+  }
+}
+
     if (!items.length) {
       return NextResponse.json(
         { ok: false, error: 'No items selected' },
