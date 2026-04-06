@@ -1,5 +1,3 @@
-import SimpleHeader from "@/components/SimpleHeader"
-
 export default function TermsPage() {
   return (
     <>
