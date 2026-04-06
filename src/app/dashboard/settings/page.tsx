@@ -4,11 +4,6 @@ import Layout from '../../../components/Layout'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
-const [acceptOrdersAnytime, setAcceptOrdersAnytime] = useState(true)
-const [openingTime, setOpeningTime] = useState('09:00')
-const [closingTime, setClosingTime] = useState('22:00')
-const [temporarilyClosed, setTemporarilyClosed] = useState(false)
-
 const MALAYSIAN_BANKS = [
   'Affin Bank',
   'Agrobank',
@@ -84,6 +79,11 @@ type SellerProfileRow = {
   account_number?: string | null
   account_holder_name?: string | null
   profile_image?: string | null
+  accept_orders_anytime?: boolean | null
+  opening_time?: string | null
+  closing_time?: string | null
+  temporarily_closed?: boolean | null
+  closed_message?: string | null
 }
 
 export default function SettingsPage() {
@@ -112,6 +112,14 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
+  const [acceptOrdersAnytime, setAcceptOrdersAnytime] = useState(true)
+  const [openingTime, setOpeningTime] = useState('09:00')
+  const [closingTime, setClosingTime] = useState('22:00')
+  const [temporarilyClosed, setTemporarilyClosed] = useState(false)
+  const [closedMessage, setClosedMessage] = useState(
+    'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
+  )
+
   const previewBaseUrl =
     (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
 
@@ -122,6 +130,18 @@ export default function SettingsPage() {
 
     return slugify(storeName || 'your-shop')
   }, [slugLocked, savedShopSlug, storeName])
+
+  const availabilityStatusText = useMemo(() => {
+    if (temporarilyClosed) {
+      return 'Temporarily Closed'
+    }
+
+    if (acceptOrdersAnytime) {
+      return 'Accepting orders anytime'
+    }
+
+    return `Orders allowed from ${openingTime || '09:00'} to ${closingTime || '22:00'}`
+  }, [acceptOrdersAnytime, openingTime, closingTime, temporarilyClosed])
 
   useEffect(() => {
     loadProfile()
@@ -151,6 +171,12 @@ export default function SettingsPage() {
         email: currentUserEmail || null,
         store_name: fallbackStoreName,
         shop_slug: null,
+        accept_orders_anytime: true,
+        opening_time: '09:00',
+        closing_time: '22:00',
+        temporarily_closed: false,
+        closed_message:
+          'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
       })
       .select('*')
       .single()
@@ -200,6 +226,15 @@ export default function SettingsPage() {
       setAccountHolderName(profile.account_holder_name || '')
       setProfileImage(profile.profile_image || '')
 
+      setAcceptOrdersAnytime(profile.accept_orders_anytime ?? true)
+      setOpeningTime(profile.opening_time || '09:00')
+      setClosingTime(profile.closing_time || '22:00')
+      setTemporarilyClosed(profile.temporarily_closed ?? false)
+      setClosedMessage(
+        profile.closed_message ||
+          'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
+      )
+
       setStoreName(!existingSlug && isDefaultName ? '' : existingStoreName)
       setSlugLocked(Boolean(existingSlug))
     } catch (err) {
@@ -235,53 +270,6 @@ export default function SettingsPage() {
     setProfileImage(data.publicUrl)
   }
 
-  <div>
-  <p className="mb-3 text-sm font-extrabold text-slate-900">
-    Order Availability
-  </p>
-
-  <div className="grid gap-3">
-    
-    <label className="flex items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={acceptOrdersAnytime}
-        onChange={(e) => setAcceptOrdersAnytime(e.target.checked)}
-      />
-      Accept orders anytime
-    </label>
-
-    {!acceptOrdersAnytime && (
-      <>
-        <div className="grid grid-cols-2 gap-3">
-          <input
-            type="time"
-            value={openingTime}
-            onChange={(e) => setOpeningTime(e.target.value)}
-            className="w-full rounded-2xl border px-4 py-3 text-sm"
-          />
-
-          <input
-            type="time"
-            value={closingTime}
-            onChange={(e) => setClosingTime(e.target.value)}
-            className="w-full rounded-2xl border px-4 py-3 text-sm"
-          />
-        </div>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={temporarilyClosed}
-            onChange={(e) => setTemporarilyClosed(e.target.checked)}
-          />
-          Temporarily closed
-        </label>
-      </>
-    )}
-  </div>
-</div>
-
   async function handleSave() {
     if (saving) return
 
@@ -291,10 +279,23 @@ export default function SettingsPage() {
     }
 
     const trimmedStoreName = storeName.trim()
+    const trimmedClosedMessage = closedMessage.trim()
 
     if (!trimmedStoreName) {
       alert('Store Name is required')
       return
+    }
+
+    if (!acceptOrdersAnytime) {
+      if (!openingTime || !closingTime) {
+        alert('Please set opening time and closing time.')
+        return
+      }
+
+      if (openingTime === closingTime) {
+        alert('Opening time and closing time cannot be the same.')
+        return
+      }
     }
 
     setSaving(true)
@@ -328,6 +329,13 @@ export default function SettingsPage() {
           account_holder_name: accountHolderName.trim() || null,
           profile_image: profileImage || null,
           shop_slug: finalShopSlug,
+          accept_orders_anytime: acceptOrdersAnytime,
+          opening_time: acceptOrdersAnytime ? null : openingTime,
+          closing_time: acceptOrdersAnytime ? null : closingTime,
+          temporarily_closed: temporarilyClosed,
+          closed_message:
+            trimmedClosedMessage ||
+            'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
         })
         .eq('id', currentSellerId)
 
@@ -399,7 +407,7 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
-          Manage your store, payout details, and account settings.
+          Manage your store, payout details, account settings, and order availability.
         </p>
       </div>
 
@@ -545,6 +553,107 @@ export default function SettingsPage() {
                       onChange={(e) => setAccountHolderName(e.target.value)}
                       className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-extrabold text-slate-900">Order Availability</p>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${
+                        temporarilyClosed
+                          ? 'bg-rose-100 text-rose-700'
+                          : 'bg-emerald-100 text-emerald-700'
+                      }`}
+                    >
+                      {temporarilyClosed
+                        ? 'Temporarily Closed'
+                        : acceptOrdersAnytime
+                        ? 'Open Anytime'
+                        : 'Scheduled Hours'}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-bold text-slate-700">Current Status</p>
+                    <p className="mt-1 text-sm text-slate-600">{availabilityStatusText}</p>
+                  </div>
+
+                  <div className="mt-4 grid gap-4">
+                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                      <input
+                        type="checkbox"
+                        checked={acceptOrdersAnytime}
+                        onChange={(e) => setAcceptOrdersAnytime(e.target.checked)}
+                        className="mt-1 h-4 w-4"
+                      />
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Accept orders anytime</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          Sesuai jika seller sentiasa available untuk terima order.
+                        </p>
+                      </div>
+                    </label>
+
+                    {!acceptOrdersAnytime ? (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Opening Time
+                          </label>
+                          <input
+                            type="time"
+                            value={openingTime}
+                            onChange={(e) => setOpeningTime(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Closing Time
+                          </label>
+                          <input
+                            type="time"
+                            value={closingTime}
+                            onChange={(e) => setClosingTime(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                      <input
+                        type="checkbox"
+                        checked={temporarilyClosed}
+                        onChange={(e) => setTemporarilyClosed(e.target.checked)}
+                        className="mt-1 h-4 w-4"
+                      />
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Temporarily closed</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          Tutup sementara walaupun waktu operasi masih aktif.
+                        </p>
+                      </div>
+                    </label>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Closed Message
+                      </label>
+                      <textarea
+                        placeholder="Contoh: Kedai kini ditutup. Tempahan dibuka semula pada 9:00 AM."
+                        value={closedMessage}
+                        onChange={(e) => setClosedMessage(e.target.value)}
+                        rows={3}
+                        className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Mesej ini boleh dipaparkan kepada customer bila kedai tidak menerima
+                        order.
+                      </p>
+                    </div>
                   </div>
                 </div>
 
