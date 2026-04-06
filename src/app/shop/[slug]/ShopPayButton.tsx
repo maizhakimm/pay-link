@@ -72,7 +72,9 @@ export default function ShopPayButton({
   }
 
   async function handleClick() {
-    if (!name || !email || phone.length <= 3) {
+    if (loading) return
+
+    if (!name.trim() || !email.trim() || phone.length <= 3) {
       alert('Sila isi nama, emel dan nombor telefon yang sah')
       return
     }
@@ -83,7 +85,13 @@ export default function ShopPayButton({
     }
 
     if (needsDelivery) {
-      if (!address1 || !postcode || !city || !district || !state) {
+      if (
+        !address1.trim() ||
+        !postcode.trim() ||
+        !city.trim() ||
+        !district.trim() ||
+        !state.trim()
+      ) {
         alert('Sila lengkapkan maklumat penghantaran')
         return
       }
@@ -100,19 +108,19 @@ export default function ShopPayButton({
         body: JSON.stringify({
           sellerId,
           shopSlug,
-          name,
-          email,
+          name: name.trim(),
+          email: email.trim(),
           phone,
           items,
           paymentChannel: paymentMethod,
           delivery: needsDelivery
             ? {
-                address1,
-                address2,
-                postcode,
-                city,
-                district,
-                state,
+                address1: address1.trim(),
+                address2: address2.trim(),
+                postcode: postcode.trim(),
+                city: city.trim(),
+                district: district.trim(),
+                state: state.trim(),
               }
             : null,
         }),
@@ -131,8 +139,7 @@ export default function ShopPayButton({
 
       alert('Payment link not available')
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Something went wrong'
+      const message = err instanceof Error ? err.message : 'Something went wrong'
       alert(message)
     } finally {
       setLoading(false)
@@ -140,127 +147,138 @@ export default function ShopPayButton({
   }
 
   return (
-    <div style={{ maxWidth: '520px', margin: '0 auto' }}>
-      <div style={{ display: 'grid', gap: '10px', marginBottom: '14px' }}>
-        <label>Full Name</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Enter your name"
-          style={inputStyle}
-        />
+    <div style={wrapper}>
+      <div style={formGrid}>
+        <div>
+          <label style={labelStyle}>Full Name</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter your name"
+            style={inputStyle}
+          />
+        </div>
 
-        <label>Email Address</label>
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your email"
-          style={inputStyle}
-        />
+        <div>
+          <label style={labelStyle}>Email Address</label>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            style={inputStyle}
+          />
+        </div>
 
-        <label>Phone Number</label>
-        <input
-          value={phone}
-          onChange={(e) => handlePhoneChange(e.target.value)}
-          style={inputStyle}
-        />
+        <div>
+          <label style={labelStyle}>Phone Number</label>
+          <input
+            value={phone}
+            onChange={(e) => handlePhoneChange(e.target.value)}
+            style={inputStyle}
+          />
+        </div>
 
-        <label>Payment Method</label>
-        <select
-          value={paymentMethod}
-          onChange={(e) => setPaymentMethod(Number(e.target.value))}
-          style={inputStyle}
-        >
-          {PAYMENT_METHODS.map((method) => (
-            <option key={method.value} value={method.value}>
-              {method.label}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label style={labelStyle}>Payment Method</label>
+          <select
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(Number(e.target.value))}
+            style={inputStyle}
+          >
+            {PAYMENT_METHODS.map((method) => (
+              <option key={method.value} value={method.value}>
+                {method.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div style={toggleBox}>
           <label style={toggleLabel}>
             <div>
-              <strong>Delivery required</strong>
-              <div style={{ fontSize: '12px', color: '#64748b' }}>
-                Turn on if delivery needed
-              </div>
+              <strong style={toggleTitle}>Delivery required</strong>
+              <div style={toggleSubtext}>Turn on if delivery needed</div>
             </div>
 
-            <div
+            <button
+              type="button"
               onClick={() => setNeedsDelivery(!needsDelivery)}
               style={{
-                width: '48px',
-                height: '28px',
-                borderRadius: '999px',
+                ...toggleSwitch,
                 background: needsDelivery ? '#1d4ed8' : '#cbd5e1',
-                position: 'relative',
-                cursor: 'pointer',
               }}
+              aria-pressed={needsDelivery}
             >
               <span
                 style={{
-                  position: 'absolute',
-                  top: '3px',
+                  ...toggleKnob,
                   left: needsDelivery ? '23px' : '3px',
-                  width: '22px',
-                  height: '22px',
-                  borderRadius: '999px',
-                  background: '#fff',
                 }}
               />
-            </div>
+            </button>
           </label>
         </div>
 
         {needsDelivery && (
           <>
-            <label>Address Line 1</label>
-            <input
-              value={address1}
-              onChange={(e) => setAddress1(e.target.value)}
-              style={inputStyle}
-            />
+            <div>
+              <label style={labelStyle}>Address Line 1</label>
+              <input
+                value={address1}
+                onChange={(e) => setAddress1(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
 
-            <label>Address Line 2</label>
-            <input
-              value={address2}
-              onChange={(e) => setAddress2(e.target.value)}
-              style={inputStyle}
-            />
+            <div>
+              <label style={labelStyle}>Address Line 2</label>
+              <input
+                value={address2}
+                onChange={(e) => setAddress2(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
 
-            <label>Postcode</label>
-            <input
-              value={postcode}
-              onChange={(e) => handlePostcodeChange(e.target.value)}
-              style={inputStyle}
-            />
+            <div>
+              <label style={labelStyle}>Postcode</label>
+              <input
+                value={postcode}
+                onChange={(e) => handlePostcodeChange(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
 
-            <label>City</label>
-            <input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              style={inputStyle}
-            />
+            <div>
+              <label style={labelStyle}>City</label>
+              <input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
 
-            <label>District</label>
-            <input
-              value={district}
-              onChange={(e) => setDistrict(e.target.value)}
-              style={inputStyle}
-            />
+            <div>
+              <label style={labelStyle}>District</label>
+              <input
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
 
-            <label>State</label>
-            <select
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="">Select state</option>
-              {STATES.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
+            <div>
+              <label style={labelStyle}>State</label>
+              <select
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">Select state</option>
+                {STATES.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
           </>
         )}
       </div>
@@ -270,18 +288,50 @@ export default function ShopPayButton({
         <strong>RM {total.toFixed(2)}</strong>
       </div>
 
-      <button onClick={handleClick} disabled={loading} style={buttonStyle}>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={loading}
+        style={{
+          ...buttonStyle,
+          opacity: loading ? 0.7 : 1,
+          cursor: loading ? 'not-allowed' : 'pointer',
+        }}
+      >
         {loading ? 'Processing payment...' : 'Proceed to Payment'}
       </button>
     </div>
   )
 }
 
+const wrapper = {
+  maxWidth: '520px',
+  margin: '0 auto',
+  width: '100%',
+} as const
+
+const formGrid = {
+  display: 'grid',
+  gap: '14px',
+  marginBottom: '14px',
+} as const
+
+const labelStyle = {
+  display: 'block',
+  marginBottom: '6px',
+  fontSize: '14px',
+  fontWeight: 700,
+  color: '#0f172a',
+} as const
+
 const inputStyle = {
   width: '100%',
   padding: '13px',
   borderRadius: '12px',
   border: '1px solid #dbe2ea',
+  fontSize: '14px',
+  outline: 'none',
+  background: '#fff',
 } as const
 
 const toggleBox = {
@@ -295,6 +345,38 @@ const toggleLabel = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
+  gap: '12px',
+} as const
+
+const toggleTitle = {
+  display: 'block',
+  color: '#0f172a',
+} as const
+
+const toggleSubtext = {
+  fontSize: '12px',
+  color: '#64748b',
+  marginTop: '4px',
+} as const
+
+const toggleSwitch = {
+  width: '48px',
+  height: '28px',
+  borderRadius: '999px',
+  position: 'relative' as const,
+  border: 'none',
+  cursor: 'pointer',
+  flexShrink: 0,
+} as const
+
+const toggleKnob = {
+  position: 'absolute' as const,
+  top: '3px',
+  width: '22px',
+  height: '22px',
+  borderRadius: '999px',
+  background: '#fff',
+  transition: 'left 0.2s ease',
 } as const
 
 const totalRow = {
@@ -303,6 +385,8 @@ const totalRow = {
   marginBottom: '12px',
   paddingTop: '10px',
   borderTop: '1px solid #e2e8f0',
+  color: '#0f172a',
+  fontSize: '15px',
 } as const
 
 const buttonStyle = {
@@ -313,6 +397,4 @@ const buttonStyle = {
   color: '#fff',
   fontWeight: 800,
   border: 'none',
-  cursor: 'pointer',
-  opacity: 1,
 } as const
