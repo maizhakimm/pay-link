@@ -10,6 +10,11 @@ type SellerProfile = {
   email?: string | null
   whatsapp?: string | null
   business_address?: string | null
+  accept_orders_anytime?: boolean | null
+  opening_time?: string | null
+  closing_time?: string | null
+  temporarily_closed?: boolean | null
+  closed_message?: string | null
 }
 
 type ProductRow = {
@@ -53,6 +58,89 @@ function getFirstImage(product: ProductRow) {
   )
 }
 
+function formatTime(value?: string | null) {
+  if (!value) return ''
+
+  const [hourString, minuteString] = value.split(':')
+  const hour = Number(hourString)
+  const minute = Number(minuteString || '0')
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return value
+
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const normalizedHour = hour % 12 === 0 ? 12 : hour % 12
+  const normalizedMinute = minute.toString().padStart(2, '0')
+
+  return `${normalizedHour}:${normalizedMinute} ${period}`
+}
+
+function getMinutesFromTime(value?: string | null) {
+  if (!value || !value.includes(':')) return null
+
+  const [hourString, minuteString] = value.split(':')
+  const hour = Number(hourString)
+  const minute = Number(minuteString)
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return null
+
+  return hour * 60 + minute
+}
+
+function getShopAvailability(seller: SellerProfile) {
+  if (seller.temporarily_closed) {
+    return {
+      isOpen: false,
+      label: 'Temporarily Closed',
+      detail:
+        seller.closed_message ||
+        'Kedai kini ditutup sementara. Sila cuba lagi sebentar nanti.',
+    }
+  }
+
+  if (seller.accept_orders_anytime ?? true) {
+    return {
+      isOpen: true,
+      label: 'Open Now',
+      detail: 'Kedai ini menerima tempahan pada bila-bila masa.',
+    }
+  }
+
+  const openMinutes = getMinutesFromTime(seller.opening_time)
+  const closeMinutes = getMinutesFromTime(seller.closing_time)
+
+  if (openMinutes === null || closeMinutes === null) {
+    return {
+      isOpen: true,
+      label: 'Open Now',
+      detail: 'Kedai ini menerima tempahan.',
+    }
+  }
+
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+  let isOpen = false
+
+  if (openMinutes < closeMinutes) {
+    isOpen = currentMinutes >= openMinutes && currentMinutes <= closeMinutes
+  } else if (openMinutes > closeMinutes) {
+    isOpen = currentMinutes >= openMinutes || currentMinutes <= closeMinutes
+  } else {
+    isOpen = false
+  }
+
+  const timeRange = `${formatTime(seller.opening_time)} - ${formatTime(seller.closing_time)}`
+
+  return {
+    isOpen,
+    label: isOpen ? 'Open Now' : 'Closed',
+    detail: isOpen
+      ? `Order diterima sehingga ${formatTime(seller.closing_time)}.`
+      : seller.closed_message || `Waktu tempahan adalah ${timeRange}.`,
+    timeRange,
+  }
+}
+
 export default function ShopPageClient({
   seller,
   products,
@@ -64,7 +152,11 @@ export default function ShopPageClient({
 }) {
   const [cart, setCart] = useState<Record<string, number>>({})
 
+  const availability = useMemo(() => getShopAvailability(seller), [seller])
+  const isShopOpen = availability.isOpen
+
   function increase(product: ProductRow) {
+    if (!isShopOpen) return
     if (product.sold_out) return
 
     setCart((prev) => ({
@@ -127,7 +219,7 @@ export default function ShopPageClient({
               <div style={sellerFallback}>{sellerName.charAt(0).toUpperCase()}</div>
             )}
 
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <h1 style={shopTitle}>{sellerName}</h1>
               {seller.business_address ? (
                 <p style={shopSub}>{seller.business_address}</p>
@@ -136,11 +228,44 @@ export default function ShopPageClient({
               )}
             </div>
           </div>
+
+          <div style={statusWrap}>
+            <div
+              style={{
+                ...statusBadge,
+                background: isShopOpen ? '#dcfce7' : '#fee2e2',
+                color: isShopOpen ? '#166534' : '#b91c1c',
+              }}
+            >
+              {availability.label}
+            </div>
+
+            {!seller.accept_orders_anytime && availability.timeRange ? (
+              <div style={hoursText}>Waktu tempahan: {availability.timeRange}</div>
+            ) : (
+              <div style={hoursText}>Tempahan tertakluk kepada availability seller.</div>
+            )}
+          </div>
+
+          <div
+            style={{
+              ...noticeBox,
+              background: isShopOpen ? '#eff6ff' : '#fff7ed',
+              borderColor: isShopOpen ? '#bfdbfe' : '#fed7aa',
+              color: isShopOpen ? '#1e3a8a' : '#9a3412',
+            }}
+          >
+            {availability.detail}
+          </div>
         </div>
 
         <div style={sectionTitleWrap}>
           <h2 style={sectionTitle}>Menu / Produk Aktif</h2>
-          <p style={sectionSub}>Pilih item dan kuantiti sebelum checkout</p>
+          <p style={sectionSub}>
+            {isShopOpen
+              ? 'Pilih item dan kuantiti sebelum checkout'
+              : 'Kedai sedang tutup. Anda masih boleh lihat produk yang tersedia.'}
+          </p>
         </div>
 
         {products.length === 0 ? (
@@ -154,38 +279,41 @@ export default function ShopPageClient({
             {products.map((product) => {
               const image = getFirstImage(product)
               const qty = cart[product.id] || 0
+              const disableAddButton = !isShopOpen || Boolean(product.sold_out)
 
               return (
                 <div key={product.id} style={productCard}>
-                  <div style={productImageWrap}>
-                    {image ? (
-                      <img
-                        src={getImageUrl(image)}
-                        alt={product.name}
-                        style={productImage}
-                      />
-                    ) : (
-                      <div style={productImagePlaceholder}>No image</div>
-                    )}
+                  <div style={productCardLeft}>
+                    <div style={productImageWrap}>
+                      {image ? (
+                        <img
+                          src={getImageUrl(image)}
+                          alt={product.name}
+                          style={productImage}
+                        />
+                      ) : (
+                        <div style={productImagePlaceholder}>No image</div>
+                      )}
 
-                    {product.sold_out ? <div style={soldOutBadge}>Sold Out</div> : null}
-                  </div>
-
-                  <div style={{ flex: 1 }}>
-                    <div style={productName}>{product.name}</div>
-                    <div style={productPrice}>RM {product.price.toFixed(2)}</div>
-
-                    {product.track_stock ? (
-                      <div style={stockText}>Stock: {product.stock_quantity ?? 0}</div>
-                    ) : null}
-
-                    <div style={productDesc}>
-                      {product.description || 'Tiada deskripsi.'}
+                      {product.sold_out ? <div style={soldOutBadge}>Sold Out</div> : null}
                     </div>
 
-                    <a href={`/s/${shopSlug}/${product.slug}`} style={productPageLink}>
-                      View product page
-                    </a>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={productName}>{product.name}</div>
+                      <div style={productPrice}>RM {product.price.toFixed(2)}</div>
+
+                      {product.track_stock ? (
+                        <div style={stockText}>Stock: {product.stock_quantity ?? 0}</div>
+                      ) : null}
+
+                      <div style={productDesc}>
+                        {product.description || 'Tiada deskripsi.'}
+                      </div>
+
+                      <a href={`/s/${shopSlug}/${product.slug}`} style={productPageLink}>
+                        View product page
+                      </a>
+                    </div>
                   </div>
 
                   <div style={qtyPanel}>
@@ -206,14 +334,18 @@ export default function ShopPageClient({
                         onClick={() => increase(product)}
                         style={{
                           ...qtyBtn,
-                          opacity: product.sold_out ? 0.4 : 1,
-                          cursor: product.sold_out ? 'not-allowed' : 'pointer',
+                          opacity: disableAddButton ? 0.4 : 1,
+                          cursor: disableAddButton ? 'not-allowed' : 'pointer',
                         }}
-                        disabled={product.sold_out}
+                        disabled={disableAddButton}
                       >
                         +
                       </button>
                     </div>
+
+                    {!isShopOpen ? (
+                      <div style={qtyHintClosed}>Ordering unavailable</div>
+                    ) : null}
                   </div>
                 </div>
               )
@@ -229,7 +361,12 @@ export default function ShopPageClient({
             </div>
           </div>
 
-          {cartItems.length === 0 ? (
+          {!isShopOpen ? (
+            <div style={closedCheckoutBox}>
+              <div style={closedCheckoutTitle}>Kedai kini tidak menerima tempahan</div>
+              <div style={closedCheckoutText}>{availability.detail}</div>
+            </div>
+          ) : cartItems.length === 0 ? (
             <div style={emptyCartBox}>
               Sila pilih sekurang-kurangnya satu item untuk teruskan pembayaran.
             </div>
@@ -281,10 +418,27 @@ const stockText = {
   marginBottom: 4,
 } as const
 
-const main = { minHeight: '100vh', background: '#f8fafc', padding: 16 } as const
-const container = { maxWidth: 760, margin: '0 auto' } as const
-const logoWrap = { textAlign: 'center' as const, marginBottom: 16 } as const
-const logo = { height: 44, margin: '0 auto', display: 'block' } as const
+const main = {
+  minHeight: '100vh',
+  background: '#f8fafc',
+  padding: 16,
+} as const
+
+const container = {
+  maxWidth: 760,
+  margin: '0 auto',
+} as const
+
+const logoWrap = {
+  textAlign: 'center' as const,
+  marginBottom: 16,
+} as const
+
+const logo = {
+  height: 44,
+  margin: '0 auto',
+  display: 'block',
+} as const
 
 const heroCard = {
   background: '#fff',
@@ -320,6 +474,7 @@ const sellerFallback = {
   justifyContent: 'center',
   fontWeight: 800,
   fontSize: 20,
+  flexShrink: 0,
 } as const
 
 const shopTitle = {
@@ -327,11 +482,52 @@ const shopTitle = {
   fontSize: 28,
   fontWeight: 800,
   color: '#0f172a',
+  lineHeight: 1.2,
 } as const
 
-const shopSub = { margin: 0, color: '#64748b', fontSize: 14 } as const
+const shopSub = {
+  margin: 0,
+  color: '#64748b',
+  fontSize: 14,
+  lineHeight: 1.5,
+} as const
 
-const sectionTitleWrap = { marginBottom: 12 } as const
+const statusWrap = {
+  display: 'flex',
+  flexWrap: 'wrap' as const,
+  gap: 10,
+  alignItems: 'center',
+  marginBottom: 12,
+} as const
+
+const statusBadge = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 999,
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 800,
+} as const
+
+const hoursText = {
+  fontSize: 13,
+  color: '#475569',
+  fontWeight: 600,
+} as const
+
+const noticeBox = {
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderRadius: 14,
+  padding: '12px 14px',
+  fontSize: 14,
+  lineHeight: 1.6,
+} as const
+
+const sectionTitleWrap = {
+  marginBottom: 12,
+} as const
 
 const sectionTitle = {
   margin: '0 0 4px 0',
@@ -340,7 +536,11 @@ const sectionTitle = {
   color: '#0f172a',
 } as const
 
-const sectionSub = { margin: 0, color: '#64748b', fontSize: 14 } as const
+const sectionSub = {
+  margin: 0,
+  color: '#64748b',
+  fontSize: 14,
+} as const
 
 const emptyCard = {
   background: '#fff',
@@ -350,7 +550,11 @@ const emptyCard = {
   marginBottom: 16,
 } as const
 
-const productGrid = { display: 'grid', gap: 12, marginBottom: 16 } as const
+const productGrid = {
+  display: 'grid',
+  gap: 12,
+  marginBottom: 16,
+} as const
 
 const productCard = {
   background: '#fff',
@@ -360,7 +564,17 @@ const productCard = {
   display: 'flex',
   gap: 12,
   alignItems: 'flex-start',
+  justifyContent: 'space-between',
   position: 'relative' as const,
+  flexWrap: 'wrap' as const,
+} as const
+
+const productCardLeft = {
+  display: 'flex',
+  gap: 12,
+  alignItems: 'flex-start',
+  flex: 1,
+  minWidth: 0,
 } as const
 
 const productPageLink = {
@@ -404,6 +618,7 @@ const productName = {
   color: '#0f172a',
   marginBottom: 6,
   fontSize: 18,
+  lineHeight: 1.3,
 } as const
 
 const productPrice = {
@@ -425,6 +640,7 @@ const qtyPanel = {
   borderRadius: 14,
   padding: 10,
   textAlign: 'center' as const,
+  flexShrink: 0,
 } as const
 
 const qtyLabel = {
@@ -457,6 +673,14 @@ const qtyValue = {
   color: '#0f172a',
 } as const
 
+const qtyHintClosed = {
+  marginTop: 8,
+  fontSize: 11,
+  lineHeight: 1.4,
+  color: '#b45309',
+  fontWeight: 700,
+} as const
+
 const checkoutCard = {
   background: '#fff',
   borderRadius: 22,
@@ -465,7 +689,9 @@ const checkoutCard = {
   boxShadow: '0 10px 30px rgba(15,23,42,0.05)',
 } as const
 
-const checkoutHeader = { marginBottom: 14 } as const
+const checkoutHeader = {
+  marginBottom: 14,
+} as const
 
 const checkoutTitle = {
   margin: '0 0 4px 0',
@@ -474,7 +700,11 @@ const checkoutTitle = {
   color: '#0f172a',
 } as const
 
-const checkoutSub = { margin: 0, color: '#64748b', fontSize: 14 } as const
+const checkoutSub = {
+  margin: 0,
+  color: '#64748b',
+  fontSize: 14,
+} as const
 
 const emptyCartBox = {
   padding: 14,
@@ -483,6 +713,25 @@ const emptyCartBox = {
   color: '#64748b',
   fontSize: 14,
   border: '1px solid #e2e8f0',
+} as const
+
+const closedCheckoutBox = {
+  padding: 16,
+  borderRadius: 14,
+  background: '#fff7ed',
+  color: '#9a3412',
+  fontSize: 14,
+  border: '1px solid #fed7aa',
+} as const
+
+const closedCheckoutTitle = {
+  fontSize: 15,
+  fontWeight: 800,
+  marginBottom: 6,
+} as const
+
+const closedCheckoutText = {
+  lineHeight: 1.6,
 } as const
 
 const summaryList = {
