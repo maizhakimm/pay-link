@@ -495,11 +495,11 @@ export default function HomePage() {
             />
             <FaqCard
               question="Siapa yang boleh daftar?"
-              answer="Semua orang boleh daftar — sama ada individu atau syarikat."
+              answer="Semua orang boleh daftar, sama ada individu atau syarikat."
             />
             <FaqCard
               question="Customer order macam mana?"
-              answer="Customer buka link shop anda, pilih produk yang aktif, kemudian terus buat order dan pembayaran dengan flow yang lebih kemas."
+              answer="Customer buka link shop anda, tak perlu download app, pilih menu / produk, isi maklumat ringkas dan buat bayaran."
             />
             <FaqCard
               question="Kalau saya jual servis pun boleh?"
