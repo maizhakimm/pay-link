@@ -14,9 +14,6 @@ export default function SimpleHeader() {
             width={32}
             height={32}
           />
-          <span className="font-semibold text-slate-900">
-            BayarLink
-          </span>
         </Link>
 
         {/* Right Button */}
