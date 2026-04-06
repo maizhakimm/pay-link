@@ -107,7 +107,7 @@ export default function HomePage() {
 
             <div className="relative">
               <Image
-                src="/Hero Image 01.png"
+                src="/Hero.svg"
                 alt="BayarLink Preview"
                 width={700}
                 height={1400}
@@ -212,60 +212,50 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features */}
+{/* Features */}
 <section className="border-t border-slate-200 bg-white py-16 sm:py-20">
   <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
     <div className="mx-auto max-w-3xl text-center">
       <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
         Features
       </p>
       <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-        Semua dalam satu sistem
+        Bukan sekadar link — ini sistem untuk bantu anda jual dengan lebih tersusun
       </h2>
       <p className="mt-4 text-base leading-7 text-slate-600">
-        Bukan sekadar link. BayarLink bantu anda urus bisnes dengan lebih tersusun dan profesional.
+        Daripada tambah produk, terima order, kawal waktu tempahan hingga urus
+        follow up — semuanya dalam satu tempat.
       </p>
     </div>
 
-    <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-
-      <FeatureCard
-        icon={<SystemIcon />}
-        title="Dashboard Analytics"
-        description="Lihat total order, paid, pending dan revenue dalam satu dashboard."
+    <div className="mt-12 grid gap-6 md:grid-cols-2">
+      <FeatureImageCard
+        imageSrc="/Product.svg"
+        imageAlt="BayarLink Product Feature"
+        title="Tambah Produk Dengan Mudah"
+        description="Masukkan produk, harga dan gambar dalam satu dashboard yang ringkas. Customer boleh terus lihat semua produk aktif anda dalam satu link."
       />
 
-      <FeatureCard
-        icon={<ChatIcon />}
-        title="Auto WhatsApp Message"
-        description="Message customer terus siap dengan order details. Tak perlu copy paste."
+      <FeatureImageCard
+        imageSrc="/Order.svg"
+        imageAlt="BayarLink Order Feature"
+        title="Semua Order Tersusun"
+        description="Tak perlu lagi scroll WhatsApp dan cari order satu-satu. Semua tempahan direkod dan lebih mudah untuk anda urus."
       />
 
-      <FeatureCard
-        icon={<FormIcon />}
-        title="Auto Order Tracking"
-        description="Tahu siapa dah bayar, siapa pending, dan siapa dah complete."
+      <FeatureImageCard
+        imageSrc="/Operation-Hour.svg"
+        imageAlt="BayarLink Operating Hours Feature"
+        title="Kawal Waktu Tempahan"
+        description="Tetapkan waktu kedai anda dibuka untuk tempahan. Elak customer order waktu anda tak available dan kurangkan salah faham."
       />
 
-      <FeatureCard
-        icon={<StockIcon />}
-        title="Stock Control"
-        description="Auto update stock untuk elak oversell dan double order."
+      <FeatureImageCard
+        imageSrc="/Dashboard-Daily Note-Whatsapp-Template.svg"
+        imageAlt="BayarLink Dashboard and WhatsApp Feature"
+        title="Urus Jualan Dengan Lebih Profesional"
+        description="Lihat ringkasan order, guna daily note, dan mudahkan follow up melalui template WhatsApp yang lebih tersusun."
       />
-
-      <FeatureCard
-        icon={<PhoneIcon />}
-        title="Mobile First System"
-        description="Urus semua dari phone tanpa perlu laptop."
-      />
-
-      <FeatureCard
-        icon={<LinkIcon />}
-        title="Smart Shop Link"
-        description="Satu link untuk semua produk — nampak lebih professional."
-      />
-
     </div>
   </div>
 </section>
@@ -632,6 +622,41 @@ function SolutionCard({
       </div>
       <h3 className="text-lg font-bold text-slate-950">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+    </div>
+  );
+}
+
+function FeatureImageCard({
+  imageSrc,
+  imageAlt,
+  title,
+  description,
+}: {
+  imageSrc: string;
+  imageAlt: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="border-b border-slate-100 bg-slate-50/70 p-4 sm:p-5">
+        <div className="relative overflow-hidden rounded-2xl bg-white">
+          <Image
+            src={imageSrc}
+            alt={imageAlt}
+            width={1200}
+            height={900}
+            className="h-auto w-full object-contain"
+          />
+        </div>
+      </div>
+
+      <div className="p-6">
+        <h3 className="text-lg font-bold text-slate-950 sm:text-xl">{title}</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+          {description}
+        </p>
+      </div>
     </div>
   );
 }
