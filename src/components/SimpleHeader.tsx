@@ -17,14 +17,12 @@ export default function SimpleHeader() {
           <span className="text-base font-semibold text-slate-900">BayarLink</span>
         </Link>
 
-        <div className="flex items-center gap-2">
-          <Link
-            href="/"
-            className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-          >
-            Home
-          </Link>
-        </div>
+        <Link
+          href="/"
+          className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+        >
+          Home
+        </Link>
       </div>
     </header>
   )
