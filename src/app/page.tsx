@@ -168,7 +168,7 @@ export default function HomePage() {
               Penyelesaian
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Share 1 link BayarLink!
+              Share BayarLink!
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
               Satu tempat untuk susun produk/menu, kumpul order, dan bagi
