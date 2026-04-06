@@ -482,8 +482,20 @@ export default function HomePage() {
               answer="Setup asas boleh siap dengan sangat cepat. Seller hanya perlu masukkan produk dan share link shop."
             />
             <FaqCard
+              question="Kena bayar apa-apa ke?"
+              answer="Tak perlu bayar apa-apa yuran untuk mula.
+              Daftar sahaja dan terus boleh guna BayarLink.
+
+              Kami hanya kenakan caj kecil untuk setiap transaksi yang berjaya sahaja.
+              Tiada caj bulanan, tiada caj tersembunyi."
+            />
+            <FaqCard
               question="Sesuai untuk bisnes kecil ke?"
               answer="Ya. Memang sesuai untuk home-based seller, agent, dropshipper, peniaga makanan, dan seller WhatsApp."
+            />
+            <FaqCard
+              question="Siapa yang boleh daftar?"
+              answer="Semua orang boleh daftar — sama ada individu atau syarikat."
             />
             <FaqCard
               question="Customer order macam mana?"
