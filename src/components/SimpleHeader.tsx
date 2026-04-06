@@ -5,16 +5,15 @@ export default function SimpleHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center">
           <Image
             src="/BayarLink-Logo-01.svg"
             alt="BayarLink"
-            width={34}
-            height={34}
+            width={140}
+            height={36}
             className="h-8 w-auto"
             priority
           />
-          <span className="text-base font-semibold text-slate-900">BayarLink</span>
         </Link>
 
         <Link
