@@ -560,9 +560,12 @@ export default function HomePage() {
     </div>
 
     {/* Bottom */}
-    <div className="mt-6 border-t border-slate-100 pt-6 text-center text-xs text-slate-400">
-      © {new Date().getFullYear()} BayarLink. All rights reserved.
-    </div>
+    <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
+  <div>© {new Date().getFullYear()} BayarLink. All rights reserved.</div>
+  <div style={{ marginTop: 4 }}>
+    by <strong>Neugens Solution</strong> (Reg No: 202503301282 (AS0504872))
+  </div>
+</div>
 
   </div>
 </footer>
