@@ -4,6 +4,11 @@ import Layout from '../../../components/Layout'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
+const [acceptOrdersAnytime, setAcceptOrdersAnytime] = useState(true)
+const [openingTime, setOpeningTime] = useState('09:00')
+const [closingTime, setClosingTime] = useState('22:00')
+const [temporarilyClosed, setTemporarilyClosed] = useState(false)
+
 const MALAYSIAN_BANKS = [
   'Affin Bank',
   'Agrobank',
