@@ -540,7 +540,7 @@ export default function HomePage() {
           BayarLink <span className="text-xs text-amber-500 font-medium">BETA</span>
         </h3>
         <p className="mt-1 text-sm text-slate-500">
-          Mudah jual. Mudah bayar. Semua dalam satu link.
+          Mudah jual. Mudah bayar.
         </p>
       </div>
 
