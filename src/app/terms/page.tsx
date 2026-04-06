@@ -1,3 +1,5 @@
+import SimpleHeader from "../../components/SimpleHeader"
+
 export default function TermsPage() {
   return (
     <main className="max-w-4xl mx-auto px-4 py-16">
