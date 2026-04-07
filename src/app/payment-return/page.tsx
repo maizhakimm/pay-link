@@ -1,150 +1,128 @@
 'use client'
 
-type PaymentReturnPageProps = {
-  searchParams: {
-    status?: string
-    status_description?: string
-    order_number?: string
-    amount?: string
-    payer_name?: string
-    shop?: string
-  }
+import { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+type OrderItem = {
+  product_name: string
+  quantity: number
 }
 
-function getStatusDetails(status?: string) {
-  const numericStatus = Number(status)
-
-  if (numericStatus === 3) {
-    return {
-      title: 'Payment Successful',
-      message: 'Your payment has been received successfully.',
-      badge: 'Success',
-      badgeBg: '#dcfce7',
-      badgeColor: '#166534',
-    }
-  }
-
-  if (numericStatus === 2) {
-    return {
-      title: 'Payment Failed',
-      message: 'Your payment could not be completed. Please try again.',
-      badge: 'Failed',
-      badgeBg: '#fee2e2',
-      badgeColor: '#991b1b',
-    }
-  }
-
-  if (numericStatus === 4) {
-    return {
-      title: 'Payment Cancelled',
-      message: 'You cancelled this payment before completion.',
-      badge: 'Cancelled',
-      badgeBg: '#f3f4f6',
-      badgeColor: '#374151',
-    }
-  }
-
-  return {
-    title: 'Payment Pending',
-    message: 'Payment sedang diproses. Sila tunggu sebentar.',
-    badge: 'Pending',
-    badgeBg: '#fef3c7',
-    badgeColor: '#92400e',
-  }
+type OrderData = {
+  order_number: string
+  customer_name: string
+  customer_phone: string
+  amount: string
+  items: OrderItem[]
+  delivery_info?: any
+  seller_profile_id?: string
 }
 
-export default function PaymentReturnPage({
-  searchParams,
-}: PaymentReturnPageProps) {
-  const statusInfo = getStatusDetails(searchParams?.status)
+type Seller = {
+  whatsapp?: string
+}
 
-  const isSuccess = Number(searchParams?.status) === 3
-  const isFailed = Number(searchParams?.status) === 2
-  const isCancelled = Number(searchParams?.status) === 4
+export default function PaymentReturnPage({ searchParams }: any) {
+  const [order, setOrder] = useState<OrderData | null>(null)
+  const [sellerPhone, setSellerPhone] = useState<string>('')
 
-  const shopUrl = searchParams?.shop
-    ? `/s/${searchParams.shop}`
-    : '/'
+  const orderNumber = searchParams?.order_number
+
+  // 🔥 FETCH ORDER
+  useEffect(() => {
+    async function fetchOrder() {
+      if (!orderNumber) return
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('order_number', orderNumber)
+        .single()
+
+      if (!error && data) {
+        setOrder(data)
+
+        // 🔥 FETCH SELLER PHONE
+        if (data.seller_profile_id) {
+          const { data: seller } = await supabase
+            .from('seller_profiles')
+            .select('whatsapp')
+            .eq('id', data.seller_profile_id)
+            .single()
+
+          if (seller?.whatsapp) {
+            setSellerPhone(seller.whatsapp)
+          }
+        }
+      }
+    }
+
+    fetchOrder()
+  }, [orderNumber])
+
+  function handleNotifySeller() {
+    if (!order || !sellerPhone) return
+
+    const now = new Date()
+    const date = now.toLocaleDateString('en-GB')
+    const time = now.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+
+    const itemsText = order.items
+      ?.map((item) => `- ${item.product_name} x${item.quantity}`)
+      .join('\n')
+
+    const deliveryText = order.delivery_info
+      ? Object.values(order.delivery_info).filter(Boolean).join(', ')
+      : '-'
+
+    const message = `🎉 Order Baru Masuk!
+
+📦 Order No: ${order.order_number}  
+🕒 Tarikh: ${date}  
+⏰ Masa: ${time}  
+
+👤 Customer: ${order.customer_name}  
+📱 Phone: ${order.customer_phone}  
+
+🛒 Order:
+${itemsText}
+
+💰 Total: RM${order.amount}  
+
+📍 Delivery:
+${deliveryText}
+
+👉 Sila prepare order sekarang.`
+
+    const url = `https://wa.me/${sellerPhone}?text=${encodeURIComponent(message)}`
+
+    window.open(url, '_blank')
+  }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
-        background: '#f8fafc',
-      }}
-    >
-      <div
+    <main style={{ padding: 20 }}>
+      <h1>Payment Complete</h1>
+
+      <button
+        onClick={handleNotifySeller}
         style={{
-          maxWidth: 520,
-          width: '100%',
-          background: '#fff',
-          padding: 24,
-          borderRadius: 16,
-          border: '1px solid #e2e8f0',
-          textAlign: 'center',
+          marginTop: 20,
+          padding: 12,
+          background: '#25D366',
+          color: '#fff',
+          borderRadius: 10,
         }}
       >
-        {/* TITLE */}
-        <h1 style={{ fontSize: 24, fontWeight: 800 }}>
-          {isSuccess ? '🎉 Payment Successful' : statusInfo.title}
-        </h1>
-
-        {/* MESSAGE */}
-        <p style={{ marginTop: 10, color: '#64748b' }}>
-          {searchParams?.status_description || statusInfo.message}
-        </p>
-
-        {/* ORDER INFO */}
-        <div style={{ marginTop: 20, textAlign: 'left' }}>
-          <p><strong>Order:</strong> {searchParams?.order_number || '-'}</p>
-          <p><strong>Amount:</strong> {searchParams?.amount || '-'}</p>
-          <p><strong>Status:</strong> {searchParams?.status || '-'}</p>
-        </div>
-
-        {/* BUTTONS */}
-        <div
-          style={{
-            marginTop: 24,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 10,
-          }}
-        >
-          {/* ✅ FIXED BUTTON */}
-          <button
-            onClick={() => (window.location.href = shopUrl)}
-            style={{
-              padding: 12,
-              background: '#111',
-              color: '#fff',
-              borderRadius: 10,
-              width: '100%',
-            }}
-          >
-            Back to Shop
-          </button>
-
-          {(isFailed || isCancelled) && (
-            <button
-              onClick={() => {
-                window.location.href = shopUrl
-              }}
-              style={{
-                padding: 12,
-                border: '1px solid #ccc',
-                borderRadius: 10,
-                background: '#fff',
-              }}
-            >
-              Try Again
-            </button>
-          )}
-        </div>
-      </div>
+        Notify Seller (WhatsApp)
+      </button>
     </main>
   )
 }
