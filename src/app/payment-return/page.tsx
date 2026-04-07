@@ -151,6 +151,7 @@ export default function PaymentReturnPage({
   const [order, setOrder] = useState<OrderData | null>(null)
   const [sellerWhatsapp, setSellerWhatsapp] = useState('')
   const [loadingOrder, setLoadingOrder] = useState(true)
+  const [savedShopSlug, setSavedShopSlug] = useState('')
 
   const shopUrl = searchParams?.shop ? `/s/${searchParams.shop}` : '/'
 
