@@ -1,25 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-type PaymentReturnPageProps = {
-  searchParams: {
-    status?: string
-    status_description?: string
-    order_number?: string
-    amount?: string
-    payer_name?: string
-    shop?: string
-    payment_intent_id?: string
-    payment_intent?: string
-  }
-}
 
 type OrderItem = {
   product_name?: string
@@ -151,17 +139,17 @@ function sanitizePaymentIntent(value?: string | null, orderValue?: string | null
   return ''
 }
 
-export default function PaymentReturnClient({
-  searchParams,
-}: PaymentReturnPageProps) {
-  const status = searchParams?.status || ''
-  const statusDescription = searchParams?.status_description || ''
-  const rawOrderNumber = searchParams?.order_number || ''
-  const amountParam = searchParams?.amount || ''
-  const payerName = searchParams?.payer_name || ''
-  const shopParam = searchParams?.shop || ''
+export default function PaymentReturnClient() {
+  const params = useSearchParams()
+
+  const status = params.get('status') || ''
+  const statusDescription = params.get('status_description') || ''
+  const rawOrderNumber = params.get('order_number') || ''
+  const amountParam = params.get('amount') || ''
+  const payerName = params.get('payer_name') || ''
+  const shopParam = params.get('shop') || ''
   const paymentIntentIdParam =
-    searchParams?.payment_intent_id || searchParams?.payment_intent || ''
+    params.get('payment_intent_id') || params.get('payment_intent') || ''
 
   const statusInfo = getStatusDetails(status)
   const isSuccess = Number(status) === 3
@@ -238,7 +226,8 @@ export default function PaymentReturnClient({
         } else {
           setSellerWhatsapp('')
         }
-      } catch {
+      } catch (error) {
+        console.error('Payment return loadOrder error:', error)
         setOrder(null)
         setSellerWhatsapp('')
       } finally {
