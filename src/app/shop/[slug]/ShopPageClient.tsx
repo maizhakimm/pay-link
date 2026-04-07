@@ -211,25 +211,23 @@ export default function ShopPageClient({
     }))
   }
 
-  function decrease(productId: string) {
-    setCart((prev) => {
-      const current = prev[productId] || 0
+function decrease(productId: string) {
+  setCart((prev) => {
+    const current = prev[productId] || 0
 
-      if (current <= 1) {
-        const next = { ...prev }
-        delete next
-        ;(next as Record<string, number>)[productId]
-        delete next[productId]
-        return next
-      }
+    if (current <= 1) {
+      const next = { ...prev }
+      delete next[productId]
+      return next
+    }
 
-      return {
-        ...prev,
-        [productId]: current - 1,
-      }
-    })
-  }
-
+    return {
+      ...prev,
+      [productId]: current - 1,
+    }
+  })
+}
+  
   function openGallery(product: ProductRow, startIndex = 0) {
     const images = getProductImages(product).map((img) => getImageUrl(img))
     if (!images.length) return
