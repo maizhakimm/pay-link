@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
 
     const sellerId = body.sellerId as string
+    const shopSlug = body.shopSlug as string
     const name = body.name as string
     const email = body.email as string
     const phone = body.phone as string
@@ -110,72 +111,72 @@ export async function POST(req: NextRequest) {
     }
 
     // 🔥 CHECK SHOP AVAILABILITY (SERVER SIDE)
-const { data: seller, error: sellerError } = await supabase
-  .from('seller_profiles')
-  .select(`
-    accept_orders_anytime,
-    opening_time,
-    closing_time,
-    temporarily_closed,
-    closed_message
-  `)
-  .eq('id', sellerId)
-  .maybeSingle()
+    const { data: seller, error: sellerError } = await supabase
+      .from('seller_profiles')
+      .select(`
+        accept_orders_anytime,
+        opening_time,
+        closing_time,
+        temporarily_closed,
+        closed_message
+      `)
+      .eq('id', sellerId)
+      .maybeSingle()
 
-if (sellerError || !seller) {
-  return NextResponse.json(
-    { ok: false, error: 'Seller not found' },
-    { status: 404 }
-  )
-}
-
-// TEMPORARILY CLOSED
-if (seller.temporarily_closed) {
-  return NextResponse.json(
-    {
-      ok: false,
-      error:
-        seller.closed_message ||
-        'Kedai kini ditutup sementara. Sila cuba lagi nanti.',
-    },
-    { status: 400 }
-  )
-}
-
-// ACCEPT ANYTIME → skip check
-if (!seller.accept_orders_anytime) {
-  if (seller.opening_time && seller.closing_time) {
-    const now = new Date()
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
-
-    const [openH, openM] = seller.opening_time.split(':').map(Number)
-    const [closeH, closeM] = seller.closing_time.split(':').map(Number)
-
-    const open = openH * 60 + openM
-    const close = closeH * 60 + closeM
-
-    let isOpen = false
-
-    if (open < close) {
-      isOpen = currentMinutes >= open && currentMinutes <= close
-    } else {
-      // overnight case (contoh 10pm - 2am)
-      isOpen = currentMinutes >= open || currentMinutes <= close
+    if (sellerError || !seller) {
+      return NextResponse.json(
+        { ok: false, error: 'Seller not found' },
+        { status: 404 }
+      )
     }
 
-    if (!isOpen) {
+    // TEMPORARILY CLOSED
+    if (seller.temporarily_closed) {
       return NextResponse.json(
         {
           ok: false,
           error:
             seller.closed_message ||
-            `Kedai hanya menerima tempahan dari ${seller.opening_time} hingga ${seller.closing_time}`,
+            'Kedai kini ditutup sementara. Sila cuba lagi nanti.',
         },
         { status: 400 }
       )
     }
-  }
-}
+
+    // ACCEPT ANYTIME → skip check
+    if (!seller.accept_orders_anytime) {
+      if (seller.opening_time && seller.closing_time) {
+        const now = new Date()
+        const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+        const [openH, openM] = seller.opening_time.split(':').map(Number)
+        const [closeH, closeM] = seller.closing_time.split(':').map(Number)
+
+        const open = openH * 60 + openM
+        const close = closeH * 60 + closeM
+
+        let isOpen = false
+
+        if (open < close) {
+          isOpen = currentMinutes >= open && currentMinutes <= close
+        } else {
+          // overnight case (contoh 10pm - 2am)
+          isOpen = currentMinutes >= open || currentMinutes <= close
+        }
+
+        if (!isOpen) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error:
+                seller.closed_message ||
+                `Kedai hanya menerima tempahan dari ${seller.opening_time} hingga ${seller.closing_time}`,
+            },
+            { status: 400 }
+          )
+        }
+      }
+    }
 
     if (!items.length) {
       return NextResponse.json(
@@ -409,6 +410,14 @@ if (!seller.accept_orders_anytime) {
       payer_email: email || 'customer@example.com',
     })
 
+    const safeShopSlug = (shopSlug || '').trim()
+
+    const returnUrl = safeShopSlug
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/payment-return?shop=${encodeURIComponent(
+          safeShopSlug
+        )}`
+      : `${process.env.NEXT_PUBLIC_APP_URL}/payment-return`
+
     const payload = {
       payment_channel: paymentChannel,
       portal_key: process.env.BAYARCASH_PORTAL_KEY,
@@ -417,7 +426,7 @@ if (!seller.accept_orders_anytime) {
       payer_name: name || 'Customer',
       payer_email: email || 'customer@example.com',
       payer_telephone_number: phone || '',
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment-return?shop=${encodeURIComponent(shopSlug)}`,
+      return_url: returnUrl,
       callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/bayarcash/webhook`,
       checksum,
     }
