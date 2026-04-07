@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -140,6 +138,22 @@ function formatAmount(order: OrderData | null, fallback?: string) {
   return '-'
 }
 
+function sanitizeOrderNumber(value?: string) {
+  if (!value) return ''
+  return value.split('?')[0].trim()
+}
+
+function sanitizePaymentIntent(value?: string, orderValue?: string) {
+  if (value) return value.trim()
+
+  if (orderValue && orderValue.includes('payment_intent_id=')) {
+    const parts = orderValue.split('payment_intent_id=')
+    return parts[1]?.trim() || ''
+  }
+
+  return ''
+}
+
 export default function PaymentReturnPage({
   searchParams,
 }: PaymentReturnPageProps) {
@@ -153,8 +167,21 @@ export default function PaymentReturnPage({
   const [loadingOrder, setLoadingOrder] = useState(true)
   const [savedShopSlug, setSavedShopSlug] = useState('')
 
+  const cleanOrderNumber = sanitizeOrderNumber(searchParams?.order_number)
+  const cleanPaymentIntentId = sanitizePaymentIntent(
+    searchParams?.payment_intent_id || searchParams?.payment_intent,
+    searchParams?.order_number
+  )
+
   const finalShopSlug = searchParams?.shop || savedShopSlug
   const shopUrl = finalShopSlug ? `/s/${finalShopSlug}` : '/'
+
+  useEffect(() => {
+    const storedShopSlug = sessionStorage.getItem('bayarlink_shop_slug') || ''
+    if (storedShopSlug) {
+      setSavedShopSlug(storedShopSlug)
+    }
+  }, [])
 
   useEffect(() => {
     async function loadOrder() {
@@ -163,11 +190,11 @@ export default function PaymentReturnPage({
 
         let foundOrder: OrderData | null = null
 
-        if (searchParams?.order_number) {
+        if (cleanOrderNumber) {
           const { data } = await supabase
             .from('orders')
             .select('*')
-            .eq('order_number', searchParams.order_number)
+            .eq('order_number', cleanOrderNumber)
             .maybeSingle()
 
           if (data) {
@@ -175,17 +202,11 @@ export default function PaymentReturnPage({
           }
         }
 
-        if (
-          !foundOrder &&
-          (searchParams?.payment_intent_id || searchParams?.payment_intent)
-        ) {
-          const paymentIntentId =
-            searchParams.payment_intent_id || searchParams.payment_intent
-
+        if (!foundOrder && cleanPaymentIntentId) {
           const { data } = await supabase
             .from('orders')
             .select('*')
-            .eq('gateway_payment_intent_id', paymentIntentId)
+            .eq('gateway_payment_intent_id', cleanPaymentIntentId)
             .maybeSingle()
 
           if (data) {
@@ -212,11 +233,7 @@ export default function PaymentReturnPage({
     }
 
     loadOrder()
-  }, [
-    searchParams?.order_number,
-    searchParams?.payment_intent_id,
-    searchParams?.payment_intent,
-  ])
+  }, [cleanOrderNumber, cleanPaymentIntentId])
 
   const canNotifySeller = useMemo(() => {
     return Boolean(sellerWhatsapp)
@@ -242,11 +259,7 @@ export default function PaymentReturnPage({
       searchParams?.payer_name ||
       'Customer'
 
-    const customerPhone =
-      order?.customer_phone ||
-      order?.buyer_phone ||
-      '-'
-
+    const customerPhone = order?.customer_phone || order?.buyer_phone || '-'
     const total = formatAmount(order, searchParams?.amount)
 
     const itemsText =
@@ -260,7 +273,7 @@ export default function PaymentReturnPage({
 
     const message = `🎉 Order Baru Masuk!
 
-📦 Order No: ${order?.order_number || searchParams?.order_number || '-'}
+📦 Order No: ${order?.order_number || cleanOrderNumber || '-'}
 🕒 Tarikh: ${date}
 ⏰ Masa: ${time}
 
@@ -376,7 +389,7 @@ ${deliveryText}
             <div>
               <div style={labelStyle}>Order Number</div>
               <div style={valueStyle}>
-                {order?.order_number || searchParams?.order_number || '-'}
+                {order?.order_number || cleanOrderNumber || '-'}
               </div>
             </div>
 
@@ -420,9 +433,8 @@ ${deliveryText}
             <span>Tap button below to notify seller via WhatsApp.</span>
           ) : (
             <span>
-              Order data belum lengkap untuk notify seller. Pastikan order_number atau
-              payment_intent_id dipulangkan dalam return URL dan seller ada nombor
-              WhatsApp.
+              Order data belum lengkap untuk notify seller. Pastikan seller ada nombor
+              WhatsApp dan order boleh dibaca dari return URL.
             </span>
           )}
         </div>
