@@ -133,6 +133,7 @@ export default function ShopPayButton({
       }
 
       if (data.payment_url) {
+        sessionStorage.setItem('bayarlink_shop_slug', shopSlug)
         window.location.href = data.payment_url
         return
       }
