@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ShopPayButton from './ShopPayButton'
 
 type SellerProfile = {
@@ -35,6 +35,13 @@ type ProductRow = {
   sold_out?: boolean
 }
 
+type GalleryState = {
+  isOpen: boolean
+  images: string[]
+  productName: string
+  currentIndex: number
+}
+
 function getImageUrl(path?: string | null) {
   if (!path) return ''
 
@@ -45,6 +52,16 @@ function getImageUrl(path?: string | null) {
 
   const cleanPath = path.replace(/^\/+/, '')
   return `${baseUrl}/storage/v1/object/public/${cleanPath}`
+}
+
+function getProductImages(product: ProductRow) {
+  return [
+    product.image_1,
+    product.image_2,
+    product.image_3,
+    product.image_4,
+    product.image_5,
+  ].filter(Boolean) as string[]
 }
 
 function getFirstImage(product: ProductRow) {
@@ -129,7 +146,9 @@ function getShopAvailability(seller: SellerProfile) {
     isOpen = false
   }
 
-  const timeRange = `${formatTime(seller.opening_time)} - ${formatTime(seller.closing_time)}`
+  const timeRange = `${formatTime(seller.opening_time)} - ${formatTime(
+    seller.closing_time
+  )}`
 
   return {
     isOpen,
@@ -151,9 +170,36 @@ export default function ShopPageClient({
   shopSlug: string
 }) {
   const [cart, setCart] = useState<Record<string, number>>({})
+  const [gallery, setGallery] = useState<GalleryState>({
+    isOpen: false,
+    images: [],
+    productName: '',
+    currentIndex: 0,
+  })
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!gallery.isOpen) return
+
+      if (event.key === 'Escape') {
+        closeGallery()
+      }
+
+      if (event.key === 'ArrowLeft') {
+        showPrevImage()
+      }
+
+      if (event.key === 'ArrowRight') {
+        showNextImage()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [gallery.isOpen, gallery.currentIndex, gallery.images.length])
 
   function increase(product: ProductRow) {
     if (!isShopOpen) return
@@ -171,6 +217,8 @@ export default function ShopPageClient({
 
       if (current <= 1) {
         const next = { ...prev }
+        delete next
+        ;(next as Record<string, number>)[productId]
         delete next[productId]
         return next
       }
@@ -178,6 +226,53 @@ export default function ShopPageClient({
       return {
         ...prev,
         [productId]: current - 1,
+      }
+    })
+  }
+
+  function openGallery(product: ProductRow, startIndex = 0) {
+    const images = getProductImages(product).map((img) => getImageUrl(img))
+    if (!images.length) return
+
+    setGallery({
+      isOpen: true,
+      images,
+      productName: product.name,
+      currentIndex: startIndex,
+    })
+  }
+
+  function closeGallery() {
+    setGallery((prev) => ({
+      ...prev,
+      isOpen: false,
+    }))
+  }
+
+  function showPrevImage() {
+    setGallery((prev) => {
+      if (!prev.images.length) return prev
+
+      return {
+        ...prev,
+        currentIndex:
+          prev.currentIndex === 0
+            ? prev.images.length - 1
+            : prev.currentIndex - 1,
+      }
+    })
+  }
+
+  function showNextImage() {
+    setGallery((prev) => {
+      if (!prev.images.length) return prev
+
+      return {
+        ...prev,
+        currentIndex:
+          prev.currentIndex === prev.images.length - 1
+            ? 0
+            : prev.currentIndex + 1,
       }
     })
   }
@@ -204,7 +299,11 @@ export default function ShopPageClient({
     <main style={main}>
       <div style={container}>
         <div style={logoWrap}>
-          <img src="/BayarLink-Logo-01.svg" alt="bayarlink" style={logo} />
+          <img
+            src="/BayarLink-Logo-Shop-Page.svg"
+            alt="BayarLink"
+            style={logo}
+          />
         </div>
 
         <div style={heroCard}>
@@ -259,15 +358,6 @@ export default function ShopPageClient({
           </div>
         </div>
 
-        <div style={sectionTitleWrap}>
-          <h2 style={sectionTitle}>Menu / Produk Aktif</h2>
-          <p style={sectionSub}>
-            {isShopOpen
-              ? 'Pilih item dan kuantiti sebelum checkout'
-              : 'Kedai sedang tutup. Anda masih boleh lihat produk yang tersedia.'}
-          </p>
-        </div>
-
         {products.length === 0 ? (
           <div style={emptyCard}>
             <p style={{ margin: 0, color: '#64748b' }}>
@@ -280,23 +370,39 @@ export default function ShopPageClient({
               const image = getFirstImage(product)
               const qty = cart[product.id] || 0
               const disableAddButton = !isShopOpen || Boolean(product.sold_out)
+              const allImages = getProductImages(product)
 
               return (
                 <div key={product.id} style={productCard}>
                   <div style={productCardLeft}>
-                    <div style={productImageWrap}>
-                      {image ? (
-                        <img
-                          src={getImageUrl(image)}
-                          alt={product.name}
-                          style={productImage}
-                        />
-                      ) : (
-                        <div style={productImagePlaceholder}>No image</div>
-                      )}
+                    <button
+                      type="button"
+                      onClick={() => openGallery(product, 0)}
+                      style={{
+                        ...productImageButton,
+                        cursor: image ? 'pointer' : 'default',
+                      }}
+                      disabled={!image}
+                      aria-label={`View images for ${product.name}`}
+                    >
+                      <div style={productImageWrap}>
+                        {image ? (
+                          <img
+                            src={getImageUrl(image)}
+                            alt={product.name}
+                            style={productImage}
+                          />
+                        ) : (
+                          <div style={productImagePlaceholder}>No image</div>
+                        )}
 
-                      {product.sold_out ? <div style={soldOutBadge}>Sold Out</div> : null}
-                    </div>
+                        {product.sold_out ? <div style={soldOutBadge}>Sold Out</div> : null}
+
+                        {allImages.length > 1 ? (
+                          <div style={multiImageBadge}>{allImages.length} photos</div>
+                        ) : null}
+                      </div>
+                    </button>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={productName}>{product.name}</div>
@@ -309,10 +415,6 @@ export default function ShopPageClient({
                       <div style={productDesc}>
                         {product.description || 'Tiada deskripsi.'}
                       </div>
-
-                      <a href={`/s/${shopSlug}/${product.slug}`} style={productPageLink}>
-                        View product page
-                      </a>
                     </div>
                   </div>
 
@@ -396,6 +498,82 @@ export default function ShopPageClient({
           )}
         </div>
       </div>
+
+      {gallery.isOpen ? (
+        <div style={galleryOverlay} onClick={closeGallery}>
+          <div
+            style={galleryDialog}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closeGallery}
+              style={galleryCloseButton}
+              aria-label="Close image gallery"
+            >
+              ✕
+            </button>
+
+            <div style={galleryTopBar}>
+              <div style={galleryTitle}>{gallery.productName}</div>
+              <div style={galleryCounter}>
+                {gallery.currentIndex + 1} / {gallery.images.length}
+              </div>
+            </div>
+
+            <div style={galleryImageArea}>
+              {gallery.images.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={showPrevImage}
+                  style={{ ...galleryNavButton, ...galleryNavLeft }}
+                  aria-label="Previous image"
+                >
+                  ‹
+                </button>
+              ) : null}
+
+              <img
+                src={gallery.images[gallery.currentIndex]}
+                alt={gallery.productName}
+                style={galleryImage}
+              />
+
+              {gallery.images.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={showNextImage}
+                  style={{ ...galleryNavButton, ...galleryNavRight }}
+                  aria-label="Next image"
+                >
+                  ›
+                </button>
+              ) : null}
+            </div>
+
+            {gallery.images.length > 1 ? (
+              <div style={galleryDots}>
+                {gallery.images.map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() =>
+                      setGallery((prev) => ({ ...prev, currentIndex: index }))
+                    }
+                    style={{
+                      ...galleryDot,
+                      opacity: gallery.currentIndex === index ? 1 : 0.35,
+                      transform:
+                        gallery.currentIndex === index ? 'scale(1.15)' : 'scale(1)',
+                    }}
+                    aria-label={`Go to image ${index + 1}`}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }
@@ -410,6 +588,18 @@ const soldOutBadge = {
   fontWeight: 800,
   padding: '4px 8px',
   borderRadius: 8,
+} as const
+
+const multiImageBadge = {
+  position: 'absolute' as const,
+  left: 6,
+  bottom: 6,
+  background: 'rgba(15,23,42,0.8)',
+  color: '#fff',
+  fontSize: 10,
+  fontWeight: 800,
+  padding: '4px 7px',
+  borderRadius: 999,
 } as const
 
 const stockText = {
@@ -431,11 +621,11 @@ const container = {
 
 const logoWrap = {
   textAlign: 'center' as const,
-  marginBottom: 16,
+  marginBottom: 12,
 } as const
 
 const logo = {
-  height: 44,
+  height: 34,
   margin: '0 auto',
   display: 'block',
 } as const
@@ -525,23 +715,6 @@ const noticeBox = {
   lineHeight: 1.6,
 } as const
 
-const sectionTitleWrap = {
-  marginBottom: 12,
-} as const
-
-const sectionTitle = {
-  margin: '0 0 4px 0',
-  fontSize: 22,
-  fontWeight: 800,
-  color: '#0f172a',
-} as const
-
-const sectionSub = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: 14,
-} as const
-
 const emptyCard = {
   background: '#fff',
   borderRadius: 20,
@@ -577,13 +750,12 @@ const productCardLeft = {
   minWidth: 0,
 } as const
 
-const productPageLink = {
-  display: 'inline-block',
-  marginTop: 8,
-  fontSize: 13,
-  fontWeight: 700,
-  color: '#1d4ed8',
-  textDecoration: 'none',
+const productImageButton = {
+  padding: 0,
+  margin: 0,
+  border: 'none',
+  background: 'transparent',
+  flexShrink: 0,
 } as const
 
 const productImageWrap = {
@@ -749,4 +921,121 @@ const summaryRow = {
   background: '#f8fafc',
   border: '1px solid #e2e8f0',
   color: '#0f172a',
+} as const
+
+const galleryOverlay = {
+  position: 'fixed' as const,
+  inset: 0,
+  zIndex: 999,
+  background: 'rgba(2, 6, 23, 0.82)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 16,
+} as const
+
+const galleryDialog = {
+  width: '100%',
+  maxWidth: 920,
+  position: 'relative' as const,
+} as const
+
+const galleryCloseButton = {
+  position: 'absolute' as const,
+  top: -8,
+  right: -4,
+  width: 42,
+  height: 42,
+  borderRadius: '999px',
+  border: '1px solid rgba(255,255,255,0.18)',
+  background: 'rgba(15,23,42,0.82)',
+  color: '#fff',
+  fontSize: 18,
+  fontWeight: 700,
+  cursor: 'pointer',
+  zIndex: 2,
+} as const
+
+const galleryTopBar = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  color: '#fff',
+  marginBottom: 12,
+  paddingRight: 44,
+} as const
+
+const galleryTitle = {
+  fontSize: 16,
+  fontWeight: 800,
+  lineHeight: 1.4,
+} as const
+
+const galleryCounter = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: 'rgba(255,255,255,0.78)',
+  flexShrink: 0,
+} as const
+
+const galleryImageArea = {
+  position: 'relative' as const,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 320,
+} as const
+
+const galleryImage = {
+  width: '100%',
+  maxHeight: '78vh',
+  objectFit: 'contain' as const,
+  borderRadius: 18,
+  background: '#fff',
+} as const
+
+const galleryNavButton = {
+  position: 'absolute' as const,
+  top: '50%',
+  transform: 'translateY(-50%)',
+  width: 42,
+  height: 42,
+  borderRadius: '999px',
+  border: '1px solid rgba(255,255,255,0.2)',
+  background: 'rgba(15,23,42,0.72)',
+  color: '#fff',
+  fontSize: 28,
+  lineHeight: 1,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+} as const
+
+const galleryNavLeft = {
+  left: 12,
+} as const
+
+const galleryNavRight = {
+  right: 12,
+} as const
+
+const galleryDots = {
+  marginTop: 14,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  flexWrap: 'wrap' as const,
+} as const
+
+const galleryDot = {
+  width: 10,
+  height: 10,
+  borderRadius: '999px',
+  border: 'none',
+  background: '#fff',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
 } as const
