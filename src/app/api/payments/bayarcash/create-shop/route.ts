@@ -412,11 +412,13 @@ export async function POST(req: NextRequest) {
 
     const safeShopSlug = (shopSlug || '').trim()
 
-    const returnUrl = safeShopSlug
+    const baseReturnUrl = safeShopSlug
       ? `${process.env.NEXT_PUBLIC_APP_URL}/payment-return?shop=${encodeURIComponent(
           safeShopSlug
+        )}&order_number=${encodeURIComponent(orderNumber)}`
+      : `${process.env.NEXT_PUBLIC_APP_URL}/payment-return?order_number=${encodeURIComponent(
+          orderNumber
         )}`
-      : `${process.env.NEXT_PUBLIC_APP_URL}/payment-return`
 
     const payload = {
       payment_channel: paymentChannel,
@@ -426,7 +428,7 @@ export async function POST(req: NextRequest) {
       payer_name: name || 'Customer',
       payer_email: email || 'customer@example.com',
       payer_telephone_number: phone || '',
-      return_url: returnUrl,
+      return_url: baseReturnUrl,
       callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/bayarcash/webhook`,
       checksum,
     }
