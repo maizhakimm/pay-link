@@ -8,7 +8,7 @@ type PaymentReturnPageProps = {
     amount?: string
     payer_name?: string
     shop?: string
-    }
+  }
 }
 
 function getStatusDetails(status?: string) {
@@ -57,37 +57,72 @@ export default function PaymentReturnPage({
   searchParams,
 }: PaymentReturnPageProps) {
   const statusInfo = getStatusDetails(searchParams?.status)
+
   const isSuccess = Number(searchParams?.status) === 3
   const isFailed = Number(searchParams?.status) === 2
   const isCancelled = Number(searchParams?.status) === 4
 
-  return (
-    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ maxWidth: 600, width: '100%', background: '#fff', padding: 24, borderRadius: 16 }}>
+  const shopUrl = searchParams?.shop
+    ? `/s/${searchParams.shop}`
+    : '/'
 
+  return (
+    <main
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+        background: '#f8fafc',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 520,
+          width: '100%',
+          background: '#fff',
+          padding: 24,
+          borderRadius: 16,
+          border: '1px solid #e2e8f0',
+          textAlign: 'center',
+        }}
+      >
+        {/* TITLE */}
         <h1 style={{ fontSize: 24, fontWeight: 800 }}>
           {isSuccess ? '🎉 Payment Successful' : statusInfo.title}
         </h1>
 
-        <p style={{ marginTop: 10 }}>
+        {/* MESSAGE */}
+        <p style={{ marginTop: 10, color: '#64748b' }}>
           {searchParams?.status_description || statusInfo.message}
         </p>
 
-        <div style={{ marginTop: 20 }}>
+        {/* ORDER INFO */}
+        <div style={{ marginTop: 20, textAlign: 'left' }}>
           <p><strong>Order:</strong> {searchParams?.order_number || '-'}</p>
           <p><strong>Amount:</strong> {searchParams?.amount || '-'}</p>
           <p><strong>Status:</strong> {searchParams?.status || '-'}</p>
         </div>
 
-        <div style={{ marginTop: 20 }}>
+        {/* BUTTONS */}
+        <div
+          style={{
+            marginTop: 24,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+          }}
+        >
+          {/* ✅ FIXED BUTTON */}
           <button
-            onClick={() => (window.location.href = '/')}
+            onClick={() => (window.location.href = shopUrl)}
             style={{
-              width: '100%',
               padding: 12,
               background: '#111',
               color: '#fff',
               borderRadius: 10,
+              width: '100%',
             }}
           >
             Back to Shop
@@ -96,14 +131,13 @@ export default function PaymentReturnPage({
           {(isFailed || isCancelled) && (
             <button
               onClick={() => {
-              window.location.href = searchParams?.shop ? `/s/${searchParams.shop}` : '/'
+                window.location.href = shopUrl
               }}
               style={{
-                width: '100%',
                 padding: 12,
-                marginTop: 10,
                 border: '1px solid #ccc',
                 borderRadius: 10,
+                background: '#fff',
               }}
             >
               Try Again
