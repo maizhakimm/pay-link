@@ -333,13 +333,15 @@ export default function OrdersPage() {
 
     const { error } = await supabase
       .from('orders')
-      .update({ status: newStatus })
+      .update({ fulfillment_status: newStatus })
       .eq('id', orderId)
 
     if (!error) {
       setOrders((prev) =>
         prev.map((order) =>
-          order.id === orderId ? { ...order, status: newStatus } : order
+        order.id === orderId
+        ? { ...order, fulfillment_status: newStatus }
+        : order
         )
       )
     }
@@ -375,7 +377,9 @@ export default function OrdersPage() {
 
       const matchesSearch = keyword ? haystack.includes(keyword) : true
 
-      const sellerStatus = normalizeSellerStatus(order.status)
+      const sellerStatus = normalizeSellerStatus(
+        (order as any).fulfillment_status || order.status
+      )
       const paymentStatus = normalizePaymentStatus(order.payment_status)
       const matchesStatus =
         statusFilter === 'all'
@@ -390,7 +394,9 @@ export default function OrdersPage() {
     const totalOrders = orders.length
 
     const completedOrders = orders.filter(
-      (order) => normalizeSellerStatus(order.status) === 'completed'
+      (order) => normalizeSellerStatus(
+  (order as any).fulfillment_status || order.status
+) === 'completed'
     ).length
 
     const paidOrders = orders.filter((order) =>
