@@ -152,12 +152,6 @@ export default function PaymentReturnPage({
 
   const shopUrl = searchParams?.shop ? `/s/${searchParams.shop}` : '/'
 
-  const orderLookupKey =
-    searchParams?.order_number ||
-    searchParams?.payment_intent_id ||
-    searchParams?.payment_intent ||
-    ''
-
   useEffect(() => {
     async function loadOrder() {
       try {
@@ -221,15 +215,15 @@ export default function PaymentReturnPage({
   ])
 
   const canNotifySeller = useMemo(() => {
-    return Boolean(order && sellerWhatsapp)
-  }, [order, sellerWhatsapp])
+    return Boolean(sellerWhatsapp)
+  }, [sellerWhatsapp])
 
   function handleBackToShop() {
     window.location.href = shopUrl
   }
 
   function handleNotifySeller() {
-    if (!order || !sellerWhatsapp) return
+    if (!sellerWhatsapp) return
 
     const now = new Date()
     const date = now.toLocaleDateString('en-GB')
@@ -239,21 +233,30 @@ export default function PaymentReturnPage({
     })
 
     const customerName =
-      order.customer_name || order.buyer_name || searchParams?.payer_name || 'Customer'
-    const customerPhone = order.customer_phone || order.buyer_phone || '-'
+      order?.customer_name ||
+      order?.buyer_name ||
+      searchParams?.payer_name ||
+      'Customer'
+
+    const customerPhone =
+      order?.customer_phone ||
+      order?.buyer_phone ||
+      '-'
+
     const total = formatAmount(order, searchParams?.amount)
+
     const itemsText =
-      order.items && order.items.length
+      order?.items && order.items.length
         ? order.items
             .map((item) => `- ${item.product_name || 'Item'} x${item.quantity || 1}`)
             .join('\n')
         : '- Order details available in dashboard'
 
-    const deliveryText = buildDeliveryText(order.delivery_info)
+    const deliveryText = buildDeliveryText(order?.delivery_info)
 
     const message = `🎉 Order Baru Masuk!
 
-📦 Order No: ${order.order_number || searchParams?.order_number || '-'}
+📦 Order No: ${order?.order_number || searchParams?.order_number || '-'}
 🕒 Tarikh: ${date}
 ⏰ Masa: ${time}
 
@@ -409,8 +412,8 @@ ${deliveryText}
         >
           {loadingOrder ? (
             <span>Loading order data...</span>
-          ) : canNotifySeller ? (
-            <span>Seller notification is ready to send via WhatsApp.</span>
+          ) : sellerWhatsapp ? (
+            <span>Tap button below to notify seller via WhatsApp.</span>
           ) : (
             <span>
               Order data belum lengkap untuk notify seller. Pastikan order_number atau
@@ -445,17 +448,17 @@ ${deliveryText}
 
           <button
             onClick={handleNotifySeller}
-            disabled={!canNotifySeller}
+            disabled={!sellerWhatsapp}
             style={{
               width: '100%',
               padding: '14px',
               borderRadius: '12px',
-              background: canNotifySeller ? '#25D366' : '#bbf7d0',
+              background: sellerWhatsapp ? '#25D366' : '#bbf7d0',
               color: '#fff',
               fontWeight: 700,
               border: 'none',
-              cursor: canNotifySeller ? 'pointer' : 'not-allowed',
-              opacity: canNotifySeller ? 1 : 0.75,
+              cursor: sellerWhatsapp ? 'pointer' : 'not-allowed',
+              opacity: sellerWhatsapp ? 1 : 0.75,
             }}
           >
             Notify Seller (WhatsApp)
