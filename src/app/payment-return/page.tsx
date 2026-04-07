@@ -153,7 +153,8 @@ export default function PaymentReturnPage({
   const [loadingOrder, setLoadingOrder] = useState(true)
   const [savedShopSlug, setSavedShopSlug] = useState('')
 
-  const shopUrl = searchParams?.shop ? `/s/${searchParams.shop}` : '/'
+  const finalShopSlug = searchParams?.shop || savedShopSlug
+  const shopUrl = finalShopSlug ? `/s/${finalShopSlug}` : '/'
 
   useEffect(() => {
     async function loadOrder() {
