@@ -1,25 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-type PaymentReturnPageProps = {
-  searchParams: {
-    status?: string
-    status_description?: string
-    order_number?: string
-    amount?: string
-    payer_name?: string
-    shop?: string
-    payment_intent_id?: string
-    payment_intent?: string
-  }
-}
 
 type OrderItem = {
   product_name?: string
@@ -91,25 +79,21 @@ function getStatusDetails(status?: string) {
 function normalizeWhatsappNumber(value?: string | null) {
   if (!value) return ''
   let cleaned = value.replace(/[^\d]/g, '')
-  if (cleaned.startsWith('0')) {
-    cleaned = `6${cleaned}`
-  }
-  if (!cleaned.startsWith('60') && cleaned.length >= 9) {
-    cleaned = `60${cleaned}`
-  }
+  if (cleaned.startsWith('0')) cleaned = `6${cleaned}`
+  if (!cleaned.startsWith('60') && cleaned.length >= 9) cleaned = `60${cleaned}`
   return cleaned
 }
 
 function buildDeliveryText(deliveryInfo?: Record<string, unknown> | null) {
-  if (!deliveryInfo) return '-'
+  if (!deliveryInfo || typeof deliveryInfo !== 'object') return '-'
 
   const parts = [
-    deliveryInfo.address1,
-    deliveryInfo.address2,
-    deliveryInfo.postcode,
-    deliveryInfo.city,
-    deliveryInfo.district,
-    deliveryInfo.state,
+    deliveryInfo['address1'],
+    deliveryInfo['address2'],
+    deliveryInfo['postcode'],
+    deliveryInfo['city'],
+    deliveryInfo['district'],
+    deliveryInfo['state'],
   ]
     .filter(Boolean)
     .map((value) => String(value).trim())
@@ -120,7 +104,8 @@ function buildDeliveryText(deliveryInfo?: Record<string, unknown> | null) {
 
 function formatAmount(order: OrderData | null, fallback?: string) {
   if (order?.total_amount != null) {
-    return Number(order.total_amount).toFixed(2)
+    const value = Number(order.total_amount)
+    return Number.isNaN(value) ? '-' : value.toFixed(2)
   }
 
   if (order?.amount != null && order.amount !== '') {
@@ -138,12 +123,12 @@ function formatAmount(order: OrderData | null, fallback?: string) {
   return '-'
 }
 
-function sanitizeOrderNumber(value?: string) {
+function sanitizeOrderNumber(value?: string | null) {
   if (!value) return ''
   return value.split('?')[0].trim()
 }
 
-function sanitizePaymentIntent(value?: string, orderValue?: string) {
+function sanitizePaymentIntent(value?: string | null, orderValue?: string | null) {
   if (value) return value.trim()
 
   if (orderValue && orderValue.includes('payment_intent_id=')) {
@@ -154,32 +139,46 @@ function sanitizePaymentIntent(value?: string, orderValue?: string) {
   return ''
 }
 
-export default function PaymentReturnPage({
-  searchParams,
-}: PaymentReturnPageProps) {
-  const statusInfo = getStatusDetails(searchParams?.status)
-  const isSuccess = Number(searchParams?.status) === 3
-  const isFailed = Number(searchParams?.status) === 2
-  const isCancelled = Number(searchParams?.status) === 4
+export default function PaymentReturnPage() {
+  const params = useSearchParams()
+
+  const status = params.get('status') || ''
+  const statusDescription = params.get('status_description') || ''
+  const rawOrderNumber = params.get('order_number') || ''
+  const amountParam = params.get('amount') || ''
+  const payerName = params.get('payer_name') || ''
+  const shopParam = params.get('shop') || ''
+  const paymentIntentIdParam =
+    params.get('payment_intent_id') || params.get('payment_intent') || ''
+
+  const statusInfo = getStatusDetails(status)
+  const isSuccess = Number(status) === 3
+  const isFailed = Number(status) === 2
+  const isCancelled = Number(status) === 4
 
   const [order, setOrder] = useState<OrderData | null>(null)
   const [sellerWhatsapp, setSellerWhatsapp] = useState('')
   const [loadingOrder, setLoadingOrder] = useState(true)
   const [savedShopSlug, setSavedShopSlug] = useState('')
 
-  const cleanOrderNumber = sanitizeOrderNumber(searchParams?.order_number)
+  const cleanOrderNumber = sanitizeOrderNumber(rawOrderNumber)
   const cleanPaymentIntentId = sanitizePaymentIntent(
-    searchParams?.payment_intent_id || searchParams?.payment_intent,
-    searchParams?.order_number
+    paymentIntentIdParam,
+    rawOrderNumber
   )
 
-  const finalShopSlug = searchParams?.shop || savedShopSlug
+  const finalShopSlug = shopParam || savedShopSlug
   const shopUrl = finalShopSlug ? `/s/${finalShopSlug}` : '/'
 
   useEffect(() => {
-    const storedShopSlug = sessionStorage.getItem('bayarlink_shop_slug') || ''
-    if (storedShopSlug) {
-      setSavedShopSlug(storedShopSlug)
+    try {
+      const storedShopSlug =
+        window.sessionStorage.getItem('bayarlink_shop_slug') || ''
+      if (storedShopSlug) {
+        setSavedShopSlug(storedShopSlug)
+      }
+    } catch {
+      setSavedShopSlug('')
     }
   }, [])
 
@@ -197,9 +196,7 @@ export default function PaymentReturnPage({
             .eq('order_number', cleanOrderNumber)
             .maybeSingle()
 
-          if (data) {
-            foundOrder = data as OrderData
-          }
+          if (data) foundOrder = data as OrderData
         }
 
         if (!foundOrder && cleanPaymentIntentId) {
@@ -209,9 +206,7 @@ export default function PaymentReturnPage({
             .eq('gateway_payment_intent_id', cleanPaymentIntentId)
             .maybeSingle()
 
-          if (data) {
-            foundOrder = data as OrderData
-          }
+          if (data) foundOrder = data as OrderData
         }
 
         setOrder(foundOrder)
@@ -225,8 +220,15 @@ export default function PaymentReturnPage({
 
           if (seller?.whatsapp) {
             setSellerWhatsapp(normalizeWhatsappNumber(seller.whatsapp))
+          } else {
+            setSellerWhatsapp('')
           }
+        } else {
+          setSellerWhatsapp('')
         }
+      } catch {
+        setOrder(null)
+        setSellerWhatsapp('')
       } finally {
         setLoadingOrder(false)
       }
@@ -254,13 +256,10 @@ export default function PaymentReturnPage({
     })
 
     const customerName =
-      order?.customer_name ||
-      order?.buyer_name ||
-      searchParams?.payer_name ||
-      'Customer'
+      order?.customer_name || order?.buyer_name || payerName || 'Customer'
 
     const customerPhone = order?.customer_phone || order?.buyer_phone || '-'
-    const total = formatAmount(order, searchParams?.amount)
+    const total = formatAmount(order, amountParam)
 
     const itemsText =
       order?.items && order.items.length
@@ -362,7 +361,7 @@ ${deliveryText}
               lineHeight: 1.7,
             }}
           >
-            {searchParams?.status_description || statusInfo.message}
+            {statusDescription || statusInfo.message}
           </p>
         </div>
 
@@ -395,22 +394,19 @@ ${deliveryText}
 
             <div>
               <div style={labelStyle}>Amount</div>
-              <div style={valueStyle}>MYR {formatAmount(order, searchParams?.amount)}</div>
+              <div style={valueStyle}>MYR {formatAmount(order, amountParam)}</div>
             </div>
 
             <div>
               <div style={labelStyle}>Customer</div>
               <div style={valueStyle}>
-                {order?.customer_name ||
-                  order?.buyer_name ||
-                  searchParams?.payer_name ||
-                  '-'}
+                {order?.customer_name || order?.buyer_name || payerName || '-'}
               </div>
             </div>
 
             <div>
               <div style={labelStyle}>Payment Status Code</div>
-              <div style={valueStyle}>{searchParams?.status || '-'}</div>
+              <div style={valueStyle}>{status || '-'}</div>
             </div>
           </div>
         </div>
