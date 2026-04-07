@@ -10,6 +10,7 @@ type OrderRow = {
   id: string
   status: string | null
   payment_status: string | null
+  fulfillment_status?: string | null
   gateway_transaction_id: string | null
   gateway_fee: number | null
 }
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     const transactionId = (payload.transaction_id as string | undefined) || null
     const statusNumber = Number(payload.status || 0)
     const statusDescription = payload.status_description || null
-    const newStatus = mapBayarcashStatus(statusNumber)
+    const newPaymentStatus = mapBayarcashStatus(statusNumber)
 
     const paidAmount = roundMoney(Number(payload.amount || 0))
     const paymentChannel =
@@ -69,7 +70,9 @@ export async function POST(req: NextRequest) {
 
     const { data: existingOrder, error: existingOrderError } = await supabase
       .from('orders')
-      .select('id, status, payment_status, gateway_transaction_id, gateway_fee')
+      .select(
+        'id, status, payment_status, fulfillment_status, gateway_transaction_id, gateway_fee'
+      )
       .eq('order_number', orderNumber)
       .maybeSingle()
 
@@ -99,7 +102,9 @@ export async function POST(req: NextRequest) {
         .eq('order_id', order.id)
 
       const typedOrderItems = (orderItems || []) as OrderItemRow[]
-      const productIds = typedOrderItems.map((item) => item.product_id).filter(Boolean)
+      const productIds = typedOrderItems
+        .map((item) => item.product_id)
+        .filter(Boolean)
 
       if (productIds.length > 0) {
         const { data: products } = await supabase
@@ -111,7 +116,6 @@ export async function POST(req: NextRequest) {
           (products || []).map((product) => [product.id, product as ProductRow])
         )
 
-        // Anti-oversell check
         for (const item of typedOrderItems) {
           const product = productMap.get(item.product_id)
 
@@ -121,7 +125,6 @@ export async function POST(req: NextRequest) {
             await supabase
               .from('orders')
               .update({
-                status: 'failed',
                 payment_status: 'failed',
                 gateway_status_description: 'Stock conflict during payment',
                 updated_at: new Date().toISOString(),
@@ -135,7 +138,6 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Final stock update
         for (const item of typedOrderItems) {
           const product = productMap.get(item.product_id)
 
@@ -169,7 +171,9 @@ export async function POST(req: NextRequest) {
         .eq('order_id', order.id)
 
       const typedOrderItems = (orderItems || []) as OrderItemRow[]
-      const productIds = typedOrderItems.map((item) => item.product_id).filter(Boolean)
+      const productIds = typedOrderItems
+        .map((item) => item.product_id)
+        .filter(Boolean)
 
       if (productIds.length > 0) {
         const { data: products } = await supabase
@@ -219,7 +223,7 @@ export async function POST(req: NextRequest) {
           paid_amount: paidAmount,
           gateway_fee: order.gateway_fee || 0,
           gateway_status: String(statusNumber),
-          payment_status: newStatus,
+          payment_status: newPaymentStatus,
           raw_response_json: payload,
           paid_at: statusNumber === 3 ? new Date().toISOString() : null,
         })
@@ -233,7 +237,7 @@ export async function POST(req: NextRequest) {
             paid_amount: paidAmount,
             gateway_fee: order.gateway_fee || 0,
             gateway_status: String(statusNumber),
-            payment_status: newStatus,
+            payment_status: newPaymentStatus,
             raw_response_json: payload,
             paid_at: statusNumber === 3 ? new Date().toISOString() : null,
           })
@@ -241,15 +245,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update order status
+    // IMPORTANT:
+    // payment webhook updates payment_status only
+    // do NOT overwrite seller fulfilment status
     await supabase
       .from('orders')
       .update({
         gateway_transaction_id: transactionId,
         gateway_status: statusNumber,
         gateway_status_description: statusDescription,
-        status: newStatus,
-        payment_status: newStatus,
+        payment_status: newPaymentStatus,
         payout_status: statusNumber === 3 ? 'eligible' : 'unpaid',
         updated_at: new Date().toISOString(),
       })
