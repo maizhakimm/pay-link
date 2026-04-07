@@ -40,9 +40,7 @@ export async function GET(req: NextRequest) {
   }
 
   const seller =
-    (sellers as SellerProfileRow[]).find(
-      (s) => s.shop_slug === shopSlug
-    ) || null
+    (sellers as SellerProfileRow[]).find((s) => s.shop_slug === shopSlug) || null
 
   if (!seller) {
     return NextResponse.json({ error: 'Seller not found' }, { status: 404 })
@@ -82,8 +80,10 @@ export async function GET(req: NextRequest) {
       platform_fee: 0,
       seller_net: typedProduct.price,
       currency: 'MYR',
+
+      // IMPORTANT: separate payment vs fulfilment
       status: 'pending',
-      payment_status: 'pending',
+      payment_status: 'awaiting_payment',
       fulfillment_status: 'pending',
       payout_status: 'unpaid',
     })
@@ -91,7 +91,10 @@ export async function GET(req: NextRequest) {
     .single()
 
   if (orderError || !order) {
-    return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to create order' },
+      { status: 500 }
+    )
   }
 
   // 4. dummy response for now
