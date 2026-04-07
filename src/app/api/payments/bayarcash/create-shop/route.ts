@@ -417,7 +417,7 @@ if (!seller.accept_orders_anytime) {
       payer_name: name || 'Customer',
       payer_email: email || 'customer@example.com',
       payer_telephone_number: phone || '',
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment-return`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment-return?shop=${encodeURIComponent(shopSlug)}`,
       callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/bayarcash/webhook`,
       checksum,
     }
