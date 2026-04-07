@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
@@ -161,6 +161,8 @@ export default function PaymentReturnClient() {
   const [loadingOrder, setLoadingOrder] = useState(true)
   const [savedShopSlug, setSavedShopSlug] = useState('')
 
+  const hasAutoConfirmedRef = useRef(false)
+
   const cleanOrderNumber = sanitizeOrderNumber(rawOrderNumber)
   const cleanPaymentIntentId = sanitizePaymentIntent(
     paymentIntentIdParam,
@@ -238,20 +240,33 @@ export default function PaymentReturnClient() {
     loadOrder()
   }, [cleanOrderNumber, cleanPaymentIntentId])
 
-  // 🔥 AUTO CONFIRM PAYMENT (fallback if webhook not triggered)
-if (Number(status) === 3 && cleanOrderNumber) {
-  await fetch('/api/payments/manual-confirm', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      order_number: cleanOrderNumber,
-      status: 3,
-      amount: amountParam,
-    }),
-  })
-}
+  useEffect(() => {
+    async function autoConfirmPayment() {
+      if (hasAutoConfirmedRef.current) return
+      if (Number(status) !== 3 || !cleanOrderNumber) return
+
+      hasAutoConfirmedRef.current = true
+
+      try {
+        await fetch('/api/payments/manual-confirm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            order_number: cleanOrderNumber,
+            status: 3,
+            amount: amountParam,
+            payment_intent_id: cleanPaymentIntentId || null,
+          }),
+        })
+      } catch (error) {
+        console.error('Manual confirm payment failed:', error)
+      }
+    }
+
+    autoConfirmPayment()
+  }, [status, cleanOrderNumber, amountParam, cleanPaymentIntentId])
 
   const canNotifySeller = useMemo(() => {
     return Boolean(sellerWhatsapp)
@@ -441,7 +456,7 @@ ${deliveryText}
         >
           {loadingOrder ? (
             <span>Loading order data...</span>
-          ) : sellerWhatsapp ? (
+          ) : canNotifySeller ? (
             <span>Tap button below to notify seller via WhatsApp.</span>
           ) : (
             <span>
@@ -476,17 +491,17 @@ ${deliveryText}
 
           <button
             onClick={handleNotifySeller}
-            disabled={!sellerWhatsapp}
+            disabled={!canNotifySeller}
             style={{
               width: '100%',
               padding: '14px',
               borderRadius: '12px',
-              background: sellerWhatsapp ? '#25D366' : '#bbf7d0',
+              background: canNotifySeller ? '#25D366' : '#bbf7d0',
               color: '#fff',
               fontWeight: 700,
               border: 'none',
-              cursor: sellerWhatsapp ? 'pointer' : 'not-allowed',
-              opacity: sellerWhatsapp ? 1 : 0.75,
+              cursor: canNotifySeller ? 'pointer' : 'not-allowed',
+              opacity: canNotifySeller ? 1 : 0.75,
             }}
           >
             Notify Seller (WhatsApp)
