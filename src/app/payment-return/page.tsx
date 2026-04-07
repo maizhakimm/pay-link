@@ -7,7 +7,8 @@ type PaymentReturnPageProps = {
     order_number?: string
     amount?: string
     payer_name?: string
-  }
+    shop?: string
+    }
 }
 
 function getStatusDetails(status?: string) {
@@ -94,7 +95,9 @@ export default function PaymentReturnPage({
 
           {(isFailed || isCancelled) && (
             <button
-              onClick={() => window.history.back()}
+              onClick={() => {
+              window.location.href = searchParams?.shop ? `/s/${searchParams.shop}` : '/'
+              }}
               style={{
                 width: '100%',
                 padding: 12,
