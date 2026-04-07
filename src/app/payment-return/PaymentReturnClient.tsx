@@ -238,6 +238,21 @@ export default function PaymentReturnClient() {
     loadOrder()
   }, [cleanOrderNumber, cleanPaymentIntentId])
 
+  // 🔥 AUTO CONFIRM PAYMENT (fallback if webhook not triggered)
+if (Number(status) === 3 && cleanOrderNumber) {
+  await fetch('/api/payments/manual-confirm', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      order_number: cleanOrderNumber,
+      status: 3,
+      amount: amountParam,
+    }),
+  })
+}
+
   const canNotifySeller = useMemo(() => {
     return Boolean(sellerWhatsapp)
   }, [sellerWhatsapp])
