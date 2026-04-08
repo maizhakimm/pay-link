@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import ShopPageClient from '../../shop/[slug]/ShopPageClient'
 
@@ -42,6 +43,88 @@ type ProductRow = {
 type PageProps = {
   params: {
     shopSlug: string
+  }
+}
+
+async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
+
+  const requestedSlug = decodeURIComponent(shopSlug).toLowerCase().trim()
+
+  const { data: seller } = await supabase
+    .from('seller_profiles')
+    .select(
+      `
+        id,
+        store_name,
+        shop_slug,
+        profile_image,
+        email,
+        whatsapp,
+        business_address,
+        accept_orders_anytime,
+        opening_time,
+        closing_time,
+        temporarily_closed,
+        closed_message
+      `
+    )
+    .eq('shop_slug', requestedSlug)
+    .maybeSingle()
+
+  return (seller as SellerProfile | null) ?? null
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const requestedSlug = decodeURIComponent(params.shopSlug).toLowerCase().trim()
+  const seller = await getSellerBySlug(requestedSlug)
+
+  const storeName = seller?.store_name?.trim() || 'BayarLink Shop'
+  const description = seller?.temporarily_closed
+    ? `${storeName} is currently temporarily closed. View shop details on BayarLink.`
+    : `${storeName} on BayarLink. Simple online ordering and payment for WhatsApp sellers.`
+
+  const imageUrl =
+    seller?.profile_image && seller.profile_image.trim().length > 0
+      ? seller.profile_image
+      : '/BayarLink-Logo-01.svg'
+
+  return {
+    title: `${storeName} | BayarLink`,
+    description,
+    openGraph: {
+      title: `${storeName} | BayarLink`,
+      description,
+      url: `https://www.bayarlink.my/s/${requestedSlug}`,
+      siteName: 'BayarLink',
+      images: [
+        {
+          url: imageUrl,
+          alt: storeName,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: `${storeName} | BayarLink`,
+      description,
+      images: [imageUrl],
+    },
   }
 }
 
