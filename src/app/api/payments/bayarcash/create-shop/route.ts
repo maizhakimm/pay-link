@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import {
-  createBayarcashPaymentIntentChecksum,
-} from '../../../../../lib/bayarcash'
+import { createBayarcashPaymentIntentChecksum } from '../../../../../lib/bayarcash'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -77,11 +75,7 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-function estimateGatewayFee(paymentChannel: number) {
-  if (paymentChannel === BAYARCASH_CHANNELS.FPX) {
-    return 1.0
-  }
-
+function estimateGatewayFee() {
   return 1.0
 }
 
@@ -108,7 +102,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 🔥 CHECK SHOP AVAILABILITY (SERVER SIDE)
     const { data: seller, error: sellerError } = await supabase
       .from('seller_profiles')
       .select(`
@@ -128,7 +121,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // TEMPORARILY CLOSED
     if (seller.temporarily_closed) {
       return NextResponse.json(
         {
@@ -141,7 +133,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ACCEPT ANYTIME → skip check
     if (!seller.accept_orders_anytime) {
       if (seller.opening_time && seller.closing_time) {
         const now = new Date()
@@ -158,7 +149,6 @@ export async function POST(req: NextRequest) {
         if (open < close) {
           isOpen = currentMinutes >= open && currentMinutes <= close
         } else {
-          // overnight case (contoh 10pm - 2am)
           isOpen = currentMinutes >= open || currentMinutes <= close
         }
 
@@ -301,7 +291,7 @@ export async function POST(req: NextRequest) {
     const totalAmount = subtotal
     const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0)
 
-    const gatewayFee = roundMoney(estimateGatewayFee(paymentChannel))
+    const gatewayFee = roundMoney(estimateGatewayFee())
     const platformFee = roundMoney(estimatePlatformFee())
     const sellerNet = roundMoney(subtotal - gatewayFee - platformFee)
 
@@ -357,7 +347,6 @@ export async function POST(req: NextRequest) {
         order_no: orderNumber,
 
         payment_provider: 'bayarcash',
-        payment_channel: paymentChannel,
 
         status: 'pending',
         payment_status: 'pending',
@@ -417,7 +406,17 @@ export async function POST(req: NextRequest) {
           orderNumber
         )}`
 
-    
+    const payload = {
+      portal_key: process.env.BAYARCASH_PORTAL_KEY,
+      order_number: orderNumber,
+      amount,
+      payer_name: name || 'Customer',
+      payer_email: email || 'customer@example.com',
+      payer_telephone_number: phone || '',
+      return_url: baseReturnUrl,
+      callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/bayarcash/webhook`,
+      checksum,
+    }
 
     const response = await fetch(`${process.env.BAYARCASH_BASE_URL}/payment-intents`, {
       method: 'POST',
