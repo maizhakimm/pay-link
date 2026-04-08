@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import {
   createBayarcashPaymentIntentChecksum,
-  BAYARCASH_CHANNELS,
 } from '../../../../../lib/bayarcash'
 
 const supabase = createClient(
@@ -101,7 +100,6 @@ export async function POST(req: NextRequest) {
     const phone = body.phone as string
     const items = (body.items || []) as RequestItem[]
     const delivery = (body.delivery || null) as DeliveryPayload
-    const paymentChannel = Number(body.paymentChannel || BAYARCASH_CHANNELS.FPX)
 
     if (!sellerId) {
       return NextResponse.json(
@@ -403,7 +401,6 @@ export async function POST(req: NextRequest) {
     }
 
     const checksum = createBayarcashPaymentIntentChecksum({
-      payment_channel: paymentChannel,
       order_number: orderNumber,
       amount,
       payer_name: name || 'Customer',
@@ -420,18 +417,7 @@ export async function POST(req: NextRequest) {
           orderNumber
         )}`
 
-    const payload = {
-      payment_channel: paymentChannel,
-      portal_key: process.env.BAYARCASH_PORTAL_KEY,
-      order_number: orderNumber,
-      amount,
-      payer_name: name || 'Customer',
-      payer_email: email || 'customer@example.com',
-      payer_telephone_number: phone || '',
-      return_url: baseReturnUrl,
-      callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/bayarcash/webhook`,
-      checksum,
-    }
+    
 
     const response = await fetch(`${process.env.BAYARCASH_BASE_URL}/payment-intents`, {
       method: 'POST',
