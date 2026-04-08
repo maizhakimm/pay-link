@@ -26,13 +26,6 @@ const STATES = [
   'Sarawak',
 ]
 
-const PAYMENT_METHODS = [
-  { label: 'FPX (Online Banking)', value: 1 },
-  { label: 'Card (Visa / Mastercard)', value: 4 },
-  { label: 'SPayLater', value: 7 },
-  { label: 'Boost PayFlex', value: 8 },
-]
-
 export default function ShopPayButton({
   sellerId,
   shopSlug,
@@ -49,7 +42,6 @@ export default function ShopPayButton({
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('+60')
-  const [paymentMethod, setPaymentMethod] = useState(1)
 
   const [needsDelivery, setNeedsDelivery] = useState(false)
 
@@ -112,7 +104,6 @@ export default function ShopPayButton({
           email: email.trim(),
           phone,
           items,
-          paymentChannel: paymentMethod,
           delivery: needsDelivery
             ? {
                 address1: address1.trim(),
@@ -177,21 +168,6 @@ export default function ShopPayButton({
             onChange={(e) => handlePhoneChange(e.target.value)}
             style={inputStyle}
           />
-        </div>
-
-        <div>
-          <label style={labelStyle}>Payment Method</label>
-          <select
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(Number(e.target.value))}
-            style={inputStyle}
-          >
-            {PAYMENT_METHODS.map((method) => (
-              <option key={method.value} value={method.value}>
-                {method.label}
-              </option>
-            ))}
-          </select>
         </div>
 
         <div style={toggleBox}>
