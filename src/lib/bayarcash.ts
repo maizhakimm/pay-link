@@ -2,7 +2,9 @@ import crypto from 'crypto'
 
 export const BAYARCASH_CHANNELS = {
   FPX: 1,
+  DUITNOW_ONLINE: 5,
   CARD: 4,
+  DUITNOW_QR: 6,
   SPAYLATER: 7,
   BOOST_PAYFLEX: 8,
 } as const
