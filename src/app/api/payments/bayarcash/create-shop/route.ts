@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createBayarcashPaymentIntentChecksum } from '../../../../../lib/bayarcash'
+import {
+  createBayarcashPaymentIntentChecksum,
+  BAYARCASH_CHANNELS,
+} from '../../../../../lib/bayarcash'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -309,6 +312,8 @@ export async function POST(req: NextRequest) {
       line_total: item.line_total,
     }))
 
+    const paymentChannel = BAYARCASH_CHANNELS.FPX
+
     const { data: insertedOrder, error: orderInsertError } = await supabase
       .from('orders')
       .insert({
@@ -347,7 +352,7 @@ export async function POST(req: NextRequest) {
         order_no: orderNumber,
 
         payment_provider: 'bayarcash',
-        payment_channel: null,
+        payment_channel: paymentChannel,
 
         status: 'pending',
         payment_status: 'pending',
@@ -391,6 +396,7 @@ export async function POST(req: NextRequest) {
     }
 
     const checksum = createBayarcashPaymentIntentChecksum({
+      payment_channel: paymentChannel,
       order_number: orderNumber,
       amount,
       payer_name: name || 'Customer',
@@ -408,6 +414,7 @@ export async function POST(req: NextRequest) {
         )}`
 
     const payload = {
+      payment_channel: paymentChannel,
       portal_key: process.env.BAYARCASH_PORTAL_KEY,
       order_number: orderNumber,
       amount,
@@ -419,18 +426,15 @@ export async function POST(req: NextRequest) {
       checksum,
     }
 
-    const response = await fetch(
-      `${process.env.BAYARCASH_BASE_URL}/payment-intents`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.BAYARCASH_PAT}`,
-        },
-        body: JSON.stringify(payload),
-        cache: 'no-store',
-      }
-    )
+    const response = await fetch(`${process.env.BAYARCASH_BASE_URL}/payment-intents`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.BAYARCASH_PAT}`,
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    })
 
     const text = await response.text()
 
