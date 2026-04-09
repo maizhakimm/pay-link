@@ -86,6 +86,14 @@ function estimatePlatformFee() {
   return 0
 }
 
+function isAllowedPaymentChannel(channel: number) {
+  return [
+    BAYARCASH_CHANNELS.FPX,
+    BAYARCASH_CHANNELS.CARD,
+    BAYARCASH_CHANNELS.DUITNOW_QR,
+  ].includes(channel)
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -97,6 +105,11 @@ export async function POST(req: NextRequest) {
     const phone = body.phone as string
     const items = (body.items || []) as RequestItem[]
     const delivery = (body.delivery || null) as DeliveryPayload
+
+    const requestedChannel = Number(body.paymentChannel)
+    const paymentChannel = isAllowedPaymentChannel(requestedChannel)
+      ? requestedChannel
+      : BAYARCASH_CHANNELS.FPX
 
     if (!sellerId) {
       return NextResponse.json(
@@ -311,8 +324,6 @@ export async function POST(req: NextRequest) {
       quantity: item.quantity,
       line_total: item.line_total,
     }))
-
-    const paymentChannel = BAYARCASH_CHANNELS.FPX
 
     const { data: insertedOrder, error: orderInsertError } = await supabase
       .from('orders')
