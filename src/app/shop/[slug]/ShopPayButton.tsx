@@ -26,6 +26,24 @@ const STATES = [
   'Sarawak',
 ]
 
+const PAYMENT_METHODS = [
+  {
+    value: 1,
+    label: 'FPX Online Banking',
+    note: 'Online banking',
+  },
+  {
+    value: 4,
+    label: 'Credit / Debit Card',
+    note: 'Visa / Mastercard',
+  },
+  {
+    value: 6,
+    label: 'DuitNow QR',
+    note: 'Scan & pay',
+  },
+]
+
 export default function ShopPayButton({
   sellerId,
   shopSlug,
@@ -42,6 +60,7 @@ export default function ShopPayButton({
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('+60')
+  const [paymentChannel, setPaymentChannel] = useState<number>(1)
 
   const [needsDelivery, setNeedsDelivery] = useState(false)
 
@@ -100,6 +119,7 @@ export default function ShopPayButton({
         body: JSON.stringify({
           sellerId,
           shopSlug,
+          paymentChannel,
           name: name.trim(),
           email: email.trim(),
           phone,
@@ -168,6 +188,39 @@ export default function ShopPayButton({
             onChange={(e) => handlePhoneChange(e.target.value)}
             style={inputStyle}
           />
+        </div>
+
+        <div style={paymentBox}>
+          <label style={labelStyle}>Payment Method</label>
+
+          <div style={paymentGrid}>
+            {PAYMENT_METHODS.map((method) => {
+              const active = paymentChannel === method.value
+
+              return (
+                <button
+                  key={method.value}
+                  type="button"
+                  onClick={() => setPaymentChannel(method.value)}
+                  style={{
+                    ...paymentOption,
+                    borderColor: active ? '#1d4ed8' : '#dbe2ea',
+                    background: active ? '#eff6ff' : '#fff',
+                  }}
+                >
+                  <div
+                    style={{
+                      ...paymentTitle,
+                      color: active ? '#1d4ed8' : '#0f172a',
+                    }}
+                  >
+                    {method.label}
+                  </div>
+                  <div style={paymentNote}>{method.note}</div>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div style={toggleBox}>
@@ -309,6 +362,39 @@ const inputStyle = {
   fontSize: '14px',
   outline: 'none',
   background: '#fff',
+} as const
+
+const paymentBox = {
+  padding: '12px',
+  border: '1px solid #e2e8f0',
+  borderRadius: '12px',
+  background: '#f8fafc',
+} as const
+
+const paymentGrid = {
+  display: 'grid',
+  gap: '10px',
+} as const
+
+const paymentOption = {
+  width: '100%',
+  textAlign: 'left' as const,
+  padding: '12px',
+  borderRadius: '12px',
+  border: '1px solid #dbe2ea',
+  background: '#fff',
+  cursor: 'pointer',
+} as const
+
+const paymentTitle = {
+  fontSize: '14px',
+  fontWeight: 800,
+  marginBottom: '4px',
+} as const
+
+const paymentNote = {
+  fontSize: '12px',
+  color: '#64748b',
 } as const
 
 const toggleBox = {
