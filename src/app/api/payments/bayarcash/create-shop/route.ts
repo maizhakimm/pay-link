@@ -87,11 +87,13 @@ function estimatePlatformFee() {
 }
 
 function isAllowedPaymentChannel(channel: number) {
-  return [
+  const allowedChannels: number[] = [
     BAYARCASH_CHANNELS.FPX,
     BAYARCASH_CHANNELS.CARD,
     BAYARCASH_CHANNELS.DUITNOW_QR,
-  ].includes(channel)
+  ]
+
+  return allowedChannels.includes(channel)
 }
 
 export async function POST(req: NextRequest) {
