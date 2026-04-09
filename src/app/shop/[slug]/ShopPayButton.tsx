@@ -32,10 +32,6 @@ const PAYMENT_METHODS = [
     label: 'FPX Online Banking',
   },
   {
-    value: 5,
-    label: 'DuitNow Online Banking / Wallets',
-  },
-  {
     value: 4,
     label: 'Credit / Debit Card',
   },
