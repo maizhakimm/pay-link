@@ -44,10 +44,6 @@ const PAYMENT_METHODS = [
     label: 'DuitNow QR',
   },
   {
-    value: 7,
-    label: 'SPayLater',
-  },
-  {
     value: 8,
     label: 'Boost PayFlex',
   },
