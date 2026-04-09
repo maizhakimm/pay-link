@@ -12,33 +12,26 @@ function hmacSha256(payload: string, secret: string) {
 }
 
 export function createBayarcashPaymentIntentChecksum(data: {
+  payment_channel: number
   order_number: string
   amount: string
   payer_name: string
   payer_email: string
-  payment_channel?: number | null
 }) {
   const secret = process.env.BAYARCASH_API_SECRET || ''
 
-  const payloadData: Record<string, string | number> = {
+  const payloadData = {
     amount: data.amount,
     order_number: data.order_number,
     payer_email: data.payer_email,
     payer_name: data.payer_name,
-  }
-
-  // Only include payment_channel if explicitly provided.
-  // This allows BayarCash to handle the payment method selection screen.
-  if (
-    typeof data.payment_channel === 'number' &&
-    Number.isFinite(data.payment_channel)
-  ) {
-    payloadData.payment_channel = data.payment_channel
+    payment_channel: data.payment_channel,
   }
 
   const sortedKeys = Object.keys(payloadData).sort()
+
   const payloadString = sortedKeys
-    .map((key) => String(payloadData[key]))
+    .map((key) => String(payloadData[key as keyof typeof payloadData]))
     .join('|')
 
   return hmacSha256(payloadString, secret)
