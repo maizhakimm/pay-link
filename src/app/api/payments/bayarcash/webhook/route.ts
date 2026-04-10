@@ -12,7 +12,6 @@ type OrderRow = {
   payment_status: string | null
   fulfillment_status?: string | null
   gateway_transaction_id: string | null
-  gateway_fee: number | null
   gross_amount?: number | null
   payment_method?: string | null
   seller_plan_type?: string | null
@@ -37,6 +36,15 @@ type ExistingPaymentRow = {
   id: string
 }
 
+type FeeBreakdown = {
+  sellerFeeAmount: number
+  gatewayCostAmount: number
+  gatewaySstAmount: number
+  gatewayTotalCostAmount: number
+  platformMarginAmount: number
+  sstAmount: number
+}
+
 function mapBayarcashStatus(status: number) {
   if (status === 3) return 'paid'
   if (status === 2) return 'failed'
@@ -48,33 +56,43 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-function estimateGatewayFee(_amount: number, _method: string) {
-  // Temporary logic aligned with your SQL test:
-  // RM1 flat gateway fee
-  return 1.0
-}
+function getFeeBreakdown(method: string, _plan: string): FeeBreakdown {
+  if (method === 'FPX') {
+    const sellerFeeAmount = 1.5
+    const gatewayCostAmount = 1.0
+    const gatewaySstAmount = 0.08
+    const gatewayTotalCostAmount = roundMoney(
+      gatewayCostAmount + gatewaySstAmount
+    )
+    const platformMarginAmount = roundMoney(
+      sellerFeeAmount - gatewayTotalCostAmount
+    )
 
-function calculatePlatformFee(amount: number, _method: string, plan: string) {
-  const normalizedPlan = (plan || 'BASIC').toUpperCase()
-
-  if (normalizedPlan !== 'BASIC') {
-    return 0
+    return {
+      sellerFeeAmount,
+      gatewayCostAmount,
+      gatewaySstAmount,
+      gatewayTotalCostAmount,
+      platformMarginAmount,
+      sstAmount: 0,
+    }
   }
 
-  return roundMoney(Math.max(amount * 0.05, 0.5))
-}
-
-function calculateSst(platformFee: number) {
-  return roundMoney(platformFee * 0.08)
+  return {
+    sellerFeeAmount: 0,
+    gatewayCostAmount: 0,
+    gatewaySstAmount: 0,
+    gatewayTotalCostAmount: 0,
+    platformMarginAmount: 0,
+    sstAmount: 0,
+  }
 }
 
 function calculateNetSellerAmount(
   grossAmount: number,
-  gatewayFee: number,
-  platformFee: number,
-  sst: number
+  sellerFeeAmount: number
 ) {
-  return roundMoney(grossAmount - gatewayFee - platformFee - sst)
+  return roundMoney(grossAmount - sellerFeeAmount)
 }
 
 export async function POST(req: NextRequest) {
@@ -103,7 +121,7 @@ export async function POST(req: NextRequest) {
     const { data: existingOrder, error: existingOrderError } = await supabase
       .from('orders')
       .select(
-        'id, status, payment_status, fulfillment_status, gateway_transaction_id, gateway_fee, gross_amount, payment_method, seller_plan_type'
+        'id, status, payment_status, fulfillment_status, gateway_transaction_id, gross_amount, payment_method, seller_plan_type'
       )
       .eq('order_number', orderNumber)
       .maybeSingle()
@@ -117,25 +135,16 @@ export async function POST(req: NextRequest) {
 
     const order = existingOrder as OrderRow
 
-    const grossAmount = roundMoney(
-      Number(order.gross_amount ?? paidAmount ?? 0)
-    )
+    const grossAmount = roundMoney(Number(order.gross_amount ?? paidAmount ?? 0))
     const paymentMethod = String(order.payment_method || 'FPX').toUpperCase()
     const sellerPlan = String(order.seller_plan_type || 'BASIC').toUpperCase()
 
-    const gatewayFee = roundMoney(estimateGatewayFee(grossAmount, paymentMethod))
-    const platformFee = roundMoney(
-      calculatePlatformFee(grossAmount, paymentMethod, sellerPlan)
-    )
-    const sst = roundMoney(calculateSst(platformFee))
+    const feeBreakdown = getFeeBreakdown(paymentMethod, sellerPlan)
     const netSellerAmount = calculateNetSellerAmount(
       grossAmount,
-      gatewayFee,
-      platformFee,
-      sst
+      feeBreakdown.sellerFeeAmount
     )
 
-    // Prevent duplicate webhook processing for already-paid same transaction
     if (
       order.payment_status === 'paid' &&
       order.gateway_transaction_id &&
@@ -144,7 +153,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, duplicate: true })
     }
 
-    // HANDLE SUCCESS PAYMENT
     if (statusNumber === 3) {
       const { data: orderItems } = await supabase
         .from('order_items')
@@ -213,7 +221,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // HANDLE FAILED / CANCELLED PAYMENT
     if (statusNumber === 2 || statusNumber === 4) {
       const { data: orderItems } = await supabase
         .from('order_items')
@@ -256,7 +263,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Insert / update payment log
     if (transactionId) {
       const { data: existingPayment } = await supabase
         .from('payments')
@@ -271,7 +277,7 @@ export async function POST(req: NextRequest) {
           gateway_transaction_id: transactionId,
           payment_channel: paymentChannel,
           paid_amount: paidAmount,
-          gateway_fee: gatewayFee,
+          gateway_fee: feeBreakdown.sellerFeeAmount,
           gateway_status: String(statusNumber),
           payment_status: newPaymentStatus,
           raw_response_json: payload,
@@ -285,7 +291,7 @@ export async function POST(req: NextRequest) {
           .update({
             payment_channel: paymentChannel,
             paid_amount: paidAmount,
-            gateway_fee: gatewayFee,
+            gateway_fee: feeBreakdown.sellerFeeAmount,
             gateway_status: String(statusNumber),
             payment_status: newPaymentStatus,
             raw_response_json: payload,
@@ -295,9 +301,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // IMPORTANT:
-    // payment webhook updates payment_status only
-    // do NOT overwrite seller fulfilment status
     await supabase
       .from('orders')
       .update({
@@ -307,13 +310,24 @@ export async function POST(req: NextRequest) {
         payment_status: newPaymentStatus,
         payout_status: statusNumber === 3 ? 'eligible' : 'unpaid',
 
-        gross_amount: grossAmount,
-        gateway_fee: gatewayFee,
-        platform_fee: platformFee,
-        platform_fee_amount: platformFee,
-        sst,
+        // Legacy compatibility
+        gateway_fee: feeBreakdown.sellerFeeAmount,
+        platform_fee: 0,
+        platform_fee_amount: 0,
+        sst: 0,
         seller_net: netSellerAmount,
+
+        // Main fields
+        gross_amount: grossAmount,
         net_seller_amount: netSellerAmount,
+
+        // New scalable fields
+        seller_fee_amount: feeBreakdown.sellerFeeAmount,
+        gateway_cost_amount: feeBreakdown.gatewayCostAmount,
+        gateway_sst_amount: feeBreakdown.gatewaySstAmount,
+        gateway_total_cost_amount: feeBreakdown.gatewayTotalCostAmount,
+        platform_margin_amount: feeBreakdown.platformMarginAmount,
+        sst_amount: feeBreakdown.sstAmount,
 
         updated_at: new Date().toISOString(),
       })
