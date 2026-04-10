@@ -13,6 +13,9 @@ type OrderRow = {
   fulfillment_status?: string | null
   gateway_transaction_id: string | null
   gateway_fee: number | null
+  gross_amount?: number | null
+  payment_method?: string | null
+  seller_plan_type?: string | null
 }
 
 type OrderItemRow = {
@@ -45,6 +48,35 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
+function estimateGatewayFee(_amount: number, _method: string) {
+  // Temporary logic aligned with your SQL test:
+  // RM1 flat gateway fee
+  return 1.0
+}
+
+function calculatePlatformFee(amount: number, _method: string, plan: string) {
+  const normalizedPlan = (plan || 'BASIC').toUpperCase()
+
+  if (normalizedPlan !== 'BASIC') {
+    return 0
+  }
+
+  return roundMoney(Math.max(amount * 0.05, 0.5))
+}
+
+function calculateSst(platformFee: number) {
+  return roundMoney(platformFee * 0.08)
+}
+
+function calculateNetSellerAmount(
+  grossAmount: number,
+  gatewayFee: number,
+  platformFee: number,
+  sst: number
+) {
+  return roundMoney(grossAmount - gatewayFee - platformFee - sst)
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json()
@@ -71,7 +103,7 @@ export async function POST(req: NextRequest) {
     const { data: existingOrder, error: existingOrderError } = await supabase
       .from('orders')
       .select(
-        'id, status, payment_status, fulfillment_status, gateway_transaction_id, gateway_fee'
+        'id, status, payment_status, fulfillment_status, gateway_transaction_id, gateway_fee, gross_amount, payment_method, seller_plan_type'
       )
       .eq('order_number', orderNumber)
       .maybeSingle()
@@ -84,6 +116,24 @@ export async function POST(req: NextRequest) {
     }
 
     const order = existingOrder as OrderRow
+
+    const grossAmount = roundMoney(
+      Number(order.gross_amount ?? paidAmount ?? 0)
+    )
+    const paymentMethod = String(order.payment_method || 'FPX').toUpperCase()
+    const sellerPlan = String(order.seller_plan_type || 'BASIC').toUpperCase()
+
+    const gatewayFee = roundMoney(estimateGatewayFee(grossAmount, paymentMethod))
+    const platformFee = roundMoney(
+      calculatePlatformFee(grossAmount, paymentMethod, sellerPlan)
+    )
+    const sst = roundMoney(calculateSst(platformFee))
+    const netSellerAmount = calculateNetSellerAmount(
+      grossAmount,
+      gatewayFee,
+      platformFee,
+      sst
+    )
 
     // Prevent duplicate webhook processing for already-paid same transaction
     if (
@@ -221,7 +271,7 @@ export async function POST(req: NextRequest) {
           gateway_transaction_id: transactionId,
           payment_channel: paymentChannel,
           paid_amount: paidAmount,
-          gateway_fee: order.gateway_fee || 0,
+          gateway_fee: gatewayFee,
           gateway_status: String(statusNumber),
           payment_status: newPaymentStatus,
           raw_response_json: payload,
@@ -235,7 +285,7 @@ export async function POST(req: NextRequest) {
           .update({
             payment_channel: paymentChannel,
             paid_amount: paidAmount,
-            gateway_fee: order.gateway_fee || 0,
+            gateway_fee: gatewayFee,
             gateway_status: String(statusNumber),
             payment_status: newPaymentStatus,
             raw_response_json: payload,
@@ -256,6 +306,15 @@ export async function POST(req: NextRequest) {
         gateway_status_description: statusDescription,
         payment_status: newPaymentStatus,
         payout_status: statusNumber === 3 ? 'eligible' : 'unpaid',
+
+        gross_amount: grossAmount,
+        gateway_fee: gatewayFee,
+        platform_fee: platformFee,
+        platform_fee_amount: platformFee,
+        sst,
+        seller_net: netSellerAmount,
+        net_seller_amount: netSellerAmount,
+
         updated_at: new Date().toISOString(),
       })
       .eq('order_number', orderNumber)
