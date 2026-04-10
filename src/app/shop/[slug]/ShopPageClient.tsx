@@ -15,6 +15,15 @@ type SellerProfile = {
   closing_time?: string | null
   temporarily_closed?: boolean | null
   closed_message?: string | null
+  delivery_mode?:
+    | 'free_delivery'
+    | 'fixed_fee'
+    | 'included_in_price'
+    | 'pay_rider_separately'
+    | null
+  delivery_fee?: number | null
+  delivery_area?: string | null
+  delivery_note?: string | null
 }
 
 type ProductRow = {
@@ -103,6 +112,32 @@ function getMinutesFromTime(value?: string | null) {
   return hour * 60 + minute
 }
 
+function formatCurrency(amount?: number | null) {
+  return new Intl.NumberFormat('ms-MY', {
+    style: 'currency',
+    currency: 'MYR',
+    minimumFractionDigits: 2,
+  }).format(Number(amount || 0))
+}
+
+function getDeliverySummary(seller: SellerProfile) {
+  const fee = Number(seller.delivery_fee || 0)
+
+  switch (seller.delivery_mode) {
+    case 'free_delivery':
+      return 'Free delivery tersedia untuk kawasan terpilih.'
+    case 'fixed_fee':
+      return fee > 0
+        ? `Delivery fee sebanyak ${formatCurrency(fee)} akan dikenakan.`
+        : 'Delivery fee akan dikenakan.'
+    case 'included_in_price':
+      return 'Harga produk telah termasuk delivery.'
+    case 'pay_rider_separately':
+    default:
+      return 'Bayaran delivery dibuat berasingan terus kepada rider / seller.'
+  }
+}
+
 function getShopAvailability(seller: SellerProfile) {
   if (seller.temporarily_closed) {
     return {
@@ -179,6 +214,7 @@ export default function ShopPageClient({
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
+  const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -211,23 +247,23 @@ export default function ShopPageClient({
     }))
   }
 
-function decrease(productId: string) {
-  setCart((prev) => {
-    const current = prev[productId] || 0
+  function decrease(productId: string) {
+    setCart((prev) => {
+      const current = prev[productId] || 0
 
-    if (current <= 1) {
-      const next = { ...prev }
-      delete next[productId]
-      return next
-    }
+      if (current <= 1) {
+        const next = { ...prev }
+        delete next[productId]
+        return next
+      }
 
-    return {
-      ...prev,
-      [productId]: current - 1,
-    }
-  })
-}
-  
+      return {
+        ...prev,
+        [productId]: current - 1,
+      }
+    })
+  }
+
   function openGallery(product: ProductRow, startIndex = 0) {
     const images = getProductImages(product).map((img) => getImageUrl(img))
     if (!images.length) return
@@ -354,6 +390,19 @@ function decrease(productId: string) {
           >
             {availability.detail}
           </div>
+
+          <div style={deliveryBox}>
+            <div style={deliveryTitle}>Maklumat Delivery</div>
+            <div style={deliveryText}>{deliverySummary}</div>
+
+            {seller.delivery_area ? (
+              <div style={deliveryMeta}>Kawasan liputan: {seller.delivery_area}</div>
+            ) : null}
+
+            {seller.delivery_note ? (
+              <div style={deliveryMeta}>{seller.delivery_note}</div>
+            ) : null}
+          </div>
         </div>
 
         {products.length === 0 ? (
@@ -461,6 +510,19 @@ function decrease(productId: string) {
             </div>
           </div>
 
+          <div style={checkoutDeliveryBox}>
+            <div style={checkoutDeliveryTitle}>Info Delivery</div>
+            <div style={checkoutDeliveryText}>{deliverySummary}</div>
+
+            {seller.delivery_area ? (
+              <div style={checkoutDeliveryMeta}>Kawasan liputan: {seller.delivery_area}</div>
+            ) : null}
+
+            {seller.delivery_note ? (
+              <div style={checkoutDeliveryMeta}>{seller.delivery_note}</div>
+            ) : null}
+          </div>
+
           {!isShopOpen ? (
             <div style={closedCheckoutBox}>
               <div style={closedCheckoutTitle}>Kedai kini tidak menerima tempahan</div>
@@ -491,6 +553,10 @@ function decrease(productId: string) {
                   quantity: item.quantity,
                 }))}
                 total={grandTotal}
+                deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
+                deliveryFee={seller.delivery_fee || 0}
+                deliveryArea={seller.delivery_area || ''}
+                deliveryNote={seller.delivery_note || ''}
               />
             </>
           )}
@@ -713,6 +779,34 @@ const noticeBox = {
   lineHeight: 1.6,
 } as const
 
+const deliveryBox = {
+  marginTop: 12,
+  border: '1px solid #dbeafe',
+  background: '#f8fbff',
+  borderRadius: 14,
+  padding: '12px 14px',
+} as const
+
+const deliveryTitle = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: '#1d4ed8',
+  marginBottom: 6,
+} as const
+
+const deliveryText = {
+  fontSize: 14,
+  color: '#0f172a',
+  lineHeight: 1.6,
+} as const
+
+const deliveryMeta = {
+  fontSize: 12,
+  color: '#64748b',
+  lineHeight: 1.6,
+  marginTop: 6,
+} as const
+
 const emptyCard = {
   background: '#fff',
   borderRadius: 20,
@@ -874,6 +968,34 @@ const checkoutSub = {
   margin: 0,
   color: '#64748b',
   fontSize: 14,
+} as const
+
+const checkoutDeliveryBox = {
+  padding: 12,
+  borderRadius: 14,
+  background: '#f8fbff',
+  border: '1px solid #dbeafe',
+  marginBottom: 14,
+} as const
+
+const checkoutDeliveryTitle = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: '#1d4ed8',
+  marginBottom: 6,
+} as const
+
+const checkoutDeliveryText = {
+  fontSize: 14,
+  color: '#0f172a',
+  lineHeight: 1.6,
+} as const
+
+const checkoutDeliveryMeta = {
+  fontSize: 12,
+  color: '#64748b',
+  lineHeight: 1.6,
+  marginTop: 6,
 } as const
 
 const emptyCartBox = {
