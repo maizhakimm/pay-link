@@ -1,11 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 type CartItem = {
   product_id: string
   quantity: number
 }
+
+type DeliveryMode =
+  | 'free_delivery'
+  | 'fixed_fee'
+  | 'included_in_price'
+  | 'pay_rider_separately'
 
 const STATES = [
   'Perlis',
@@ -45,16 +51,32 @@ const PAYMENT_METHODS = [
   },
 ]
 
+function formatCurrency(amount?: number | null) {
+  return new Intl.NumberFormat('ms-MY', {
+    style: 'currency',
+    currency: 'MYR',
+    minimumFractionDigits: 2,
+  }).format(Number(amount || 0))
+}
+
 export default function ShopPayButton({
   sellerId,
   shopSlug,
   items,
   total,
+  deliveryMode = 'pay_rider_separately',
+  deliveryFee = 0,
+  deliveryArea = '',
+  deliveryNote = '',
 }: {
   sellerId: string
   shopSlug: string
   items: CartItem[]
   total: number
+  deliveryMode?: DeliveryMode
+  deliveryFee?: number
+  deliveryArea?: string
+  deliveryNote?: string
 }) {
   const [loading, setLoading] = useState(false)
 
@@ -71,6 +93,22 @@ export default function ShopPayButton({
   const [city, setCity] = useState('')
   const [district, setDistrict] = useState('')
   const [state, setState] = useState('')
+
+  const deliverySummary = useMemo(() => {
+    switch (deliveryMode) {
+      case 'free_delivery':
+        return 'Free delivery tersedia untuk kawasan terpilih.'
+      case 'fixed_fee':
+        return Number(deliveryFee || 0) > 0
+          ? `Delivery fee sebanyak ${formatCurrency(deliveryFee)} akan dikenakan.`
+          : 'Delivery fee akan dikenakan.'
+      case 'included_in_price':
+        return 'Harga produk telah termasuk delivery.'
+      case 'pay_rider_separately':
+      default:
+        return 'Bayaran delivery dibuat berasingan terus kepada rider / seller.'
+    }
+  }, [deliveryMode, deliveryFee])
 
   function handlePhoneChange(value: string) {
     let cleaned = value.replace(/[^\d+]/g, '')
@@ -161,6 +199,19 @@ export default function ShopPayButton({
 
   return (
     <div style={wrapper}>
+      <div style={deliveryNoticeBox}>
+        <div style={deliveryNoticeTitle}>Info Delivery</div>
+        <div style={deliveryNoticeText}>{deliverySummary}</div>
+
+        {deliveryArea ? (
+          <div style={deliveryNoticeMeta}>Kawasan liputan: {deliveryArea}</div>
+        ) : null}
+
+        {deliveryNote ? (
+          <div style={deliveryNoticeMeta}>{deliveryNote}</div>
+        ) : null}
+      </div>
+
       <div style={formGrid}>
         <div>
           <label style={labelStyle}>Full Name</label>
@@ -321,6 +372,34 @@ const wrapper = {
   maxWidth: '520px',
   margin: '0 auto',
   width: '100%',
+} as const
+
+const deliveryNoticeBox = {
+  padding: '12px',
+  border: '1px solid #dbeafe',
+  borderRadius: '12px',
+  background: '#f8fbff',
+  marginBottom: '14px',
+} as const
+
+const deliveryNoticeTitle = {
+  fontSize: '13px',
+  fontWeight: 800,
+  color: '#1d4ed8',
+  marginBottom: '6px',
+} as const
+
+const deliveryNoticeText = {
+  fontSize: '14px',
+  color: '#0f172a',
+  lineHeight: 1.6,
+} as const
+
+const deliveryNoticeMeta = {
+  fontSize: '12px',
+  color: '#64748b',
+  lineHeight: 1.6,
+  marginTop: '6px',
 } as const
 
 const formGrid = {
