@@ -51,6 +51,12 @@ type DeliveryPayload = {
   state?: string
 } | null
 
+type DeliveryMode =
+  | 'free_delivery'
+  | 'fixed_fee'
+  | 'included_in_price'
+  | 'pay_rider_separately'
+
 function isReservationExpired(reservedUntil?: string | null) {
   if (!reservedUntil) return true
   return new Date(reservedUntil).getTime() <= Date.now()
@@ -95,8 +101,6 @@ function mapPaymentMethod(channel: number) {
 function calculatePlatformFee(amount: number, method: string, plan: string) {
   const normalizedPlan = (plan || 'BASIC').toUpperCase()
 
-  // Current live pricing only for BASIC.
-  // Future plans can be added here later without changing historical orders.
   if (normalizedPlan !== 'BASIC') {
     return 0
   }
@@ -131,6 +135,22 @@ function isAllowedPaymentChannel(channel: number) {
   return allowedChannels.includes(channel)
 }
 
+function getAppliedDeliveryFee(params: {
+  deliveryRequired: boolean
+  deliveryMode: DeliveryMode
+  deliveryFee: number
+}) {
+  const { deliveryRequired, deliveryMode, deliveryFee } = params
+
+  if (!deliveryRequired) return 0
+  if (deliveryMode !== 'fixed_fee') return 0
+
+  const fee = Number(deliveryFee || 0)
+  if (!Number.isFinite(fee) || fee <= 0) return 0
+
+  return roundMoney(fee)
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -142,6 +162,12 @@ export async function POST(req: NextRequest) {
     const phone = body.phone as string
     const items = (body.items || []) as RequestItem[]
     const delivery = (body.delivery || null) as DeliveryPayload
+
+    const deliveryRequired = Boolean(body.deliveryRequired)
+    const deliveryMode = (
+      body.deliveryMode || 'pay_rider_separately'
+    ) as DeliveryMode
+    const requestedDeliveryFee = Number(body.deliveryFee || 0)
 
     const requestedChannel = Number(body.paymentChannel)
     const paymentChannel = isAllowedPaymentChannel(requestedChannel)
@@ -163,7 +189,9 @@ export async function POST(req: NextRequest) {
         closing_time,
         temporarily_closed,
         closed_message,
-        plan_type
+        plan_type,
+        delivery_mode,
+        delivery_fee
       `)
       .eq('id', sellerId)
       .maybeSingle()
@@ -342,7 +370,24 @@ export async function POST(req: NextRequest) {
     const subtotal = roundMoney(
       validItems.reduce((sum, item) => sum + item.line_total, 0)
     )
-    const totalAmount = subtotal
+
+    const effectiveDeliveryMode = (
+      seller.delivery_mode ||
+      deliveryMode ||
+      'pay_rider_separately'
+    ) as DeliveryMode
+
+    const effectiveDeliveryFee = Number.isFinite(Number(seller.delivery_fee))
+      ? Number(seller.delivery_fee || 0)
+      : requestedDeliveryFee
+
+    const appliedDeliveryFee = getAppliedDeliveryFee({
+      deliveryRequired,
+      deliveryMode: effectiveDeliveryMode,
+      deliveryFee: effectiveDeliveryFee,
+    })
+
+    const totalAmount = roundMoney(subtotal + appliedDeliveryFee)
     const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0)
 
     const paymentMethod = mapPaymentMethod(paymentChannel)
@@ -350,9 +395,9 @@ export async function POST(req: NextRequest) {
 
     const gatewayFee = roundMoney(estimateGatewayFee())
     const platformFee = roundMoney(
-      calculatePlatformFee(subtotal, paymentMethod, sellerPlan)
+      calculatePlatformFee(totalAmount, paymentMethod, sellerPlan)
     )
-    const sellerNet = roundMoney(subtotal - platformFee)
+    const sellerNet = roundMoney(totalAmount - platformFee)
 
     const firstProduct = validItems[0].product
     const orderNumber = `ORD-${Date.now()}`
@@ -397,6 +442,9 @@ export async function POST(req: NextRequest) {
         amount,
         total_amount: totalAmount,
         subtotal,
+        delivery_mode: effectiveDeliveryMode,
+        delivery_fee: appliedDeliveryFee,
+        delivery_required: deliveryRequired,
         gateway_fee: gatewayFee,
         platform_fee: platformFee,
         seller_net: sellerNet,
