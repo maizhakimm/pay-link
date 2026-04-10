@@ -345,7 +345,8 @@ export default function HomePage() {
               <ul className="mt-2 space-y-1 text-sm text-slate-700">
                 <li>• FPX: RM1.50</li>
                 <li>• QR: 2.5%</li>
-                <li>• Card: RM1 + 2.5%</li>
+                <li>• Boost PayFlex = 2.5%</li>
+                <li>• Card: RM1 + 2.5%</li> 
                 <li>•T+1 payout to merchant account</li>
               </ul>
 
@@ -384,6 +385,7 @@ export default function HomePage() {
               <ul className="mt-2 space-y-1 text-sm text-slate-700">
                 <li>• FPX: RM1.30</li>
                 <li>• QR: 2.2%</li>
+                <li>• Boost PayFlex = 2.2%</li>
                 <li>• Card: RM1 + 2.2%</li>
               </ul>
 
@@ -419,7 +421,8 @@ export default function HomePage() {
               </p>
               <ul className="mt-2 space-y-1 text-sm text-slate-700">
                 <li>• FPX: RM1.10</li>
-                <li>• QR: 1.9%</li>
+                <li>• QR: 2.0%</li>
+                <li>• Boost PayFlex = 2.0%</li>
                 <li>• Card: RM1 + 1.9%</li>
               </ul>
 
