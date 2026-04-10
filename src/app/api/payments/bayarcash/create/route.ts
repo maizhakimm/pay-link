@@ -97,41 +97,169 @@ function mapPaymentMethod(channel: number) {
   return 'FPX'
 }
 
-function getFeeBreakdown(method: string, _plan: string): FeeBreakdown {
-  // Current locked model:
-  // Seller-facing Basic FPX fee = RM1.50
-  // Internal provider cost = RM1.00
-  // Internal provider SST = RM0.08
-  // Internal platform margin = RM0.42
-  // Seller does NOT see SST line
-  if (method === 'FPX') {
-    const sellerFeeAmount = 1.5
-    const gatewayCostAmount = 1.0
-    const gatewaySstAmount = 0.08
-    const gatewayTotalCostAmount = roundMoney(
-      gatewayCostAmount + gatewaySstAmount
-    )
-    const platformMarginAmount = roundMoney(
-      sellerFeeAmount - gatewayTotalCostAmount
-    )
+function getFeeBreakdown(
+  method: string,
+  plan: string,
+  grossAmount: number
+): FeeBreakdown {
+  const normalizedMethod = String(method || 'FPX').toUpperCase()
+  const normalizedPlan = String(plan || 'BASIC').toUpperCase()
 
-    return {
-      sellerFeeAmount,
-      gatewayCostAmount,
-      gatewaySstAmount,
-      gatewayTotalCostAmount,
-      platformMarginAmount,
-      sstAmount: 0,
-    }
+  type FeeRule = {
+    sellerFeeType: 'flat' | 'percent_plus_flat'
+    sellerFeeFlat: number
+    sellerFeePercent: number
+
+    gatewayCostType: 'flat' | 'percent_plus_flat'
+    gatewayCostFlat: number
+    gatewayCostPercent: number
+
+    gatewaySstType: 'none' | 'flat' | 'percent_of_gateway_cost'
+    gatewaySstFlat: number
+    gatewaySstPercent: number
   }
 
-  // Temporary safe default for other methods until you finalize pricing
+  const feeRules: Record<string, Record<string, FeeRule>> = {
+    BASIC: {
+      FPX: {
+        sellerFeeType: 'flat',
+        sellerFeeFlat: 1.5,
+        sellerFeePercent: 0,
+
+        gatewayCostType: 'flat',
+        gatewayCostFlat: 1.0,
+        gatewayCostPercent: 0,
+
+        gatewaySstType: 'flat',
+        gatewaySstFlat: 0.08,
+        gatewaySstPercent: 0,
+      },
+
+      // Temporary placeholders until you finalize the exact pricing.
+      CARD: {
+        sellerFeeType: 'percent_plus_flat',
+        sellerFeeFlat: 0,
+        sellerFeePercent: 0,
+
+        gatewayCostType: 'percent_plus_flat',
+        gatewayCostFlat: 0,
+        gatewayCostPercent: 0,
+
+        gatewaySstType: 'percent_of_gateway_cost',
+        gatewaySstFlat: 0,
+        gatewaySstPercent: 0.08,
+      },
+
+      DUITNOW_QR: {
+        sellerFeeType: 'percent_plus_flat',
+        sellerFeeFlat: 0,
+        sellerFeePercent: 0,
+
+        gatewayCostType: 'percent_plus_flat',
+        gatewayCostFlat: 0,
+        gatewayCostPercent: 0,
+
+        gatewaySstType: 'percent_of_gateway_cost',
+        gatewaySstFlat: 0,
+        gatewaySstPercent: 0.08,
+      },
+
+      BOOST_PAYFLEX: {
+        sellerFeeType: 'percent_plus_flat',
+        sellerFeeFlat: 0,
+        sellerFeePercent: 0,
+
+        gatewayCostType: 'percent_plus_flat',
+        gatewayCostFlat: 0,
+        gatewayCostPercent: 0,
+
+        gatewaySstType: 'percent_of_gateway_cost',
+        gatewaySstFlat: 0,
+        gatewaySstPercent: 0.08,
+      },
+
+      DUITNOW_ONLINE: {
+        sellerFeeType: 'percent_plus_flat',
+        sellerFeeFlat: 0,
+        sellerFeePercent: 0,
+
+        gatewayCostType: 'percent_plus_flat',
+        gatewayCostFlat: 0,
+        gatewayCostPercent: 0,
+
+        gatewaySstType: 'percent_of_gateway_cost',
+        gatewaySstFlat: 0,
+        gatewaySstPercent: 0.08,
+      },
+
+      SPAYLATER: {
+        sellerFeeType: 'percent_plus_flat',
+        sellerFeeFlat: 0,
+        sellerFeePercent: 0,
+
+        gatewayCostType: 'percent_plus_flat',
+        gatewayCostFlat: 0,
+        gatewayCostPercent: 0,
+
+        gatewaySstType: 'percent_of_gateway_cost',
+        gatewaySstFlat: 0,
+        gatewaySstPercent: 0.08,
+      },
+    },
+  }
+
+  const safePlan = feeRules[normalizedPlan] ? normalizedPlan : 'BASIC'
+  const selectedRule =
+    feeRules[safePlan][normalizedMethod] || feeRules[safePlan]['FPX']
+
+  const calculateAmount = (
+    type: 'flat' | 'percent_plus_flat',
+    flat: number,
+    percent: number,
+    amount: number
+  ) => {
+    if (type === 'flat') return roundMoney(flat)
+    return roundMoney(flat + amount * percent)
+  }
+
+  const sellerFeeAmount = calculateAmount(
+    selectedRule.sellerFeeType,
+    selectedRule.sellerFeeFlat,
+    selectedRule.sellerFeePercent,
+    grossAmount
+  )
+
+  const gatewayCostAmount = calculateAmount(
+    selectedRule.gatewayCostType,
+    selectedRule.gatewayCostFlat,
+    selectedRule.gatewayCostPercent,
+    grossAmount
+  )
+
+  let gatewaySstAmount = 0
+
+  if (selectedRule.gatewaySstType === 'flat') {
+    gatewaySstAmount = roundMoney(selectedRule.gatewaySstFlat)
+  } else if (selectedRule.gatewaySstType === 'percent_of_gateway_cost') {
+    gatewaySstAmount = roundMoney(
+      gatewayCostAmount * selectedRule.gatewaySstPercent
+    )
+  }
+
+  const gatewayTotalCostAmount = roundMoney(
+    gatewayCostAmount + gatewaySstAmount
+  )
+
+  const platformMarginAmount = roundMoney(
+    sellerFeeAmount - gatewayTotalCostAmount
+  )
+
   return {
-    sellerFeeAmount: 0,
-    gatewayCostAmount: 0,
-    gatewaySstAmount: 0,
-    gatewayTotalCostAmount: 0,
-    platformMarginAmount: 0,
+    sellerFeeAmount,
+    gatewayCostAmount,
+    gatewaySstAmount,
+    gatewayTotalCostAmount,
+    platformMarginAmount,
     sstAmount: 0,
   }
 }
@@ -371,7 +499,7 @@ export async function POST(req: NextRequest) {
     const paymentMethod = mapPaymentMethod(paymentChannel)
     const sellerPlan = (seller.plan_type || 'BASIC').toUpperCase()
 
-    const feeBreakdown = getFeeBreakdown(paymentMethod, sellerPlan)
+    const feeBreakdown = getFeeBreakdown(paymentMethod, sellerPlan, totalAmount)
     const sellerNet = calculateNetSellerAmount(
       totalAmount,
       feeBreakdown.sellerFeeAmount
@@ -427,7 +555,7 @@ export async function POST(req: NextRequest) {
         sst: 0,
         seller_net: sellerNet,
 
-        // Existing
+        // Existing fields
         seller_plan_type: sellerPlan,
         payment_method: paymentMethod,
         gross_amount: totalAmount,
