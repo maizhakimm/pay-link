@@ -159,11 +159,20 @@ const historyMap = new Map()
 for (const o of paidOutOrders || []) {
   const key = `${o.seller_profile_id}__${o.payout_at}`
 
+  const sellerProfileRaw = Array.isArray(o.seller_profiles)
+    ? o.seller_profiles[0]
+    : o.seller_profiles
+
+  const sellerProfile = sellerProfileRaw as
+    | { store_name?: string | null; email?: string | null }
+    | null
+    | undefined
+
   if (!historyMap.has(key)) {
     historyMap.set(key, {
       seller_profile_id: o.seller_profile_id,
-      store_name: o.seller_profiles?.store_name || 'Unknown',
-      email: o.seller_profiles?.email || '',
+      store_name: sellerProfile?.store_name || 'Unknown',
+      email: sellerProfile?.email || '',
       payout_at: o.payout_at,
       total_sales: 0,
       total_fee: 0,
@@ -171,6 +180,13 @@ for (const o of paidOutOrders || []) {
       total_orders: 0,
     })
   }
+
+  const row = historyMap.get(key)
+  row.total_sales += Number(o.gross_amount || 0)
+  row.total_fee += Number(o.platform_fee_amount || 0)
+  row.total_payout += Number(o.net_seller_amount || 0)
+  row.total_orders += 1
+}
 
   const row = historyMap.get(key)
   row.total_sales += Number(o.gross_amount || 0)
