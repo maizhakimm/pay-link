@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import ShopPageClient from '../../shop/[slug]/ShopPageClient'
 
@@ -12,6 +13,11 @@ type SellerProfile = {
   email?: string | null
   whatsapp?: string | null
   business_address?: string | null
+  accept_orders_anytime?: boolean | null
+  opening_time?: string | null
+  closing_time?: string | null
+  temporarily_closed?: boolean | null
+  closed_message?: string | null
   delivery_mode?:
     | 'free_delivery'
     | 'fixed_fee'
@@ -58,35 +64,179 @@ function slugify(value: string) {
     .replace(/-+/g, '-')
 }
 
-export default async function Page({ params }: PageProps) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+function getServerSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  const requestedSlug = params.shopSlug.toLowerCase().trim()
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
+}
+
+async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> {
+  const supabase = getServerSupabase()
+  if (!supabase) return null
+
+  const requestedSlug = decodeURIComponent(shopSlug).toLowerCase().trim()
+
+  const { data: seller } = await supabase
+    .from('seller_profiles')
+    .select(
+      `
+        id,
+        store_name,
+        shop_slug,
+        profile_image,
+        email,
+        whatsapp,
+        business_address,
+        accept_orders_anytime,
+        opening_time,
+        closing_time,
+        temporarily_closed,
+        closed_message,
+        delivery_mode,
+        delivery_fee,
+        delivery_area,
+        delivery_note
+      `
+    )
+    .eq('shop_slug', requestedSlug)
+    .maybeSingle()
+
+  return (seller as SellerProfile | null) ?? null
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const requestedSlug = decodeURIComponent(params.shopSlug).toLowerCase().trim()
+  const seller = await getSellerBySlug(requestedSlug)
+
+  const storeName = seller?.store_name?.trim() || 'BayarLink Shop'
+  const description = seller?.temporarily_closed
+    ? `${storeName} is currently temporarily closed. View shop details on BayarLink.`
+    : `${storeName} on BayarLink. Simple online ordering and payment for WhatsApp sellers.`
+
+  const imageUrl =
+    seller?.profile_image && seller.profile_image.trim().length > 0
+      ? seller.profile_image
+      : 'https://www.bayarlink.my/BayarLink-Logo-01.svg'
+
+  return {
+    title: `${storeName} | BayarLink`,
+    description,
+    openGraph: {
+      title: `${storeName} | BayarLink`,
+      description,
+      url: `https://www.bayarlink.my/s/${requestedSlug}`,
+      siteName: 'BayarLink',
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: storeName,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary',
+      title: `${storeName} | BayarLink`,
+      description,
+      images: [imageUrl],
+    },
+  }
+}
+
+export default async function Page({ params }: PageProps) {
+  const supabase = getServerSupabase()
+
+  if (!supabase) {
+    return (
+      <main style={errorMain}>
+        <div style={errorBox}>
+          <h2 style={errorTitle}>Server configuration error</h2>
+          <p style={errorText}>
+            Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
+  const requestedSlug = decodeURIComponent(params.shopSlug).toLowerCase().trim()
 
   let seller: SellerProfile | null = null
 
-  const { data: sellers, error: sellerError } = await supabase
+  const { data: directSeller, error: sellerError } = await supabase
     .from('seller_profiles')
     .select(
-      'id, store_name, shop_slug, profile_image, email, whatsapp, business_address, delivery_mode, delivery_fee, delivery_area, delivery_note, accept_orders_anytime, opening_time, closing_time, temporarily_closed, closed_message'
+      `
+        id,
+        store_name,
+        shop_slug,
+        profile_image,
+        email,
+        whatsapp,
+        business_address,
+        accept_orders_anytime,
+        opening_time,
+        closing_time,
+        temporarily_closed,
+        closed_message,
+        delivery_mode,
+        delivery_fee,
+        delivery_area,
+        delivery_note
+      `
     )
+    .eq('shop_slug', requestedSlug)
+    .maybeSingle()
 
-  if (!sellerError && sellers && sellers.length > 0) {
-    seller =
-      (sellers as SellerProfile[]).find((item) => {
-        if (!item.store_name) return false
-        return item.shop_slug === requestedSlug
-      }) || null
+  if (sellerError) {
+    return (
+      <main style={errorMain}>
+        <div style={errorBox}>
+          <h2 style={errorTitle}>Unable to load shop</h2>
+          <p style={errorText}>{sellerError.message}</p>
+        </div>
+      </main>
+    )
   }
+
+  seller = (directSeller as SellerProfile | null) ?? null
 
   if (!seller) {
     const { data: fallbackProducts, error: fallbackError } = await supabase
       .from('products')
       .select(
-        'seller_profile_id, store_name, is_active, name, slug, description, price, image_1, image_2, image_3, image_4, image_5, track_stock, stock_quantity, sold_out, created_at'
+        `
+          seller_profile_id,
+          store_name,
+          is_active,
+          name,
+          slug,
+          description,
+          price,
+          image_1,
+          image_2,
+          image_3,
+          image_4,
+          image_5,
+          track_stock,
+          stock_quantity,
+          sold_out,
+          created_at
+        `
       )
       .eq('is_active', true)
 
@@ -96,32 +246,33 @@ export default async function Page({ params }: PageProps) {
         return slugify(item.store_name) === requestedSlug
       })
 
-      if (matchedProduct) {
+      if (matchedProduct?.seller_profile_id) {
         const { data: fallbackSeller } = await supabase
           .from('seller_profiles')
           .select(
-            'id, store_name, shop_slug, profile_image, email, whatsapp, business_address, delivery_mode, delivery_fee, delivery_area, delivery_note, accept_orders_anytime, opening_time, closing_time, temporarily_closed, closed_message'
+            `
+              id,
+              store_name,
+              shop_slug,
+              profile_image,
+              email,
+              whatsapp,
+              business_address,
+              accept_orders_anytime,
+              opening_time,
+              closing_time,
+              temporarily_closed,
+              closed_message,
+              delivery_mode,
+              delivery_fee,
+              delivery_area,
+              delivery_note
+            `
           )
-          .eq('id', matchedProduct.seller_profile_id || '')
+          .eq('id', matchedProduct.seller_profile_id)
           .maybeSingle()
 
-        if (fallbackSeller) {
-          seller = fallbackSeller as SellerProfile
-        } else {
-          seller = {
-            id: matchedProduct.seller_profile_id || '',
-            store_name: matchedProduct.store_name || 'Shop',
-            shop_slug: requestedSlug,
-            profile_image: null,
-            email: null,
-            whatsapp: null,
-            business_address: null,
-            delivery_mode: 'pay_rider_separately',
-            delivery_fee: 0,
-            delivery_area: null,
-            delivery_note: null,
-          }
-        }
+        seller = (fallbackSeller as SellerProfile | null) ?? null
       }
     }
   }
@@ -132,9 +283,6 @@ export default async function Page({ params }: PageProps) {
         <div style={errorBox}>
           <h2 style={errorTitle}>Shop not found</h2>
           <p style={errorText}>The shop link may be invalid or unavailable.</p>
-          <p style={{ ...errorText, marginTop: 8 }}>
-            Please check the shop slug or make sure active products exist for this shop.
-          </p>
         </div>
       </main>
     )
@@ -160,7 +308,7 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <ShopPageClient
-      seller={seller as any}
+      seller={seller}
       products={(products || []) as ProductRow[]}
       shopSlug={seller.shop_slug || requestedSlug}
     />
