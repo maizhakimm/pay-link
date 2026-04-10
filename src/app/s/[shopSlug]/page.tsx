@@ -45,7 +45,7 @@ type ProductRow = {
 
 type PageProps = {
   params: {
-    slug: string
+    shopSlug: string
   }
 }
 
@@ -64,14 +64,14 @@ export default async function Page({ params }: PageProps) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const requestedSlug = params.slug.toLowerCase().trim()
+  const requestedSlug = params.shopSlug.toLowerCase().trim()
 
   let seller: SellerProfile | null = null
 
   const { data: sellers, error: sellerError } = await supabase
     .from('seller_profiles')
     .select(
-      'id, store_name, shop_slug, profile_image, email, whatsapp, business_address, delivery_mode, delivery_fee, delivery_area, delivery_note'
+      'id, store_name, shop_slug, profile_image, email, whatsapp, business_address, delivery_mode, delivery_fee, delivery_area, delivery_note, accept_orders_anytime, opening_time, closing_time, temporarily_closed, closed_message'
     )
 
   if (!sellerError && sellers && sellers.length > 0) {
@@ -100,7 +100,7 @@ export default async function Page({ params }: PageProps) {
         const { data: fallbackSeller } = await supabase
           .from('seller_profiles')
           .select(
-            'id, store_name, shop_slug, profile_image, email, whatsapp, business_address, delivery_mode, delivery_fee, delivery_area, delivery_note'
+            'id, store_name, shop_slug, profile_image, email, whatsapp, business_address, delivery_mode, delivery_fee, delivery_area, delivery_note, accept_orders_anytime, opening_time, closing_time, temporarily_closed, closed_message'
           )
           .eq('id', matchedProduct.seller_profile_id || '')
           .maybeSingle()
@@ -160,7 +160,7 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <ShopPageClient
-      seller={seller}
+      seller={seller as any}
       products={(products || []) as ProductRow[]}
       shopSlug={seller.shop_slug || requestedSlug}
     />
