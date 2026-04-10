@@ -427,6 +427,13 @@ export async function POST(req: NextRequest) {
       line_total: item.line_total,
     }))
 
+    const deliveryInfoPayload = {
+      delivery_required: deliveryRequired,
+      delivery_mode: effectiveDeliveryMode,
+      delivery_fee: appliedDeliveryFee,
+      address: delivery,
+    }
+
     const { data: insertedOrder, error: orderInsertError } = await supabase
       .from('orders')
       .insert({
@@ -449,16 +456,13 @@ export async function POST(req: NextRequest) {
         customer_email: email || 'customer@example.com',
         customer_phone: phone || '',
 
-        delivery_info: delivery,
+        delivery_info: deliveryInfoPayload,
         items: itemsSnapshot,
 
         quantity: totalQuantity,
         amount,
         total_amount: totalAmount,
         subtotal,
-        delivery_mode: effectiveDeliveryMode,
-        delivery_fee: appliedDeliveryFee,
-        delivery_required: deliveryRequired,
         gateway_fee: gatewayFee,
         platform_fee: platformFee,
         seller_net: sellerNet,
@@ -487,7 +491,10 @@ export async function POST(req: NextRequest) {
 
     if (orderInsertError || !insertedOrder) {
       return NextResponse.json(
-        { ok: false, error: 'Failed to create order' },
+        {
+          ok: false,
+          error: orderInsertError?.message || 'Failed to create order',
+        },
         { status: 500 }
       )
     }
@@ -512,7 +519,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: 'Failed to create order items',
+          error: itemInsertError.message || 'Failed to create order items',
         },
         { status: 500 }
       )
