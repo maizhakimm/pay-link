@@ -27,6 +27,13 @@ const MALAYSIAN_BANKS = [
   'UOB Bank',
 ]
 
+const DELIVERY_MODES = [
+  { value: 'free_delivery', label: 'Free Delivery' },
+  { value: 'fixed_fee', label: 'Delivery Fee (Fixed)' },
+  { value: 'included_in_price', label: 'Included in Price' },
+  { value: 'pay_rider_separately', label: 'Pay Rider Separately' },
+]
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -84,6 +91,10 @@ type SellerProfileRow = {
   closing_time?: string | null
   temporarily_closed?: boolean | null
   closed_message?: string | null
+  delivery_mode?: string | null
+  delivery_fee?: number | null
+  delivery_area?: string | null
+  delivery_note?: string | null
 }
 
 export default function SettingsPage() {
@@ -120,6 +131,11 @@ export default function SettingsPage() {
     'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
   )
 
+  const [deliveryMode, setDeliveryMode] = useState('pay_rider_separately')
+  const [deliveryFee, setDeliveryFee] = useState('0')
+  const [deliveryArea, setDeliveryArea] = useState('')
+  const [deliveryNote, setDeliveryNote] = useState('')
+
   const previewBaseUrl =
     (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
 
@@ -142,6 +158,24 @@ export default function SettingsPage() {
 
     return `Orders allowed from ${openingTime || '09:00'} to ${closingTime || '22:00'}`
   }, [acceptOrdersAnytime, openingTime, closingTime, temporarilyClosed])
+
+  const deliverySummaryText = useMemo(() => {
+    const feeNumber = Number(deliveryFee || 0)
+
+    switch (deliveryMode) {
+      case 'free_delivery':
+        return 'Free delivery tersedia untuk kawasan terpilih.'
+      case 'fixed_fee':
+        return feeNumber > 0
+          ? `Delivery fee sebanyak RM${feeNumber.toFixed(2)} akan dikenakan.`
+          : 'Delivery fee akan dikenakan.'
+      case 'included_in_price':
+        return 'Harga produk telah termasuk delivery.'
+      case 'pay_rider_separately':
+      default:
+        return 'Bayaran delivery dibuat berasingan terus kepada rider / seller.'
+    }
+  }, [deliveryMode, deliveryFee])
 
   useEffect(() => {
     loadProfile()
@@ -177,6 +211,10 @@ export default function SettingsPage() {
         temporarily_closed: false,
         closed_message:
           'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+        delivery_mode: 'pay_rider_separately',
+        delivery_fee: 0,
+        delivery_area: null,
+        delivery_note: null,
       })
       .select('*')
       .single()
@@ -235,6 +273,11 @@ export default function SettingsPage() {
           'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
       )
 
+      setDeliveryMode(profile.delivery_mode || 'pay_rider_separately')
+      setDeliveryFee(String(profile.delivery_fee ?? 0))
+      setDeliveryArea(profile.delivery_area || '')
+      setDeliveryNote(profile.delivery_note || '')
+
       setStoreName(!existingSlug && isDefaultName ? '' : existingStoreName)
       setSlugLocked(Boolean(existingSlug))
     } catch (err) {
@@ -280,6 +323,9 @@ export default function SettingsPage() {
 
     const trimmedStoreName = storeName.trim()
     const trimmedClosedMessage = closedMessage.trim()
+    const trimmedDeliveryArea = deliveryArea.trim()
+    const trimmedDeliveryNote = deliveryNote.trim()
+    const parsedDeliveryFee = Number(deliveryFee || 0)
 
     if (!trimmedStoreName) {
       alert('Store Name is required')
@@ -296,6 +342,23 @@ export default function SettingsPage() {
         alert('Opening time and closing time cannot be the same.')
         return
       }
+    }
+
+    if (!Number.isFinite(parsedDeliveryFee) || parsedDeliveryFee < 0) {
+      alert('Please enter a valid delivery fee.')
+      return
+    }
+
+    if (
+      ![
+        'free_delivery',
+        'fixed_fee',
+        'included_in_price',
+        'pay_rider_separately',
+      ].includes(deliveryMode)
+    ) {
+      alert('Invalid delivery mode.')
+      return
     }
 
     setSaving(true)
@@ -336,6 +399,10 @@ export default function SettingsPage() {
           closed_message:
             trimmedClosedMessage ||
             'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+          delivery_mode: deliveryMode,
+          delivery_fee: parsedDeliveryFee,
+          delivery_area: trimmedDeliveryArea || null,
+          delivery_note: trimmedDeliveryNote || null,
         })
         .eq('id', currentSellerId)
 
@@ -346,6 +413,7 @@ export default function SettingsPage() {
       setStoreName(trimmedStoreName)
       setSavedShopSlug(finalShopSlug)
       setSlugLocked(true)
+      setDeliveryFee(String(parsedDeliveryFee))
 
       alert('Settings updated successfully!')
     } catch (err) {
@@ -558,6 +626,92 @@ export default function SettingsPage() {
 
                 <div>
                   <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-extrabold text-slate-900">Delivery Setting</p>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                      Buyer-facing
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-bold text-slate-700">Preview</p>
+                    <p className="mt-1 text-sm text-slate-600">{deliverySummaryText}</p>
+                    {deliveryArea ? (
+                      <p className="mt-2 text-xs text-slate-500">
+                        Kawasan liputan: {deliveryArea}
+                      </p>
+                    ) : null}
+                    {deliveryNote ? (
+                      <p className="mt-2 text-xs text-slate-500">{deliveryNote}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid gap-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Delivery Mode
+                      </label>
+                      <select
+                        value={deliveryMode}
+                        onChange={(e) => setDeliveryMode(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                      >
+                        {DELIVERY_MODES.map((mode) => (
+                          <option key={mode.value} value={mode.value}>
+                            {mode.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {deliveryMode === 'fixed_fee' ? (
+                      <div>
+                        <label className="mb-2 block text-sm font-bold text-slate-700">
+                          Delivery Fee (RM)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Contoh: 5.00"
+                          value={deliveryFee}
+                          onChange={(e) => setDeliveryFee(e.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                        />
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Delivery Area
+                      </label>
+                      <input
+                        placeholder="Contoh: Shah Alam, Subang, Klang"
+                        value={deliveryArea}
+                        onChange={(e) => setDeliveryArea(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Delivery Note
+                      </label>
+                      <textarea
+                        placeholder="Contoh: Bayaran rider dibayar terus kepada rider semasa penghantaran."
+                        value={deliveryNote}
+                        onChange={(e) => setDeliveryNote(e.target.value)}
+                        rows={3}
+                        className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Nota ini akan bantu buyer faham cara delivery seller.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
                     <p className="text-sm font-extrabold text-slate-900">Order Availability</p>
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-bold ${
@@ -605,132 +759,4 @@ export default function SettingsPage() {
                             type="time"
                             value={openingTime}
                             onChange={(e) => setOpeningTime(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="mb-2 block text-sm font-bold text-slate-700">
-                            Closing Time
-                          </label>
-                          <input
-                            type="time"
-                            value={closingTime}
-                            onChange={(e) => setClosingTime(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                          />
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                      <input
-                        type="checkbox"
-                        checked={temporarilyClosed}
-                        onChange={(e) => setTemporarilyClosed(e.target.checked)}
-                        className="mt-1 h-4 w-4"
-                      />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">Temporarily closed</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          Tutup sementara walaupun waktu operasi masih aktif.
-                        </p>
-                      </div>
-                    </label>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-slate-700">
-                        Closed Message
-                      </label>
-                      <textarea
-                        placeholder="Contoh: Kedai kini ditutup. Tempahan dibuka semula pada 9:00 AM."
-                        value={closedMessage}
-                        onChange={(e) => setClosedMessage(e.target.value)}
-                        rows={3}
-                        className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                      />
-                      <p className="mt-2 text-xs text-slate-500">
-                        Mesej ini boleh dipaparkan kepada customer bila kedai tidak menerima
-                        order.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {saving ? 'Saving...' : 'Save Settings'}
-                </button>
-              </div>
-            </section>
-          </div>
-
-          <div className="space-y-5">
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Account</h2>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-bold text-slate-700">Login Email</p>
-                <p className="mt-1 break-all text-sm text-slate-600">
-                  {accountEmail || '-'}
-                </p>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                <p className="text-sm font-extrabold text-slate-900">Change Password</p>
-
-                <input
-                  type="password"
-                  placeholder="New Password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                />
-
-                <input
-                  type="password"
-                  placeholder="Confirm New Password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                />
-
-                <button
-                  type="button"
-                  onClick={handleChangePassword}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50"
-                >
-                  Update Password
-                </button>
-
-                <p className="text-xs text-slate-500">
-                  Gunakan password sekurang-kurangnya 6 aksara.
-                </p>
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Session</h2>
-
-              <p className="mb-4 text-sm leading-6 text-slate-500">
-                Log out jika anda ingin keluar dari akaun seller ini.
-              </p>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="w-full rounded-2xl border border-red-200 bg-rose-50 px-4 py-3 text-sm font-extrabold text-red-700 transition hover:bg-rose-100"
-              >
-                Log Out
-              </button>
-            </section>
-          </div>
-        </div>
-      )}
-    </Layout>
-  )
-}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline
