@@ -33,6 +33,7 @@ export default function AdminPayoutPage() {
   const [markingSellerId, setMarkingSellerId] = useState<string | null>(null)
 
   const [rows, setRows] = useState<PayoutRow[]>([])
+  const [history, setHistory] = useState<any[]>([])
   const [breakdowns, setBreakdowns] = useState<BreakdownRow[]>([])
   const [search, setSearch] = useState('')
 
@@ -137,6 +138,51 @@ export default function AdminPayoutPage() {
       return a.seller_profile_id.localeCompare(b.seller_profile_id)
     })
 
+    // LOAD PAYOUT HISTORY
+const { data: paidOutOrders } = await supabase
+  .from('orders')
+  .select(`
+    seller_profile_id,
+    gross_amount,
+    platform_fee_amount,
+    net_seller_amount,
+    payout_at,
+    seller_profiles (
+      store_name,
+      email
+    )
+  `)
+  .eq('payout_status', 'paid')
+
+const historyMap = new Map()
+
+for (const o of paidOutOrders || []) {
+  const key = `${o.seller_profile_id}__${o.payout_at}`
+
+  if (!historyMap.has(key)) {
+    historyMap.set(key, {
+      seller_profile_id: o.seller_profile_id,
+      store_name: o.seller_profiles?.store_name || 'Unknown',
+      email: o.seller_profiles?.email || '',
+      payout_at: o.payout_at,
+      total_sales: 0,
+      total_fee: 0,
+      total_payout: 0,
+      total_orders: 0,
+    })
+  }
+
+  const row = historyMap.get(key)
+  row.total_sales += Number(o.gross_amount || 0)
+  row.total_fee += Number(o.platform_fee_amount || 0)
+  row.total_payout += Number(o.net_seller_amount || 0)
+  row.total_orders += 1
+  }
+
+  setHistory(Array.from(historyMap.values()).sort((a, b) =>
+    new Date(b.payout_at).getTime() - new Date(a.payout_at).getTime()
+  ))
+    
     setRows(payoutRows)
     setBreakdowns(breakdownRows)
     setLoading(false)
@@ -239,9 +285,9 @@ export default function AdminPayoutPage() {
       <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label="Sellers" value={totals.sellers} />
         <StatCard label="Paid Orders" value={totals.orders} />
-        <StatCard label="Total Sales" value={formatMoney(totals.sales)} />
-        <StatCard label="Total Fee" value={formatMoney(totals.fee)} />
-        <StatCard label="Total Payout" value={formatMoney(totals.payout)} />
+        <StatCard label="Paid Sales (Pending Payout)" value={formatMoney(totals.sales)} />
+        <StatCard label="Pending Fee" value={formatMoney(totals.fee)} />
+        <StatCard label="Payout Due" value={formatMoney(totals.payout)} />
       </section>
 
       <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
@@ -252,6 +298,47 @@ export default function AdminPayoutPage() {
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
         />
       </section>
+
+      {/* PAYOUT HISTORY */}
+<section className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+  <div className="mb-5">
+    <h2 className="text-2xl font-bold text-slate-900">Payout History</h2>
+    <p className="mt-1 text-sm text-slate-500">
+      Records of completed payouts.
+    </p>
+  </div>
+
+  {history.length === 0 ? (
+    <p className="text-sm text-slate-500">No payout history yet.</p>
+  ) : (
+    <div className="space-y-4">
+      {history.map((h, i) => (
+        <div key={i} className="rounded-2xl border border-slate-200 p-4">
+          <div className="flex justify-between">
+            <div>
+              <p className="font-bold text-slate-900">{h.store_name}</p>
+              <p className="text-sm text-slate-500">{h.email}</p>
+            </div>
+
+            <div className="text-right">
+              <p className="text-sm text-slate-500">Payout Date</p>
+              <p className="font-semibold">
+                {new Date(h.payout_at).toLocaleString()}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <InfoCard label="Orders" value={String(h.total_orders)} />
+            <InfoCard label="Sales" value={formatMoney(h.total_sales)} />
+            <InfoCard label="Fee" value={formatMoney(h.total_fee)} />
+            <InfoCard label="Paid" value={formatMoney(h.total_payout)} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <div className="mb-5">
@@ -312,15 +399,15 @@ export default function AdminPayoutPage() {
                       value={String(row.total_paid_orders)}
                     />
                     <InfoCard
-                      label="Total Sales"
+                      label="Paid Sales"
                       value={formatMoney(row.total_sales)}
                     />
                     <InfoCard
-                      label="Total Fee"
+                      label="Fee (Pending)"
                       value={formatMoney(row.total_fee)}
                     />
                     <InfoCard
-                      label="Total Payout"
+                      label="Payout Due"
                       value={formatMoney(row.total_payout)}
                     />
                   </div>
