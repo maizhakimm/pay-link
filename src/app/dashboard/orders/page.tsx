@@ -21,6 +21,7 @@ type OrderRow = {
   product_slug?: string | null
   amount?: number | null
   status?: string | null
+  fulfillment_status?: string | null
   payment_status?: string | null
   buyer_name?: string | null
   buyer_phone?: string | null
@@ -74,6 +75,10 @@ function normalizeSellerStatus(value?: string | null) {
 function normalizePaymentStatus(value?: string | null) {
   const normalized = normalizeStatus(value)
   return normalized || 'awaiting_payment'
+}
+
+function getSellerStatus(order: OrderRow) {
+  return normalizeSellerStatus(order.fulfillment_status || order.status)
 }
 
 function formatMoney(value?: number | null) {
@@ -313,10 +318,13 @@ export default function OrdersPage() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (!error && data) {
-      setOrders(data as OrderRow[])
+    if (error) {
+      console.error('Failed to fetch orders:', error)
+      setLoading(false)
+      return
     }
 
+    setOrders((data || []) as OrderRow[])
     setLoading(false)
   }, [])
 
@@ -336,16 +344,22 @@ export default function OrdersPage() {
       .update({ fulfillment_status: newStatus })
       .eq('id', orderId)
 
-    if (!error) {
-      setOrders((prev) =>
-        prev.map((order) =>
-        order.id === orderId
-        ? { ...order, fulfillment_status: newStatus }
-        : order
-        )
-      )
+    if (error) {
+      console.error('Failed to update fulfillment_status:', error)
+      alert(`Failed to update order status: ${error.message}`)
+      setUpdatingOrderId(null)
+      return
     }
 
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === orderId
+          ? { ...order, fulfillment_status: newStatus }
+          : order
+      )
+    )
+
+    await fetchOrders()
     setUpdatingOrderId(null)
   }
 
@@ -365,6 +379,7 @@ export default function OrdersPage() {
         order.product_slug,
         order.id,
         order.status,
+        order.fulfillment_status,
         order.payment_status,
         order.buyer_name,
         order.buyer_phone,
@@ -377,9 +392,7 @@ export default function OrdersPage() {
 
       const matchesSearch = keyword ? haystack.includes(keyword) : true
 
-      const sellerStatus = normalizeSellerStatus(
-        (order as any).fulfillment_status || order.status
-      )
+      const sellerStatus = getSellerStatus(order)
       const paymentStatus = normalizePaymentStatus(order.payment_status)
       const matchesStatus =
         statusFilter === 'all'
@@ -394,9 +407,7 @@ export default function OrdersPage() {
     const totalOrders = orders.length
 
     const completedOrders = orders.filter(
-      (order) => normalizeSellerStatus(
-  (order as any).fulfillment_status || order.status
-) === 'completed'
+      (order) => getSellerStatus(order) === 'completed'
     ).length
 
     const paidOrders = orders.filter((order) =>
@@ -561,7 +572,7 @@ export default function OrdersPage() {
               const orderTotal = getOrderTotal(order, items)
               const isExpanded = expandedOrderId === order.id
               const paymentStatus = normalizePaymentStatus(order.payment_status)
-              const sellerStatus = normalizeSellerStatus(order.status)
+              const sellerStatus = getSellerStatus(order)
 
               return (
                 <div
