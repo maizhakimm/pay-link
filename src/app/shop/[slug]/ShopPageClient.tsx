@@ -54,12 +54,25 @@ type GalleryState = {
 function getImageUrl(path?: string | null) {
   if (!path) return ''
 
-  if (path.startsWith('http')) return path
+  const trimmed = path.trim()
+  if (!trimmed) return ''
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (trimmed.startsWith('/')) return trimmed
 
   const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (!baseUrl) return path
+  if (!baseUrl) return trimmed
 
-  const cleanPath = path.replace(/^\/+/, '')
+  let cleanPath = trimmed
+    .replace(/^storage\/v1\/object\/public\//, '')
+    .replace(/^\/+/, '')
+
+  const knownBuckets = ['product-images', 'product-assets']
+
+  if (!knownBuckets.some((bucket) => cleanPath.startsWith(`${bucket}/`))) {
+    cleanPath = `product-images/${cleanPath}`
+  }
+
   return `${baseUrl}/storage/v1/object/public/${cleanPath}`
 }
 
@@ -128,8 +141,8 @@ function getDeliverySummary(seller: SellerProfile) {
       return 'Free delivery tersedia untuk kawasan terpilih.'
     case 'fixed_fee':
       return fee > 0
-        ? `Delivery fee sebanyak ${formatCurrency(fee)} akan dikenakan.`
-        : 'Delivery fee akan dikenakan.'
+        ? `Delivery fee sebanyak ${formatCurrency(fee)} akan dikenakan jika customer pilih delivery.`
+        : 'Delivery fee akan dikenakan jika customer pilih delivery.'
     case 'included_in_price':
       return 'Harga produk telah termasuk delivery.'
     case 'pay_rider_separately':
@@ -149,7 +162,7 @@ function getShopAvailability(seller: SellerProfile) {
     }
   }
 
-  if (seller.accept_orders_anytime ?? true) {
+  if (seller.accept_orders_anytime === true) {
     return {
       isOpen: true,
       label: 'Open Now',
@@ -373,7 +386,7 @@ export default function ShopPageClient({
               {availability.label}
             </div>
 
-            {!seller.accept_orders_anytime && availability.timeRange ? (
+            {seller.accept_orders_anytime === false && availability.timeRange ? (
               <div style={hoursText}>Waktu tempahan: {availability.timeRange}</div>
             ) : (
               <div style={hoursText}>Tempahan tertakluk kepada availability seller.</div>
@@ -506,7 +519,7 @@ export default function ShopPageClient({
           <div style={checkoutHeader}>
             <div>
               <h2 style={checkoutTitle}>Checkout</h2>
-              <p style={checkoutSub}>Jumlah RM {grandTotal.toFixed(2)}</p>
+              <p style={checkoutSub}>Subtotal RM {grandTotal.toFixed(2)}</p>
             </div>
           </div>
 
