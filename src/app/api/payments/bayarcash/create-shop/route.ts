@@ -151,6 +151,21 @@ function getAppliedDeliveryFee(params: {
   return roundMoney(fee)
 }
 
+function getCurrentMalaysiaMinutes() {
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kuala_Lumpur',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+
+  const parts = formatter.formatToParts(new Date())
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value || '0')
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value || '0')
+
+  return hour * 60 + minute
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -217,8 +232,7 @@ export async function POST(req: NextRequest) {
 
     if (!seller.accept_orders_anytime) {
       if (seller.opening_time && seller.closing_time) {
-        const now = new Date()
-        const currentMinutes = now.getHours() * 60 + now.getMinutes()
+        const currentMinutes = getCurrentMalaysiaMinutes()
 
         const [openH, openM] = seller.opening_time.split(':').map(Number)
         const [closeH, closeM] = seller.closing_time.split(':').map(Number)
