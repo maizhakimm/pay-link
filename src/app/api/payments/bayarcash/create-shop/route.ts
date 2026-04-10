@@ -82,7 +82,41 @@ function estimateGatewayFee() {
   return 1.0
 }
 
-function estimatePlatformFee() {
+function mapPaymentMethod(channel: number) {
+  if (channel === BAYARCASH_CHANNELS.FPX) return 'FPX'
+  if (channel === BAYARCASH_CHANNELS.CARD) return 'CARD'
+  if (channel === BAYARCASH_CHANNELS.DUITNOW_QR) return 'DUITNOW_QR'
+  if (channel === BAYARCASH_CHANNELS.BOOST_PAYFLEX) return 'BOOST_PAYFLEX'
+  if (channel === BAYARCASH_CHANNELS.DUITNOW_ONLINE) return 'DUITNOW_ONLINE'
+  if (channel === BAYARCASH_CHANNELS.SPAYLATER) return 'SPAYLATER'
+  return 'FPX'
+}
+
+function calculatePlatformFee(amount: number, method: string, plan: string) {
+  const normalizedPlan = (plan || 'BASIC').toUpperCase()
+
+  // Current live pricing only for BASIC.
+  // Future plans can be added here later without changing historical orders.
+  if (normalizedPlan !== 'BASIC') {
+    return 0
+  }
+
+  if (method === 'FPX') {
+    return 1.5
+  }
+
+  if (method === 'DUITNOW_QR') {
+    return roundMoney(amount * 0.025)
+  }
+
+  if (method === 'BOOST_PAYFLEX') {
+    return roundMoney(amount * 0.025)
+  }
+
+  if (method === 'CARD') {
+    return roundMoney(1 + amount * 0.025)
+  }
+
   return 0
 }
 
@@ -128,7 +162,8 @@ export async function POST(req: NextRequest) {
         opening_time,
         closing_time,
         temporarily_closed,
-        closed_message
+        closed_message,
+        plan_type
       `)
       .eq('id', sellerId)
       .maybeSingle()
@@ -310,8 +345,13 @@ export async function POST(req: NextRequest) {
     const totalAmount = subtotal
     const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0)
 
+    const paymentMethod = mapPaymentMethod(paymentChannel)
+    const sellerPlan = (seller.plan_type || 'BASIC').toUpperCase()
+
     const gatewayFee = roundMoney(estimateGatewayFee())
-    const platformFee = roundMoney(estimatePlatformFee())
+    const platformFee = roundMoney(
+      calculatePlatformFee(subtotal, paymentMethod, sellerPlan)
+    )
     const sellerNet = roundMoney(subtotal - gatewayFee - platformFee)
 
     const firstProduct = validItems[0].product
@@ -360,6 +400,13 @@ export async function POST(req: NextRequest) {
         gateway_fee: gatewayFee,
         platform_fee: platformFee,
         seller_net: sellerNet,
+
+        seller_plan_type: sellerPlan,
+        payment_method: paymentMethod,
+        gross_amount: totalAmount,
+        platform_fee_amount: platformFee,
+        net_seller_amount: sellerNet,
+
         currency: 'MYR',
 
         order_number: orderNumber,
