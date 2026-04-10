@@ -51,6 +51,15 @@ type DeliveryPayload = {
   state?: string
 } | null
 
+type FeeBreakdown = {
+  sellerFeeAmount: number
+  gatewayCostAmount: number
+  gatewaySstAmount: number
+  gatewayTotalCostAmount: number
+  platformMarginAmount: number
+  sstAmount: number
+}
+
 function isReservationExpired(reservedUntil?: string | null) {
   if (!reservedUntil) return true
   return new Date(reservedUntil).getTime() <= Date.now()
@@ -88,35 +97,50 @@ function mapPaymentMethod(channel: number) {
   return 'FPX'
 }
 
-function estimateGatewayFee(_amount: number, _method: string) {
-  // Temporary logic aligned with your SQL test:
-  // RM1 flat gateway fee
-  return 1.0
-}
+function getFeeBreakdown(method: string, _plan: string): FeeBreakdown {
+  // Current locked model:
+  // Seller-facing Basic FPX fee = RM1.50
+  // Internal provider cost = RM1.00
+  // Internal provider SST = RM0.08
+  // Internal platform margin = RM0.42
+  // Seller does NOT see SST line
+  if (method === 'FPX') {
+    const sellerFeeAmount = 1.5
+    const gatewayCostAmount = 1.0
+    const gatewaySstAmount = 0.08
+    const gatewayTotalCostAmount = roundMoney(
+      gatewayCostAmount + gatewaySstAmount
+    )
+    const platformMarginAmount = roundMoney(
+      sellerFeeAmount - gatewayTotalCostAmount
+    )
 
-function calculatePlatformFee(amount: number, _method: string, plan: string) {
-  const normalizedPlan = (plan || 'BASIC').toUpperCase()
-
-  // Keep future flexibility for other plans.
-  // For now BASIC follows tested SQL logic.
-  if (normalizedPlan !== 'BASIC') {
-    return 0
+    return {
+      sellerFeeAmount,
+      gatewayCostAmount,
+      gatewaySstAmount,
+      gatewayTotalCostAmount,
+      platformMarginAmount,
+      sstAmount: 0,
+    }
   }
 
-  return roundMoney(Math.max(amount * 0.05, 0.5))
-}
-
-function calculateSst(platformFee: number) {
-  return roundMoney(platformFee * 0.08)
+  // Temporary safe default for other methods until you finalize pricing
+  return {
+    sellerFeeAmount: 0,
+    gatewayCostAmount: 0,
+    gatewaySstAmount: 0,
+    gatewayTotalCostAmount: 0,
+    platformMarginAmount: 0,
+    sstAmount: 0,
+  }
 }
 
 function calculateNetSellerAmount(
   grossAmount: number,
-  gatewayFee: number,
-  platformFee: number,
-  sst: number
+  sellerFeeAmount: number
 ) {
-  return roundMoney(grossAmount - gatewayFee - platformFee - sst)
+  return roundMoney(grossAmount - sellerFeeAmount)
 }
 
 function isAllowedPaymentChannel(channel: number) {
@@ -347,16 +371,10 @@ export async function POST(req: NextRequest) {
     const paymentMethod = mapPaymentMethod(paymentChannel)
     const sellerPlan = (seller.plan_type || 'BASIC').toUpperCase()
 
-    const gatewayFee = roundMoney(estimateGatewayFee(subtotal, paymentMethod))
-    const platformFee = roundMoney(
-      calculatePlatformFee(subtotal, paymentMethod, sellerPlan)
-    )
-    const sst = roundMoney(calculateSst(platformFee))
+    const feeBreakdown = getFeeBreakdown(paymentMethod, sellerPlan)
     const sellerNet = calculateNetSellerAmount(
       totalAmount,
-      gatewayFee,
-      platformFee,
-      sst
+      feeBreakdown.sellerFeeAmount
     )
 
     const firstProduct = validItems[0].product
@@ -403,16 +421,26 @@ export async function POST(req: NextRequest) {
         total_amount: totalAmount,
         subtotal,
 
-        gateway_fee: gatewayFee,
-        platform_fee: platformFee,
-        sst,
+        // Legacy compatibility
+        gateway_fee: feeBreakdown.sellerFeeAmount,
+        platform_fee: 0,
+        sst: 0,
         seller_net: sellerNet,
 
+        // Existing
         seller_plan_type: sellerPlan,
         payment_method: paymentMethod,
         gross_amount: totalAmount,
-        platform_fee_amount: platformFee,
+        platform_fee_amount: 0,
         net_seller_amount: sellerNet,
+
+        // New scalable fields
+        seller_fee_amount: feeBreakdown.sellerFeeAmount,
+        gateway_cost_amount: feeBreakdown.gatewayCostAmount,
+        gateway_sst_amount: feeBreakdown.gatewaySstAmount,
+        gateway_total_cost_amount: feeBreakdown.gatewayTotalCostAmount,
+        platform_margin_amount: feeBreakdown.platformMarginAmount,
+        sst_amount: feeBreakdown.sstAmount,
 
         currency: 'MYR',
 
