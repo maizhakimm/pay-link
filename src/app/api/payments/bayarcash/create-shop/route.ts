@@ -352,7 +352,7 @@ export async function POST(req: NextRequest) {
     const platformFee = roundMoney(
       calculatePlatformFee(subtotal, paymentMethod, sellerPlan)
     )
-    const sellerNet = roundMoney(subtotal - gatewayFee - platformFee)
+    const sellerNet = roundMoney(subtotal - platformFee)
 
     const firstProduct = validItems[0].product
     const orderNumber = `ORD-${Date.now()}`
