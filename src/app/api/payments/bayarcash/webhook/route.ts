@@ -64,145 +64,38 @@ function getFeeBreakdown(
   const normalizedMethod = String(method || 'FPX').toUpperCase()
   const normalizedPlan = String(plan || 'BASIC').toUpperCase()
 
-  type FeeRule = {
-    sellerFeeType: 'flat' | 'percent_plus_flat'
-    sellerFeeFlat: number
-    sellerFeePercent: number
-
-    gatewayCostType: 'flat' | 'percent_plus_flat'
-    gatewayCostFlat: number
-    gatewayCostPercent: number
-
-    gatewaySstType: 'none' | 'flat' | 'percent_of_gateway_cost'
-    gatewaySstFlat: number
-    gatewaySstPercent: number
+  if (normalizedPlan !== 'BASIC') {
+    return {
+      sellerFeeAmount: 0,
+      gatewayCostAmount: 0,
+      gatewaySstAmount: 0,
+      gatewayTotalCostAmount: 0,
+      platformMarginAmount: 0,
+      sstAmount: 0,
+    }
   }
 
-  const feeRules: Record<string, Record<string, FeeRule>> = {
-    BASIC: {
-      FPX: {
-        sellerFeeType: 'flat',
-        sellerFeeFlat: 1.5,
-        sellerFeePercent: 0,
-
-        gatewayCostType: 'flat',
-        gatewayCostFlat: 1.0,
-        gatewayCostPercent: 0,
-
-        gatewaySstType: 'flat',
-        gatewaySstFlat: 0.08,
-        gatewaySstPercent: 0,
-      },
-
-      // Temporary placeholders until you finalize the exact pricing.
-      CARD: {
-        sellerFeeType: 'percent_plus_flat',
-        sellerFeeFlat: 0,
-        sellerFeePercent: 0,
-
-        gatewayCostType: 'percent_plus_flat',
-        gatewayCostFlat: 0,
-        gatewayCostPercent: 0,
-
-        gatewaySstType: 'percent_of_gateway_cost',
-        gatewaySstFlat: 0,
-        gatewaySstPercent: 0.08,
-      },
-
-      DUITNOW_QR: {
-        sellerFeeType: 'percent_plus_flat',
-        sellerFeeFlat: 0,
-        sellerFeePercent: 0,
-
-        gatewayCostType: 'percent_plus_flat',
-        gatewayCostFlat: 0,
-        gatewayCostPercent: 0,
-
-        gatewaySstType: 'percent_of_gateway_cost',
-        gatewaySstFlat: 0,
-        gatewaySstPercent: 0.08,
-      },
-
-      BOOST_PAYFLEX: {
-        sellerFeeType: 'percent_plus_flat',
-        sellerFeeFlat: 0,
-        sellerFeePercent: 0,
-
-        gatewayCostType: 'percent_plus_flat',
-        gatewayCostFlat: 0,
-        gatewayCostPercent: 0,
-
-        gatewaySstType: 'percent_of_gateway_cost',
-        gatewaySstFlat: 0,
-        gatewaySstPercent: 0.08,
-      },
-
-      DUITNOW_ONLINE: {
-        sellerFeeType: 'percent_plus_flat',
-        sellerFeeFlat: 0,
-        sellerFeePercent: 0,
-
-        gatewayCostType: 'percent_plus_flat',
-        gatewayCostFlat: 0,
-        gatewayCostPercent: 0,
-
-        gatewaySstType: 'percent_of_gateway_cost',
-        gatewaySstFlat: 0,
-        gatewaySstPercent: 0.08,
-      },
-
-      SPAYLATER: {
-        sellerFeeType: 'percent_plus_flat',
-        sellerFeeFlat: 0,
-        sellerFeePercent: 0,
-
-        gatewayCostType: 'percent_plus_flat',
-        gatewayCostFlat: 0,
-        gatewayCostPercent: 0,
-
-        gatewaySstType: 'percent_of_gateway_cost',
-        gatewaySstFlat: 0,
-        gatewaySstPercent: 0.08,
-      },
-    },
-  }
-
-  const safePlan = feeRules[normalizedPlan] ? normalizedPlan : 'BASIC'
-  const selectedRule =
-    feeRules[safePlan][normalizedMethod] || feeRules[safePlan]['FPX']
-
-  const calculateAmount = (
-    type: 'flat' | 'percent_plus_flat',
-    flat: number,
-    percent: number,
-    amount: number
-  ) => {
-    if (type === 'flat') return roundMoney(flat)
-    return roundMoney(flat + amount * percent)
-  }
-
-  const sellerFeeAmount = calculateAmount(
-    selectedRule.sellerFeeType,
-    selectedRule.sellerFeeFlat,
-    selectedRule.sellerFeePercent,
-    grossAmount
-  )
-
-  const gatewayCostAmount = calculateAmount(
-    selectedRule.gatewayCostType,
-    selectedRule.gatewayCostFlat,
-    selectedRule.gatewayCostPercent,
-    grossAmount
-  )
-
+  let sellerFeeAmount = 0
+  let gatewayCostAmount = 0
   let gatewaySstAmount = 0
 
-  if (selectedRule.gatewaySstType === 'flat') {
-    gatewaySstAmount = roundMoney(selectedRule.gatewaySstFlat)
-  } else if (selectedRule.gatewaySstType === 'percent_of_gateway_cost') {
-    gatewaySstAmount = roundMoney(
-      gatewayCostAmount * selectedRule.gatewaySstPercent
-    )
+  if (normalizedMethod === 'FPX') {
+    sellerFeeAmount = 1.5
+    gatewayCostAmount = 1.0
+    gatewaySstAmount = 0.08
+  } else if (normalizedMethod === 'CARD') {
+    sellerFeeAmount = roundMoney(1 + grossAmount * 0.025)
+    gatewayCostAmount = roundMoney(1 + grossAmount * 0.02)
+    gatewaySstAmount = roundMoney(gatewayCostAmount * 0.08)
+  } else if (
+    normalizedMethod === 'DUITNOW_QR' ||
+    normalizedMethod === 'BOOST_PAYFLEX' ||
+    normalizedMethod === 'DUITNOW_ONLINE' ||
+    normalizedMethod === 'SPAYLATER'
+  ) {
+    sellerFeeAmount = roundMoney(grossAmount * 0.025)
+    gatewayCostAmount = roundMoney(grossAmount * 0.02)
+    gatewaySstAmount = roundMoney(gatewayCostAmount * 0.08)
   }
 
   const gatewayTotalCostAmount = roundMoney(
@@ -214,9 +107,9 @@ function getFeeBreakdown(
   )
 
   return {
-    sellerFeeAmount,
-    gatewayCostAmount,
-    gatewaySstAmount,
+    sellerFeeAmount: roundMoney(sellerFeeAmount),
+    gatewayCostAmount: roundMoney(gatewayCostAmount),
+    gatewaySstAmount: roundMoney(gatewaySstAmount),
     gatewayTotalCostAmount,
     platformMarginAmount,
     sstAmount: 0,
