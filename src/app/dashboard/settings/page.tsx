@@ -27,6 +27,13 @@ const MALAYSIAN_BANKS = [
   'UOB Bank',
 ]
 
+const DELIVERY_MODES = [
+  { value: 'free_delivery', label: 'Free Delivery' },
+  { value: 'fixed_fee', label: 'Delivery Fee (Fixed)' },
+  { value: 'included_in_price', label: 'Included in Price' },
+  { value: 'pay_rider_separately', label: 'Pay Rider Separately' },
+]
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -65,6 +72,20 @@ async function generateUniqueShopSlug(base: string, currentSellerId?: string | n
   }
 }
 
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('ms-MY', {
+    style: 'currency',
+    currency: 'MYR',
+    minimumFractionDigits: 2,
+  }).format(amount)
+}
+
+type DeliveryMode =
+  | 'free_delivery'
+  | 'fixed_fee'
+  | 'included_in_price'
+  | 'pay_rider_separately'
+
 type SellerProfileRow = {
   id: string
   user_id: string
@@ -84,6 +105,10 @@ type SellerProfileRow = {
   closing_time?: string | null
   temporarily_closed?: boolean | null
   closed_message?: string | null
+  delivery_mode?: DeliveryMode | null
+  delivery_fee?: number | null
+  delivery_area?: string | null
+  delivery_note?: string | null
 }
 
 export default function SettingsPage() {
@@ -120,6 +145,12 @@ export default function SettingsPage() {
     'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
   )
 
+  const [deliveryMode, setDeliveryMode] =
+    useState<DeliveryMode>('pay_rider_separately')
+  const [deliveryFee, setDeliveryFee] = useState('0')
+  const [deliveryArea, setDeliveryArea] = useState('')
+  const [deliveryNote, setDeliveryNote] = useState('')
+
   const previewBaseUrl =
     (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
 
@@ -142,6 +173,24 @@ export default function SettingsPage() {
 
     return `Orders allowed from ${openingTime || '09:00'} to ${closingTime || '22:00'}`
   }, [acceptOrdersAnytime, openingTime, closingTime, temporarilyClosed])
+
+  const deliverySummaryText = useMemo(() => {
+    const fee = Number(deliveryFee || 0)
+
+    switch (deliveryMode) {
+      case 'free_delivery':
+        return 'Free delivery tersedia untuk kawasan terpilih.'
+      case 'fixed_fee':
+        return fee > 0
+          ? `Delivery fee sebanyak ${formatCurrency(fee)} akan dikenakan.`
+          : 'Delivery fee akan dikenakan.'
+      case 'included_in_price':
+        return 'Harga produk telah termasuk delivery.'
+      case 'pay_rider_separately':
+      default:
+        return 'Bayaran delivery dibuat berasingan terus kepada rider / seller.'
+    }
+  }, [deliveryMode, deliveryFee])
 
   useEffect(() => {
     loadProfile()
@@ -177,6 +226,10 @@ export default function SettingsPage() {
         temporarily_closed: false,
         closed_message:
           'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+        delivery_mode: 'pay_rider_separately',
+        delivery_fee: 0,
+        delivery_area: null,
+        delivery_note: null,
       })
       .select('*')
       .single()
@@ -235,6 +288,11 @@ export default function SettingsPage() {
           'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
       )
 
+      setDeliveryMode(profile.delivery_mode || 'pay_rider_separately')
+      setDeliveryFee(String(profile.delivery_fee ?? 0))
+      setDeliveryArea(profile.delivery_area || '')
+      setDeliveryNote(profile.delivery_note || '')
+
       setStoreName(!existingSlug && isDefaultName ? '' : existingStoreName)
       setSlugLocked(Boolean(existingSlug))
     } catch (err) {
@@ -280,6 +338,9 @@ export default function SettingsPage() {
 
     const trimmedStoreName = storeName.trim()
     const trimmedClosedMessage = closedMessage.trim()
+    const trimmedDeliveryArea = deliveryArea.trim()
+    const trimmedDeliveryNote = deliveryNote.trim()
+    const parsedDeliveryFee = Number(deliveryFee || 0)
 
     if (!trimmedStoreName) {
       alert('Store Name is required')
@@ -296,6 +357,16 @@ export default function SettingsPage() {
         alert('Opening time and closing time cannot be the same.')
         return
       }
+    }
+
+    if (!Number.isFinite(parsedDeliveryFee) || parsedDeliveryFee < 0) {
+      alert('Please enter a valid delivery fee.')
+      return
+    }
+
+    if (deliveryMode === 'fixed_fee' && parsedDeliveryFee <= 0) {
+      alert('Please enter delivery fee more than 0.')
+      return
     }
 
     setSaving(true)
@@ -336,6 +407,10 @@ export default function SettingsPage() {
           closed_message:
             trimmedClosedMessage ||
             'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+          delivery_mode: deliveryMode,
+          delivery_fee: deliveryMode === 'fixed_fee' ? parsedDeliveryFee : 0,
+          delivery_area: trimmedDeliveryArea || null,
+          delivery_note: trimmedDeliveryNote || null,
         })
         .eq('id', currentSellerId)
 
@@ -553,6 +628,98 @@ export default function SettingsPage() {
                       onChange={(e) => setAccountHolderName(e.target.value)}
                       className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-extrabold text-slate-900">Delivery Settings</p>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                      Customer-facing
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-bold text-slate-700">Preview</p>
+                    <p className="mt-1 text-sm text-slate-600">{deliverySummaryText}</p>
+
+                    {deliveryArea.trim() ? (
+                      <p className="mt-2 text-xs text-slate-500">
+                        Kawasan liputan: {deliveryArea.trim()}
+                      </p>
+                    ) : null}
+
+                    {deliveryNote.trim() ? (
+                      <p className="mt-1 text-xs text-slate-500">{deliveryNote.trim()}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid gap-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Delivery Mode
+                      </label>
+                      <select
+                        value={deliveryMode}
+                        onChange={(e) => setDeliveryMode(e.target.value as DeliveryMode)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                      >
+                        {DELIVERY_MODES.map((mode) => (
+                          <option key={mode.value} value={mode.value}>
+                            {mode.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {deliveryMode === 'fixed_fee' ? (
+                      <div>
+                        <label className="mb-2 block text-sm font-bold text-slate-700">
+                          Delivery Fee (RM)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Contoh: 5.00"
+                          value={deliveryFee}
+                          onChange={(e) => setDeliveryFee(e.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                        />
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Delivery Area
+                      </label>
+                      <input
+                        placeholder="Contoh: Shah Alam, Subang, Klang"
+                        value={deliveryArea}
+                        onChange={(e) => setDeliveryArea(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Optional. Customer boleh nampak kawasan liputan seller.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Delivery Note
+                      </label>
+                      <textarea
+                        placeholder="Contoh: Caj rider dibayar terus kepada rider semasa barang sampai."
+                        value={deliveryNote}
+                        onChange={(e) => setDeliveryNote(e.target.value)}
+                        rows={3}
+                        className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Nota tambahan ini boleh dipaparkan kepada customer semasa checkout /
+                        shop page.
+                      </p>
+                    </div>
                   </div>
                 </div>
 
