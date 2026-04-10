@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import ShopPageClient from './ShopPageClient'
+import ShopPageClient from '../../shop/[slug]/ShopPageClient'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
