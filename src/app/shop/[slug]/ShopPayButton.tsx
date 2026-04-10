@@ -100,8 +100,8 @@ export default function ShopPayButton({
         return 'Free delivery tersedia untuk kawasan terpilih.'
       case 'fixed_fee':
         return Number(deliveryFee || 0) > 0
-          ? `Delivery fee sebanyak ${formatCurrency(deliveryFee)} akan dikenakan.`
-          : 'Delivery fee akan dikenakan.'
+          ? `Delivery fee sebanyak ${formatCurrency(deliveryFee)} akan dikenakan jika anda pilih delivery.`
+          : 'Delivery fee akan dikenakan jika anda pilih delivery.'
       case 'included_in_price':
         return 'Harga produk telah termasuk delivery.'
       case 'pay_rider_separately':
@@ -109,6 +109,18 @@ export default function ShopPayButton({
         return 'Bayaran delivery dibuat berasingan terus kepada rider / seller.'
     }
   }, [deliveryMode, deliveryFee])
+
+  const appliedDeliveryFee = useMemo(() => {
+    if (!needsDelivery) return 0
+    if (deliveryMode !== 'fixed_fee') return 0
+
+    const parsed = Number(deliveryFee || 0)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+  }, [needsDelivery, deliveryMode, deliveryFee])
+
+  const payableTotal = useMemo(() => {
+    return Number(total || 0) + appliedDeliveryFee
+  }, [total, appliedDeliveryFee])
 
   function handlePhoneChange(value: string) {
     let cleaned = value.replace(/[^\d+]/g, '')
@@ -163,6 +175,13 @@ export default function ShopPayButton({
           email: email.trim(),
           phone,
           items,
+          subtotal: Number(total || 0),
+          deliveryMode,
+          deliveryFee: appliedDeliveryFee,
+          deliveryRequired: needsDelivery,
+          totalAmount: payableTotal,
+          deliveryArea: deliveryArea || null,
+          deliveryNote: deliveryNote || null,
           delivery: needsDelivery
             ? {
                 address1: address1.trim(),
@@ -347,9 +366,23 @@ export default function ShopPayButton({
         )}
       </div>
 
-      <div style={totalRow}>
-        <span>Total</span>
-        <strong>RM {total.toFixed(2)}</strong>
+      <div style={totalsBox}>
+        <div style={totalLine}>
+          <span>Subtotal</span>
+          <strong>{formatCurrency(total)}</strong>
+        </div>
+
+        <div style={totalLine}>
+          <span>Delivery</span>
+          <strong>
+            {appliedDeliveryFee > 0 ? formatCurrency(appliedDeliveryFee) : formatCurrency(0)}
+          </strong>
+        </div>
+
+        <div style={grandTotalLine}>
+          <span>Total</span>
+          <strong>{formatCurrency(payableTotal)}</strong>
+        </div>
       </div>
 
       <button
@@ -471,14 +504,28 @@ const toggleKnob = {
   transition: 'left 0.2s ease',
 } as const
 
-const totalRow = {
-  display: 'flex',
-  justifyContent: 'space-between',
+const totalsBox = {
   marginBottom: '12px',
   paddingTop: '10px',
   borderTop: '1px solid #e2e8f0',
+  display: 'grid',
+  gap: '8px',
+} as const
+
+const totalLine = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  color: '#334155',
+  fontSize: '14px',
+} as const
+
+const grandTotalLine = {
+  display: 'flex',
+  justifyContent: 'space-between',
   color: '#0f172a',
-  fontSize: '15px',
+  fontSize: '16px',
+  fontWeight: 800,
+  paddingTop: '4px',
 } as const
 
 const buttonStyle = {
