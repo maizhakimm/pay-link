@@ -24,6 +24,17 @@ type BreakdownRow = {
   total_payout: number
 }
 
+type HistoryRow = {
+  seller_profile_id: string
+  store_name: string
+  email: string
+  payout_at: string | null
+  total_sales: number
+  total_fee: number
+  total_payout: number
+  total_orders: number
+}
+
 function formatMoney(value?: number | null) {
   return `RM ${Number(value || 0).toFixed(2)}`
 }
@@ -33,7 +44,7 @@ export default function AdminPayoutPage() {
   const [markingSellerId, setMarkingSellerId] = useState<string | null>(null)
 
   const [rows, setRows] = useState<PayoutRow[]>([])
-  const [history, setHistory] = useState<any[]>([])
+  const [history, setHistory] = useState<HistoryRow[]>([])
   const [breakdowns, setBreakdowns] = useState<BreakdownRow[]>([])
   const [search, setSearch] = useState('')
 
@@ -138,67 +149,71 @@ export default function AdminPayoutPage() {
       return a.seller_profile_id.localeCompare(b.seller_profile_id)
     })
 
-    // LOAD PAYOUT HISTORY
-const { data: paidOutOrders } = await supabase
-  .from('orders')
-  .select(`
-    seller_profile_id,
-    gross_amount,
-    platform_fee_amount,
-    net_seller_amount,
-    payout_at,
-    seller_profiles (
-      store_name,
-      email
+    const { data: paidOutOrders, error: paidOutError } = await supabase
+      .from('orders')
+      .select(`
+        seller_profile_id,
+        gross_amount,
+        platform_fee_amount,
+        net_seller_amount,
+        payout_at,
+        seller_profiles (
+          store_name,
+          email
+        )
+      `)
+      .eq('payout_status', 'paid')
+
+    if (paidOutError) {
+      alert(paidOutError.message)
+      setLoading(false)
+      return
+    }
+
+    const historyMap = new Map<string, HistoryRow>()
+
+    for (const o of paidOutOrders || []) {
+      const key = `${o.seller_profile_id}__${o.payout_at}`
+
+      const sellerProfileRaw = Array.isArray(o.seller_profiles)
+        ? o.seller_profiles[0]
+        : o.seller_profiles
+
+      const sellerProfile = sellerProfileRaw as
+        | { store_name?: string | null; email?: string | null }
+        | null
+        | undefined
+
+      if (!historyMap.has(key)) {
+        historyMap.set(key, {
+          seller_profile_id: String(o.seller_profile_id || ''),
+          store_name: sellerProfile?.store_name || 'Unknown',
+          email: sellerProfile?.email || '',
+          payout_at: o.payout_at || null,
+          total_sales: 0,
+          total_fee: 0,
+          total_payout: 0,
+          total_orders: 0,
+        })
+      }
+
+      const row = historyMap.get(key)
+      if (!row) continue
+
+      row.total_sales += Number(o.gross_amount || 0)
+      row.total_fee += Number(o.platform_fee_amount || 0)
+      row.total_payout += Number(o.net_seller_amount || 0)
+      row.total_orders += 1
+    }
+
+    setHistory(
+      Array.from(historyMap.values()).sort(
+        (a, b) =>
+          new Date(b.payout_at || 0).getTime() -
+          new Date(a.payout_at || 0).getTime()
+      )
     )
-  `)
-  .eq('payout_status', 'paid')
 
-const historyMap = new Map()
-
-for (const o of paidOutOrders || []) {
-  const key = `${o.seller_profile_id}__${o.payout_at}`
-
-  const sellerProfileRaw = Array.isArray(o.seller_profiles)
-    ? o.seller_profiles[0]
-    : o.seller_profiles
-
-  const sellerProfile = sellerProfileRaw as
-    | { store_name?: string | null; email?: string | null }
-    | null
-    | undefined
-
-  if (!historyMap.has(key)) {
-    historyMap.set(key, {
-      seller_profile_id: o.seller_profile_id,
-      store_name: sellerProfile?.store_name || 'Unknown',
-      email: sellerProfile?.email || '',
-      payout_at: o.payout_at,
-      total_sales: 0,
-      total_fee: 0,
-      total_payout: 0,
-      total_orders: 0,
-    })
-  }
-
-  const row = historyMap.get(key)
-  row.total_sales += Number(o.gross_amount || 0)
-  row.total_fee += Number(o.platform_fee_amount || 0)
-  row.total_payout += Number(o.net_seller_amount || 0)
-  row.total_orders += 1
-}
-
-  const row = historyMap.get(key)
-  row.total_sales += Number(o.gross_amount || 0)
-  row.total_fee += Number(o.platform_fee_amount || 0)
-  row.total_payout += Number(o.net_seller_amount || 0)
-  row.total_orders += 1
-  }
-
-  setHistory(Array.from(historyMap.values()).sort((a, b) =>
-    new Date(b.payout_at).getTime() - new Date(a.payout_at).getTime()
-  ))
-    
     setRows(payoutRows)
     setBreakdowns(breakdownRows)
     setLoading(false)
@@ -301,7 +316,10 @@ for (const o of paidOutOrders || []) {
       <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label="Sellers" value={totals.sellers} />
         <StatCard label="Paid Orders" value={totals.orders} />
-        <StatCard label="Paid Sales (Pending Payout)" value={formatMoney(totals.sales)} />
+        <StatCard
+          label="Paid Sales (Pending Payout)"
+          value={formatMoney(totals.sales)}
+        />
         <StatCard label="Pending Fee" value={formatMoney(totals.fee)} />
         <StatCard label="Payout Due" value={formatMoney(totals.payout)} />
       </section>
@@ -315,53 +333,13 @@ for (const o of paidOutOrders || []) {
         />
       </section>
 
-      {/* PAYOUT HISTORY */}
-<section className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-  <div className="mb-5">
-    <h2 className="text-2xl font-bold text-slate-900">Payout History</h2>
-    <p className="mt-1 text-sm text-slate-500">
-      Records of completed payouts.
-    </p>
-  </div>
-
-  {history.length === 0 ? (
-    <p className="text-sm text-slate-500">No payout history yet.</p>
-  ) : (
-    <div className="space-y-4">
-      {history.map((h, i) => (
-        <div key={i} className="rounded-2xl border border-slate-200 p-4">
-          <div className="flex justify-between">
-            <div>
-              <p className="font-bold text-slate-900">{h.store_name}</p>
-              <p className="text-sm text-slate-500">{h.email}</p>
-            </div>
-
-            <div className="text-right">
-              <p className="text-sm text-slate-500">Payout Date</p>
-              <p className="font-semibold">
-                {new Date(h.payout_at).toLocaleString()}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <InfoCard label="Orders" value={String(h.total_orders)} />
-            <InfoCard label="Sales" value={formatMoney(h.total_sales)} />
-            <InfoCard label="Fee" value={formatMoney(h.total_fee)} />
-            <InfoCard label="Paid" value={formatMoney(h.total_payout)} />
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-</section>
-
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <div className="mb-5">
           <h2 className="text-2xl font-bold text-slate-900">Seller Payout List</h2>
           <p className="mt-1 text-sm text-slate-500">
             Showing {filteredRows.length} seller
-            {filteredRows.length === 1 ? '' : 's'} with unpaid / eligible paid orders.
+            {filteredRows.length === 1 ? '' : 's'} with unpaid / eligible paid
+            orders.
           </p>
         </div>
 
@@ -467,6 +445,48 @@ for (const o of paidOutOrders || []) {
                 </div>
               )
             })}
+          </div>
+        )}
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-5">
+          <h2 className="text-2xl font-bold text-slate-900">Payout History</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Records of completed payouts.
+          </p>
+        </div>
+
+        {history.length === 0 ? (
+          <p className="text-sm text-slate-500">No payout history yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {history.map((h, i) => (
+              <div key={i} className="rounded-2xl border border-slate-200 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-bold text-slate-900">{h.store_name}</p>
+                    <p className="text-sm text-slate-500">{h.email}</p>
+                  </div>
+
+                  <div className="text-left sm:text-right">
+                    <p className="text-sm text-slate-500">Payout Date</p>
+                    <p className="font-semibold">
+                      {h.payout_at
+                        ? new Date(h.payout_at).toLocaleString()
+                        : '-'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <InfoCard label="Orders" value={String(h.total_orders)} />
+                  <InfoCard label="Sales" value={formatMoney(h.total_sales)} />
+                  <InfoCard label="Fee" value={formatMoney(h.total_fee)} />
+                  <InfoCard label="Paid" value={formatMoney(h.total_payout)} />
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>
