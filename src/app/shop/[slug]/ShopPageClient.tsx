@@ -702,7 +702,7 @@ const logoWrap = {
 } as const
 
 const logo = {
-  height: 26,
+  height: 22,
   margin: '0 auto',
   display: 'block',
 } as const
