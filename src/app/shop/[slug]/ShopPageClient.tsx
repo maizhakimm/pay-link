@@ -705,7 +705,7 @@ const logo = {
   height: 18,
   margin: '0 auto',
   display: 'block',
-  opacity: 0.7,
+  opacity: 0.4,
 } as const
 
 const heroCard = {
