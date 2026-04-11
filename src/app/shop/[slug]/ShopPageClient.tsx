@@ -702,10 +702,9 @@ const logoWrap = {
 } as const
 
 const logo = {
-  height: 18,
+  height: 16,
   margin: '0 auto',
   display: 'block',
-  opacity: 0.4,
 } as const
 
 const heroCard = {
