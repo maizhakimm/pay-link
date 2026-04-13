@@ -22,12 +22,23 @@ type ProductRow = {
   image_3?: string | null
   image_4?: string | null
   image_5?: string | null
+  menu_category_id?: string | null
 }
 
 type SellerProfileRow = {
   id: string
   store_name: string | null
   shop_slug?: string | null
+}
+
+type MenuCategoryRow = {
+  id: string
+  seller_profile_id: string
+  name: string
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 function createSlug(value: string) {
@@ -40,7 +51,11 @@ function createSlug(value: string) {
     .slice(0, 60)
 }
 
-async function generateUniqueProductSlug(base: string, sellerProfileId: string, productId?: string) {
+async function generateUniqueProductSlug(
+  base: string,
+  sellerProfileId: string,
+  productId?: string
+) {
   const cleanBase = createSlug(base || 'product')
   let candidate = cleanBase || 'product'
   let counter = 1
@@ -83,6 +98,7 @@ function getProductImages(product: ProductRow) {
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([])
+  const [categories, setCategories] = useState<MenuCategoryRow[]>([])
   const [sellerProfile, setSellerProfile] = useState<SellerProfileRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -94,6 +110,11 @@ export default function ProductsPage() {
   const [productImages, setProductImages] = useState<File[]>([])
   const [trackStock, setTrackStock] = useState(true)
   const [stockQuantity, setStockQuantity] = useState('0')
+  const [menuCategoryId, setMenuCategoryId] = useState('')
+
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategorySortOrder, setNewCategorySortOrder] = useState('0')
+  const [savingCategory, setSavingCategory] = useState(false)
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
@@ -104,6 +125,7 @@ export default function ProductsPage() {
   const [editingStockQuantity, setEditingStockQuantity] = useState('0')
   const [editingExistingImages, setEditingExistingImages] = useState<string[]>([])
   const [editingNewImages, setEditingNewImages] = useState<File[]>([])
+  const [editingMenuCategoryId, setEditingMenuCategoryId] = useState('')
 
   const appUrl =
     typeof window !== 'undefined'
@@ -113,6 +135,12 @@ export default function ProductsPage() {
   const generatedSlug = useMemo(() => {
     return createSlug(name)
   }, [name])
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, MenuCategoryRow>()
+    categories.forEach((category) => map.set(category.id, category))
+    return map
+  }, [categories])
 
   const buildProductLink = useCallback(
     (productSlug: string) => {
@@ -158,6 +186,21 @@ export default function ProductsPage() {
 
     setSellerProfile(sellerData as SellerProfileRow)
 
+    const { data: categoryData, error: categoryError } = await supabase
+      .from('menu_categories')
+      .select('*')
+      .eq('seller_profile_id', sellerData.id)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+
+    if (categoryError) {
+      setError(categoryError.message)
+      setLoading(false)
+      return
+    }
+
+    setCategories((categoryData || []) as MenuCategoryRow[])
+
     const { data: productData, error: productError } = await supabase
       .from('products')
       .select('*')
@@ -177,6 +220,12 @@ export default function ProductsPage() {
   useEffect(() => {
     loadProductsPage()
   }, [loadProductsPage])
+
+  useEffect(() => {
+    if (!newCategorySortOrder && categories.length > 0) {
+      setNewCategorySortOrder(String(categories.length + 1))
+    }
+  }, [categories.length, newCategorySortOrder])
 
   function appendCreateImages(files: FileList | null) {
     if (!files) return
@@ -198,10 +247,14 @@ export default function ProductsPage() {
     if (!files) return
 
     const incoming = Array.from(files)
-    const totalCount = editingExistingImages.length + editingNewImages.length + incoming.length
+    const totalCount =
+      editingExistingImages.length + editingNewImages.length + incoming.length
 
     if (totalCount > 5) {
-      const allowed = Math.max(0, 5 - editingExistingImages.length - editingNewImages.length)
+      const allowed = Math.max(
+        0,
+        5 - editingExistingImages.length - editingNewImages.length
+      )
       const limited = [...editingNewImages, ...incoming.slice(0, allowed)]
       setEditingNewImages(limited)
       alert('Maximum 5 images only.')
@@ -244,6 +297,61 @@ export default function ProductsPage() {
     return uploadedUrls
   }
 
+  async function handleCreateCategory() {
+    if (!sellerProfile) {
+      alert('Seller profile not ready yet.')
+      return
+    }
+
+    if (!newCategoryName.trim()) {
+      alert('Please enter category name.')
+      return
+    }
+
+    setSavingCategory(true)
+
+    const trimmedSortOrder = newCategorySortOrder.trim()
+
+    const nextSortOrder =
+      categories.length > 0
+        ? Math.max(...categories.map((item) => Number(item.sort_order || 0))) + 1
+        : 1
+
+    const safeSortOrder =
+      trimmedSortOrder === ''
+        ? nextSortOrder
+        : Number.isFinite(Number(trimmedSortOrder))
+          ? Number(trimmedSortOrder)
+          : nextSortOrder
+
+    const { data: insertedCategory, error: insertError } = await supabase
+      .from('menu_categories')
+      .insert({
+        seller_profile_id: sellerProfile.id,
+        name: newCategoryName.trim(),
+        sort_order: safeSortOrder,
+        is_active: true,
+      })
+      .select('*')
+      .single()
+
+    setSavingCategory(false)
+
+    if (insertError) {
+      alert(insertError.message)
+      return
+    }
+
+    setNewCategoryName('')
+    setNewCategorySortOrder('')
+
+    await loadProductsPage()
+
+    if (insertedCategory?.id) {
+      setMenuCategoryId(insertedCategory.id)
+    }
+  }
+
   async function handleCreateProduct() {
     if (!sellerProfile) {
       alert('Seller profile not ready yet.')
@@ -269,7 +377,10 @@ export default function ProductsPage() {
       let uploadedUrls: string[] = []
 
       if (productImages.length > 0) {
-        uploadedUrls = await uploadProductImages(productImages, `${sellerProfile.id}/${finalSlug}`)
+        uploadedUrls = await uploadProductImages(
+          productImages,
+          `${sellerProfile.id}/${finalSlug}`
+        )
       }
 
       const safeStock = trackStock ? Math.max(0, Number(stockQuantity || 0)) : 0
@@ -286,6 +397,7 @@ export default function ProductsPage() {
         sold_out: computedSoldOut,
         store_name: sellerProfile.store_name || null,
         seller_profile_id: sellerProfile.id,
+        menu_category_id: menuCategoryId || null,
         image_1: uploadedUrls[0] || null,
         image_2: uploadedUrls[1] || null,
         image_3: uploadedUrls[2] || null,
@@ -305,6 +417,7 @@ export default function ProductsPage() {
       setProductImages([])
       setTrackStock(true)
       setStockQuantity('0')
+      setMenuCategoryId('')
       await loadProductsPage()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Image upload failed'
@@ -324,6 +437,7 @@ export default function ProductsPage() {
     setEditingStockQuantity(String(product.stock_quantity ?? 0))
     setEditingExistingImages(getProductImages(product))
     setEditingNewImages([])
+    setEditingMenuCategoryId(product.menu_category_id || '')
   }
 
   function cancelEdit() {
@@ -336,6 +450,7 @@ export default function ProductsPage() {
     setEditingStockQuantity('0')
     setEditingExistingImages([])
     setEditingNewImages([])
+    setEditingMenuCategoryId('')
   }
 
   async function saveEdit(product: ProductRow) {
@@ -353,7 +468,11 @@ export default function ProductsPage() {
       const nextSlug =
         editingName.trim() === product.name.trim()
           ? product.slug
-          : await generateUniqueProductSlug(editingName.trim(), sellerProfile.id, product.id)
+          : await generateUniqueProductSlug(
+              editingName.trim(),
+              sellerProfile.id,
+              product.id
+            )
 
       let newUploadedUrls: string[] = []
 
@@ -365,7 +484,9 @@ export default function ProductsPage() {
       }
 
       const finalImages = [...editingExistingImages, ...newUploadedUrls].slice(0, 5)
-      const safeStock = editingTrackStock ? Math.max(0, Number(editingStockQuantity || 0)) : 0
+      const safeStock = editingTrackStock
+        ? Math.max(0, Number(editingStockQuantity || 0))
+        : 0
       const computedSoldOut = editingTrackStock ? safeStock <= 0 : false
 
       const { error: updateError } = await supabase
@@ -379,6 +500,7 @@ export default function ProductsPage() {
           track_stock: editingTrackStock,
           stock_quantity: safeStock,
           sold_out: computedSoldOut,
+          menu_category_id: editingMenuCategoryId || null,
           image_1: finalImages[0] || null,
           image_2: finalImages[1] || null,
           image_3: finalImages[2] || null,
@@ -491,116 +613,199 @@ export default function ProductsPage() {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Create Product</h2>
+          <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
+            Menu Categories
+          </h2>
 
           <div className="grid gap-3">
-            <label className="text-sm font-bold text-slate-600">Product Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Example: Nasi Lemak Ayam"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-            />
-
-            <label className="text-sm font-bold text-slate-600">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Short product description"
-              rows={4}
-              className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-            />
-
-            <label className="text-sm font-bold text-slate-600">Price (RM)</label>
-            <input
-              value={price}
-              onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
-              placeholder="0.00"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-            />
-
-            <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-              <input
-                type="checkbox"
-                checked={trackStock}
-                onChange={(e) => setTrackStock(e.target.checked)}
-              />
-              <span>Track Stock Quantity</span>
+            <label className="text-sm font-bold text-slate-600">
+              New Category Name
             </label>
-
-            <label className="text-sm font-bold text-slate-600">Stock Quantity</label>
             <input
-              value={stockQuantity}
-              onChange={(e) => setStockQuantity(e.target.value.replace(/[^\d]/g, ''))}
-              placeholder="0"
-              disabled={!trackStock}
-              className={[
-                'w-full rounded-2xl border px-4 py-3 text-sm outline-none transition',
-                trackStock
-                  ? 'border-slate-200 bg-white text-slate-900 focus:border-slate-400'
-                  : 'border-slate-200 bg-slate-100 text-slate-400',
-              ].join(' ')}
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="Example: Burger"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
             />
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-              <strong className="text-slate-900">Stock note:</strong>
-              <div className="mt-1">
-                If stock tracking is on and quantity is 0, the product will become sold out automatically.
-              </div>
-            </div>
-
-            <label className="text-sm font-bold text-slate-600">Upload Product Images (Max 5)</label>
+            <label className="text-sm font-bold text-slate-600">
+              Sort Order
+            </label>
             <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => appendCreateImages(e.target.files)}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+              value={newCategorySortOrder}
+              onChange={(e) =>
+                setNewCategorySortOrder(e.target.value.replace(/[^\d-]/g, ''))
+              }
+              placeholder="Auto"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
             />
-
-            {productImages.length > 0 && (
-              <div className="grid grid-cols-2 gap-3">
-                {productImages.map((file, index) => (
-                  <div
-                    key={index}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
-                  >
-                    <div className="mb-2 break-words text-center text-xs text-slate-600">
-                      {file.name}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeCreateImage(index)}
-                      className="w-full rounded-xl border border-red-200 bg-rose-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-rose-100"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-              <strong className="text-slate-900">Preview link:</strong>
-              <div className="mt-1 break-all">
-                {generatedSlug && sellerProfile?.shop_slug
-                  ? `${appUrl}/p/${sellerProfile.shop_slug}/${generatedSlug}`
-                  : 'Enter product name to generate product link'}
-              </div>
-            </div>
 
             <button
-              onClick={handleCreateProduct}
-              disabled={saving}
-              className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={handleCreateCategory}
+              disabled={savingCategory}
+              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-900 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {saving ? 'Saving...' : 'Create Product'}
+              {savingCategory ? 'Saving category...' : '+ Add Category'}
             </button>
+
+            {categories.length > 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-2 text-sm font-bold text-slate-700">
+                  Existing Categories
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((category) => (
+                    <span
+                      key={category.id}
+                      className={[
+                        'inline-flex rounded-full px-3 py-1 text-xs font-bold',
+                        category.is_active
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-slate-200 text-slate-700',
+                      ].join(' ')}
+                    >
+                      {category.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-6 border-t border-slate-100 pt-6">
+            <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
+              Create Product
+            </h2>
+
+            <div className="grid gap-3">
+              <label className="text-sm font-bold text-slate-600">Product Name</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Example: Nasi Lemak Ayam"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+              />
+
+              <label className="text-sm font-bold text-slate-600">Menu Category</label>
+              <select
+                value={menuCategoryId}
+                onChange={(e) => setMenuCategoryId(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+              >
+                <option value="">No category</option>
+                {categories
+                  .filter((category) => category.is_active)
+                  .map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+              </select>
+
+              <label className="text-sm font-bold text-slate-600">Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Short product description"
+                rows={4}
+                className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+              />
+
+              <label className="text-sm font-bold text-slate-600">Price (RM)</label>
+              <input
+                value={price}
+                onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
+                placeholder="0.00"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+              />
+
+              <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={trackStock}
+                  onChange={(e) => setTrackStock(e.target.checked)}
+                />
+                <span>Track Stock Quantity</span>
+              </label>
+
+              <label className="text-sm font-bold text-slate-600">Stock Quantity</label>
+              <input
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(e.target.value.replace(/[^\d]/g, ''))}
+                placeholder="0"
+                disabled={!trackStock}
+                className={[
+                  'w-full rounded-2xl border px-4 py-3 text-sm outline-none transition',
+                  trackStock
+                    ? 'border-slate-200 bg-white text-slate-900 focus:border-slate-400'
+                    : 'border-slate-200 bg-slate-100 text-slate-400',
+                ].join(' ')}
+              />
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                <strong className="text-slate-900">Stock note:</strong>
+                <div className="mt-1">
+                  If stock tracking is on and quantity is 0, the product will become sold out automatically.
+                </div>
+              </div>
+
+              <label className="text-sm font-bold text-slate-600">
+                Upload Product Images (Max 5)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => appendCreateImages(e.target.files)}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+              />
+
+              {productImages.length > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  {productImages.map((file, index) => (
+                    <div
+                      key={index}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="mb-2 break-words text-center text-xs text-slate-600">
+                        {file.name}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeCreateImage(index)}
+                        className="w-full rounded-xl border border-red-200 bg-rose-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-rose-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                <strong className="text-slate-900">Preview link:</strong>
+                <div className="mt-1 break-all">
+                  {generatedSlug && sellerProfile?.shop_slug
+                    ? `${appUrl}/p/${sellerProfile.shop_slug}/${generatedSlug}`
+                    : 'Enter product name to generate product link'}
+                </div>
+              </div>
+
+              <button
+                onClick={handleCreateProduct}
+                disabled={saving}
+                className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {saving ? 'Saving...' : 'Create Product'}
+              </button>
+            </div>
           </div>
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Your Products</h2>
+          <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
+            Your Products
+          </h2>
 
           {loading ? (
             <p className="text-sm text-slate-500">Loading products...</p>
@@ -614,6 +819,9 @@ export default function ProductsPage() {
                 const link = buildProductLink(product.slug)
                 const images = getProductImages(product)
                 const thumb = images[0]
+                const categoryName = product.menu_category_id
+                  ? categoryMap.get(product.menu_category_id)?.name || 'Unknown category'
+                  : 'No category'
 
                 return (
                   <div
@@ -628,6 +836,24 @@ export default function ProductsPage() {
                           placeholder="Product name"
                           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                         />
+
+                        <label className="text-sm font-bold text-slate-600">
+                          Menu Category
+                        </label>
+                        <select
+                          value={editingMenuCategoryId}
+                          onChange={(e) => setEditingMenuCategoryId(e.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                        >
+                          <option value="">No category</option>
+                          {categories
+                            .filter((category) => category.is_active)
+                            .map((category) => (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            ))}
+                        </select>
 
                         <textarea
                           value={editingDescription}
@@ -679,7 +905,9 @@ export default function ProductsPage() {
                           ].join(' ')}
                         />
 
-                        <label className="text-sm font-bold text-slate-600">Existing Images</label>
+                        <label className="text-sm font-bold text-slate-600">
+                          Existing Images
+                        </label>
                         {editingExistingImages.length > 0 ? (
                           <div className="grid grid-cols-2 gap-3">
                             {editingExistingImages.map((image, index) => (
@@ -706,7 +934,9 @@ export default function ProductsPage() {
                           <p className="text-sm text-slate-500">No existing images</p>
                         )}
 
-                        <label className="text-sm font-bold text-slate-600">Add More Images (Max total 5)</label>
+                        <label className="text-sm font-bold text-slate-600">
+                          Add More Images (Max total 5)
+                        </label>
                         <input
                           type="file"
                           accept="image/*"
@@ -801,6 +1031,10 @@ export default function ProductsPage() {
                                 {product.track_stock
                                   ? `Stock: ${product.stock_quantity ?? 0}`
                                   : 'Stock tracking off'}
+                              </span>
+
+                              <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
+                                {categoryName}
                               </span>
                             </div>
 

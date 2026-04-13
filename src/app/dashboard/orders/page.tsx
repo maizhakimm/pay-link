@@ -20,6 +20,7 @@ type OrderRow = {
   product_name?: string | null
   product_slug?: string | null
   amount?: number | null
+  total_amount?: number | null
   status?: string | null
   fulfillment_status?: string | null
   payment_status?: string | null
@@ -279,12 +280,23 @@ function extractOrderItems(order: OrderRow): OrderItem[] {
 }
 
 function getOrderTotal(order: OrderRow, items: OrderItem[]) {
+  if (order.total_amount !== null && order.total_amount !== undefined) {
+    return Number(order.total_amount)
+  }
+
+  if (order.amount !== null && order.amount !== undefined) {
+    return Number(order.amount)
+  }
+
   if (items.length > 0) {
-    const itemsTotal = items.reduce((sum, item) => sum + Number(item.total || 0), 0)
+    const itemsTotal = items.reduce(
+      (sum, item) => sum + Number(item.total || 0),
+      0
+    )
     if (itemsTotal > 0) return itemsTotal
   }
 
-  return Number(order.amount || 0)
+  return 0
 }
 
 function isToday(dateValue?: string | null) {

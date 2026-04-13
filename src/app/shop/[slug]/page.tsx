@@ -14,6 +14,13 @@ type SellerProfile = {
   business_address?: string | null
 }
 
+type MenuCategory = {
+  id: string
+  name: string
+  sort_order?: number | null
+  is_active?: boolean | null
+}
+
 type ProductRow = {
   id: string
   name: string
@@ -27,11 +34,11 @@ type ProductRow = {
   image_5?: string | null
   is_active?: boolean | null
   seller_profile_id?: string | null
-  store_name?: string | null
   track_stock?: boolean
   stock_quantity?: number
   sold_out?: boolean
   created_at?: string
+  menu_category_id?: string | null // ✅ NEW
 }
 
 type PageProps = {
@@ -59,11 +66,14 @@ export default async function Page({ params }: PageProps) {
 
   let seller: SellerProfile | null = null
 
-  const { data: sellers, error: sellerError } = await supabase
+  // 🔹 GET SELLER
+  const { data: sellers } = await supabase
     .from('seller_profiles')
-    .select('id, store_name, shop_slug, profile_image, email, whatsapp, business_address')
+    .select(
+      'id, store_name, shop_slug, profile_image, email, whatsapp, business_address'
+    )
 
-  if (!sellerError && sellers && sellers.length > 0) {
+  if (sellers && sellers.length > 0) {
     seller =
       (sellers as SellerProfile[]).find((item) => {
         if (!item.store_name) return false
@@ -71,16 +81,17 @@ export default async function Page({ params }: PageProps) {
       }) || null
   }
 
+  // 🔹 FALLBACK SELLER FROM PRODUCT
   if (!seller) {
-    const { data: fallbackProducts, error: fallbackError } = await supabase
+    const { data: fallbackProducts } = await supabase
       .from('products')
       .select(
-        'seller_profile_id, store_name, is_active, name, slug, description, price, image_1, image_2, image_3, image_4, image_5, track_stock, stock_quantity, sold_out, created_at'
+        'seller_profile_id, store_name, is_active, name, slug, description, price'
       )
       .eq('is_active', true)
 
-    if (!fallbackError && fallbackProducts && fallbackProducts.length > 0) {
-      const matchedProduct = (fallbackProducts as ProductRow[]).find((item) => {
+    if (fallbackProducts && fallbackProducts.length > 0) {
+      const matchedProduct = (fallbackProducts as any[]).find((item) => {
         if (!item.store_name) return false
         return slugify(item.store_name) === requestedSlug
       })
@@ -99,46 +110,47 @@ export default async function Page({ params }: PageProps) {
     }
   }
 
+  // ❌ NO SELLER
   if (!seller) {
     return (
       <main style={errorMain}>
         <div style={errorBox}>
           <h2 style={errorTitle}>Shop not found</h2>
-          <p style={errorText}>The shop link may be invalid or unavailable.</p>
-          <p style={{ ...errorText, marginTop: 8 }}>
-            Please check the shop slug or make sure active products exist for this shop.
+          <p style={errorText}>
+            The shop link may be invalid or unavailable.
           </p>
         </div>
       </main>
     )
   }
 
-  const { data: products, error: productError } = await supabase
+  // 🔹 GET PRODUCTS (UPDATED)
+  const { data: products } = await supabase
     .from('products')
     .select('*')
     .eq('seller_profile_id', seller.id)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
-  if (productError) {
-    return (
-      <main style={errorMain}>
-        <div style={errorBox}>
-          <h2 style={errorTitle}>Unable to load products</h2>
-          <p style={errorText}>{productError.message}</p>
-        </div>
-      </main>
-    )
-  }
+  // 🔥 NEW — GET MENU CATEGORIES
+  const { data: categories } = await supabase
+    .from('menu_categories')
+    .select('id, name, sort_order, is_active')
+    .eq('seller_profile_id', seller.id)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
 
   return (
     <ShopPageClient
       seller={seller}
       products={(products || []) as ProductRow[]}
+      categories={(categories || []) as MenuCategory[]} // ✅ PASS HERE
       shopSlug={seller.shop_slug || requestedSlug}
     />
   )
 }
+
+// 🔹 ERROR UI (same as before)
 
 const errorMain = {
   minHeight: '100vh',
