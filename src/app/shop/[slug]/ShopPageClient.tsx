@@ -447,7 +447,7 @@ export default function ShopPageClient({
               {seller.business_address ? (
                 <p style={shopSub}>{seller.business_address}</p>
               ) : (
-                <p style={shopSub}>Order menu anda di sini</p>
+               
               )}
             </div>
           </div>
