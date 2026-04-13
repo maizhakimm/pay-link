@@ -130,8 +130,8 @@ export async function generateMetadata({
 
   const storeName = seller?.store_name?.trim() || 'BayarLink Shop'
   const description = seller?.temporarily_closed
-    ? `${storeName} is currently temporarily closed. View shop details on BayarLink.`
-    : `${storeName} on BayarLink. Simple online ordering and payment for WhatsApp sellers.`
+  ? `Kedai ini ditutup sementara. Sila lihat maklumat lanjut di BayarLink.`
+  : `Simple online ordering and payment untuk WhatsApp sellers.`
 
   const imageUrl =
     seller?.profile_image && seller.profile_image.trim().length > 0
