@@ -126,6 +126,9 @@ export default function ProductsPage() {
   const [editingExistingImages, setEditingExistingImages] = useState<string[]>([])
   const [editingNewImages, setEditingNewImages] = useState<File[]>([])
   const [editingMenuCategoryId, setEditingMenuCategoryId] = useState('')
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [editingCategoryName, setEditingCategoryName] = useState('')
+  const [editingCategorySortOrder, setEditingCategorySortOrder] = useState('0')
 
   const appUrl =
     typeof window !== 'undefined'
@@ -351,6 +354,64 @@ export default function ProductsPage() {
       setMenuCategoryId(insertedCategory.id)
     }
   }
+
+  function startEditCategory(category: MenuCategoryRow) {
+  setEditingCategoryId(category.id)
+  setEditingCategoryName(category.name)
+  setEditingCategorySortOrder(String(category.sort_order ?? 0))
+}
+
+function cancelEditCategory() {
+  setEditingCategoryId(null)
+  setEditingCategoryName('')
+  setEditingCategorySortOrder('0')
+}
+
+async function saveCategoryEdit(categoryId: string) {
+  if (!editingCategoryName.trim()) {
+    alert('Please enter category name.')
+    return
+  }
+
+  const safeSortOrder = Number.isFinite(Number(editingCategorySortOrder))
+    ? Number(editingCategorySortOrder)
+    : 0
+
+  const { error } = await supabase
+    .from('menu_categories')
+    .update({
+      name: editingCategoryName.trim(),
+      sort_order: safeSortOrder,
+    })
+    .eq('id', categoryId)
+
+  if (error) {
+    alert(error.message)
+    return
+  }
+
+  cancelEditCategory()
+  await loadProductsPage()
+}
+
+async function deleteCategory(category: MenuCategoryRow) {
+  const confirmed = window.confirm(
+    `Delete category "${category.name}"?`
+  )
+  if (!confirmed) return
+
+  const { error } = await supabase
+    .from('menu_categories')
+    .delete()
+    .eq('id', category.id)
+
+  if (error) {
+    alert(error.message)
+    return
+  }
+
+  await loadProductsPage()
+}
 
   async function handleCreateProduct() {
     if (!sellerProfile) {
@@ -653,21 +714,75 @@ export default function ProductsPage() {
                 <div className="mb-2 text-sm font-bold text-slate-700">
                   Existing Categories
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((category) => (
-                    <span
-                      key={category.id}
-                      className={[
-                        'inline-flex rounded-full px-3 py-1 text-xs font-bold',
-                        category.is_active
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-slate-200 text-slate-700',
-                      ].join(' ')}
-                    >
-                      {category.name}
-                    </span>
-                  ))}
-                </div>
+                <div className="grid gap-3">
+  {categories.map((category) => {
+    const isEditing = editingCategoryId === category.id
+
+    return (
+      <div
+        key={category.id}
+        className="rounded-2xl border border-slate-200 bg-white p-3"
+      >
+        {isEditing ? (
+          <div className="grid gap-2">
+            <input
+              value={editingCategoryName}
+              onChange={(e) => setEditingCategoryName(e.target.value)}
+              className="w-full rounded-xl border px-3 py-2 text-sm"
+            />
+
+            <input
+              value={editingCategorySortOrder}
+              onChange={(e) =>
+                setEditingCategorySortOrder(
+                  e.target.value.replace(/[^\d-]/g, '')
+                )
+              }
+              className="w-full rounded-xl border px-3 py-2 text-sm"
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => saveCategoryEdit(category.id)}
+                className="rounded-xl bg-black px-3 py-2 text-xs text-white"
+              >
+                Save
+              </button>
+              <button
+                onClick={cancelEditCategory}
+                className="rounded-xl border px-3 py-2 text-xs"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold">
+              {category.name}
+            </span>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => startEditCategory(category)}
+                className="text-xs"
+              >
+                ✏️
+              </button>
+
+              <button
+                onClick={() => deleteCategory(category)}
+                className="text-xs text-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  })}
+</div>
               </div>
             ) : null}
           </div>
