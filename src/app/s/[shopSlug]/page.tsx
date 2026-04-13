@@ -139,10 +139,10 @@ export async function generateMetadata({
       : 'https://www.bayarlink.my/BayarLink-Logo-01.svg'
 
   return {
-    title: `${storeName} | BayarLink`,
+    title: `${storeName}`,
     description,
     openGraph: {
-      title: `${storeName} | BayarLink`,
+      title: `${storeName}`,
       description,
       url: `https://www.bayarlink.my/s/${requestedSlug}`,
       siteName: 'BayarLink',
