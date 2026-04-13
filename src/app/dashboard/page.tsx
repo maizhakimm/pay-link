@@ -152,9 +152,7 @@ export default function DashboardPage() {
   const message = useMemo(() => {
     const customBlock = dailyNote.trim()
 
-    return `Salam 😊
-
-${customBlock ? `${customBlock}\n\n` : ''}${promoLines}
+    return `${customBlock ? `${customBlock}\n\n` : ''}${promoLines}
 
 Order sini:
 ${shopLink}`.trim()
