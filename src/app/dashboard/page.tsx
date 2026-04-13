@@ -17,6 +17,14 @@ type Product = {
   name?: string
   price?: number
   is_active?: boolean
+  menu_category_id?: string | null
+}
+
+type MenuCategory = {
+  id: string
+  name: string
+  sort_order?: number | null
+  is_active?: boolean | null
 }
 
 type Order = {
@@ -34,6 +42,7 @@ export default function DashboardPage() {
 
   const [seller, setSeller] = useState<SellerProfile | null>(null)
   const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<MenuCategory[]>([])
   const [orders, setOrders] = useState<Order[]>([])
 
   const [dailyNote, setDailyNote] = useState('')
@@ -71,6 +80,14 @@ export default function DashboardPage() {
       .select('*')
       .eq('seller_profile_id', sellerData.id)
 
+    const { data: categoryData } = await supabase
+      .from('menu_categories')
+      .select('id, name, sort_order, is_active')
+      .eq('seller_profile_id', sellerData.id)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+
     const { data: orderData } = await supabase
       .from('orders')
       .select('*')
@@ -78,6 +95,7 @@ export default function DashboardPage() {
       .order('created_at', { ascending: false })
 
     setProducts(productData || [])
+    setCategories(categoryData || [])
     setOrders(orderData || [])
     setLoading(false)
   }, [])
@@ -90,6 +108,24 @@ export default function DashboardPage() {
     return products.filter((p) => p.is_active)
   }, [products])
 
+  const activeCategories = useMemo(() => {
+    if (!categories.length || !activeProducts.length) return []
+
+    return categories.filter((category) =>
+      activeProducts.some(
+        (product) => (product.menu_category_id || '') === category.id
+      )
+    )
+  }, [categories, activeProducts])
+
+  const topCategories = useMemo(() => {
+    return activeCategories.slice(0, 5)
+  }, [activeCategories])
+
+  const topProducts = useMemo(() => {
+    return activeProducts.slice(0, 5)
+  }, [activeProducts])
+
   const shopLink =
     seller?.shop_slug && typeof window !== 'undefined'
       ? `${window.location.origin}/s/${seller.shop_slug}`
@@ -97,24 +133,32 @@ export default function DashboardPage() {
 
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.amount || 0), 0)
 
-  const productLines = activeProducts.length
-    ? activeProducts
+  const promoLines = useMemo(() => {
+    if (topCategories.length > 0) {
+      return `Antara kategori:\n${topCategories
+        .map((category) => `• ${category.name}`)
+        .join('\n')}\n\n...dan banyak lagi menu tersedia.`
+    }
+
+    if (topProducts.length > 0) {
+      return `Antara menu:\n${topProducts
         .map((p, i) => `${i + 1}. ${p.name} - ${formatMoney(p.price)}`)
-        .join('\n')
-    : 'Tiada produk aktif buat masa ini.'
+        .join('\n')}\n\n...dan banyak lagi menu tersedia.`
+    }
+
+    return 'Tiada produk aktif buat masa ini.'
+  }, [topCategories, topProducts])
 
   const message = useMemo(() => {
     const customBlock = dailyNote.trim()
 
     return `Salam 😊
 
-${customBlock ? `${customBlock}\n\n` : ''}Open order hari ini:
-
-${productLines}
+${customBlock ? `${customBlock}\n\n` : ''}${promoLines}
 
 Order sini:
 ${shopLink}`.trim()
-  }, [dailyNote, productLines, shopLink])
+  }, [dailyNote, promoLines, shopLink])
 
   async function saveNote() {
     if (!seller) return
@@ -190,7 +234,10 @@ ${shopLink}`.trim()
       <div className="mb-6 rounded-xl border bg-white p-4">
         <h2 className="mb-2 font-bold">Daily Note / Copywriting</h2>
         <p className="mb-3 text-sm text-slate-500">
-          Ini optional. Seller boleh tulis ayat sendiri di sini. Sistem tetap akan auto senaraikan produk aktif di bawah mesej WhatsApp.
+          Ini optional. Seller boleh tulis ayat sendiri di sini. Sistem akan
+          auto paparkan 5 kategori teratas jika ada kategori aktif. Jika tiada
+          kategori, sistem akan fallback kepada 5 produk aktif sahaja di bawah
+          mesej WhatsApp.
         </p>
 
         <textarea
@@ -213,7 +260,9 @@ ${shopLink}`.trim()
       <div className="mb-6 rounded-xl border bg-white p-4">
         <h2 className="mb-2 font-bold">WhatsApp Message</h2>
         <p className="mb-3 text-sm text-slate-500">
-          Produk di bawah ini dijana automatik berdasarkan produk yang aktif sahaja.
+          Kandungan di bawah dijana automatik berdasarkan kategori aktif yang
+          ada produk. Jika tiada kategori, sistem akan gunakan produk aktif
+          sahaja.
         </p>
 
         <div className="whitespace-pre-line rounded bg-gray-50 p-3 text-sm">
@@ -243,7 +292,9 @@ ${shopLink}`.trim()
           orders.slice(0, 5).map((order) => (
             <div key={order.id} className="border-b py-2 last:border-b-0">
               <div>{order.product_name}</div>
-              <div className="text-sm text-gray-500">{formatMoney(order.amount)}</div>
+              <div className="text-sm text-gray-500">
+                {formatMoney(order.amount)}
+              </div>
             </div>
           ))
         )}
