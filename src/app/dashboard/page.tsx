@@ -234,7 +234,7 @@ ${shopLink}`.trim()
 
           <div>
             <h1 className="text-3xl font-bold text-slate-900">
-              Welcome {seller?.store_name || 'Seller'}
+              {seller?.store_name || 'Seller'}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
               {shopLink || 'Complete your settings to activate your shop link.'}
