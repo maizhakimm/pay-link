@@ -5,6 +5,8 @@ import ShopPayButton from './ShopPayButton'
 
 type SellerProfile = {
   id: string
+  store_name: string | nulltype SellerProfile = {
+  id: string
   store_name: string | null
   profile_image?: string | null
   email?: string | null
@@ -20,10 +22,17 @@ type SellerProfile = {
     | 'fixed_fee'
     | 'included_in_price'
     | 'pay_rider_separately'
+    | 'distance_based'
     | null
   delivery_fee?: number | null
   delivery_area?: string | null
   delivery_note?: string | null
+  delivery_radius_km?: number | null
+  delivery_rate_per_km?: number | null
+  delivery_min_fee?: number | null
+  pickup_address?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 type MenuCategory = {
