@@ -180,10 +180,10 @@ export default function LoginPage() {
             <div className="w-full max-w-md">
               <div className="mb-6 flex flex-col items-center text-center lg:hidden">
                 <Image
-                  src="/BayarLink-Logo-01.svg"
+                  src="/BayarLink-Logo-Singup-Page.png"
                   alt="BayarLink Logo"
-                  width={180}
-                  height={50}
+                  width={200}
+                  height={130}
                   className="h-auto w-auto"
                   priority
                 />
