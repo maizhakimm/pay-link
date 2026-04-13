@@ -33,6 +33,25 @@ type Order = {
   amount?: number
 }
 
+function getImageUrl(path?: string | null) {
+  if (!path) return ''
+
+  const trimmed = path.trim()
+  if (!trimmed) return ''
+
+  // kalau dah full URL → guna terus
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!baseUrl) return trimmed
+
+  let cleanPath = trimmed
+    .replace(/^storage\/v1\/object\/public\//, '')
+    .replace(/^\/+/, '')
+
+  return `${baseUrl}/storage/v1/object/public/${cleanPath}`
+}
+
 function formatMoney(value?: number) {
   return `RM ${Number(value || 0).toFixed(2)}`
 }
@@ -203,7 +222,7 @@ ${shopLink}`.trim()
         <div className="flex items-center gap-4">
           {seller?.profile_image ? (
             <img
-              src={seller.profile_image}
+              src={getImageUrl(seller.profile_image) || '/default-avatar.png'}
               alt={seller.store_name || 'Seller profile'}
               className="h-16 w-16 rounded-full border border-slate-200 object-cover"
             />
