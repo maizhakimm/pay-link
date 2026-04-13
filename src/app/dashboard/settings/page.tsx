@@ -521,7 +521,7 @@ export default function SettingsPage() {
 
               <div className="space-y-5">
                 <div>
-                  <p className="mb-3 text-sm font-extrabold text-slate-900">Basic Info</p>
+                  <p className="mb-3 text-sm font-extrabold text-slate-900">Nama Biz</p>
 
                   <div className="grid gap-3">
                     <div>
