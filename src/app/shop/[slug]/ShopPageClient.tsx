@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ShopPayButton from './ShopPayButton'
 
 type SellerProfile = {
@@ -235,50 +235,72 @@ export default function ShopPageClient({
     currentIndex: 0,
   })
 
+  const productListRef = useRef<HTMLDivElement | null>(null)
+
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
   const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
 
-  const normalizedCategories = useMemo(() => {
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+
+    for (const product of products) {
+      const categoryId = product.menu_category_id || ''
+      if (!categoryId) continue
+      counts.set(categoryId, (counts.get(categoryId) || 0) + 1)
+    }
+
+    return counts
+  }, [products])
+
+  const visibleCategories = useMemo(() => {
     return [...categories]
       .filter((item) => item && item.id && item.name)
+      .filter((item) => (categoryCounts.get(item.id) || 0) > 0)
       .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
-  }, [categories])
+  }, [categories, categoryCounts])
 
   const hasCategoryFeature =
-    normalizedCategories.length > 0 &&
+    visibleCategories.length > 0 &&
     products.some((product) => product.menu_category_id)
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
 
   useEffect(() => {
-    if (hasCategoryFeature && normalizedCategories.length > 0) {
-      setActiveCategoryId(normalizedCategories[0].id)
-    } else {
-      setActiveCategoryId('all')
-    }
-  }, [hasCategoryFeature, normalizedCategories])
+    setActiveCategoryId('all')
+  }, [hasCategoryFeature])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (!gallery.isOpen) return
 
-      if (event.key === 'Escape') {
-        closeGallery()
-      }
-
-      if (event.key === 'ArrowLeft') {
-        showPrevImage()
-      }
-
-      if (event.key === 'ArrowRight') {
-        showNextImage()
-      }
+      if (event.key === 'Escape') closeGallery()
+      if (event.key === 'ArrowLeft') showPrevImage()
+      if (event.key === 'ArrowRight') showNextImage()
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [gallery.isOpen, gallery.currentIndex, gallery.images.length])
+
+  function scrollToProducts() {
+    if (!productListRef.current) return
+
+    const top =
+      productListRef.current.getBoundingClientRect().top + window.scrollY - 110
+
+    window.scrollTo({
+      top,
+      behavior: 'smooth',
+    })
+  }
+
+  function handleCategoryClick(categoryId: string) {
+    setActiveCategoryId(categoryId)
+    window.requestAnimationFrame(() => {
+      scrollToProducts()
+    })
+  }
 
   function increase(product: ProductRow) {
     if (!isShopOpen) return
@@ -467,137 +489,149 @@ export default function ShopPageClient({
 
         {hasCategoryFeature ? (
           <div style={stickyTabWrap}>
-            <div style={tabScroller}>
-              {normalizedCategories.map((category) => {
-                const isActive = activeCategoryId === category.id
+            <div style={tabShell}>
+              <div style={tabScroller}>
+                <button
+                  type="button"
+                  onClick={() => handleCategoryClick('all')}
+                  style={{
+                    ...tabButton,
+                    ...(activeCategoryId === 'all'
+                      ? activeTabButton
+                      : inactiveTabButton),
+                  }}
+                >
+                  All
+                </button>
 
-                return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setActiveCategoryId(category.id)}
-                    style={{
-                      ...tabButton,
-                      background: isActive ? '#0f172a' : '#fff',
-                      color: isActive ? '#fff' : '#0f172a',
-                      borderColor: isActive ? '#0f172a' : '#e2e8f0',
-                      boxShadow: isActive
-                        ? '0 8px 20px rgba(15,23,42,0.14)'
-                        : 'none',
-                    }}
-                  >
-                    {category.name}
-                  </button>
-                )
-              })}
+                {visibleCategories.map((category) => {
+                  const isActive = activeCategoryId === category.id
+
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => handleCategoryClick(category.id)}
+                      style={{
+                        ...tabButton,
+                        ...(isActive ? activeTabButton : inactiveTabButton),
+                      }}
+                    >
+                      {category.name}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         ) : null}
 
-        {visibleProducts.length === 0 ? (
-          <div style={emptyCard}>
-            <p style={{ margin: 0, color: '#64748b' }}>
-              Tiada menu aktif buat masa ini.
-            </p>
-          </div>
-        ) : (
-          <div style={productGrid}>
-            {visibleProducts.map((product) => {
-              const image = getFirstImage(product)
-              const qty = cart[product.id] || 0
-              const disableAddButton = !isShopOpen || Boolean(product.sold_out)
-              const allImages = getProductImages(product)
+        <div ref={productListRef}>
+          {visibleProducts.length === 0 ? (
+            <div style={emptyCard}>
+              <p style={{ margin: 0, color: '#64748b' }}>
+                Tiada menu aktif buat masa ini.
+              </p>
+            </div>
+          ) : (
+            <div style={productGrid}>
+              {visibleProducts.map((product) => {
+                const image = getFirstImage(product)
+                const qty = cart[product.id] || 0
+                const disableAddButton = !isShopOpen || Boolean(product.sold_out)
+                const allImages = getProductImages(product)
 
-              return (
-                <div key={product.id} style={productCard}>
-                  <div style={productCardLeft}>
-                    <button
-                      type="button"
-                      onClick={() => openGallery(product, 0)}
-                      style={{
-                        ...productImageButton,
-                        cursor: image ? 'pointer' : 'default',
-                      }}
-                      disabled={!image}
-                      aria-label={`View images for ${product.name}`}
-                    >
-                      <div style={productImageWrap}>
-                        {image ? (
-                          <img
-                            src={getImageUrl(image)}
-                            alt={product.name}
-                            style={productImage}
-                          />
-                        ) : (
-                          <div style={productImagePlaceholder}>No image</div>
-                        )}
+                return (
+                  <div key={product.id} style={productCard}>
+                    <div style={productCardLeft}>
+                      <button
+                        type="button"
+                        onClick={() => openGallery(product, 0)}
+                        style={{
+                          ...productImageButton,
+                          cursor: image ? 'pointer' : 'default',
+                        }}
+                        disabled={!image}
+                        aria-label={`View images for ${product.name}`}
+                      >
+                        <div style={productImageWrap}>
+                          {image ? (
+                            <img
+                              src={getImageUrl(image)}
+                              alt={product.name}
+                              style={productImage}
+                            />
+                          ) : (
+                            <div style={productImagePlaceholder}>No image</div>
+                          )}
 
-                        {product.sold_out ? (
-                          <div style={soldOutBadge}>Sold Out</div>
-                        ) : null}
+                          {product.sold_out ? (
+                            <div style={soldOutBadge}>Sold Out</div>
+                          ) : null}
 
-                        {allImages.length > 1 ? (
-                          <div style={multiImageBadge}>
-                            {allImages.length} photos
+                          {allImages.length > 1 ? (
+                            <div style={multiImageBadge}>
+                              {allImages.length} photos
+                            </div>
+                          ) : null}
+                        </div>
+                      </button>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={productName}>{product.name}</div>
+                        <div style={productPrice}>
+                          RM {product.price.toFixed(2)}
+                        </div>
+
+                        {product.track_stock ? (
+                          <div style={stockText}>
+                            Stock: {product.stock_quantity ?? 0}
                           </div>
                         ) : null}
-                      </div>
-                    </button>
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={productName}>{product.name}</div>
-                      <div style={productPrice}>
-                        RM {product.price.toFixed(2)}
-                      </div>
-
-                      {product.track_stock ? (
-                        <div style={stockText}>
-                          Stock: {product.stock_quantity ?? 0}
+                        <div style={productDesc}>
+                          {product.description || 'Tiada deskripsi.'}
                         </div>
-                      ) : null}
-
-                      <div style={productDesc}>
-                        {product.description || 'Tiada deskripsi.'}
                       </div>
                     </div>
-                  </div>
 
-                  <div style={qtyPanel}>
-                    <div style={qtyLabel}>Qty</div>
-                    <div style={qtyRow}>
-                      <button
-                        type="button"
-                        onClick={() => decrease(product.id)}
-                        style={qtyBtn}
-                      >
-                        -
-                      </button>
+                    <div style={qtyPanel}>
+                      <div style={qtyLabel}>Qty</div>
+                      <div style={qtyRow}>
+                        <button
+                          type="button"
+                          onClick={() => decrease(product.id)}
+                          style={qtyBtn}
+                        >
+                          -
+                        </button>
 
-                      <span style={qtyValue}>{qty}</span>
+                        <span style={qtyValue}>{qty}</span>
 
-                      <button
-                        type="button"
-                        onClick={() => increase(product)}
-                        style={{
-                          ...qtyBtn,
-                          opacity: disableAddButton ? 0.4 : 1,
-                          cursor: disableAddButton ? 'not-allowed' : 'pointer',
-                        }}
-                        disabled={disableAddButton}
-                      >
-                        +
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => increase(product)}
+                          style={{
+                            ...qtyBtn,
+                            opacity: disableAddButton ? 0.4 : 1,
+                            cursor: disableAddButton ? 'not-allowed' : 'pointer',
+                          }}
+                          disabled={disableAddButton}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {!isShopOpen ? (
+                        <div style={qtyHintClosed}>Ordering unavailable</div>
+                      ) : null}
                     </div>
-
-                    {!isShopOpen ? (
-                      <div style={qtyHintClosed}>Ordering unavailable</div>
-                    ) : null}
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         <div style={checkoutCard}>
           <div style={checkoutHeader}>
@@ -761,7 +795,7 @@ const multiImageBadge = {
   position: 'absolute' as const,
   left: 6,
   bottom: 6,
-  background: 'rgba(15,23,42,0.8)',
+  background: 'rgba(15,23,42,0.82)',
   color: '#fff',
   fontSize: 10,
   fontWeight: 800,
@@ -913,33 +947,50 @@ const deliveryMeta = {
 const stickyTabWrap = {
   position: 'sticky' as const,
   top: 8,
-  zIndex: 20,
+  zIndex: 30,
   marginBottom: 16,
+} as const
+
+const tabShell = {
+  padding: 6,
+  borderRadius: 20,
+  background: 'rgba(248,250,252,0.92)',
+  backdropFilter: 'blur(12px)',
+  boxShadow: '0 10px 25px rgba(15,23,42,0.08)',
+  border: '1px solid rgba(226,232,240,0.9)',
 } as const
 
 const tabScroller = {
   display: 'flex',
   gap: 10,
   overflowX: 'auto' as const,
-  padding: '10px 4px 6px 4px',
   WebkitOverflowScrolling: 'touch' as const,
   scrollbarWidth: 'none' as const,
-  background: 'rgba(248,250,252,0.92)',
-  backdropFilter: 'blur(10px)',
-  borderRadius: 18,
 } as const
 
 const tabButton = {
   flexShrink: 0,
   borderRadius: 999,
   border: '1px solid #e2e8f0',
-  padding: '10px 14px',
-  background: '#fff',
-  color: '#0f172a',
+  padding: '11px 15px',
   fontSize: 14,
   fontWeight: 800,
   whiteSpace: 'nowrap' as const,
   cursor: 'pointer',
+  transition: 'all 0.2s ease',
+} as const
+
+const activeTabButton = {
+  background: '#0f172a',
+  color: '#fff',
+  borderColor: '#0f172a',
+  boxShadow: '0 10px 20px rgba(15,23,42,0.18)',
+} as const
+
+const inactiveTabButton = {
+  background: '#fff',
+  color: '#0f172a',
+  borderColor: '#e2e8f0',
 } as const
 
 const emptyCard = {
