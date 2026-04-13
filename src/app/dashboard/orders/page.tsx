@@ -20,6 +20,7 @@ type OrderRow = {
   product_name?: string | null
   product_slug?: string | null
   amount?: number | null
+  total_amount?: number | null
   status?: string | null
   fulfillment_status?: string | null
   payment_status?: string | null
