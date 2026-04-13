@@ -432,23 +432,6 @@ export default function ShopPayButton({
 
   return (
     <div style={wrapper}>
-      <div style={deliveryNoticeBox}>
-        <div style={deliveryNoticeTitle}>Info Delivery</div>
-        <div style={deliveryNoticeText}>{deliverySummary}</div>
-
-        {deliveryArea ? (
-          <div style={deliveryNoticeMeta}>Kawasan liputan: {deliveryArea}</div>
-        ) : null}
-
-        {deliveryNote ? (
-          <div style={deliveryNoticeMeta}>{deliveryNote}</div>
-        ) : null}
-
-        {deliveryMode === 'distance_based' && pickupAddress ? (
-          <div style={deliveryNoticeMeta}>Pickup seller: {pickupAddress}</div>
-        ) : null}
-      </div>
-
       <div style={formGrid}>
         <div>
           <label style={labelStyle}>Full Name</label>
@@ -663,8 +646,6 @@ export default function ShopPayButton({
 }
 
 const wrapper = {
-  maxWidth: '520px',
-  margin: '0 auto',
   width: '100%',
 } as const
 
