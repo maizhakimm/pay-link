@@ -133,10 +133,10 @@ export default function LoginPage() {
 
               <div className="mt-6">
                 <Image
-                  src="/BayarLink-Logo-01.svg"
+                  src="/BayarLink-Logo-Singup-Page.png"
                   alt="BayarLink Logo"
-                  width={190}
-                  height={52}
+                  width={200}
+                  height={130}
                   className="h-auto w-auto"
                   priority
                 />
