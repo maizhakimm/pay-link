@@ -310,9 +310,19 @@ export default function ProductsPage() {
 
     setSavingCategory(true)
 
-    const safeSortOrder = Number.isFinite(Number(newCategorySortOrder))
-      ? Number(newCategorySortOrder)
-      : categories.length + 1
+    const trimmedSortOrder = newCategorySortOrder.trim()
+
+    const nextSortOrder =
+      categories.length > 0
+        ? Math.max(...categories.map((item) => Number(item.sort_order || 0))) + 1
+        : 1
+
+    const safeSortOrder =
+      trimmedSortOrder === ''
+        ? nextSortOrder
+        : Number.isFinite(Number(trimmedSortOrder))
+          ? Number(trimmedSortOrder)
+          : nextSortOrder
 
     const { data: insertedCategory, error: insertError } = await supabase
       .from('menu_categories')
@@ -333,7 +343,7 @@ export default function ProductsPage() {
     }
 
     setNewCategoryName('')
-    setNewCategorySortOrder(String(categories.length + 2))
+    setNewCategorySortOrder('')
 
     await loadProductsPage()
 
@@ -626,7 +636,7 @@ export default function ProductsPage() {
               onChange={(e) =>
                 setNewCategorySortOrder(e.target.value.replace(/[^\d-]/g, ''))
               }
-              placeholder="0"
+              placeholder="Auto"
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
             />
 
