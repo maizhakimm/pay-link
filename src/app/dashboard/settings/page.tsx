@@ -122,6 +122,7 @@ type SellerProfileRow = {
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [detectingLocation, setDetectingLocation] = useState(false)
 
   const [sellerId, setSellerId] = useState<string | null>(null)
   const [accountEmail, setAccountEmail] = useState('')
@@ -165,6 +166,7 @@ export default function SettingsPage() {
   const [pickupAddress, setPickupAddress] = useState('')
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
+  const [resolvedPickupAddress, setResolvedPickupAddress] = useState('')
 
   const previewBaseUrl =
     (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
@@ -324,6 +326,7 @@ export default function SettingsPage() {
       setDeliveryRatePerKm(String(profile.delivery_rate_per_km ?? 1))
       setDeliveryMinFee(String(profile.delivery_min_fee ?? 5))
       setPickupAddress(profile.pickup_address || '')
+      setResolvedPickupAddress(profile.pickup_address || '')
       setLatitude(
         profile.latitude !== null && profile.latitude !== undefined
           ? String(profile.latitude)
@@ -370,6 +373,58 @@ export default function SettingsPage() {
     setProfileImage(data.publicUrl)
   }
 
+  async function detectPickupLocation() {
+    const trimmedPickupAddress = pickupAddress.trim()
+
+    if (!trimmedPickupAddress) {
+      alert('Please enter pickup address first.')
+      return null
+    }
+
+    try {
+      setDetectingLocation(true)
+
+      const response = await fetch('/api/maps/geocode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: trimmedPickupAddress,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.error || 'Alamat tidak dapat dikenal pasti. Sila semak semula alamat pickup.'
+        )
+      }
+
+      const nextLat = String(data.latitude)
+      const nextLng = String(data.longitude)
+      const nextAddress = String(data.formatted_address || trimmedPickupAddress)
+
+      setLatitude(nextLat)
+      setLongitude(nextLng)
+      setResolvedPickupAddress(nextAddress)
+
+      return {
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+        formattedAddress: nextAddress,
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to detect pickup location'
+      alert(message)
+      return null
+    } finally {
+      setDetectingLocation(false)
+    }
+  }
+
   async function handleSave() {
     if (saving) return
 
@@ -382,16 +437,16 @@ export default function SettingsPage() {
     const trimmedClosedMessage = closedMessage.trim()
     const trimmedDeliveryArea = deliveryArea.trim()
     const trimmedDeliveryNote = deliveryNote.trim()
-    const trimmedPickupAddress = pickupAddress.trim()
+    let trimmedPickupAddress = pickupAddress.trim()
 
     const parsedDeliveryFee = Number(deliveryFee || 0)
     const parsedDeliveryRadiusKm = Number(deliveryRadiusKm || 0)
     const parsedDeliveryRatePerKm = Number(deliveryRatePerKm || 0)
     const parsedDeliveryMinFee = Number(deliveryMinFee || 0)
 
-    const parsedLatitude =
+    let parsedLatitude =
       latitude.trim() === '' ? null : Number(latitude)
-    const parsedLongitude =
+    let parsedLongitude =
       longitude.trim() === '' ? null : Number(longitude)
 
     if (!trimmedStoreName) {
@@ -442,15 +497,15 @@ export default function SettingsPage() {
         return
       }
 
-      if (
-        parsedLatitude === null ||
-        parsedLongitude === null ||
-        !Number.isFinite(parsedLatitude) ||
-        !Number.isFinite(parsedLongitude)
-      ) {
-        alert('Please enter valid latitude and longitude for distance based delivery.')
+      const geocoded = await detectPickupLocation()
+
+      if (!geocoded) {
         return
       }
+
+      parsedLatitude = geocoded.latitude
+      parsedLongitude = geocoded.longitude
+      trimmedPickupAddress = geocoded.formattedAddress
     }
 
     setSaving(true)
@@ -517,6 +572,8 @@ export default function SettingsPage() {
       setStoreName(trimmedStoreName)
       setSavedShopSlug(finalShopSlug)
       setSlugLocked(true)
+      setPickupAddress(trimmedPickupAddress)
+      setResolvedPickupAddress(trimmedPickupAddress)
 
       alert('Settings updated successfully!')
     } catch (err) {
@@ -844,44 +901,49 @@ export default function SettingsPage() {
                             className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                           />
                           <p className="mt-2 text-xs text-slate-500">
-                            Alamat ini akan digunakan sebagai lokasi asal seller untuk kiraan
-                            distance.
+                            Seller hanya isi alamat. Sistem akan auto detect latitude dan longitude.
                           </p>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <div>
-                            <label className="mb-2 block text-sm font-bold text-slate-700">
-                              Latitude
-                            </label>
-                            <input
-                              type="number"
-                              step="0.0000001"
-                              placeholder="Contoh: 3.1123456"
-                              value={latitude}
-                              onChange={(e) => setLatitude(e.target.value)}
-                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                            />
-                          </div>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <button
+                            type="button"
+                            onClick={detectPickupLocation}
+                            disabled={detectingLocation}
+                            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {detectingLocation ? 'Detecting...' : 'Detect Pickup Location'}
+                          </button>
 
-                          <div>
-                            <label className="mb-2 block text-sm font-bold text-slate-700">
-                              Longitude
-                            </label>
-                            <input
-                              type="number"
-                              step="0.0000001"
-                              placeholder="Contoh: 101.5678901"
-                              value={longitude}
-                              onChange={(e) => setLongitude(e.target.value)}
-                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                            />
-                          </div>
+                          {latitude && longitude ? (
+                            <div className="text-xs text-slate-600">
+                              Latitude: <strong>{latitude}</strong> &nbsp;•&nbsp; Longitude:{' '}
+                              <strong>{longitude}</strong>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500">
+                              Lokasi belum dikesan lagi.
+                            </div>
+                          )}
                         </div>
 
+                        {resolvedPickupAddress ? (
+                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                              Resolved Address
+                            </p>
+                            <p className="mt-1 text-sm text-emerald-900">
+                              {resolvedPickupAddress}
+                            </p>
+                          </div>
+                        ) : null}
+
+                        <input type="hidden" value={latitude} readOnly />
+                        <input type="hidden" value={longitude} readOnly />
+
                         <p className="text-xs leading-5 text-slate-500">
-                          Buat masa ini seller perlu isi latitude dan longitude secara manual
-                          dahulu. Nanti kita boleh upgrade kepada map picker / auto detect.
+                          Sistem akan simpan latitude dan longitude secara automatik bila alamat
+                          berjaya dikenal pasti.
                         </p>
                       </div>
                     ) : null}
@@ -1024,10 +1086,10 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={saving}
+                  disabled={saving || detectingLocation}
                   className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {saving ? 'Saving...' : 'Save Settings'}
+                  {saving ? 'Saving...' : detectingLocation ? 'Detecting location...' : 'Save Settings'}
                 </button>
               </div>
             </section>
