@@ -188,7 +188,7 @@ export default function SettingsPage() {
         return 'Harga produk telah termasuk delivery.'
       case 'pay_rider_separately':
       default:
-        return 'Caj delivery tidak termasuk dalam harga dan dibayar terus kepada rider.'
+        return 'Caj delivery tidak termasuk dalam harga. Bayaran delivery harus dibuat terus kepada rider semasa penghantaran.'
     }
   }, [deliveryMode, deliveryFee])
 
