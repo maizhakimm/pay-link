@@ -29,6 +29,13 @@ type SellerProfile = {
   delivery_note?: string | null
 }
 
+type MenuCategory = {
+  id: string
+  name: string
+  sort_order?: number | null
+  is_active?: boolean | null
+}
+
 type ProductRow = {
   id: string
   name: string
@@ -47,6 +54,7 @@ type ProductRow = {
   stock_quantity?: number
   sold_out?: boolean
   created_at?: string
+  menu_category_id?: string | null
 }
 
 type PageProps = {
@@ -235,7 +243,8 @@ export default async function Page({ params }: PageProps) {
           track_stock,
           stock_quantity,
           sold_out,
-          created_at
+          created_at,
+          menu_category_id
         `
       )
       .eq('is_active', true)
@@ -306,10 +315,30 @@ export default async function Page({ params }: PageProps) {
     )
   }
 
+  const { data: categories, error: categoryError } = await supabase
+    .from('menu_categories')
+    .select('id, name, sort_order, is_active')
+    .eq('seller_profile_id', seller.id)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (categoryError) {
+    return (
+      <main style={errorMain}>
+        <div style={errorBox}>
+          <h2 style={errorTitle}>Unable to load categories</h2>
+          <p style={errorText}>{categoryError.message}</p>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <ShopPageClient
       seller={seller}
       products={(products || []) as ProductRow[]}
+      categories={(categories || []) as MenuCategory[]}
       shopSlug={seller.shop_slug || requestedSlug}
     />
   )
