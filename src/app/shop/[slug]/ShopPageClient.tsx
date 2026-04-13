@@ -447,8 +447,6 @@ export default function ShopPageClient({
               {seller.business_address && (
                 <p style={shopSub}>{seller.business_address}</p>
               )}
-               
-              )}
             </div>
           </div>
 
