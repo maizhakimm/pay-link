@@ -23,10 +23,17 @@ type SellerProfile = {
     | 'fixed_fee'
     | 'included_in_price'
     | 'pay_rider_separately'
+    | 'distance_based'
     | null
   delivery_fee?: number | null
   delivery_area?: string | null
   delivery_note?: string | null
+  delivery_radius_km?: number | null
+  delivery_rate_per_km?: number | null
+  delivery_min_fee?: number | null
+  pickup_address?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 type MenuCategory = {
@@ -94,30 +101,36 @@ async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> 
 
   const requestedSlug = decodeURIComponent(shopSlug).toLowerCase().trim()
 
-  const { data: seller } = await supabase
-    .from('seller_profiles')
-    .select(
-      `
-        id,
-        store_name,
-        shop_slug,
-        profile_image,
-        email,
-        whatsapp,
-        business_address,
-        accept_orders_anytime,
-        opening_time,
-        closing_time,
-        temporarily_closed,
-        closed_message,
-        delivery_mode,
-        delivery_fee,
-        delivery_area,
-        delivery_note
-      `
-    )
-    .eq('shop_slug', requestedSlug)
-    .maybeSingle()
+const { data: seller } = await supabase
+  .from('seller_profiles')
+  .select(
+    `
+      id,
+      store_name,
+      shop_slug,
+      profile_image,
+      email,
+      whatsapp,
+      business_address,
+      accept_orders_anytime,
+      opening_time,
+      closing_time,
+      temporarily_closed,
+      closed_message,
+      delivery_mode,
+      delivery_fee,
+      delivery_area,
+      delivery_note,
+      delivery_radius_km,
+      delivery_rate_per_km,
+      delivery_min_fee,
+      pickup_address,
+      latitude,
+      longitude
+    `
+  )
+  .eq('shop_slug', requestedSlug)
+  .maybeSingle()
 
   return (seller as SellerProfile | null) ?? null
 }
@@ -183,32 +196,38 @@ export default async function Page({ params }: PageProps) {
 
   const requestedSlug = decodeURIComponent(params.shopSlug).toLowerCase().trim()
 
-  let seller: SellerProfile | null = null
+let seller: SellerProfile | null = null
 
-  const { data: directSeller, error: sellerError } = await supabase
-    .from('seller_profiles')
-    .select(
-      `
-        id,
-        store_name,
-        shop_slug,
-        profile_image,
-        email,
-        whatsapp,
-        business_address,
-        accept_orders_anytime,
-        opening_time,
-        closing_time,
-        temporarily_closed,
-        closed_message,
-        delivery_mode,
-        delivery_fee,
-        delivery_area,
-        delivery_note
-      `
-    )
-    .eq('shop_slug', requestedSlug)
-    .maybeSingle()
+const { data: directSeller, error: sellerError } = await supabase
+  .from('seller_profiles')
+  .select(
+    `
+      id,
+      store_name,
+      shop_slug,
+      profile_image,
+      email,
+      whatsapp,
+      business_address,
+      accept_orders_anytime,
+      opening_time,
+      closing_time,
+      temporarily_closed,
+      closed_message,
+      delivery_mode,
+      delivery_fee,
+      delivery_area,
+      delivery_note,
+      delivery_radius_km,
+      delivery_rate_per_km,
+      delivery_min_fee,
+      pickup_address,
+      latitude,
+      longitude
+    `
+  )
+  .eq('shop_slug', requestedSlug)
+  .maybeSingle()
 
   if (sellerError) {
     return (
@@ -255,36 +274,40 @@ export default async function Page({ params }: PageProps) {
         return slugify(item.store_name) === requestedSlug
       })
 
-      if (matchedProduct?.seller_profile_id) {
-        const { data: fallbackSeller } = await supabase
-          .from('seller_profiles')
-          .select(
-            `
-              id,
-              store_name,
-              shop_slug,
-              profile_image,
-              email,
-              whatsapp,
-              business_address,
-              accept_orders_anytime,
-              opening_time,
-              closing_time,
-              temporarily_closed,
-              closed_message,
-              delivery_mode,
-              delivery_fee,
-              delivery_area,
-              delivery_note
-            `
-          )
-          .eq('id', matchedProduct.seller_profile_id)
-          .maybeSingle()
+if (matchedProduct?.seller_profile_id) {
+  const { data: fallbackSeller } = await supabase
+    .from('seller_profiles')
+    .select(
+      `
+        id,
+        store_name,
+        shop_slug,
+        profile_image,
+        email,
+        whatsapp,
+        business_address,
+        accept_orders_anytime,
+        opening_time,
+        closing_time,
+        temporarily_closed,
+        closed_message,
+        delivery_mode,
+        delivery_fee,
+        delivery_area,
+        delivery_note,
+        delivery_radius_km,
+        delivery_rate_per_km,
+        delivery_min_fee,
+        pickup_address,
+        latitude,
+        longitude
+      `
+    )
+    .eq('id', matchedProduct.seller_profile_id)
+    .maybeSingle()
 
-        seller = (fallbackSeller as SellerProfile | null) ?? null
-      }
-    }
-  }
+  seller = (fallbackSeller as SellerProfile | null) ?? null
+}
 
   if (!seller) {
     return (
