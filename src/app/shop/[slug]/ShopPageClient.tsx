@@ -477,21 +477,6 @@ export default function ShopPageClient({
           >
             {availability.detail}
           </div>
-
-          <div style={deliveryBox}>
-            <div style={deliveryTitle}>Maklumat Delivery</div>
-            <div style={deliveryText}>{deliverySummary}</div>
-
-            {seller.delivery_area ? (
-              <div style={deliveryMeta}>
-                Kawasan liputan: {seller.delivery_area}
-              </div>
-            ) : null}
-
-            {seller.delivery_note ? (
-              <div style={deliveryMeta}>{seller.delivery_note}</div>
-            ) : null}
-          </div>
         </div>
 
         {hasCategoryFeature ? (
@@ -650,21 +635,6 @@ export default function ShopPageClient({
             </div>
           </div>
 
-          <div style={checkoutDeliveryBox}>
-            <div style={checkoutDeliveryTitle}>Info Delivery</div>
-            <div style={checkoutDeliveryText}>{deliverySummary}</div>
-
-            {seller.delivery_area ? (
-              <div style={checkoutDeliveryMeta}>
-                Kawasan liputan: {seller.delivery_area}
-              </div>
-            ) : null}
-
-            {seller.delivery_note ? (
-              <div style={checkoutDeliveryMeta}>{seller.delivery_note}</div>
-            ) : null}
-          </div>
-
           {!isShopOpen ? (
             <div style={closedCheckoutBox}>
               <div style={closedCheckoutTitle}>
@@ -689,10 +659,7 @@ export default function ShopPageClient({
                 ))}
               </div>
 
-              <div style={{ fontSize: 12, color: 'red', marginBottom: 8 }}>
-                delivery_mode: {String(seller.delivery_mode)}
-              </div>
-              
+                          
               <ShopPayButton
                 sellerId={seller.id}
                 shopSlug={shopSlug}
