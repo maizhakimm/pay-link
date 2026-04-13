@@ -118,47 +118,29 @@ export default function LoginPage() {
   }
 
   return (
-<div>
-  <div className="flex flex-col items-center text-center">
-    <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/80">
-      BayarLink Seller Portal
-    </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)] lg:grid-cols-2">
+          <div className="hidden bg-slate-900 p-8 text-white lg:flex lg:flex-col lg:justify-between xl:p-10">
+            <div className="flex flex-col items-center text-center">
+              <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/80">
+                BayarLink Seller Portal
+              </div>
 
-    <div className="mt-3 inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/90">
-      🚀 Beta
-    </div>
+              <div className="mt-3 inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/90">
+                🚀 Beta
+              </div>
 
-    <div className="mt-6">
-      <Image
-        src="/BayarLink-Logo-Singup-Page.png"
-        alt="BayarLink Logo"
-        width={200}
-        height={130}
-        className="h-auto w-auto"
-        priority
-      />
-    </div>
-
-    <h1 className="mt-8 max-w-md text-2xl font-bold leading-tight xl:text-3xl">
-      Jual lebih tersusun. Terima bayaran dengan lebih mudah.
-    </h1>
-
-    <p className="mt-4 max-w-md text-sm leading-6 text-slate-300 xl:text-base">
-      BayarLink membantu seller urus produk, order, dan pembayaran dalam satu tempat
-      yang ringkas, kemas, dan mesra mobile.
-    </p>
-  </div>
-</div>
-
-  <h1 className="mt-8 max-w-md text-2xl font-bold leading-tight xl:text-3xl">
-    Jual lebih tersusun. Terima bayaran dengan lebih mudah.
-  </h1>
-
-  <p className="mt-4 max-w-md text-sm leading-6 text-slate-300 xl:text-base">
-    BayarLink membantu seller urus produk, order, dan pembayaran dalam satu tempat
-    yang ringkas, kemas, dan mesra mobile.
-  </p>
-</div>
+              <div className="mt-6 flex justify-center">
+                <Image
+                  src="/BayarLink-Logo-Singup-Page.png"
+                  alt="BayarLink Logo"
+                  width={200}
+                  height={130}
+                  className="h-auto w-auto"
+                  priority
+                />
+              </div>
 
               <h1 className="mt-8 max-w-md text-2xl font-bold leading-tight xl:text-3xl">
                 Jual lebih tersusun. Terima bayaran dengan lebih mudah.
