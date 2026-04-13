@@ -689,6 +689,10 @@ export default function ShopPageClient({
                 ))}
               </div>
 
+              <div style={{ fontSize: 12, color: 'red', marginBottom: 8 }}>
+                delivery_mode: {String(seller.delivery_mode)}
+              </div>
+              
               <ShopPayButton
                 sellerId={seller.id}
                 shopSlug={shopSlug}
