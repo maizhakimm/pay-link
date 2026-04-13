@@ -444,9 +444,9 @@ export default function ShopPageClient({
 
             <div style={{ minWidth: 0, flex: 1 }}>
               <h1 style={shopTitle}>{sellerName}</h1>
-              {seller.business_address ? (
+              {seller.business_address && (
                 <p style={shopSub}>{seller.business_address}</p>
-              ) : (
+              )}
                
               )}
             </div>
