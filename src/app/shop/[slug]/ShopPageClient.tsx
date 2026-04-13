@@ -147,7 +147,7 @@ function getDeliverySummary(seller: SellerProfile) {
       return 'Harga produk telah termasuk delivery.'
     case 'pay_rider_separately':
     default:
-      return 'Bayaran delivery dibuat berasingan terus kepada rider / seller.'
+      return 'Bayaran delivery dibuat berasingan terus kepada rider.'
   }
 }
 
