@@ -12,6 +12,7 @@ type DeliveryMode =
   | 'fixed_fee'
   | 'included_in_price'
   | 'pay_rider_separately'
+  | 'distance_based'
 
 const STATES = [
   'Perlis',
