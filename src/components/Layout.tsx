@@ -30,7 +30,7 @@ export default function Layout({ children }: LayoutProps) {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/dashboard" className="shrink-0">
-            <div className="relative h-8 w-[140px] sm:h-9 sm:w-[160px]">
+            <div className="relative h-7 w-[120px] sm:h-8 sm:w-[140px]">
               <Image
                 src="/BayarLink-Logo-Shop-Page-Dashboard.png"
                 alt="BayarLink"
