@@ -5,8 +5,6 @@ import ShopPayButton from './ShopPayButton'
 
 type SellerProfile = {
   id: string
-  store_name: string | nulltype SellerProfile = {
-  id: string
   store_name: string | null
   profile_image?: string | null
   email?: string | null
