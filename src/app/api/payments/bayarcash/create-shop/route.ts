@@ -49,6 +49,8 @@ type DeliveryPayload = {
   city?: string
   district?: string
   state?: string
+  distance_km?: number | null
+  resolved_address?: string | null
 } | null
 
 type DeliveryMode =
@@ -56,6 +58,24 @@ type DeliveryMode =
   | 'fixed_fee'
   | 'included_in_price'
   | 'pay_rider_separately'
+  | 'distance_based'
+
+type SellerRow = {
+  accept_orders_anytime?: boolean | null
+  opening_time?: string | null
+  closing_time?: string | null
+  temporarily_closed?: boolean | null
+  closed_message?: string | null
+  plan_type?: string | null
+  delivery_mode?: DeliveryMode | null
+  delivery_fee?: number | null
+  delivery_radius_km?: number | null
+  delivery_rate_per_km?: number | null
+  delivery_min_fee?: number | null
+  pickup_address?: string | null
+  latitude?: number | null
+  longitude?: number | null
+}
 
 function isReservationExpired(reservedUntil?: string | null) {
   if (!reservedUntil) return true
@@ -135,7 +155,76 @@ function isAllowedPaymentChannel(channel: number) {
   return allowedChannels.includes(channel)
 }
 
-function getAppliedDeliveryFee(params: {
+function calculateDistanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+) {
+  const toRad = (value: number) => (value * Math.PI) / 180
+
+  const earthRadiusKm = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2)
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return earthRadiusKm * c
+}
+
+async function geocodeAddress(address: string) {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY
+
+  if (!apiKey) {
+    throw new Error('Missing GOOGLE_MAPS_API_KEY')
+  }
+
+  const url = new URL('https://maps.googleapis.com/maps/api/geocode/json')
+  url.searchParams.set('address', address)
+  url.searchParams.set('key', apiKey)
+  url.searchParams.set('region', 'my')
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    cache: 'no-store',
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error('Failed to reach Google Geocoding API')
+  }
+
+  if (data.status !== 'OK' || !Array.isArray(data.results) || data.results.length === 0) {
+    throw new Error(
+      data.error_message ||
+        'Alamat customer tidak dapat dikenal pasti. Sila semak semula alamat delivery.'
+    )
+  }
+
+  const first = data.results[0]
+  const lat = Number(first?.geometry?.location?.lat)
+  const lng = Number(first?.geometry?.location?.lng)
+  const formattedAddress = String(first?.formatted_address || address)
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    throw new Error('Latitude/longitude customer tidak dijumpai.')
+  }
+
+  return {
+    latitude: lat,
+    longitude: lng,
+    formattedAddress,
+  }
+}
+
+function getAppliedFixedDeliveryFee(params: {
   deliveryRequired: boolean
   deliveryMode: DeliveryMode
   deliveryFee: number
@@ -149,6 +238,72 @@ function getAppliedDeliveryFee(params: {
   if (!Number.isFinite(fee) || fee <= 0) return 0
 
   return roundMoney(fee)
+}
+
+async function getDistanceBasedDelivery(params: {
+  seller: SellerRow
+  deliveryRequired: boolean
+  deliveryMode: DeliveryMode
+  delivery: DeliveryPayload
+}) {
+  const { seller, deliveryRequired, deliveryMode, delivery } = params
+
+  if (!deliveryRequired || deliveryMode !== 'distance_based') {
+    return {
+      fee: 0,
+      distanceKm: null as number | null,
+      resolvedAddress: null as string | null,
+      customerLatitude: null as number | null,
+      customerLongitude: null as number | null,
+    }
+  }
+
+  const sellerLat = Number(seller.latitude)
+  const sellerLng = Number(seller.longitude)
+  const radiusKm = Number(seller.delivery_radius_km || 0)
+  const ratePerKm = Number(seller.delivery_rate_per_km || 0)
+  const minFee = Number(seller.delivery_min_fee || 0)
+
+  if (!Number.isFinite(sellerLat) || !Number.isFinite(sellerLng)) {
+    throw new Error('Lokasi seller belum lengkap untuk distance based delivery.')
+  }
+
+  if (!Number.isFinite(radiusKm) || radiusKm <= 0) {
+    throw new Error('Radius penghantaran seller belum ditetapkan dengan betul.')
+  }
+
+  if (!Number.isFinite(ratePerKm) || ratePerKm <= 0) {
+    throw new Error('Kadar delivery per km seller belum ditetapkan dengan betul.')
+  }
+
+  const buyerAddress = buildBuyerAddress(delivery)
+
+  if (!buyerAddress) {
+    throw new Error('Alamat delivery customer tidak lengkap.')
+  }
+
+  const customer = await geocodeAddress(buyerAddress)
+  const distanceKm = roundMoney(
+    calculateDistanceKm(sellerLat, sellerLng, customer.latitude, customer.longitude)
+  )
+
+  if (distanceKm > radiusKm) {
+    throw new Error(
+      `Maaf, lokasi customer di luar kawasan penghantaran seller ini. Jarak ${distanceKm.toFixed(
+        2
+      )}km, maksimum ${radiusKm.toFixed(2)}km.`
+    )
+  }
+
+  const fee = roundMoney(Math.max(minFee, distanceKm * ratePerKm))
+
+  return {
+    fee,
+    distanceKm,
+    resolvedAddress: customer.formattedAddress,
+    customerLatitude: customer.latitude,
+    customerLongitude: customer.longitude,
+  }
 }
 
 function getCurrentMalaysiaMinutes() {
@@ -206,7 +361,13 @@ export async function POST(req: NextRequest) {
         closed_message,
         plan_type,
         delivery_mode,
-        delivery_fee
+        delivery_fee,
+        delivery_radius_km,
+        delivery_rate_per_km,
+        delivery_min_fee,
+        pickup_address,
+        latitude,
+        longitude
       `)
       .eq('id', sellerId)
       .maybeSingle()
@@ -395,11 +556,23 @@ export async function POST(req: NextRequest) {
       ? Number(seller.delivery_fee || 0)
       : requestedDeliveryFee
 
-    const appliedDeliveryFee = getAppliedDeliveryFee({
+    const fixedFee = getAppliedFixedDeliveryFee({
       deliveryRequired,
       deliveryMode: effectiveDeliveryMode,
       deliveryFee: effectiveDeliveryFee,
     })
+
+    const distanceDelivery = await getDistanceBasedDelivery({
+      seller: seller as SellerRow,
+      deliveryRequired,
+      deliveryMode: effectiveDeliveryMode,
+      delivery,
+    })
+
+    const appliedDeliveryFee =
+      effectiveDeliveryMode === 'distance_based'
+        ? distanceDelivery.fee
+        : fixedFee
 
     const totalAmount = roundMoney(subtotal + appliedDeliveryFee)
     const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0)
@@ -411,12 +584,13 @@ export async function POST(req: NextRequest) {
     const platformFee = roundMoney(
       calculatePlatformFee(totalAmount, paymentMethod, sellerPlan)
     )
-    const sellerNet = roundMoney(totalAmount - platformFee)
+    const sellerNet = roundMoney(Math.max(0, totalAmount - platformFee))
 
     const firstProduct = validItems[0].product
     const orderNumber = `ORD-${Date.now()}`
     const amount = totalAmount.toFixed(2)
-    const buyerAddress = buildBuyerAddress(delivery)
+    const buyerAddress =
+      distanceDelivery.resolvedAddress || buildBuyerAddress(delivery)
 
     const itemsSnapshot = validItems.map((item) => ({
       product_id: item.product.id,
@@ -431,6 +605,13 @@ export async function POST(req: NextRequest) {
       delivery_required: deliveryRequired,
       delivery_mode: effectiveDeliveryMode,
       delivery_fee: appliedDeliveryFee,
+      distance_km: distanceDelivery.distanceKm,
+      resolved_address: distanceDelivery.resolvedAddress,
+      seller_pickup_address: seller.pickup_address || null,
+      seller_latitude: seller.latitude ?? null,
+      seller_longitude: seller.longitude ?? null,
+      customer_latitude: distanceDelivery.customerLatitude,
+      customer_longitude: distanceDelivery.customerLongitude,
       address: delivery,
     }
 
@@ -599,28 +780,20 @@ export async function POST(req: NextRequest) {
       .from('orders')
       .update({
         gateway_payment_intent_id: parsedResponse?.id || null,
-        status: 'awaiting_payment',
         payment_status: 'awaiting_payment',
+        status: 'awaiting_payment',
         updated_at: new Date().toISOString(),
       })
       .eq('id', insertedOrder.id)
 
     return NextResponse.json({
       ok: true,
-      order_id: insertedOrder.id,
-      order_number: orderNumber,
-      payment_intent_id: parsedResponse?.id || null,
       payment_url: parsedResponse?.url || null,
+      order_number: orderNumber,
     })
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unexpected error'
-
-    return NextResponse.json(
-      {
-        ok: false,
-        error: message,
-      },
-      { status: 500 }
-    )
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to create payment'
+    return NextResponse.json({ ok: false, error: message }, { status: 500 })
   }
 }

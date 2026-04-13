@@ -20,10 +20,17 @@ type SellerProfile = {
     | 'fixed_fee'
     | 'included_in_price'
     | 'pay_rider_separately'
+    | 'distance_based'
     | null
   delivery_fee?: number | null
   delivery_area?: string | null
   delivery_note?: string | null
+  delivery_radius_km?: number | null
+  delivery_rate_per_km?: number | null
+  delivery_min_fee?: number | null
+  pickup_address?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 type MenuCategory = {
@@ -143,6 +150,9 @@ function formatCurrency(amount?: number | null) {
 
 function getDeliverySummary(seller: SellerProfile) {
   const fee = Number(seller.delivery_fee || 0)
+  const rate = Number(seller.delivery_rate_per_km || 0)
+  const minFee = Number(seller.delivery_min_fee || 0)
+  const radius = Number(seller.delivery_radius_km || 0)
 
   switch (seller.delivery_mode) {
     case 'free_delivery':
@@ -153,6 +163,10 @@ function getDeliverySummary(seller: SellerProfile) {
         : 'Delivery fee akan dikenakan jika customer pilih delivery.'
     case 'included_in_price':
       return 'Harga produk telah termasuk delivery.'
+    case 'distance_based':
+      return `Caj delivery dikira ikut jarak. Kadar ${formatCurrency(
+        rate
+      )}/km, minimum ${formatCurrency(minFee)}, radius maksimum ${radius}km.`
     case 'pay_rider_separately':
     default:
       return 'Bayaran delivery dibuat berasingan terus kepada rider.'
@@ -430,10 +444,8 @@ export default function ShopPageClient({
 
             <div style={{ minWidth: 0, flex: 1 }}>
               <h1 style={shopTitle}>{sellerName}</h1>
-              {seller.business_address ? (
+              {seller.business_address && (
                 <p style={shopSub}>{seller.business_address}</p>
-              ) : (
-                <p style={shopSub}>Order menu anda di sini</p>
               )}
             </div>
           </div>
@@ -469,21 +481,6 @@ export default function ShopPageClient({
             }}
           >
             {availability.detail}
-          </div>
-
-          <div style={deliveryBox}>
-            <div style={deliveryTitle}>Maklumat Delivery</div>
-            <div style={deliveryText}>{deliverySummary}</div>
-
-            {seller.delivery_area ? (
-              <div style={deliveryMeta}>
-                Kawasan liputan: {seller.delivery_area}
-              </div>
-            ) : null}
-
-            {seller.delivery_note ? (
-              <div style={deliveryMeta}>{seller.delivery_note}</div>
-            ) : null}
           </div>
         </div>
 
@@ -643,21 +640,6 @@ export default function ShopPageClient({
             </div>
           </div>
 
-          <div style={checkoutDeliveryBox}>
-            <div style={checkoutDeliveryTitle}>Info Delivery</div>
-            <div style={checkoutDeliveryText}>{deliverySummary}</div>
-
-            {seller.delivery_area ? (
-              <div style={checkoutDeliveryMeta}>
-                Kawasan liputan: {seller.delivery_area}
-              </div>
-            ) : null}
-
-            {seller.delivery_note ? (
-              <div style={checkoutDeliveryMeta}>{seller.delivery_note}</div>
-            ) : null}
-          </div>
-
           {!isShopOpen ? (
             <div style={closedCheckoutBox}>
               <div style={closedCheckoutTitle}>
@@ -682,18 +664,25 @@ export default function ShopPageClient({
                 ))}
               </div>
 
+                          
               <ShopPayButton
                 sellerId={seller.id}
                 shopSlug={shopSlug}
                 items={cartItems.map((item) => ({
-                  product_id: item.product_id,
-                  quantity: item.quantity,
-                }))}
+                product_id: item.product_id,
+                quantity: item.quantity,
+              }))}
                 total={grandTotal}
                 deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
                 deliveryFee={seller.delivery_fee || 0}
                 deliveryArea={seller.delivery_area || ''}
                 deliveryNote={seller.delivery_note || ''}
+                deliveryRadiusKm={seller.delivery_radius_km || 0}
+                deliveryRatePerKm={seller.delivery_rate_per_km || 0}
+                deliveryMinFee={seller.delivery_min_fee || 0}
+                pickupAddress={seller.pickup_address || ''}
+                sellerLatitude={seller.latitude || null}
+                sellerLongitude={seller.longitude || null}
               />
             </>
           )}

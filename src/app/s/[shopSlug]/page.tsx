@@ -23,10 +23,17 @@ type SellerProfile = {
     | 'fixed_fee'
     | 'included_in_price'
     | 'pay_rider_separately'
+    | 'distance_based'
     | null
   delivery_fee?: number | null
   delivery_area?: string | null
   delivery_note?: string | null
+  delivery_radius_km?: number | null
+  delivery_rate_per_km?: number | null
+  delivery_min_fee?: number | null
+  pickup_address?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 type MenuCategory = {
@@ -113,7 +120,13 @@ async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> 
         delivery_mode,
         delivery_fee,
         delivery_area,
-        delivery_note
+        delivery_note,
+        delivery_radius_km,
+        delivery_rate_per_km,
+        delivery_min_fee,
+        pickup_address,
+        latitude,
+        longitude
       `
     )
     .eq('shop_slug', requestedSlug)
@@ -130,8 +143,8 @@ export async function generateMetadata({
 
   const storeName = seller?.store_name?.trim() || 'BayarLink Shop'
   const description = seller?.temporarily_closed
-  ? `Kedai ini ditutup sementara. Sila cuba lagi nanti.`
-  : `Order online dengan mudah. Senarai menu lengkap tersedia di sini.`
+    ? `Kedai ini ditutup sementara. Sila cuba lagi nanti.`
+    : `Order online dengan mudah. Senarai menu lengkap tersedia di sini.`
 
   const imageUrl =
     seller?.profile_image && seller.profile_image.trim().length > 0
@@ -204,7 +217,13 @@ export default async function Page({ params }: PageProps) {
         delivery_mode,
         delivery_fee,
         delivery_area,
-        delivery_note
+        delivery_note,
+        delivery_radius_km,
+        delivery_rate_per_km,
+        delivery_min_fee,
+        pickup_address,
+        latitude,
+        longitude
       `
     )
     .eq('shop_slug', requestedSlug)
@@ -275,7 +294,13 @@ export default async function Page({ params }: PageProps) {
               delivery_mode,
               delivery_fee,
               delivery_area,
-              delivery_note
+              delivery_note,
+              delivery_radius_km,
+              delivery_rate_per_km,
+              delivery_min_fee,
+              pickup_address,
+              latitude,
+              longitude
             `
           )
           .eq('id', matchedProduct.seller_profile_id)

@@ -32,6 +32,7 @@ const DELIVERY_MODES = [
   { value: 'fixed_fee', label: 'Delivery Fee (Fixed)' },
   { value: 'included_in_price', label: 'Included in Price' },
   { value: 'pay_rider_separately', label: 'Pay Rider Separately' },
+  { value: 'distance_based', label: 'Distance Based' },
 ]
 
 function slugify(value: string) {
@@ -85,6 +86,7 @@ type DeliveryMode =
   | 'fixed_fee'
   | 'included_in_price'
   | 'pay_rider_separately'
+  | 'distance_based'
 
 type SellerProfileRow = {
   id: string
@@ -109,11 +111,18 @@ type SellerProfileRow = {
   delivery_fee?: number | null
   delivery_area?: string | null
   delivery_note?: string | null
+  delivery_radius_km?: number | null
+  delivery_rate_per_km?: number | null
+  delivery_min_fee?: number | null
+  pickup_address?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [detectingLocation, setDetectingLocation] = useState(false)
 
   const [sellerId, setSellerId] = useState<string | null>(null)
   const [accountEmail, setAccountEmail] = useState('')
@@ -151,6 +160,14 @@ export default function SettingsPage() {
   const [deliveryArea, setDeliveryArea] = useState('')
   const [deliveryNote, setDeliveryNote] = useState('')
 
+  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('10')
+  const [deliveryRatePerKm, setDeliveryRatePerKm] = useState('1')
+  const [deliveryMinFee, setDeliveryMinFee] = useState('5')
+  const [pickupAddress, setPickupAddress] = useState('')
+  const [latitude, setLatitude] = useState('')
+  const [longitude, setLongitude] = useState('')
+  const [resolvedPickupAddress, setResolvedPickupAddress] = useState('')
+
   const previewBaseUrl =
     (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
 
@@ -176,6 +193,9 @@ export default function SettingsPage() {
 
   const deliverySummaryText = useMemo(() => {
     const fee = Number(deliveryFee || 0)
+    const rate = Number(deliveryRatePerKm || 0)
+    const minFee = Number(deliveryMinFee || 0)
+    const radius = Number(deliveryRadiusKm || 0)
 
     switch (deliveryMode) {
       case 'free_delivery':
@@ -186,11 +206,15 @@ export default function SettingsPage() {
           : 'Delivery fee akan dikenakan.'
       case 'included_in_price':
         return 'Harga produk telah termasuk delivery.'
+      case 'distance_based':
+        return `Caj delivery dikira berdasarkan jarak. Kadar ${formatCurrency(
+          rate
+        )}/km, minimum ${formatCurrency(minFee)}, radius maksimum ${radius}km.`
       case 'pay_rider_separately':
       default:
         return 'Caj delivery tidak termasuk dalam harga. Bayaran delivery harus dibuat terus kepada rider semasa penghantaran.'
     }
-  }, [deliveryMode, deliveryFee])
+  }, [deliveryMode, deliveryFee, deliveryRatePerKm, deliveryMinFee, deliveryRadiusKm])
 
   useEffect(() => {
     loadProfile()
@@ -230,6 +254,12 @@ export default function SettingsPage() {
         delivery_fee: 0,
         delivery_area: null,
         delivery_note: null,
+        delivery_radius_km: 10,
+        delivery_rate_per_km: 1,
+        delivery_min_fee: 5,
+        pickup_address: null,
+        latitude: null,
+        longitude: null,
       })
       .select('*')
       .single()
@@ -292,6 +322,21 @@ export default function SettingsPage() {
       setDeliveryFee(String(profile.delivery_fee ?? 0))
       setDeliveryArea(profile.delivery_area || '')
       setDeliveryNote(profile.delivery_note || '')
+      setDeliveryRadiusKm(String(profile.delivery_radius_km ?? 10))
+      setDeliveryRatePerKm(String(profile.delivery_rate_per_km ?? 1))
+      setDeliveryMinFee(String(profile.delivery_min_fee ?? 5))
+      setPickupAddress(profile.pickup_address || '')
+      setResolvedPickupAddress(profile.pickup_address || '')
+      setLatitude(
+        profile.latitude !== null && profile.latitude !== undefined
+          ? String(profile.latitude)
+          : ''
+      )
+      setLongitude(
+        profile.longitude !== null && profile.longitude !== undefined
+          ? String(profile.longitude)
+          : ''
+      )
 
       setStoreName(!existingSlug && isDefaultName ? '' : existingStoreName)
       setSlugLocked(Boolean(existingSlug))
@@ -328,6 +373,58 @@ export default function SettingsPage() {
     setProfileImage(data.publicUrl)
   }
 
+  async function detectPickupLocation() {
+    const trimmedPickupAddress = pickupAddress.trim()
+
+    if (!trimmedPickupAddress) {
+      alert('Please enter pickup address first.')
+      return null
+    }
+
+    try {
+      setDetectingLocation(true)
+
+      const response = await fetch('/api/maps/geocode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: trimmedPickupAddress,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.error || 'Alamat tidak dapat dikenal pasti. Sila semak semula alamat pickup.'
+        )
+      }
+
+      const nextLat = String(data.latitude)
+      const nextLng = String(data.longitude)
+      const nextAddress = String(data.formatted_address || trimmedPickupAddress)
+
+      setLatitude(nextLat)
+      setLongitude(nextLng)
+      setResolvedPickupAddress(nextAddress)
+
+      return {
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+        formattedAddress: nextAddress,
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to detect pickup location'
+      alert(message)
+      return null
+    } finally {
+      setDetectingLocation(false)
+    }
+  }
+
   async function handleSave() {
     if (saving) return
 
@@ -340,7 +437,17 @@ export default function SettingsPage() {
     const trimmedClosedMessage = closedMessage.trim()
     const trimmedDeliveryArea = deliveryArea.trim()
     const trimmedDeliveryNote = deliveryNote.trim()
+    let trimmedPickupAddress = pickupAddress.trim()
+
     const parsedDeliveryFee = Number(deliveryFee || 0)
+    const parsedDeliveryRadiusKm = Number(deliveryRadiusKm || 0)
+    const parsedDeliveryRatePerKm = Number(deliveryRatePerKm || 0)
+    const parsedDeliveryMinFee = Number(deliveryMinFee || 0)
+
+    let parsedLatitude =
+      latitude.trim() === '' ? null : Number(latitude)
+    let parsedLongitude =
+      longitude.trim() === '' ? null : Number(longitude)
 
     if (!trimmedStoreName) {
       alert('Store Name is required')
@@ -367,6 +474,38 @@ export default function SettingsPage() {
     if (deliveryMode === 'fixed_fee' && parsedDeliveryFee <= 0) {
       alert('Please enter delivery fee more than 0.')
       return
+    }
+
+    if (deliveryMode === 'distance_based') {
+      if (!Number.isFinite(parsedDeliveryRadiusKm) || parsedDeliveryRadiusKm <= 0) {
+        alert('Please enter max delivery radius more than 0.')
+        return
+      }
+
+      if (!Number.isFinite(parsedDeliveryRatePerKm) || parsedDeliveryRatePerKm <= 0) {
+        alert('Please enter rate per km more than 0.')
+        return
+      }
+
+      if (!Number.isFinite(parsedDeliveryMinFee) || parsedDeliveryMinFee < 0) {
+        alert('Please enter a valid minimum delivery fee.')
+        return
+      }
+
+      if (!trimmedPickupAddress) {
+        alert('Please enter pickup address for distance based delivery.')
+        return
+      }
+
+      const geocoded = await detectPickupLocation()
+
+      if (!geocoded) {
+        return
+      }
+
+      parsedLatitude = geocoded.latitude
+      parsedLongitude = geocoded.longitude
+      trimmedPickupAddress = geocoded.formattedAddress
     }
 
     setSaving(true)
@@ -411,6 +550,18 @@ export default function SettingsPage() {
           delivery_fee: deliveryMode === 'fixed_fee' ? parsedDeliveryFee : 0,
           delivery_area: trimmedDeliveryArea || null,
           delivery_note: trimmedDeliveryNote || null,
+          delivery_radius_km:
+            deliveryMode === 'distance_based' ? parsedDeliveryRadiusKm : null,
+          delivery_rate_per_km:
+            deliveryMode === 'distance_based' ? parsedDeliveryRatePerKm : null,
+          delivery_min_fee:
+            deliveryMode === 'distance_based' ? parsedDeliveryMinFee : null,
+          pickup_address:
+            deliveryMode === 'distance_based' ? trimmedPickupAddress : null,
+          latitude:
+            deliveryMode === 'distance_based' ? parsedLatitude : null,
+          longitude:
+            deliveryMode === 'distance_based' ? parsedLongitude : null,
         })
         .eq('id', currentSellerId)
 
@@ -421,6 +572,8 @@ export default function SettingsPage() {
       setStoreName(trimmedStoreName)
       setSavedShopSlug(finalShopSlug)
       setSlugLocked(true)
+      setPickupAddress(trimmedPickupAddress)
+      setResolvedPickupAddress(trimmedPickupAddress)
 
       alert('Settings updated successfully!')
     } catch (err) {
@@ -689,6 +842,112 @@ export default function SettingsPage() {
                       </div>
                     ) : null}
 
+                    {deliveryMode === 'distance_based' ? (
+                      <div className="grid gap-4 rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Rate Per KM (RM)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Contoh: 1.00"
+                            value={deliveryRatePerKm}
+                            onChange={(e) => setDeliveryRatePerKm(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Minimum Delivery Fee (RM)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Contoh: 5.00"
+                            value={deliveryMinFee}
+                            onChange={(e) => setDeliveryMinFee(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Maximum Delivery Radius (KM)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Contoh: 10"
+                            value={deliveryRadiusKm}
+                            onChange={(e) => setDeliveryRadiusKm(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Pickup Address
+                          </label>
+                          <textarea
+                            placeholder="Alamat pickup / lokasi kedai untuk kiraan jarak"
+                            value={pickupAddress}
+                            onChange={(e) => setPickupAddress(e.target.value)}
+                            rows={3}
+                            className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                          />
+                          <p className="mt-2 text-xs text-slate-500">
+                            Seller hanya isi alamat. Sistem akan auto detect latitude dan longitude.
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <button
+                            type="button"
+                            onClick={detectPickupLocation}
+                            disabled={detectingLocation}
+                            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {detectingLocation ? 'Detecting...' : 'Detect Pickup Location'}
+                          </button>
+
+                          {latitude && longitude ? (
+                            <div className="text-xs text-slate-600">
+                              Latitude: <strong>{latitude}</strong> &nbsp;•&nbsp; Longitude:{' '}
+                              <strong>{longitude}</strong>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500">
+                              Lokasi belum dikesan lagi.
+                            </div>
+                          )}
+                        </div>
+
+                        {resolvedPickupAddress ? (
+                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                              Resolved Address
+                            </p>
+                            <p className="mt-1 text-sm text-emerald-900">
+                              {resolvedPickupAddress}
+                            </p>
+                          </div>
+                        ) : null}
+
+                        <input type="hidden" value={latitude} readOnly />
+                        <input type="hidden" value={longitude} readOnly />
+
+                        <p className="text-xs leading-5 text-slate-500">
+                          Sistem akan simpan latitude dan longitude secara automatik bila alamat
+                          berjaya dikenal pasti.
+                        </p>
+                      </div>
+                    ) : null}
+
                     <div>
                       <label className="mb-2 block text-sm font-bold text-slate-700">
                         Delivery Area
@@ -827,10 +1086,10 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={saving}
+                  disabled={saving || detectingLocation}
                   className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {saving ? 'Saving...' : 'Save Settings'}
+                  {saving ? 'Saving...' : detectingLocation ? 'Detecting location...' : 'Save Settings'}
                 </button>
               </div>
             </section>
