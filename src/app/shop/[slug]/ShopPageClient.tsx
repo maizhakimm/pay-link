@@ -543,7 +543,58 @@ export default function ShopPageClient({
 
                 return (
                   <div key={product.id} style={productCard}>
-                    <div style={productCardLeft}>
+                    <div style={productContent}>
+                      <div style={productInfo}>
+                        <div style={productName}>{product.name}</div>
+
+                        <div style={productPrice}>
+                          RM {product.price.toFixed(2)}
+                        </div>
+
+                        {product.track_stock ? (
+                          <div style={stockText}>
+                            Stock: {product.stock_quantity ?? 0}
+                          </div>
+                        ) : null}
+
+                        <div style={productDesc}>
+                          {product.description || 'Tiada deskripsi.'}
+                        </div>
+
+                        <div style={qtyWrap}>
+                          <div style={qtyRow}>
+                            <button
+                              type="button"
+                              onClick={() => decrease(product.id)}
+                              style={qtyBtn}
+                            >
+                              -
+                            </button>
+
+                            <span style={qtyValue}>{qty}</span>
+
+                            <button
+                              type="button"
+                              onClick={() => increase(product)}
+                              style={{
+                                ...qtyBtn,
+                                opacity: disableAddButton ? 0.4 : 1,
+                                cursor: disableAddButton
+                                  ? 'not-allowed'
+                                  : 'pointer',
+                              }}
+                              disabled={disableAddButton}
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {!isShopOpen ? (
+                            <div style={qtyHintClosed}>Ordering unavailable</div>
+                          ) : null}
+                        </div>
+                      </div>
+
                       <button
                         type="button"
                         onClick={() => openGallery(product, 0)}
@@ -576,55 +627,6 @@ export default function ShopPageClient({
                           ) : null}
                         </div>
                       </button>
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={productName}>{product.name}</div>
-                        <div style={productPrice}>
-                          RM {product.price.toFixed(2)}
-                        </div>
-
-                        {product.track_stock ? (
-                          <div style={stockText}>
-                            Stock: {product.stock_quantity ?? 0}
-                          </div>
-                        ) : null}
-
-                        <div style={productDesc}>
-                          {product.description || 'Tiada deskripsi.'}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={qtyPanel}>
-                      <div style={qtyLabel}>Qty</div>
-                      <div style={qtyRow}>
-                        <button
-                          type="button"
-                          onClick={() => decrease(product.id)}
-                          style={qtyBtn}
-                        >
-                          -
-                        </button>
-
-                        <span style={qtyValue}>{qty}</span>
-
-                        <button
-                          type="button"
-                          onClick={() => increase(product)}
-                          style={{
-                            ...qtyBtn,
-                            opacity: disableAddButton ? 0.4 : 1,
-                            cursor: disableAddButton ? 'not-allowed' : 'pointer',
-                          }}
-                          disabled={disableAddButton}
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      {!isShopOpen ? (
-                        <div style={qtyHintClosed}>Ordering unavailable</div>
-                      ) : null}
                     </div>
                   </div>
                 )
@@ -785,9 +787,9 @@ const soldOutBadge = {
   right: 6,
   background: '#ef4444',
   color: '#fff',
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 800,
-  padding: '4px 8px',
+  padding: '4px 7px',
   borderRadius: 8,
 } as const
 
@@ -804,9 +806,10 @@ const multiImageBadge = {
 } as const
 
 const stockText = {
-  fontSize: 12,
+  fontSize: 11,
   color: '#64748b',
   marginBottom: 4,
+  lineHeight: 1.35,
 } as const
 
 const main = {
@@ -1003,29 +1006,31 @@ const emptyCard = {
 
 const productGrid = {
   display: 'grid',
-  gap: 12,
+  gap: 10,
   marginBottom: 16,
 } as const
 
 const productCard = {
   background: '#fff',
-  borderRadius: 20,
-  padding: 14,
+  borderRadius: 18,
+  padding: 12,
   border: '1px solid #e2e8f0',
-  display: 'flex',
-  gap: 12,
-  alignItems: 'flex-start',
-  justifyContent: 'space-between',
-  position: 'relative' as const,
-  flexWrap: 'wrap' as const,
 } as const
 
-const productCardLeft = {
+const productContent = {
   display: 'flex',
-  gap: 12,
   alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 12,
+  minWidth: 0,
+} as const
+
+const productInfo = {
   flex: 1,
   minWidth: 0,
+  display: 'flex',
+  flexDirection: 'column' as const,
+  alignItems: 'flex-start',
 } as const
 
 const productImageButton = {
@@ -1064,69 +1069,79 @@ const productImagePlaceholder = {
 } as const
 
 const productName = {
-  fontWeight: 800,
+  fontWeight: 700,
   color: '#0f172a',
-  marginBottom: 6,
-  fontSize: 18,
-  lineHeight: 1.3,
+  marginBottom: 4,
+  fontSize: 15,
+  lineHeight: 1.35,
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical' as const,
+  overflow: 'hidden',
+  wordBreak: 'break-word' as const,
 } as const
 
 const productPrice = {
   color: '#1d4ed8',
-  fontWeight: 800,
-  marginBottom: 6,
+  fontWeight: 700,
+  marginBottom: 4,
+  fontSize: 14,
+  lineHeight: 1.35,
 } as const
 
 const productDesc = {
   color: '#64748b',
-  fontSize: 13,
-  lineHeight: 1.6,
-} as const
-
-const qtyPanel = {
-  minWidth: 110,
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: 14,
-  padding: 10,
-  textAlign: 'center' as const,
-  flexShrink: 0,
-} as const
-
-const qtyLabel = {
   fontSize: 12,
-  color: '#64748b',
-  fontWeight: 700,
+  lineHeight: 1.4,
   marginBottom: 8,
+  width: '100%',
+  whiteSpace: 'nowrap' as const,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis' as const,
+} as const
+
+const qtyWrap = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  alignItems: 'flex-start',
+  gap: 6,
+  marginTop: 2,
 } as const
 
 const qtyRow = {
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
   gap: 8,
 } as const
 
 const qtyBtn = {
   width: 30,
   height: 30,
-  borderRadius: 8,
+  borderRadius: 999,
   border: '1px solid #cbd5e1',
   background: '#fff',
   cursor: 'pointer',
   fontWeight: 700,
+  fontSize: 16,
+  color: '#0f172a',
+  lineHeight: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 0,
 } as const
 
 const qtyValue = {
-  minWidth: 16,
+  minWidth: 18,
   fontWeight: 800,
   color: '#0f172a',
+  fontSize: 14,
+  textAlign: 'center' as const,
 } as const
 
 const qtyHintClosed = {
-  marginTop: 8,
   fontSize: 11,
-  lineHeight: 1.4,
+  lineHeight: 1.35,
   color: '#b45309',
   fontWeight: 700,
 } as const
