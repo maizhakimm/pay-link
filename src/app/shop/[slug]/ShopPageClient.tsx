@@ -1013,7 +1013,7 @@ const productGrid = {
 const productCard = {
   background: '#fff',
   borderRadius: 18,
-  padding: 12,
+  padding: 10,
   border: '1px solid #e2e8f0',
 } as const
 
@@ -1021,7 +1021,7 @@ const productContent = {
   display: 'flex',
   alignItems: 'flex-start',
   justifyContent: 'space-between',
-  gap: 12,
+  gap: 10,
   minWidth: 0,
 } as const
 
@@ -1042,8 +1042,8 @@ const productImageButton = {
 } as const
 
 const productImageWrap = {
-  width: 96,
-  height: 96,
+  width: 100,
+  height: 100,
   borderRadius: 14,
   overflow: 'hidden',
   background: '#e2e8f0',
@@ -1072,8 +1072,8 @@ const productName = {
   fontWeight: 700,
   color: '#0f172a',
   marginBottom: 4,
-  fontSize: 15,
-  lineHeight: 1.35,
+  fontSize: 14,
+  lineHeight: 1.3,
   display: '-webkit-box',
   WebkitLineClamp: 2,
   WebkitBoxOrient: 'vertical' as const,
@@ -1115,14 +1115,14 @@ const qtyRow = {
 } as const
 
 const qtyBtn = {
-  width: 30,
-  height: 30,
-  borderRadius: 999,
+  width: 28,
+  height: 28,
+  borderRadius: '999px',
   border: '1px solid #cbd5e1',
   background: '#fff',
   cursor: 'pointer',
   fontWeight: 700,
-  fontSize: 16,
+  fontSize: 15,
   color: '#0f172a',
   lineHeight: 1,
   display: 'flex',
@@ -1132,10 +1132,10 @@ const qtyBtn = {
 } as const
 
 const qtyValue = {
-  minWidth: 18,
-  fontWeight: 800,
+  minWidth: 16,
+  fontWeight: 700,
   color: '#0f172a',
-  fontSize: 14,
+  fontSize: 13,
   textAlign: 'center' as const,
 } as const
 
