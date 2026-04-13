@@ -497,7 +497,7 @@ export default function SettingsPage() {
               <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Seller Profile</h2>
 
               <div className="mb-5">
-                <p className="mb-2 text-sm font-bold text-slate-700">Logo Biz/p>
+                <p className="mb-2 text-sm font-bold text-slate-700">Logo Biz</p>
 
                 {profileImage ? (
                   <img
