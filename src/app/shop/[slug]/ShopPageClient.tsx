@@ -693,14 +693,20 @@ export default function ShopPageClient({
                 sellerId={seller.id}
                 shopSlug={shopSlug}
                 items={cartItems.map((item) => ({
-                  product_id: item.product_id,
-                  quantity: item.quantity,
-                }))}
+                product_id: item.product_id,
+                quantity: item.quantity,
+              }))}
                 total={grandTotal}
                 deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
                 deliveryFee={seller.delivery_fee || 0}
                 deliveryArea={seller.delivery_area || ''}
                 deliveryNote={seller.delivery_note || ''}
+                deliveryRadiusKm={seller.delivery_radius_km || 0}
+                deliveryRatePerKm={seller.delivery_rate_per_km || 0}
+                deliveryMinFee={seller.delivery_min_fee || 0}
+                pickupAddress={seller.pickup_address || ''}
+                sellerLatitude={seller.latitude || null}
+                sellerLongitude={seller.longitude || null}
               />
             </>
           )}
