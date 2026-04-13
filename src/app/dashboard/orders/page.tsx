@@ -279,11 +279,21 @@ function extractOrderItems(order: OrderRow): OrderItem[] {
 }
 
 function getOrderTotal(order: OrderRow, items: OrderItem[]) {
+  // ✅ PRIORITY 1: guna total_amount (paling accurate)
+  if (order.total_amount) {
+    return Number(order.total_amount)
+  }
+
+  // ✅ PRIORITY 2: fallback ke items
   if (items.length > 0) {
-    const itemsTotal = items.reduce((sum, item) => sum + Number(item.total || 0), 0)
+    const itemsTotal = items.reduce(
+      (sum, item) => sum + Number(item.total || 0),
+      0
+    )
     if (itemsTotal > 0) return itemsTotal
   }
 
+  // ✅ LAST fallback
   return Number(order.amount || 0)
 }
 
