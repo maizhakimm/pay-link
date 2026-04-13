@@ -150,6 +150,9 @@ function formatCurrency(amount?: number | null) {
 
 function getDeliverySummary(seller: SellerProfile) {
   const fee = Number(seller.delivery_fee || 0)
+  const rate = Number(seller.delivery_rate_per_km || 0)
+  const minFee = Number(seller.delivery_min_fee || 0)
+  const radius = Number(seller.delivery_radius_km || 0)
 
   switch (seller.delivery_mode) {
     case 'free_delivery':
@@ -160,6 +163,10 @@ function getDeliverySummary(seller: SellerProfile) {
         : 'Delivery fee akan dikenakan jika customer pilih delivery.'
     case 'included_in_price':
       return 'Harga produk telah termasuk delivery.'
+    case 'distance_based':
+      return `Caj delivery dikira ikut jarak. Kadar ${formatCurrency(
+        rate
+      )}/km, minimum ${formatCurrency(minFee)}, radius maksimum ${radius}km.`
     case 'pay_rider_separately':
     default:
       return 'Bayaran delivery dibuat berasingan terus kepada rider.'
