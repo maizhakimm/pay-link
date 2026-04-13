@@ -1013,21 +1013,23 @@ const productGrid = {
 const productCard = {
   background: '#fff',
   borderRadius: 18,
-  padding: 10,
+  padding: 12,
   border: '1px solid #e2e8f0',
+  overflow: 'hidden',
 } as const
 
 const productContent = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  justifyContent: 'space-between',
-  gap: 10,
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) 84px',
+  alignItems: 'start',
+  columnGap: 12,
   minWidth: 0,
+  width: '100%',
 } as const
 
 const productInfo = {
-  flex: 1,
   minWidth: 0,
+  width: '100%',
   display: 'flex',
   flexDirection: 'column' as const,
   alignItems: 'flex-start',
@@ -1038,16 +1040,18 @@ const productImageButton = {
   margin: 0,
   border: 'none',
   background: 'transparent',
-  flexShrink: 0,
+  width: 84,
+  minWidth: 84,
+  justifySelf: 'end' as const,
+  alignSelf: 'start' as const,
 } as const
 
 const productImageWrap = {
-  width: 100,
-  height: 100,
+  width: 84,
+  height: 84,
   borderRadius: 14,
   overflow: 'hidden',
   background: '#e2e8f0',
-  flexShrink: 0,
   position: 'relative' as const,
 } as const
 
@@ -1072,13 +1076,15 @@ const productName = {
   fontWeight: 700,
   color: '#0f172a',
   marginBottom: 4,
-  fontSize: 14,
+  fontSize: 13,
   lineHeight: 1.3,
   display: '-webkit-box',
   WebkitLineClamp: 2,
   WebkitBoxOrient: 'vertical' as const,
   overflow: 'hidden',
+  textOverflow: 'ellipsis' as const,
   wordBreak: 'break-word' as const,
+  maxWidth: '100%',
 } as const
 
 const productPrice = {
@@ -1091,11 +1097,13 @@ const productPrice = {
 
 const productDesc = {
   color: '#64748b',
-  fontSize: 12,
-  lineHeight: 1.4,
+  fontSize: 11,
+  lineHeight: 1.35,
   marginBottom: 8,
   width: '100%',
-  whiteSpace: 'nowrap' as const,
+  display: '-webkit-box',
+  WebkitLineClamp: 1,
+  WebkitBoxOrient: 'vertical' as const,
   overflow: 'hidden',
   textOverflow: 'ellipsis' as const,
 } as const
