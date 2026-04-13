@@ -26,6 +26,13 @@ type SellerProfile = {
   delivery_note?: string | null
 }
 
+type MenuCategory = {
+  id: string
+  name: string
+  sort_order?: number | null
+  is_active?: boolean | null
+}
+
 type ProductRow = {
   id: string
   name: string
@@ -42,6 +49,7 @@ type ProductRow = {
   track_stock?: boolean
   stock_quantity?: number
   sold_out?: boolean
+  menu_category_id?: string | null
 }
 
 type GalleryState = {
@@ -212,10 +220,12 @@ export default function ShopPageClient({
   seller,
   products,
   shopSlug,
+  categories = [],
 }: {
   seller: SellerProfile
   products: ProductRow[]
   shopSlug: string
+  categories?: MenuCategory[]
 }) {
   const [cart, setCart] = useState<Record<string, number>>({})
   const [gallery, setGallery] = useState<GalleryState>({
@@ -228,6 +238,26 @@ export default function ShopPageClient({
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
   const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
+
+  const normalizedCategories = useMemo(() => {
+    return [...categories]
+      .filter((item) => item && item.id && item.name)
+      .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+  }, [categories])
+
+  const hasCategoryFeature =
+    normalizedCategories.length > 0 &&
+    products.some((product) => product.menu_category_id)
+
+  const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
+
+  useEffect(() => {
+    if (hasCategoryFeature && normalizedCategories.length > 0) {
+      setActiveCategoryId(normalizedCategories[0].id)
+    } else {
+      setActiveCategoryId('all')
+    }
+  }, [hasCategoryFeature, normalizedCategories])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -324,6 +354,15 @@ export default function ShopPageClient({
     })
   }
 
+  const visibleProducts = useMemo(() => {
+    if (!hasCategoryFeature) return products
+    if (activeCategoryId === 'all') return products
+
+    return products.filter(
+      (product) => (product.menu_category_id || '') === activeCategoryId
+    )
+  }, [products, hasCategoryFeature, activeCategoryId])
+
   const cartItems = useMemo(() => {
     return products
       .filter((product) => (cart[product.id] || 0) > 0)
@@ -362,7 +401,9 @@ export default function ShopPageClient({
                 style={sellerImg}
               />
             ) : (
-              <div style={sellerFallback}>{sellerName.charAt(0).toUpperCase()}</div>
+              <div style={sellerFallback}>
+                {sellerName.charAt(0).toUpperCase()}
+              </div>
             )}
 
             <div style={{ minWidth: 0, flex: 1 }}>
@@ -387,9 +428,13 @@ export default function ShopPageClient({
             </div>
 
             {seller.accept_orders_anytime === false && availability.timeRange ? (
-              <div style={hoursText}>Waktu tempahan: {availability.timeRange}</div>
+              <div style={hoursText}>
+                Waktu tempahan: {availability.timeRange}
+              </div>
             ) : (
-              <div style={hoursText}>Tempahan tertakluk kepada availability seller.</div>
+              <div style={hoursText}>
+                Tempahan tertakluk kepada availability seller.
+              </div>
             )}
           </div>
 
@@ -409,7 +454,9 @@ export default function ShopPageClient({
             <div style={deliveryText}>{deliverySummary}</div>
 
             {seller.delivery_area ? (
-              <div style={deliveryMeta}>Kawasan liputan: {seller.delivery_area}</div>
+              <div style={deliveryMeta}>
+                Kawasan liputan: {seller.delivery_area}
+              </div>
             ) : null}
 
             {seller.delivery_note ? (
@@ -418,7 +465,36 @@ export default function ShopPageClient({
           </div>
         </div>
 
-        {products.length === 0 ? (
+        {hasCategoryFeature ? (
+          <div style={stickyTabWrap}>
+            <div style={tabScroller}>
+              {normalizedCategories.map((category) => {
+                const isActive = activeCategoryId === category.id
+
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setActiveCategoryId(category.id)}
+                    style={{
+                      ...tabButton,
+                      background: isActive ? '#0f172a' : '#fff',
+                      color: isActive ? '#fff' : '#0f172a',
+                      borderColor: isActive ? '#0f172a' : '#e2e8f0',
+                      boxShadow: isActive
+                        ? '0 8px 20px rgba(15,23,42,0.14)'
+                        : 'none',
+                    }}
+                  >
+                    {category.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {visibleProducts.length === 0 ? (
           <div style={emptyCard}>
             <p style={{ margin: 0, color: '#64748b' }}>
               Tiada menu aktif buat masa ini.
@@ -426,7 +502,7 @@ export default function ShopPageClient({
           </div>
         ) : (
           <div style={productGrid}>
-            {products.map((product) => {
+            {visibleProducts.map((product) => {
               const image = getFirstImage(product)
               const qty = cart[product.id] || 0
               const disableAddButton = !isShopOpen || Boolean(product.sold_out)
@@ -456,20 +532,28 @@ export default function ShopPageClient({
                           <div style={productImagePlaceholder}>No image</div>
                         )}
 
-                        {product.sold_out ? <div style={soldOutBadge}>Sold Out</div> : null}
+                        {product.sold_out ? (
+                          <div style={soldOutBadge}>Sold Out</div>
+                        ) : null}
 
                         {allImages.length > 1 ? (
-                          <div style={multiImageBadge}>{allImages.length} photos</div>
+                          <div style={multiImageBadge}>
+                            {allImages.length} photos
+                          </div>
                         ) : null}
                       </div>
                     </button>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={productName}>{product.name}</div>
-                      <div style={productPrice}>RM {product.price.toFixed(2)}</div>
+                      <div style={productPrice}>
+                        RM {product.price.toFixed(2)}
+                      </div>
 
                       {product.track_stock ? (
-                        <div style={stockText}>Stock: {product.stock_quantity ?? 0}</div>
+                        <div style={stockText}>
+                          Stock: {product.stock_quantity ?? 0}
+                        </div>
                       ) : null}
 
                       <div style={productDesc}>
@@ -528,7 +612,9 @@ export default function ShopPageClient({
             <div style={checkoutDeliveryText}>{deliverySummary}</div>
 
             {seller.delivery_area ? (
-              <div style={checkoutDeliveryMeta}>Kawasan liputan: {seller.delivery_area}</div>
+              <div style={checkoutDeliveryMeta}>
+                Kawasan liputan: {seller.delivery_area}
+              </div>
             ) : null}
 
             {seller.delivery_note ? (
@@ -538,7 +624,9 @@ export default function ShopPageClient({
 
           {!isShopOpen ? (
             <div style={closedCheckoutBox}>
-              <div style={closedCheckoutTitle}>Kedai kini tidak menerima tempahan</div>
+              <div style={closedCheckoutTitle}>
+                Kedai kini tidak menerima tempahan
+              </div>
               <div style={closedCheckoutText}>{availability.detail}</div>
             </div>
           ) : cartItems.length === 0 ? (
@@ -641,7 +729,9 @@ export default function ShopPageClient({
                       ...galleryDot,
                       opacity: gallery.currentIndex === index ? 1 : 0.35,
                       transform:
-                        gallery.currentIndex === index ? 'scale(1.15)' : 'scale(1)',
+                        gallery.currentIndex === index
+                          ? 'scale(1.15)'
+                          : 'scale(1)',
                     }}
                     aria-label={`Go to image ${index + 1}`}
                   />
@@ -818,6 +908,38 @@ const deliveryMeta = {
   color: '#64748b',
   lineHeight: 1.6,
   marginTop: 6,
+} as const
+
+const stickyTabWrap = {
+  position: 'sticky' as const,
+  top: 8,
+  zIndex: 20,
+  marginBottom: 16,
+} as const
+
+const tabScroller = {
+  display: 'flex',
+  gap: 10,
+  overflowX: 'auto' as const,
+  padding: '10px 4px 6px 4px',
+  WebkitOverflowScrolling: 'touch' as const,
+  scrollbarWidth: 'none' as const,
+  background: 'rgba(248,250,252,0.92)',
+  backdropFilter: 'blur(10px)',
+  borderRadius: 18,
+} as const
+
+const tabButton = {
+  flexShrink: 0,
+  borderRadius: 999,
+  border: '1px solid #e2e8f0',
+  padding: '10px 14px',
+  background: '#fff',
+  color: '#0f172a',
+  fontSize: 14,
+  fontWeight: 800,
+  whiteSpace: 'nowrap' as const,
+  cursor: 'pointer',
 } as const
 
 const emptyCard = {
