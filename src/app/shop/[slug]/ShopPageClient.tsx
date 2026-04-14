@@ -970,20 +970,19 @@ const tabButton = {
   flexShrink: 0,
   borderRadius: 999,
   border: '1px solid #e2e8f0',
-  padding: '8px 12px', // 🔥 smaller
-  fontSize: 12, // 🔥 smaller font
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 800,
+  whiteSpace: 'nowrap' as const,
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+} as const
 
 const activeTabButton = {
   background: '#0f172a',
   color: '#fff',
   borderColor: '#0f172a',
   boxShadow: '0 10px 20px rgba(15,23,42,0.18)',
-} as const
-
-const inactiveTabButton = {
-  background: '#fff',
-  color: '#0f172a',
-  borderColor: '#e2e8f0',
 } as const
 
 const emptyCard = {
