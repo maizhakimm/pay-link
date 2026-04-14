@@ -180,7 +180,7 @@ function getShopAvailability(seller: SellerProfile) {
       label: 'Temporarily Closed',
       detail:
         seller.closed_message ||
-        'Kedai kini ditutup sementara. Sila cuba lagi sebentar nanti.',
+        'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
     }
   }
 
@@ -199,7 +199,7 @@ function getShopAvailability(seller: SellerProfile) {
     return {
       isOpen: true,
       label: 'Open Now',
-      detail: 'Kedai ini menerima tempahan.',
+      detail: '',
     }
   }
 
@@ -212,8 +212,6 @@ function getShopAvailability(seller: SellerProfile) {
     isOpen = currentMinutes >= openMinutes && currentMinutes <= closeMinutes
   } else if (openMinutes > closeMinutes) {
     isOpen = currentMinutes >= openMinutes || currentMinutes <= closeMinutes
-  } else {
-    isOpen = false
   }
 
   const timeRange = `${formatTime(seller.opening_time)} - ${formatTime(
@@ -223,12 +221,23 @@ function getShopAvailability(seller: SellerProfile) {
   return {
     isOpen,
     label: isOpen ? 'Open Now' : 'Closed',
-    detail: isOpen
-      ? `Order diterima sehingga ${formatTime(seller.closing_time)}.`
-      : seller.closed_message || `Waktu tempahan adalah ${timeRange}.`,
+    detail: '', // 🔥 REMOVE ayat panjang
     timeRange,
   }
 }
+
+{availability.detail && (
+  <div
+    style={{
+      ...noticeBox,
+      background: isShopOpen ? '#eff6ff' : '#fff7ed',
+      borderColor: isShopOpen ? '#bfdbfe' : '#fed7aa',
+      color: isShopOpen ? '#1e3a8a' : '#9a3412',
+    }}
+  >
+    {availability.detail}
+  </div>
+)}
 
 export default function ShopPageClient({
   seller,
@@ -463,25 +472,23 @@ export default function ShopPageClient({
 
             {seller.accept_orders_anytime === false && availability.timeRange ? (
               <div style={hoursText}>
-                Waktu tempahan: {availability.timeRange}
+                {availability.timeRange}
               </div>
-            ) : (
-              <div style={hoursText}>
-                Tempahan tertakluk kepada availability seller.
-              </div>
-            )}
+            ) : null}
           </div>
 
-          <div
-            style={{
-              ...noticeBox,
-              background: isShopOpen ? '#eff6ff' : '#fff7ed',
-              borderColor: isShopOpen ? '#bfdbfe' : '#fed7aa',
-              color: isShopOpen ? '#1e3a8a' : '#9a3412',
-            }}
-          >
-            {availability.detail}
-          </div>
+          {availability.detail && (
+            <div
+              style={{
+                ...noticeBox,
+                background: isShopOpen ? '#eff6ff' : '#fff7ed',
+                borderColor: isShopOpen ? '#bfdbfe' : '#fed7aa',
+                color: isShopOpen ? '#1e3a8a' : '#9a3412',
+              }}
+            >
+              {availability.detail}
+            </div>
+          )}
         </div>
 
         {hasCategoryFeature ? (
@@ -938,18 +945,17 @@ const deliveryMeta = {
 
 const stickyTabWrap = {
   position: 'sticky' as const,
-  top: 8,
-  zIndex: 30,
-  marginBottom: 16,
+  top: 0, // 🔥 rapat ke atas (buang gap)
+  zIndex: 50,
+  marginBottom: 10,
 } as const
 
 const tabShell = {
-  padding: 6,
-  borderRadius: 20,
-  background: 'rgba(248,250,252,0.92)',
-  backdropFilter: 'blur(12px)',
-  boxShadow: '0 10px 25px rgba(15,23,42,0.08)',
-  border: '1px solid rgba(226,232,240,0.9)',
+  padding: '6px 0', // 🔥 no left/right padding
+  borderRadius: 0, // 🔥 buang rounded bila sticky
+  background: '#f8fafc', // 🔥 solid supaya tak nampak belakang
+  boxShadow: '0 6px 12px rgba(15,23,42,0.06)',
+  borderBottom: '1px solid #e2e8f0',
 } as const
 
 const tabScroller = {
@@ -964,13 +970,8 @@ const tabButton = {
   flexShrink: 0,
   borderRadius: 999,
   border: '1px solid #e2e8f0',
-  padding: '11px 15px',
-  fontSize: 14,
-  fontWeight: 800,
-  whiteSpace: 'nowrap' as const,
-  cursor: 'pointer',
-  transition: 'all 0.2s ease',
-} as const
+  padding: '8px 12px', // 🔥 smaller
+  fontSize: 12, // 🔥 smaller font
 
 const activeTabButton = {
   background: '#0f172a',
