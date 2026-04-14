@@ -974,6 +974,12 @@ const activeTabButton = {
   boxShadow: '0 10px 20px rgba(15,23,42,0.18)',
 } as const
 
+const inactiveTabButton = {
+  background: '#fff',
+  color: '#0f172a',
+  borderColor: '#e2e8f0',
+} as const
+
 const emptyCard = {
   background: '#fff',
   borderRadius: 20,
