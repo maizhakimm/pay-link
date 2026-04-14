@@ -42,7 +42,6 @@ function getImageUrl(path?: string | null) {
   const trimmed = path.trim()
   if (!trimmed) return ''
 
-  // kalau dah full URL → guna terus
   if (/^https?:\/\//i.test(trimmed)) return trimmed
 
   const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -205,11 +204,14 @@ ${shopLink}`.trim()
     }
 
     const firstProductWithImage = products.find(
-      (p) => p.is_active && p.image_1 && p.image_1.trim() !== ''
+      (p) =>
+        p.is_active &&
+        p.product_image_url &&
+        p.product_image_url.trim() !== ''
     )
 
-    if (firstProductWithImage?.image_1) {
-      return getImageUrl(firstProductWithImage.image_1)
+    if (firstProductWithImage?.product_image_url) {
+      return getImageUrl(firstProductWithImage.product_image_url)
     }
 
     if (seller?.profile_image) {
@@ -241,7 +243,7 @@ ${shopLink}`.trim()
     setPosterUrl(data.publicUrl)
   }
 
-  async function saveNote() {
+  async function saveAllShareSettings() {
     if (!seller) return
 
     setSavingNote(true)
@@ -317,44 +319,117 @@ ${shopLink}`.trim()
       </div>
 
       <div className="mb-6 rounded-xl border bg-white p-4">
-        <h2 className="mb-2 font-bold">Daily Note / Copywriting</h2>
-        <p className="mb-3 text-sm text-slate-500">
-          Ini optional. Seller boleh tulis ayat sendiri di sini. Sistem akan
-          auto paparkan 5 kategori teratas jika ada kategori aktif. Jika tiada
-          kategori, sistem akan fallback kepada 5 produk aktif sahaja di bawah
-          mesej WhatsApp.
-        </p>
-
-        <textarea
-          value={dailyNote}
-          onChange={(e) => setDailyNote(e.target.value)}
-          placeholder="Contoh: Open order hari ini untuk delivery petang. COD area Shah Alam sahaja."
-          rows={4}
-          className="w-full rounded border p-3 outline-none"
-        />
-
-        <button
-          onClick={saveNote}
-          disabled={savingNote}
-          className="mt-3 rounded bg-black px-4 py-2 text-white disabled:opacity-70"
-        >
-          {savingNote ? 'Saving...' : 'Save'}
-        </button>
-      </div>
-
-      <div className="mb-6 rounded-xl border bg-white p-4">
-        <h2 className="mb-2 font-bold">WhatsApp Message</h2>
-        <p className="mb-3 text-sm text-slate-500">
-          Kandungan di bawah dijana automatik berdasarkan kategori aktif yang
-          ada produk. Jika tiada kategori, sistem akan gunakan produk aktif
-          sahaja.
-        </p>
-
-        <div className="whitespace-pre-line rounded bg-gray-50 p-3 text-sm">
-          {message}
+        <div className="mb-4">
+          <h2 className="mb-2 font-bold text-slate-900">
+            Share Preview (WhatsApp / FB)
+          </h2>
+          <p className="text-sm text-slate-500">
+            Tulis ayat, pilih gambar preview, dan tengok terus bagaimana mesej
+            serta link kedai anda akan nampak bila di-share.
+          </p>
         </div>
 
-        <div className="mt-3 flex gap-2">
+        <div className="mb-5">
+          <label className="mb-2 block text-sm font-semibold text-slate-800">
+            Ayat / Copywriting
+          </label>
+          <p className="mb-3 text-sm text-slate-500">
+            Ini optional. Seller boleh tulis ayat sendiri di sini. Sistem akan
+            auto paparkan 5 kategori teratas jika ada kategori aktif. Jika tiada
+            kategori, sistem akan fallback kepada 5 produk aktif sahaja.
+          </p>
+
+          <textarea
+            value={dailyNote}
+            onChange={(e) => setDailyNote(e.target.value)}
+            placeholder="Contoh: Open order hari ini untuk delivery petang. COD area Shah Alam sahaja."
+            rows={4}
+            className="w-full rounded border p-3 outline-none"
+          />
+        </div>
+
+        <div className="mb-5">
+          <label className="mb-2 block text-sm font-semibold text-slate-800">
+            Gambar Preview Bila Share Link
+          </label>
+          <p className="mb-3 text-sm text-slate-500">
+            Pilih gambar yang akan digunakan untuk preview link kedai anda di
+            WhatsApp atau Facebook.
+          </p>
+
+          <div className="grid gap-3">
+            <select
+              value={shareMode}
+              onChange={(e) =>
+                setShareMode(e.target.value as 'product' | 'logo' | 'poster')
+              }
+              className="w-full rounded border p-3 outline-none"
+            >
+              <option value="product">Guna Product Image</option>
+              <option value="logo">Guna Logo Kedai</option>
+              <option value="poster">Upload Poster</option>
+            </select>
+
+            {shareMode === 'poster' && (
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => uploadPoster(e.target.files?.[0])}
+                className="w-full rounded border p-2"
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border bg-slate-50 p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Preview Link
+            </p>
+
+            <div className="overflow-hidden rounded-lg border bg-white">
+              {previewImage ? (
+                <img
+                  src={previewImage}
+                  alt="Share preview"
+                  className="h-44 w-full object-cover"
+                />
+              ) : null}
+
+              <div className="p-3">
+                <p className="text-sm font-bold text-slate-900">
+                  {seller?.store_name || 'Nama Kedai'}
+                </p>
+                <p className="mt-1 text-sm text-slate-500 line-clamp-2">
+                  {dailyNote.trim() || 'Order menu anda di sini.'}
+                </p>
+                <p className="mt-2 break-all text-xs text-slate-400">
+                  {shopLink || 'https://www.bayarlink.my'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border bg-slate-50 p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Preview Mesej WhatsApp
+            </p>
+
+            <div className="whitespace-pre-line rounded-lg border bg-white p-3 text-sm text-slate-800">
+              {message}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            onClick={saveAllShareSettings}
+            disabled={savingNote}
+            className="rounded bg-black px-4 py-2 text-white disabled:opacity-70"
+          >
+            {savingNote ? 'Saving...' : 'Save'}
+          </button>
+
           <button onClick={copyMessage} className="rounded border px-3 py-2">
             {copied ? 'Copied' : 'Copy'}
           </button>
@@ -366,81 +441,6 @@ ${shopLink}`.trim()
             WhatsApp
           </button>
         </div>
-      </div>
-
-      <div className="mb-6 rounded-xl border bg-white p-4">
-        <h2 className="mb-2 font-bold">Social Preview (WhatsApp / FB)</h2>
-
-        <p className="mb-3 text-sm text-slate-500">
-          Pilih gambar yang akan dipaparkan bila customer share link kedai anda.
-        </p>
-
-        <div className="grid gap-3">
-          <select
-            value={shareMode}
-            onChange={(e) =>
-              setShareMode(e.target.value as 'product' | 'logo' | 'poster')
-            }
-            className="w-full rounded border p-2"
-          >
-            <option value="product">Guna Product Image</option>
-            <option value="logo">Guna Logo Kedai</option>
-            <option value="poster">Upload Poster</option>
-          </select>
-
-          {shareMode === 'poster' && (
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => uploadPoster(e.target.files?.[0])}
-              className="w-full"
-            />
-          )}
-        </div>
-
-        <div className="mt-4 rounded border bg-gray-50 p-3">
-          <p className="mb-2 text-xs text-gray-500">Preview</p>
-
-          <div className="overflow-hidden rounded border bg-white">
-            {previewImage && (
-              <img
-                src={previewImage}
-                alt="Share preview"
-                className="h-40 w-full object-cover"
-              />
-            )}
-
-            <div className="p-2">
-              <p className="text-sm font-bold">{seller?.store_name}</p>
-              <p className="text-xs text-gray-500">{shopLink}</p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={saveNote}
-          disabled={savingNote}
-          className="mt-3 rounded bg-black px-4 py-2 text-white disabled:opacity-70"
-        >
-          {savingNote ? 'Saving...' : 'Save Preview Settings'}
-        </button>
-      </div>
-
-      <div className="rounded-xl border bg-white p-4">
-        <h2 className="mb-3 font-bold">Recent Orders</h2>
-
-        {orders.length === 0 ? (
-          <p>No orders yet</p>
-        ) : (
-          orders.slice(0, 5).map((order) => (
-            <div key={order.id} className="border-b py-2 last:border-b-0">
-              <div>{order.product_name}</div>
-              <div className="text-sm text-gray-500">
-                {formatMoney(order.amount)}
-              </div>
-            </div>
-          ))
-        )}
       </div>
     </Layout>
   )
