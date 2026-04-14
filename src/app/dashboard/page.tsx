@@ -10,8 +10,6 @@ type SellerProfile = {
   shop_slug?: string | null
   profile_image?: string | null
   daily_note?: string | null
-  share_image_mode?: 'product' | 'logo' | 'poster' | null
-  share_poster_url?: string | null
 }
 
 type Product = {
@@ -70,11 +68,6 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
 
-  const [shareMode, setShareMode] = useState<'product' | 'logo' | 'poster'>(
-    'product'
-  )
-  const [posterUrl, setPosterUrl] = useState('')
-
   const loadDashboard = useCallback(async () => {
     setLoading(true)
 
@@ -89,9 +82,7 @@ export default function DashboardPage() {
 
     const { data: sellerData, error: sellerError } = await supabase
       .from('seller_profiles')
-      .select(
-        'id, store_name, shop_slug, profile_image, daily_note, share_image_mode, share_poster_url'
-      )
+      .select('id, store_name, shop_slug, profile_image, daily_note')
       .eq('user_id', user.id)
       .single()
 
@@ -102,14 +93,6 @@ export default function DashboardPage() {
 
     setSeller(sellerData)
     setDailyNote(sellerData.daily_note || '')
-    setShareMode(
-      sellerData.share_image_mode === 'logo' ||
-        sellerData.share_image_mode === 'poster' ||
-        sellerData.share_image_mode === 'product'
-        ? sellerData.share_image_mode
-        : 'product'
-    )
-    setPosterUrl(sellerData.share_poster_url || '')
 
     const { data: productData } = await supabase
       .from('products')
@@ -195,53 +178,12 @@ ${shopLink}`.trim()
   }, [dailyNote, promoLines, shopLink])
 
   const previewImage = useMemo(() => {
-    if (shareMode === 'poster' && posterUrl) {
-      return posterUrl
-    }
-
-    if (shareMode === 'logo' && seller?.profile_image) {
-      return getImageUrl(seller.profile_image)
-    }
-
-    const firstProductWithImage = products.find(
-      (p) =>
-        p.is_active &&
-        p.product_image_url &&
-        p.product_image_url.trim() !== ''
-    )
-
-    if (firstProductWithImage?.product_image_url) {
-      return getImageUrl(firstProductWithImage.product_image_url)
-    }
-
     if (seller?.profile_image) {
       return getImageUrl(seller.profile_image)
     }
 
     return '/default-share.png'
-  }, [shareMode, posterUrl, seller, products])
-
-  async function uploadPoster(file?: File) {
-    if (!file || !seller) return
-
-    const ext = file.name.split('.').pop() || 'jpg'
-    const filePath = `poster-${seller.id}-${Date.now()}.${ext}`
-
-    const { error } = await supabase.storage
-      .from('product-images')
-      .upload(filePath, file, { upsert: true })
-
-    if (error) {
-      alert(error.message)
-      return
-    }
-
-    const { data } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(filePath)
-
-    setPosterUrl(data.publicUrl)
-  }
+  }, [seller])
 
   async function saveAllShareSettings() {
     if (!seller) return
@@ -252,8 +194,6 @@ ${shopLink}`.trim()
       .from('seller_profiles')
       .update({
         daily_note: dailyNote,
-        share_image_mode: shareMode,
-        share_poster_url: posterUrl || null,
       })
       .eq('id', seller.id)
 
@@ -337,32 +277,9 @@ ${shopLink}`.trim()
         </div>
 
         <div className="mb-5">
-          <p className="mb-3 text-xs text-slate-500">
-            Pilih gambar yang akan dipaparkan bila link di-share.
+          <p className="text-xs text-slate-500">
+            Gambar preview akan guna logo kedai anda.
           </p>
-
-          <div className="grid gap-3">
-            <select
-              value={shareMode}
-              onChange={(e) =>
-                setShareMode(e.target.value as 'product' | 'logo' | 'poster')
-              }
-              className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
-            >
-              <option value="product">Product Image</option>
-              <option value="logo">Logo Kedai</option>
-              <option value="poster">Upload Poster</option>
-            </select>
-
-            {shareMode === 'poster' && (
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => uploadPoster(e.target.files?.[0])}
-                className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
-              />
-            )}
-          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
