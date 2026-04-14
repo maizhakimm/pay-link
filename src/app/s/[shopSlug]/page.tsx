@@ -34,6 +34,9 @@ type SellerProfile = {
   pickup_address?: string | null
   latitude?: number | null
   longitude?: number | null
+  daily_note?: string | null
+  share_image_mode?: 'product' | 'logo' | 'poster' | null
+  share_poster_url?: string | null
 }
 
 type MenuCategory = {
@@ -49,6 +52,7 @@ type ProductRow = {
   slug: string
   description: string | null
   price: number
+  product_image_url?: string | null
   image_1?: string | null
   image_2?: string | null
   image_3?: string | null
@@ -95,6 +99,49 @@ function getServerSupabase() {
   })
 }
 
+function normalizePublicImage(path?: string | null) {
+  if (!path) return ''
+
+  const trimmed = path.trim()
+  if (!trimmed) return ''
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!baseUrl) return trimmed
+
+  let cleanPath = trimmed
+    .replace(/^storage\/v1\/object\/public\//, '')
+    .replace(/^\/+/, '')
+
+  const knownBuckets = ['product-images', 'product-assets']
+
+  if (!knownBuckets.some((bucket) => cleanPath.startsWith(`${bucket}/`))) {
+    cleanPath = `product-images/${cleanPath}`
+  }
+
+  return `${baseUrl}/storage/v1/object/public/${cleanPath}`
+}
+
+function getProductPreviewImage(product?: ProductRow | null) {
+  if (!product) return ''
+
+  const directProductImage = normalizePublicImage(product.product_image_url)
+  if (directProductImage) return directProductImage
+
+  const galleryImages = [
+    product.image_1,
+    product.image_2,
+    product.image_3,
+    product.image_4,
+    product.image_5,
+  ]
+    .map((img) => normalizePublicImage(img))
+    .filter(Boolean)
+
+  return galleryImages[0] || ''
+}
+
 async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> {
   const supabase = getServerSupabase()
   if (!supabase) return null
@@ -126,13 +173,87 @@ async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> 
         delivery_min_fee,
         pickup_address,
         latitude,
-        longitude
+        longitude,
+        daily_note,
+        share_image_mode,
+        share_poster_url
       `
     )
     .eq('shop_slug', requestedSlug)
     .maybeSingle()
 
   return (seller as SellerProfile | null) ?? null
+}
+
+async function getFirstActiveProductImage(
+  sellerId: string
+): Promise<string> {
+  const supabase = getServerSupabase()
+  if (!supabase) return ''
+
+  const { data: products } = await supabase
+    .from('products')
+    .select(
+      `
+        id,
+        name,
+        slug,
+        description,
+        price,
+        product_image_url,
+        image_1,
+        image_2,
+        image_3,
+        image_4,
+        image_5,
+        is_active,
+        seller_profile_id,
+        created_at
+      `
+    )
+    .eq('seller_profile_id', sellerId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+
+  const firstProduct = (products as ProductRow[] | null)?.find((item) => {
+    return Boolean(
+      item.product_image_url ||
+        item.image_1 ||
+        item.image_2 ||
+        item.image_3 ||
+        item.image_4 ||
+        item.image_5
+    )
+  })
+
+  return getProductPreviewImage(firstProduct || null)
+}
+
+async function getShareImageUrl(seller: SellerProfile | null): Promise<string> {
+  if (!seller) {
+    return 'https://www.bayarlink.my/BayarLink-Logo-01.svg'
+  }
+
+  if (
+    seller.share_image_mode === 'poster' &&
+    seller.share_poster_url &&
+    seller.share_poster_url.trim().length > 0
+  ) {
+    return normalizePublicImage(seller.share_poster_url)
+  }
+
+  if (seller.share_image_mode === 'logo') {
+    const logoUrl = normalizePublicImage(seller.profile_image)
+    if (logoUrl) return logoUrl
+  }
+
+  const productImage = await getFirstActiveProductImage(seller.id)
+  if (productImage) return productImage
+
+  const logoUrl = normalizePublicImage(seller.profile_image)
+  if (logoUrl) return logoUrl
+
+  return 'https://www.bayarlink.my/BayarLink-Logo-01.svg'
 }
 
 export async function generateMetadata({
@@ -142,14 +263,13 @@ export async function generateMetadata({
   const seller = await getSellerBySlug(requestedSlug)
 
   const storeName = seller?.store_name?.trim() || 'BayarLink Shop'
-  const description = seller?.temporarily_closed
-    ? `Kedai ini ditutup sementara. Sila cuba lagi nanti.`
-    : `Order online dengan mudah. Senarai menu lengkap tersedia di sini.`
+  const description =
+    seller?.daily_note?.trim() ||
+    (seller?.temporarily_closed
+      ? 'Kedai ini ditutup sementara. Sila cuba lagi nanti.'
+      : 'Order online dengan mudah. Senarai menu lengkap tersedia di sini.')
 
-  const imageUrl =
-    seller?.profile_image && seller.profile_image.trim().length > 0
-      ? seller.profile_image
-      : 'https://www.bayarlink.my/BayarLink-Logo-01.svg'
+  const imageUrl = await getShareImageUrl(seller)
 
   return {
     title: storeName,
@@ -170,7 +290,7 @@ export async function generateMetadata({
       type: 'website',
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: `${storeName} | BayarLink`,
       description,
       images: [imageUrl],
@@ -223,7 +343,10 @@ export default async function Page({ params }: PageProps) {
         delivery_min_fee,
         pickup_address,
         latitude,
-        longitude
+        longitude,
+        daily_note,
+        share_image_mode,
+        share_poster_url
       `
     )
     .eq('shop_slug', requestedSlug)
@@ -254,6 +377,7 @@ export default async function Page({ params }: PageProps) {
           slug,
           description,
           price,
+          product_image_url,
           image_1,
           image_2,
           image_3,
@@ -300,7 +424,10 @@ export default async function Page({ params }: PageProps) {
               delivery_min_fee,
               pickup_address,
               latitude,
-              longitude
+              longitude,
+              daily_note,
+              share_image_mode,
+              share_poster_url
             `
           )
           .eq('id', matchedProduct.seller_profile_id)
