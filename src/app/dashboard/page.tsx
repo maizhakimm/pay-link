@@ -20,7 +20,7 @@ type Product = {
   price?: number
   is_active?: boolean
   menu_category_id?: string | null
-  image_1?: string | null
+  product_image_url?: string | null
 }
 
 type MenuCategory = {
