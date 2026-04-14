@@ -288,7 +288,7 @@ ${shopLink}`.trim()
 
   return (
     <Layout>
-      <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
         <div className="flex items-center gap-4">
           {seller?.profile_image ? (
             <img
@@ -302,11 +302,11 @@ ${shopLink}`.trim()
             </div>
           )}
 
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold text-slate-900 sm:text-3xl">
               {seller?.store_name || 'Seller'}
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 break-all text-sm text-slate-500">
               {shopLink || 'Complete your settings to activate your shop link.'}
             </p>
           </div>
@@ -318,43 +318,35 @@ ${shopLink}`.trim()
         <Card title="Revenue" value={formatMoney(totalRevenue)} />
       </div>
 
-      <div className="mb-6 rounded-xl border bg-white p-4">
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
         <div className="mb-4">
-          <h2 className="mb-2 font-bold text-slate-900">
-            Share Preview (WhatsApp / FB)
-          </h2>
+          <h2 className="text-lg font-semibold text-slate-900">Share Preview</h2>
           <p className="text-sm text-slate-500">
-            Tulis ayat, pilih gambar preview, dan tengok terus bagaimana mesej
-            serta link kedai anda akan nampak bila di-share.
+            Tulis caption. Preview akan dikemaskini secara automatik.
           </p>
         </div>
 
         <div className="mb-5">
-          <label className="mb-2 block text-sm font-semibold text-slate-800">
-            Ayat / Copywriting
+          <label className="mb-2 block text-sm font-medium text-slate-800">
+            Caption
           </label>
-          <p className="mb-3 text-sm text-slate-500">
-            Ini optional. Seller boleh tulis ayat sendiri di sini. Sistem akan
-            auto paparkan 5 kategori teratas jika ada kategori aktif. Jika tiada
-            kategori, sistem akan fallback kepada 5 produk aktif sahaja.
-          </p>
 
           <textarea
             value={dailyNote}
             onChange={(e) => setDailyNote(e.target.value)}
-            placeholder="Contoh: Open order hari ini untuk delivery petang. COD area Shah Alam sahaja."
-            rows={4}
-            className="w-full rounded border p-3 outline-none"
+            placeholder="Contoh: Open order hari ini! Delivery petang 🚚"
+            rows={3}
+            className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
           />
         </div>
 
         <div className="mb-5">
-          <label className="mb-2 block text-sm font-semibold text-slate-800">
-            Gambar Preview Bila Share Link
+          <label className="mb-2 block text-sm font-medium text-slate-800">
+            Preview Image
           </label>
-          <p className="mb-3 text-sm text-slate-500">
-            Pilih gambar yang akan digunakan untuk preview link kedai anda di
-            WhatsApp atau Facebook.
+
+          <p className="mb-3 text-xs text-slate-500">
+            Gambar yang akan dipaparkan bila link di-share.
           </p>
 
           <div className="grid gap-3">
@@ -363,10 +355,10 @@ ${shopLink}`.trim()
               onChange={(e) =>
                 setShareMode(e.target.value as 'product' | 'logo' | 'poster')
               }
-              className="w-full rounded border p-3 outline-none"
+              className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
             >
-              <option value="product">Guna Product Image</option>
-              <option value="logo">Guna Logo Kedai</option>
+              <option value="product">Product Image</option>
+              <option value="logo">Logo Kedai</option>
               <option value="poster">Upload Poster</option>
             </select>
 
@@ -375,34 +367,36 @@ ${shopLink}`.trim()
                 type="file"
                 accept="image/*"
                 onChange={(e) => uploadPoster(e.target.files?.[0])}
-                className="w-full rounded border p-2"
+                className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
               />
             )}
           </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border bg-slate-50 p-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Preview Link
+              Link Preview
             </p>
 
             <div className="overflow-hidden rounded-lg border bg-white">
               {previewImage ? (
                 <img
                   src={previewImage}
-                  alt="Share preview"
-                  className="h-44 w-full object-cover"
+                  alt="Preview"
+                  className="h-40 w-full object-cover transition duration-300 hover:scale-[1.02]"
                 />
               ) : null}
 
               <div className="p-3">
-                <p className="text-sm font-bold text-slate-900">
+                <p className="text-sm font-semibold text-slate-900">
                   {seller?.store_name || 'Nama Kedai'}
                 </p>
-                <p className="mt-1 text-sm text-slate-500 line-clamp-2">
-                  {dailyNote.trim() || 'Order menu anda di sini.'}
+
+                <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                  {dailyNote.trim() || 'Order dengan mudah di sini.'}
                 </p>
+
                 <p className="mt-2 break-all text-xs text-slate-400">
                   {shopLink || 'https://www.bayarlink.my'}
                 </p>
@@ -410,9 +404,9 @@ ${shopLink}`.trim()
             </div>
           </div>
 
-          <div className="rounded-xl border bg-slate-50 p-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Preview Mesej WhatsApp
+              WhatsApp Preview
             </p>
 
             <div className="whitespace-pre-line rounded-lg border bg-white p-3 text-sm text-slate-800">
@@ -421,24 +415,31 @@ ${shopLink}`.trim()
           </div>
         </div>
 
+        <p className="mt-3 text-xs text-slate-400">
+          Inilah rupa mesej yang customer akan terima.
+        </p>
+
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             onClick={saveAllShareSettings}
             disabled={savingNote}
-            className="rounded bg-black px-4 py-2 text-white disabled:opacity-70"
+            className="rounded-lg bg-black px-4 py-2 text-sm text-white transition hover:opacity-90 disabled:opacity-70"
           >
-            {savingNote ? 'Saving...' : 'Save'}
+            {savingNote ? 'Saving...' : 'Save Changes'}
           </button>
 
-          <button onClick={copyMessage} className="rounded border px-3 py-2">
+          <button
+            onClick={copyMessage}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition hover:bg-slate-50"
+          >
             {copied ? 'Copied' : 'Copy'}
           </button>
 
           <button
             onClick={shareWhatsApp}
-            className="rounded bg-green-500 px-3 py-2 text-white"
+            className="rounded-lg bg-green-500 px-3 py-2 text-sm text-white transition hover:bg-green-600"
           >
-            WhatsApp
+            Share to WhatsApp
           </button>
         </div>
       </div>
@@ -448,9 +449,9 @@ ${shopLink}`.trim()
 
 function Card({ title, value }: { title: string; value: string | number }) {
   return (
-    <div className="rounded-xl border bg-white p-4">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="text-sm text-gray-500">{title}</div>
-      <div className="text-xl font-bold">{value}</div>
+      <div className="text-xl font-bold text-slate-900">{value}</div>
     </div>
   )
 }
