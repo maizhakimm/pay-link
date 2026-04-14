@@ -226,18 +226,7 @@ function getShopAvailability(seller: SellerProfile) {
   }
 }
 
-{availability.detail && (
-  <div
-    style={{
-      ...noticeBox,
-      background: isShopOpen ? '#eff6ff' : '#fff7ed',
-      borderColor: isShopOpen ? '#bfdbfe' : '#fed7aa',
-      color: isShopOpen ? '#1e3a8a' : '#9a3412',
-    }}
-  >
-    {availability.detail}
-  </div>
-)}
+
 
 export default function ShopPageClient({
   seller,
