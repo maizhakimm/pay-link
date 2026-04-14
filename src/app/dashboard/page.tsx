@@ -276,12 +276,6 @@ ${shopLink}`.trim()
           />
         </div>
 
-        <div className="mb-5">
-          <p className="text-xs text-slate-500">
-            Gambar preview akan guna logo kedai anda.
-          </p>
-        </div>
-
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
