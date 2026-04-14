@@ -269,7 +269,7 @@ export async function generateMetadata({
       ? 'Kedai ini ditutup sementara. Sila cuba lagi nanti.'
       : 'Order online dengan mudah. Senarai menu lengkap tersedia di sini.')
 
-  const imageUrl = await getShareImageUrl(seller)
+  const imageUrl = 'https://www.bayarlink.my/test-og.jpg'
 
   return {
     title: storeName,
