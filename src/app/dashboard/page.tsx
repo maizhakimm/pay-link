@@ -129,7 +129,7 @@ export default function DashboardPage() {
         hasStoreName && hasShopSlug && hasWhatsapp && hasDeliveryMode
 
       if (!isBasicSetupComplete) {
-        window.location.href = '/dashboard/settings?setup=1'
+        window.location.href = '/dashboard/onboarding
         return
       }
 
