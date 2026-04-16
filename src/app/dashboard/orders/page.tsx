@@ -38,6 +38,7 @@ type OrderRow = {
   buyer_phone?: string | null
   buyer_email?: string | null
   created_at?: string | null
+  seller_profile_id?: string | null
   items?: unknown
   order_items?: unknown
   cart_items?: unknown
@@ -45,6 +46,13 @@ type OrderRow = {
   metadata?: unknown
   payload?: unknown
   customer_details?: unknown
+}
+
+type SellerProfileRow = {
+  id: string
+  user_id: string
+  store_name?: string | null
+  shop_slug?: string | null
 }
 
 type StatProps = {
@@ -363,23 +371,67 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
+  const [sellerProfile, setSellerProfile] = useState<SellerProfileRow | null>(null)
+  const [pageError, setPageError] = useState('')
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
+    setPageError('')
 
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
 
-    if (error) {
-      console.error('Failed to fetch orders:', error)
+      if (authError) {
+        throw new Error(authError.message)
+      }
+
+      if (!user) {
+        window.location.href = '/login'
+        return
+      }
+
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('seller_profiles')
+        .select('id, user_id, store_name, shop_slug')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (sellerError) {
+        throw new Error(sellerError.message)
+      }
+
+      if (!sellerData) {
+        setSellerProfile(null)
+        setOrders([])
+        setPageError('Seller profile not found. Please complete your settings first.')
+        return
+      }
+
+      setSellerProfile(sellerData as SellerProfileRow)
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('seller_profile_id', sellerData.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      setOrders((data || []) as OrderRow[])
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to fetch orders.'
+      console.error('Failed to fetch orders:', message)
+      setOrders([])
+      setPageError(message)
+    } finally {
       setLoading(false)
-      return
     }
-
-    setOrders((data || []) as OrderRow[])
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -391,12 +443,18 @@ export default function OrdersPage() {
   }
 
   const handleSellerStatusUpdate = async (orderId: string, newStatus: string) => {
+    if (!sellerProfile?.id) {
+      alert('Seller profile not found.')
+      return
+    }
+
     setUpdatingOrderId(orderId)
 
     const { error } = await supabase
       .from('orders')
       .update({ fulfillment_status: newStatus })
       .eq('id', orderId)
+      .eq('seller_profile_id', sellerProfile.id)
 
     if (error) {
       console.error('Failed to update fulfillment_status:', error)
@@ -534,6 +592,12 @@ export default function OrdersPage() {
           Monitor your incoming orders, payment status, and update fulfilment progress.
         </p>
       </div>
+
+      {pageError ? (
+        <section className="rounded-3xl border border-red-200 bg-red-50 p-4 shadow-sm sm:p-6">
+          <p className="text-sm font-medium text-red-700">{pageError}</p>
+        </section>
+      ) : null}
 
       <section className="mb-6">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
