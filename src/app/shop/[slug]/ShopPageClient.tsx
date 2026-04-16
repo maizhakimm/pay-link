@@ -97,6 +97,24 @@ type GalleryState = {
   currentIndex: number
 }
 
+type CartLine = {
+  id: string
+  product_id: string
+  name: string
+  base_price: number
+  quantity: number
+  addons: {
+    group_id: string
+    group_name: string
+    option_id: string
+    option_name: string
+    price: number
+  }[]
+  note?: string
+  unit_price: number
+  line_total: number
+}
+
 function getImageUrl(path?: string | null) {
   if (!path) return ''
 
@@ -252,7 +270,7 @@ function getShopAvailability(seller: SellerProfile) {
   return {
     isOpen,
     label: isOpen ? 'Open Now' : 'Closed',
-    detail: '', // 🔥 REMOVE ayat panjang
+    detail: '',
     timeRange,
   }
 }
@@ -270,13 +288,26 @@ export default function ShopPageClient({
   categories?: MenuCategory[]
   productAddons?: ProductAddonsMap
 }) {
-  
   const [cart, setCart] = useState<CartLine[]>([])
   const [gallery, setGallery] = useState<GalleryState>({
     isOpen: false,
     images: [],
     productName: '',
     currentIndex: 0,
+  })
+
+  const [addonModal, setAddonModal] = useState<{
+    product: ProductRow | null
+    groups: ProductAddonGroup[]
+    selections: Record<string, string[]>
+    note: string
+    isOpen: boolean
+  }>({
+    product: null,
+    groups: [],
+    selections: {},
+    note: '',
+    isOpen: false,
   })
 
   const productListRef = useRef<HTMLDivElement | null>(null)
@@ -294,47 +325,50 @@ export default function ShopPageClient({
   }
 
   function addToCartWithAddons(
-  product: ProductRow,
-  selections: Record<string, string[]>,
-  groups: ProductAddonGroup[],
-  note: string
-) {
-  const selectedAddons: CartLine['addons'] = []
+    product: ProductRow,
+    selections: Record<string, string[]>,
+    groups: ProductAddonGroup[],
+    note: string
+  ) {
+    const selectedAddons: CartLine['addons'] = []
 
-  for (const group of groups) {
-    const selectedIds = selections[group.id] || []
+    for (const group of groups) {
+      const selectedIds = selections[group.id] || []
 
-    for (const optId of selectedIds) {
-      const opt = group.options.find((o) => o.id === optId)
-      if (!opt) continue
+      for (const optId of selectedIds) {
+        const opt = group.options.find((o) => o.id === optId)
+        if (!opt) continue
 
-      selectedAddons.push({
-        group_id: group.id,
-        group_name: group.name,
-        option_id: opt.id,
-        option_name: opt.name,
-        price: Number(opt.price_delta || 0),
-      })
+        selectedAddons.push({
+          group_id: group.id,
+          group_name: group.name,
+          option_id: opt.id,
+          option_name: opt.name,
+          price: Number(opt.price_delta || 0),
+        })
+      }
     }
+
+    const addonTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0)
+    const unitPrice = product.price + addonTotal
+
+    const newLine: CartLine = {
+      id:
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${product.id}-${Date.now()}`,
+      product_id: product.id,
+      name: product.name,
+      base_price: product.price,
+      quantity: 1,
+      addons: selectedAddons,
+      note,
+      unit_price: unitPrice,
+      line_total: unitPrice,
+    }
+
+    setCart((prev) => [...prev, newLine])
   }
-
-  const addonTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0)
-  const unitPrice = product.price + addonTotal
-
-  const newLine: CartLine = {
-    id: crypto.randomUUID(),
-    product_id: product.id,
-    name: product.name,
-    base_price: product.price,
-    quantity: 1,
-    addons: selectedAddons,
-    note,
-    unit_price: unitPrice,
-    line_total: unitPrice,
-  }
-
-  setCart((prev) => [...prev, newLine])
-}
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -360,20 +394,6 @@ export default function ShopPageClient({
     products.some((product) => product.menu_category_id)
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
-
-  const [addonModal, setAddonModal] = useState<{
-  product: ProductRow | null
-  groups: ProductAddonGroup[]
-  selections: Record<string, string[]> // group_id -> option_id[]
-  note: string
-  isOpen: boolean
-}>({
-  product: null,
-  groups: [],
-  selections: {},
-  note: '',
-  isOpen: false,
-})
 
   useEffect(() => {
     setActiveCategoryId('all')
@@ -411,46 +431,37 @@ export default function ShopPageClient({
     })
   }
 
- function increase(product: ProductRow) {
-  if (!isShopOpen) return
-  if (product.sold_out) return
+  function increase(product: ProductRow) {
+    if (!isShopOpen) return
+    if (product.sold_out) return
 
-  const addonGroups = getProductAddonGroups(product.id)
+    const addonGroups = getProductAddonGroups(product.id)
 
-  // ✅ kalau ada add-on → buka popup
-  if (addonGroups.length > 0) {
-    setAddonModal({
-      product,
-      groups: addonGroups,
-      selections: {},
-      note: '',
-      isOpen: true,
-    })
-    return
+    if (addonGroups.length > 0) {
+      setAddonModal({
+        product,
+        groups: addonGroups,
+        selections: {},
+        note: '',
+        isOpen: true,
+      })
+      return
+    }
+
+    addToCartWithAddons(product, {}, [], '')
   }
-
-  // ✅ kalau tiada add-on → normal flow
-addToCartWithAddons(
-  addonModal.product,
-  addonModal.selections,
-  addonModal.groups,
-  addonModal.note
-)
 
   function decrease(productId: string) {
     setCart((prev) => {
-      const current = prev[productId] || 0
+      const index = prev
+        .map((item) => item.product_id)
+        .lastIndexOf(productId)
 
-      if (current <= 1) {
-        const next = { ...prev }
-        delete next[productId]
-        return next
-      }
+      if (index === -1) return prev
 
-      return {
-        ...prev,
-        [productId]: current - 1,
-      }
+      const next = [...prev]
+      next.splice(index, 1)
+      return next
     })
   }
 
@@ -513,8 +524,8 @@ addToCartWithAddons(
   const cartItems = cart
 
   const grandTotal = useMemo(() => {
-  return cart.reduce((sum, item) => sum + item.line_total, 0)
-}, [cart])
+    return cart.reduce((sum, item) => sum + item.line_total, 0)
+  }, [cart])
 
   const sellerName = seller.store_name || 'Shop'
 
@@ -633,7 +644,11 @@ addToCartWithAddons(
             <div style={productGrid}>
               {visibleProducts.map((product) => {
                 const image = getFirstImage(product)
-                const qty = cart[product.id] || 0
+                const qty = cart.reduce(
+                  (sum, item) =>
+                    item.product_id === product.id ? sum + item.quantity : sum,
+                  0
+                )
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
                 const allImages = getProductImages(product)
                 const addonGroups = getProductAddonGroups(product.id)
@@ -668,8 +683,8 @@ addToCartWithAddons(
                               marginBottom: 8,
                             }}
                           >
-                        Add-on available
-                        </div>
+                            Add-on available
+                          </div>
                         ) : null}
 
                         <div style={qtyWrap}>
@@ -769,36 +784,38 @@ addToCartWithAddons(
             <>
               <div style={summaryList}>
                 {cartItems.map((item) => (
-                  <div key={item.id}> style={summaryRow}>
+                  <div key={item.id} style={summaryRow}>
                     <div>
                       {item.name} × {item.quantity}
 
-                        {item.addons.length > 0 && (
-                          <div style={{ fontSize: 12, color: '#64748b' }}>
-                            {item.addons.map((a) => (
-                              <div key={a.option_id}>
-                                + {a.option_name} (RM {a.price})
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      {item.addons.length > 0 && (
+                        <div style={{ fontSize: 12, color: '#64748b' }}>
+                          {item.addons.map((a) => (
+                            <div key={`${item.id}-${a.option_id}`}>
+                              + {a.option_name} (RM {a.price.toFixed(2)})
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                        {item.note && (
-                          <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                            Note: {item.note}
-                          </div>
-                        )}
-                      </div>
+                      {item.note ? (
+                        <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                          Note: {item.note}
+                        </div>
+                      ) : null}
+                    </div>
                     <strong>RM {item.line_total.toFixed(2)}</strong>
                   </div>
                 ))}
               </div>
 
-                          
               <ShopPayButton
                 sellerId={seller.id}
                 shopSlug={shopSlug}
-                items={cartItems}
+                items={cartItems.map((item) => ({
+                  product_id: item.product_id,
+                  quantity: item.quantity,
+                }))}
                 total={grandTotal}
                 deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
                 deliveryFee={seller.delivery_fee || 0}
@@ -894,107 +911,120 @@ addToCartWithAddons(
         </div>
       ) : null}
 
-      {addonModal.isOpen && addonModal.product && (
-  <div style={modalOverlay}>
-    <div style={modalBox}>
-      <h3 style={{ marginBottom: 10 }}>
-        {addonModal.product.name}
-      </h3>
+      {addonModal.isOpen && addonModal.product ? (
+        <div style={modalOverlay}>
+          <div style={modalBox}>
+            <h3 style={{ marginBottom: 10 }}>
+              {addonModal.product.name}
+            </h3>
 
-      {addonModal.groups.map((group) => (
-        <div key={group.id} style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>
-            {group.name}
-          </div>
+            {addonModal.groups.map((group) => (
+              <div key={group.id} style={{ marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                  {group.name}
+                </div>
 
-          {group.options.map((opt) => {
-            const selected =
-              addonModal.selections[group.id]?.includes(opt.id) || false
+                {group.options.map((opt) => {
+                  const selected =
+                    addonModal.selections[group.id]?.includes(opt.id) || false
 
-            return (
-              <label key={opt.id} style={optionRow}>
-                <input
-                  type={group.selection_type === 'single' ? 'radio' : 'checkbox'}
-                  checked={selected}
-                  onChange={() => {
-                    setAddonModal((prev) => {
-                      const current = prev.selections[group.id] || []
-
-                      let updated: string[] = []
-
-                      if (group.selection_type === 'single') {
-                        updated = [opt.id]
-                      } else {
-                        if (current.includes(opt.id)) {
-                          updated = current.filter((id) => id !== opt.id)
-                        } else {
-                          updated = [...current, opt.id]
+                  return (
+                    <label key={opt.id} style={optionRow}>
+                      <input
+                        type={
+                          group.selection_type === 'single'
+                            ? 'radio'
+                            : 'checkbox'
                         }
-                      }
+                        checked={selected}
+                        onChange={() => {
+                          setAddonModal((prev) => {
+                            const current = prev.selections[group.id] || []
 
-                      return {
-                        ...prev,
-                        selections: {
-                          ...prev.selections,
-                          [group.id]: updated,
-                        },
-                      }
-                    })
-                  }}
-                />
-                {opt.name} (+RM {opt.price_delta})
-              </label>
-            )
-          })}
+                            let updated: string[] = []
+
+                            if (group.selection_type === 'single') {
+                              updated = [opt.id]
+                            } else {
+                              if (current.includes(opt.id)) {
+                                updated = current.filter((id) => id !== opt.id)
+                              } else {
+                                updated = [...current, opt.id]
+                              }
+                            }
+
+                            return {
+                              ...prev,
+                              selections: {
+                                ...prev.selections,
+                                [group.id]: updated,
+                              },
+                            }
+                          })
+                        }}
+                      />
+                      {opt.name} (+RM {opt.price_delta})
+                    </label>
+                  )
+                })}
+              </div>
+            ))}
+
+            <textarea
+              placeholder="Note (optional)"
+              value={addonModal.note}
+              onChange={(e) =>
+                setAddonModal((prev) => ({
+                  ...prev,
+                  note: e.target.value,
+                }))
+              }
+              style={noteBox}
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!addonModal.product) return
+
+                addToCartWithAddons(
+                  addonModal.product,
+                  addonModal.selections,
+                  addonModal.groups,
+                  addonModal.note
+                )
+
+                setAddonModal({
+                  product: null,
+                  groups: [],
+                  selections: {},
+                  note: '',
+                  isOpen: false,
+                })
+              }}
+              style={confirmBtn}
+            >
+              Add to Order
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setAddonModal({
+                  product: null,
+                  groups: [],
+                  selections: {},
+                  note: '',
+                  isOpen: false,
+                })
+              }
+              style={cancelBtn}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
-      ))}
-
-      <textarea
-        placeholder="Note (optional)"
-        value={addonModal.note}
-        onChange={(e) =>
-          setAddonModal((prev) => ({
-            ...prev,
-            note: e.target.value,
-          }))
-        }
-        style={noteBox}
-      />
-
-      <button
-        onClick={() => {
-          if (!addonModal.product) return
-
-          // 👉 sementara: tambah seperti biasa dulu
-          setCart((prev) => ({
-            ...prev,
-            [addonModal.product!.id]:
-              (prev[addonModal.product!.id] || 0) + 1,
-          }))
-
-          setAddonModal((prev) => ({
-            ...prev,
-            isOpen: false,
-          }))
-        }}
-        style={confirmBtn}
-      >
-        Add to Order
-      </button>
-
-      <button
-        onClick={() =>
-          setAddonModal((prev) => ({ ...prev, isOpen: false }))
-        }
-        style={cancelBtn}
-      >
-        Cancel
-      </button>
-    </div>
-  </div>
-)}
-
-      
+      ) : null}
     </main>
   )
 }
@@ -1167,15 +1197,15 @@ const deliveryMeta = {
 
 const stickyTabWrap = {
   position: 'sticky' as const,
-  top: 0, // 🔥 rapat ke atas (buang gap)
+  top: 0,
   zIndex: 50,
   marginBottom: 10,
 } as const
 
 const tabShell = {
-  padding: '6px 0', // 🔥 no left/right padding
-  borderRadius: 0, // 🔥 buang rounded bila sticky
-  background: '#f8fafc', // 🔥 solid supaya tak nampak belakang
+  padding: '6px 0',
+  borderRadius: 0,
+  background: '#f8fafc',
   boxShadow: '0 6px 12px rgba(15,23,42,0.06)',
   borderBottom: '1px solid #e2e8f0',
 } as const
@@ -1594,7 +1624,7 @@ const modalOverlay = {
   alignItems: 'center',
   justifyContent: 'center',
   zIndex: 999,
-}
+} as const
 
 const modalBox = {
   background: '#fff',
@@ -1602,14 +1632,14 @@ const modalBox = {
   borderRadius: 16,
   width: '90%',
   maxWidth: 400,
-}
+} as const
 
 const optionRow = {
   display: 'flex',
   gap: 8,
   marginBottom: 6,
   fontSize: 14,
-}
+} as const
 
 const noteBox = {
   width: '100%',
@@ -1617,7 +1647,7 @@ const noteBox = {
   padding: 8,
   borderRadius: 8,
   border: '1px solid #ccc',
-}
+} as const
 
 const confirmBtn = {
   marginTop: 12,
@@ -1628,7 +1658,7 @@ const confirmBtn = {
   borderRadius: 10,
   border: 'none',
   fontWeight: 700,
-}
+} as const
 
 const cancelBtn = {
   marginTop: 6,
@@ -1637,4 +1667,4 @@ const cancelBtn = {
   background: '#e5e7eb',
   borderRadius: 10,
   border: 'none',
-}
+} as const
