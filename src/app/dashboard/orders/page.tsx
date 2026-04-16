@@ -6,12 +6,22 @@ import { supabase } from '../../../lib/supabase'
 
 type JsonRecord = Record<string, unknown>
 
+type OrderAddon = {
+  group_id?: string | null
+  group_name?: string | null
+  option_id?: string | null
+  option_name?: string | null
+  price?: number | null
+}
+
 type OrderItem = {
   name: string
   quantity: number
   price: number
   total: number
   slug?: string | null
+  note?: string | null
+  addons?: OrderAddon[]
 }
 
 type OrderRow = {
@@ -168,6 +178,32 @@ function getObjectValue(
   return fallback
 }
 
+function normalizeAddons(raw: unknown): OrderAddon[] {
+  const parsed = safeParseJson(raw)
+  if (!Array.isArray(parsed)) return []
+
+  return parsed
+    .filter((addon) => addon && typeof addon === 'object' && !Array.isArray(addon))
+    .map((addon) => {
+      const item = addon as JsonRecord
+      return {
+        group_id: getObjectValue(item, ['group_id'], null)
+          ? String(getObjectValue(item, ['group_id'], ''))
+          : null,
+        group_name: getObjectValue(item, ['group_name'], null)
+          ? String(getObjectValue(item, ['group_name'], ''))
+          : null,
+        option_id: getObjectValue(item, ['option_id'], null)
+          ? String(getObjectValue(item, ['option_id'], ''))
+          : null,
+        option_name: getObjectValue(item, ['option_name', 'name'], null)
+          ? String(getObjectValue(item, ['option_name', 'name'], ''))
+          : null,
+        price: toNumber(getObjectValue(item, ['price'], 0), 0),
+      }
+    })
+}
+
 function normalizeItem(raw: unknown): OrderItem | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
 
@@ -206,6 +242,8 @@ function normalizeItem(raw: unknown): OrderItem | null {
   )
 
   const slugValue = getObjectValue(item, ['slug', 'product_slug'], null)
+  const noteValue = getObjectValue(item, ['note', 'customer_note', 'remarks'], null)
+  const addonsValue = getObjectValue(item, ['addons', 'add_ons'], [])
 
   return {
     name: String(nameValue || 'Untitled Item'),
@@ -213,6 +251,8 @@ function normalizeItem(raw: unknown): OrderItem | null {
     price,
     total,
     slug: slugValue ? String(slugValue) : null,
+    note: noteValue ? String(noteValue) : null,
+    addons: normalizeAddons(addonsValue),
   }
 }
 
@@ -238,8 +278,8 @@ function extractOrderItems(order: OrderRow): OrderItem[] {
   const directCandidates: unknown[] = [
     order.order_items,
     order.items,
-    order.cart_items,
     order.checkout_items,
+    order.cart_items,
   ]
 
   for (const candidate of directCandidates) {
@@ -272,6 +312,8 @@ function extractOrderItems(order: OrderRow): OrderItem[] {
         price: Number(order.amount || 0),
         total: Number(order.amount || 0),
         slug: order.product_slug || null,
+        note: null,
+        addons: [],
       },
     ]
   }
@@ -380,7 +422,12 @@ export default function OrdersPage() {
       const items = extractOrderItems(order)
 
       const itemText = items
-        .map((item) => `${item.name} ${item.slug || ''}`)
+        .map((item) => {
+          const addonText = (item.addons || [])
+            .map((addon) => `${addon.option_name || ''} ${addon.group_name || ''}`)
+            .join(' ')
+          return `${item.name} ${item.slug || ''} ${item.note || ''} ${addonText}`
+        })
         .join(' ')
         .toLowerCase()
 
@@ -535,7 +582,7 @@ export default function OrdersPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search order number, customer, product, phone or status..."
+            placeholder="Search order number, customer, product, add-on, note, phone or status..."
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
           />
 
@@ -708,6 +755,31 @@ export default function OrdersPage() {
                                         <div className="mt-1 text-xs text-slate-500">
                                           {item.slug || '—'}
                                         </div>
+
+                                        {item.addons && item.addons.length > 0 ? (
+                                          <div className="mt-2 space-y-1">
+                                            {item.addons.map((addon, addonIndex) => (
+                                              <div
+                                                key={`${order.id}-addon-${index}-${addonIndex}`}
+                                                className="text-xs text-violet-700"
+                                              >
+                                                + {addon.option_name || 'Add-on'}
+                                                {typeof addon.price === 'number'
+                                                  ? ` (${formatMoney(addon.price)})`
+                                                  : ''}
+                                                {addon.group_name
+                                                  ? ` • ${addon.group_name}`
+                                                  : ''}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : null}
+
+                                        {item.note ? (
+                                          <div className="mt-2 text-xs text-slate-500">
+                                            Note: {item.note}
+                                          </div>
+                                        ) : null}
                                       </div>
                                       <div className="col-span-2 text-center font-medium">
                                         {item.quantity}
@@ -735,6 +807,31 @@ export default function OrdersPage() {
                                     <div className="mt-1 text-xs text-slate-500">
                                       {item.slug || '—'}
                                     </div>
+
+                                    {item.addons && item.addons.length > 0 ? (
+                                      <div className="mt-3 space-y-1">
+                                        {item.addons.map((addon, addonIndex) => (
+                                          <div
+                                            key={`${order.id}-mobile-addon-${index}-${addonIndex}`}
+                                            className="text-xs text-violet-700"
+                                          >
+                                            + {addon.option_name || 'Add-on'}
+                                            {typeof addon.price === 'number'
+                                              ? ` (${formatMoney(addon.price)})`
+                                              : ''}
+                                            {addon.group_name
+                                              ? ` • ${addon.group_name}`
+                                              : ''}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : null}
+
+                                    {item.note ? (
+                                      <div className="mt-3 text-xs text-slate-500">
+                                        Note: {item.note}
+                                      </div>
+                                    ) : null}
 
                                     <div className="mt-3 grid grid-cols-3 gap-3">
                                       <MiniInfo label="Qty" value={String(item.quantity)} />
