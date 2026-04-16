@@ -3,6 +3,37 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ShopPayButton from './ShopPayButton'
 
+type ProductAddonOption = {
+  id: string
+  addon_group_id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  price_delta: number
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+type ProductAddonGroup = {
+  id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  selection_type: 'single' | 'multiple'
+  is_required: boolean
+  min_select: number
+  max_select: number | null
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+  options: ProductAddonOption[]
+}
+
+type ProductAddonsMap = Record<string, ProductAddonGroup[]>
+
 type SellerProfile = {
   id: string
   store_name: string | null
@@ -173,6 +204,14 @@ function getDeliverySummary(seller: SellerProfile) {
   }
 }
 
+  function getProductAddonGroups(productId: string) {
+    return productAddons[productId] || []
+  }
+
+  function productHasAddons(productId: string) {
+    return getProductAddonGroups(productId).length > 0
+  }
+
 function getShopAvailability(seller: SellerProfile) {
   if (seller.temporarily_closed) {
     return {
@@ -233,11 +272,13 @@ export default function ShopPageClient({
   products,
   shopSlug,
   categories = [],
+  productAddons = {},
 }: {
   seller: SellerProfile
   products: ProductRow[]
   shopSlug: string
   categories?: MenuCategory[]
+  productAddons?: ProductAddonsMap
 }) {
   const [cart, setCart] = useState<Record<string, number>>({})
   const [gallery, setGallery] = useState<GalleryState>({
@@ -533,6 +574,8 @@ export default function ShopPageClient({
                 const qty = cart[product.id] || 0
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
                 const allImages = getProductImages(product)
+                const addonGroups = getProductAddonGroups(product.id)
+                const hasAddons = addonGroups.length > 0
 
                 return (
                   <div key={product.id} style={productCard}>
@@ -553,6 +596,19 @@ export default function ShopPageClient({
                         <div style={productDesc}>
                           {product.description || 'Tiada deskripsi.'}
                         </div>
+
+                        {hasAddons ? (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: '#7c3aed',
+                              marginBottom: 8,
+                            }}
+                          >
+                        Add-on available
+                        </div>
+                        ) : null}
 
                         <div style={qtyWrap}>
                           <div style={qtyRow}>
