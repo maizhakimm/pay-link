@@ -798,10 +798,7 @@ addToCartWithAddons(
               <ShopPayButton
                 sellerId={seller.id}
                 shopSlug={shopSlug}
-                items={cartItems.map((item) => ({
-                product_id: item.product_id,
-                quantity: item.quantity,
-              }))}
+                items={cartItems}
                 total={grandTotal}
                 deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
                 deliveryFee={seller.delivery_fee || 0}
