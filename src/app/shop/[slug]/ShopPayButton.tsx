@@ -2,9 +2,23 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
+type CartItemAddon = {
+  group_id: string
+  group_name: string
+  option_id: string
+  option_name: string
+  price: number
+}
+
 type CartItem = {
   product_id: string
   quantity: number
+  name?: string
+  base_price?: number
+  unit_price?: number
+  line_total?: number
+  note?: string
+  addons?: CartItemAddon[]
 }
 
 type DeliveryMode =
@@ -189,6 +203,45 @@ export default function ShopPayButton({
     setDeliveryError('')
   }, [address1, address2, postcode, city, district, state, needsDelivery, deliveryMode])
 
+  const normalizedItems = useMemo(() => {
+    return items.map((item) => {
+      const quantity = Math.max(1, Number(item.quantity || 1))
+      const addons = Array.isArray(item.addons)
+        ? item.addons.map((addon) => ({
+            group_id: String(addon.group_id || ''),
+            group_name: String(addon.group_name || ''),
+            option_id: String(addon.option_id || ''),
+            option_name: String(addon.option_name || ''),
+            price: Number(addon.price || 0),
+          }))
+        : []
+
+      const basePrice = Number(item.base_price || 0)
+      const addonTotal = addons.reduce((sum, addon) => sum + Number(addon.price || 0), 0)
+      const fallbackUnitPrice = basePrice + addonTotal
+      const unitPrice =
+        Number.isFinite(Number(item.unit_price)) && Number(item.unit_price) > 0
+          ? Number(item.unit_price)
+          : fallbackUnitPrice
+
+      const lineTotal =
+        Number.isFinite(Number(item.line_total)) && Number(item.line_total) > 0
+          ? Number(item.line_total)
+          : roundMoney(unitPrice * quantity)
+
+      return {
+        product_id: item.product_id,
+        quantity,
+        name: item.name || '',
+        base_price: basePrice,
+        unit_price: unitPrice,
+        line_total: lineTotal,
+        note: item.note || '',
+        addons,
+      }
+    })
+  }, [items])
+
   const deliverySummary = useMemo(() => {
     switch (deliveryMode) {
       case 'free_delivery':
@@ -333,7 +386,7 @@ export default function ShopPayButton({
       return
     }
 
-    if (items.length === 0) {
+    if (normalizedItems.length === 0) {
       alert('Sila pilih sekurang-kurangnya satu item')
       return
     }
@@ -382,7 +435,11 @@ export default function ShopPayButton({
           name: name.trim(),
           email: email.trim(),
           phone,
-          items,
+          items: normalizedItems.map((item) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+          })),
+          checkoutItems: normalizedItems,
           subtotal: Number(total || 0),
           deliveryMode,
           deliveryFee: appliedDeliveryFee,
@@ -390,6 +447,7 @@ export default function ShopPayButton({
           totalAmount: payableTotal,
           deliveryArea: deliveryArea || null,
           deliveryNote: deliveryNote || null,
+          deliverySummary,
           delivery: needsDelivery
             ? {
                 address1: address1.trim(),
@@ -432,6 +490,29 @@ export default function ShopPayButton({
 
   return (
     <div style={wrapper}>
+      <div style={deliveryNoticeBox}>
+        <div style={deliveryNoticeTitle}>Delivery Info</div>
+        <div style={deliveryNoticeText}>{deliverySummary}</div>
+
+        {deliveryArea ? (
+          <div style={deliveryNoticeMeta}>
+            Kawasan: {deliveryArea}
+          </div>
+        ) : null}
+
+        {pickupAddress ? (
+          <div style={deliveryNoticeMeta}>
+            Pickup address: {pickupAddress}
+          </div>
+        ) : null}
+
+        {deliveryNote ? (
+          <div style={deliveryNoticeMeta}>
+            Note: {deliveryNote}
+          </div>
+        ) : null}
+      </div>
+
       <div style={formGrid}>
         <div>
           <label style={labelStyle}>Full Name</label>
@@ -583,7 +664,8 @@ export default function ShopPayButton({
                 Number.isFinite(Number(calculatedDeliveryFee)) ? (
                   <div style={distanceResult}>
                     <div>
-                      Distance: <strong>{Number(calculatedDistanceKm).toFixed(2)} km</strong>
+                      Distance:{' '}
+                      <strong>{Number(calculatedDistanceKm).toFixed(2)} km</strong>
                     </div>
                     <div>
                       Delivery fee:{' '}
