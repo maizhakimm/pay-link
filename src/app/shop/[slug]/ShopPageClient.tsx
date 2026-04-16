@@ -333,12 +333,14 @@ export default function ShopPageClient({
     selections: Record<string, string[]>
     note: string
     isOpen: boolean
+    error: string
   }>({
     product: null,
     groups: [],
     selections: {},
     note: '',
     isOpen: false,
+    error: '',
   })
 
   const productListRef = useRef<HTMLDivElement | null>(null)
@@ -427,6 +429,43 @@ export default function ShopPageClient({
     addOrMergeCartLine(newLine)
   }
 
+  function validateAddonSelections(
+    groups: ProductAddonGroup[],
+    selections: Record<string, string[]>
+  ) {
+    for (const group of groups) {
+      const selectedIds = selections[group.id] || []
+      const selectedCount = selectedIds.length
+      const minSelect = Number(group.min_select || 0)
+      const maxSelect =
+        group.max_select === null || group.max_select === undefined
+          ? null
+          : Number(group.max_select)
+
+      if (group.is_required && selectedCount === 0) {
+        return `Please select at least one option for "${group.name}".`
+      }
+
+      if (selectedCount < minSelect) {
+        return `Please select at least ${minSelect} option${
+          minSelect > 1 ? 's' : ''
+        } for "${group.name}".`
+      }
+
+      if (maxSelect !== null && selectedCount > maxSelect) {
+        return `You can only select up to ${maxSelect} option${
+          maxSelect > 1 ? 's' : ''
+        } for "${group.name}".`
+      }
+
+      if (group.selection_type === 'single' && selectedCount > 1) {
+        return `Only one option is allowed for "${group.name}".`
+      }
+    }
+
+    return ''
+  }
+
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>()
 
@@ -501,6 +540,7 @@ export default function ShopPageClient({
         selections: {},
         note: '',
         isOpen: true,
+        error: '',
       })
       return
     }
@@ -984,57 +1024,99 @@ export default function ShopPageClient({
               {addonModal.product.name}
             </h3>
 
-            {addonModal.groups.map((group) => (
-              <div key={group.id} style={{ marginBottom: 12 }}>
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                  {group.name}
-                </div>
-
-                {group.options.map((opt) => {
-                  const selected =
-                    addonModal.selections[group.id]?.includes(opt.id) || false
-
-                  return (
-                    <label key={opt.id} style={optionRow}>
-                      <input
-                        type={
-                          group.selection_type === 'single'
-                            ? 'radio'
-                            : 'checkbox'
-                        }
-                        checked={selected}
-                        onChange={() => {
-                          setAddonModal((prev) => {
-                            const current = prev.selections[group.id] || []
-
-                            let updated: string[] = []
-
-                            if (group.selection_type === 'single') {
-                              updated = [opt.id]
-                            } else {
-                              if (current.includes(opt.id)) {
-                                updated = current.filter((id) => id !== opt.id)
-                              } else {
-                                updated = [...current, opt.id]
-                              }
-                            }
-
-                            return {
-                              ...prev,
-                              selections: {
-                                ...prev.selections,
-                                [group.id]: updated,
-                              },
-                            }
-                          })
-                        }}
-                      />
-                      {opt.name} (+RM {opt.price_delta})
-                    </label>
-                  )
-                })}
+            {addonModal.error ? (
+              <div style={modalErrorBox}>
+                {addonModal.error}
               </div>
-            ))}
+            ) : null}
+
+            {addonModal.groups.map((group) => {
+              const selectedCount = (addonModal.selections[group.id] || []).length
+
+              return (
+                <div key={group.id} style={{ marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                    {group.name}
+                    {group.is_required ? (
+                      <span style={requiredMark}> *</span>
+                    ) : null}
+                  </div>
+
+                  <div style={groupMetaText}>
+                    {group.selection_type === 'single'
+                      ? 'Choose 1'
+                      : `Choose ${Number(group.min_select || 0)} or more`}
+                    {group.max_select !== null && group.max_select !== undefined
+                      ? ` • Max ${group.max_select}`
+                      : ''}
+                    {selectedCount > 0 ? ` • Selected ${selectedCount}` : ''}
+                  </div>
+
+                  {group.options.map((opt) => {
+                    const selected =
+                      addonModal.selections[group.id]?.includes(opt.id) || false
+
+                    return (
+                      <label key={opt.id} style={optionRow}>
+                        <input
+                          type={
+                            group.selection_type === 'single'
+                              ? 'radio'
+                              : 'checkbox'
+                          }
+                          checked={selected}
+                          onChange={() => {
+                            setAddonModal((prev) => {
+                              const current = prev.selections[group.id] || []
+
+                              let updated: string[] = []
+
+                              if (group.selection_type === 'single') {
+                                updated = [opt.id]
+                              } else {
+                                if (current.includes(opt.id)) {
+                                  updated = current.filter((id) => id !== opt.id)
+                                } else {
+                                  const maxSelect =
+                                    group.max_select === null ||
+                                    group.max_select === undefined
+                                      ? null
+                                      : Number(group.max_select)
+
+                                  if (
+                                    maxSelect !== null &&
+                                    current.length >= maxSelect
+                                  ) {
+                                    return {
+                                      ...prev,
+                                      error: `You can only select up to ${maxSelect} option${
+                                        maxSelect > 1 ? 's' : ''
+                                      } for "${group.name}".`,
+                                    }
+                                  }
+
+                                  updated = [...current, opt.id]
+                                }
+                              }
+
+                              return {
+                                ...prev,
+                                error: '',
+                                selections: {
+                                  ...prev.selections,
+                                  [group.id]: updated,
+                                },
+                              }
+                            })
+                          }}
+                        />
+                        {opt.name} (+RM {opt.price_delta})
+                      </label>
+                    )
+                  })}
+                </div>
+              )
+            })}
 
             <textarea
               placeholder="Note (optional)"
@@ -1043,6 +1125,7 @@ export default function ShopPageClient({
                 setAddonModal((prev) => ({
                   ...prev,
                   note: e.target.value,
+                  error: '',
                 }))
               }
               style={noteBox}
@@ -1052,6 +1135,19 @@ export default function ShopPageClient({
               type="button"
               onClick={() => {
                 if (!addonModal.product) return
+
+                const validationError = validateAddonSelections(
+                  addonModal.groups,
+                  addonModal.selections
+                )
+
+                if (validationError) {
+                  setAddonModal((prev) => ({
+                    ...prev,
+                    error: validationError,
+                  }))
+                  return
+                }
 
                 addToCartWithAddons(
                   addonModal.product,
@@ -1066,6 +1162,7 @@ export default function ShopPageClient({
                   selections: {},
                   note: '',
                   isOpen: false,
+                  error: '',
                 })
               }}
               style={confirmBtn}
@@ -1082,6 +1179,7 @@ export default function ShopPageClient({
                   selections: {},
                   note: '',
                   isOpen: false,
+                  error: '',
                 })
               }
               style={cancelBtn}
@@ -1231,34 +1329,6 @@ const noticeBox = {
   padding: '12px 14px',
   fontSize: 14,
   lineHeight: 1.6,
-} as const
-
-const deliveryBox = {
-  marginTop: 12,
-  border: '1px solid #dbeafe',
-  background: '#f8fbff',
-  borderRadius: 14,
-  padding: '12px 14px',
-} as const
-
-const deliveryTitle = {
-  fontSize: 13,
-  fontWeight: 800,
-  color: '#1d4ed8',
-  marginBottom: 6,
-} as const
-
-const deliveryText = {
-  fontSize: 14,
-  color: '#0f172a',
-  lineHeight: 1.6,
-} as const
-
-const deliveryMeta = {
-  fontSize: 12,
-  color: '#64748b',
-  lineHeight: 1.6,
-  marginTop: 6,
 } as const
 
 const stickyTabWrap = {
@@ -1492,34 +1562,6 @@ const checkoutSub = {
   fontSize: 14,
 } as const
 
-const checkoutDeliveryBox = {
-  padding: 12,
-  borderRadius: 14,
-  background: '#f8fbff',
-  border: '1px solid #dbeafe',
-  marginBottom: 14,
-} as const
-
-const checkoutDeliveryTitle = {
-  fontSize: 13,
-  fontWeight: 800,
-  color: '#1d4ed8',
-  marginBottom: 6,
-} as const
-
-const checkoutDeliveryText = {
-  fontSize: 14,
-  color: '#0f172a',
-  lineHeight: 1.6,
-} as const
-
-const checkoutDeliveryMeta = {
-  fontSize: 12,
-  color: '#64748b',
-  lineHeight: 1.6,
-  marginTop: 6,
-} as const
-
 const emptyCartBox = {
   padding: 14,
   borderRadius: 14,
@@ -1733,4 +1775,26 @@ const cancelBtn = {
   background: '#e5e7eb',
   borderRadius: 10,
   border: 'none',
+} as const
+
+const modalErrorBox = {
+  marginBottom: 12,
+  padding: '10px 12px',
+  borderRadius: 10,
+  background: '#fef2f2',
+  border: '1px solid #fecaca',
+  color: '#b91c1c',
+  fontSize: 13,
+  lineHeight: 1.5,
+} as const
+
+const requiredMark = {
+  color: '#dc2626',
+  fontWeight: 800,
+} as const
+
+const groupMetaText = {
+  fontSize: 12,
+  color: '#64748b',
+  marginBottom: 8,
 } as const
