@@ -204,14 +204,6 @@ function getDeliverySummary(seller: SellerProfile) {
   }
 }
 
-  function getProductAddonGroups(productId: string) {
-    return productAddons[productId] || []
-  }
-
-  function productHasAddons(productId: string) {
-    return getProductAddonGroups(productId).length > 0
-  }
-
 function getShopAvailability(seller: SellerProfile) {
   if (seller.temporarily_closed) {
     return {
@@ -292,6 +284,14 @@ export default function ShopPageClient({
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
   const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
+
+  function getProductAddonGroups(productId: string) {
+    return productAddons[productId] || []
+  }
+
+  function productHasAddons(productId: string) {
+    return getProductAddonGroups(productId).length > 0
+  }
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>()
