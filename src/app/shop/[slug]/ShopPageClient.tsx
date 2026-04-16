@@ -97,19 +97,21 @@ type GalleryState = {
   currentIndex: number
 }
 
+type CartAddon = {
+  group_id: string
+  group_name: string
+  option_id: string
+  option_name: string
+  price: number
+}
+
 type CartLine = {
   id: string
   product_id: string
   name: string
   base_price: number
   quantity: number
-  addons: {
-    group_id: string
-    group_name: string
-    option_id: string
-    option_name: string
-    price: number
-  }[]
+  addons: CartAddon[]
   note?: string
   unit_price: number
   line_total: number
@@ -275,6 +277,35 @@ function getShopAvailability(seller: SellerProfile) {
   }
 }
 
+function normalizeNote(note?: string) {
+  return (note || '').trim()
+}
+
+function sortAddons(addons: CartAddon[]) {
+  return [...addons].sort((a, b) => {
+    const keyA = `${a.group_id}|${a.option_id}|${a.price}`
+    const keyB = `${b.group_id}|${b.option_id}|${b.price}`
+    return keyA.localeCompare(keyB)
+  })
+}
+
+function isSameAddons(a: CartAddon[], b: CartAddon[]) {
+  if (a.length !== b.length) return false
+
+  const sortedA = sortAddons(a)
+  const sortedB = sortAddons(b)
+
+  return JSON.stringify(sortedA) === JSON.stringify(sortedB)
+}
+
+function isSameCartLine(a: CartLine, b: CartLine) {
+  return (
+    a.product_id === b.product_id &&
+    normalizeNote(a.note) === normalizeNote(b.note) &&
+    isSameAddons(a.addons || [], b.addons || [])
+  )
+}
+
 export default function ShopPageClient({
   seller,
   products,
@@ -320,17 +351,13 @@ export default function ShopPageClient({
     return productAddons[productId] || []
   }
 
-  function productHasAddons(productId: string) {
-    return getProductAddonGroups(productId).length > 0
-  }
-
-  function addToCartWithAddons(
+  function buildCartLine(
     product: ProductRow,
     selections: Record<string, string[]>,
     groups: ProductAddonGroup[],
     note: string
-  ) {
-    const selectedAddons: CartLine['addons'] = []
+  ): CartLine {
+    const selectedAddons: CartAddon[] = []
 
     for (const group of groups) {
       const selectedIds = selections[group.id] || []
@@ -349,25 +376,55 @@ export default function ShopPageClient({
       }
     }
 
-    const addonTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0)
-    const unitPrice = product.price + addonTotal
+    const addonTotal = selectedAddons.reduce((sum, addon) => sum + addon.price, 0)
+    const unitPrice = Number(product.price) + addonTotal
 
-    const newLine: CartLine = {
+    return {
       id:
         typeof crypto !== 'undefined' && crypto.randomUUID
           ? crypto.randomUUID()
           : `${product.id}-${Date.now()}`,
       product_id: product.id,
       name: product.name,
-      base_price: product.price,
+      base_price: Number(product.price),
       quantity: 1,
       addons: selectedAddons,
-      note,
+      note: normalizeNote(note),
       unit_price: unitPrice,
       line_total: unitPrice,
     }
+  }
 
-    setCart((prev) => [...prev, newLine])
+  function addOrMergeCartLine(newLine: CartLine) {
+    setCart((prev) => {
+      const index = prev.findIndex((item) => isSameCartLine(item, newLine))
+
+      if (index === -1) {
+        return [...prev, newLine]
+      }
+
+      const updated = [...prev]
+      const existing = updated[index]
+      const nextQuantity = existing.quantity + newLine.quantity
+
+      updated[index] = {
+        ...existing,
+        quantity: nextQuantity,
+        line_total: existing.unit_price * nextQuantity,
+      }
+
+      return updated
+    })
+  }
+
+  function addToCartWithAddons(
+    product: ProductRow,
+    selections: Record<string, string[]>,
+    groups: ProductAddonGroup[],
+    note: string
+  ) {
+    const newLine = buildCartLine(product, selections, groups, note)
+    addOrMergeCartLine(newLine)
   }
 
   const categoryCounts = useMemo(() => {
@@ -453,14 +510,26 @@ export default function ShopPageClient({
 
   function decrease(productId: string) {
     setCart((prev) => {
-      const index = prev
+      const index = [...prev]
         .map((item) => item.product_id)
         .lastIndexOf(productId)
 
       if (index === -1) return prev
 
       const next = [...prev]
-      next.splice(index, 1)
+      const currentLine = next[index]
+
+      if (currentLine.quantity <= 1) {
+        next.splice(index, 1)
+        return next
+      }
+
+      next[index] = {
+        ...currentLine,
+        quantity: currentLine.quantity - 1,
+        line_total: currentLine.unit_price * (currentLine.quantity - 1),
+      }
+
       return next
     })
   }
@@ -812,10 +881,7 @@ export default function ShopPageClient({
               <ShopPayButton
                 sellerId={seller.id}
                 shopSlug={shopSlug}
-                items={cartItems.map((item) => ({
-                  product_id: item.product_id,
-                  quantity: item.quantity,
-                }))}
+                items={cartItems}
                 total={grandTotal}
                 deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
                 deliveryFee={seller.delivery_fee || 0}
