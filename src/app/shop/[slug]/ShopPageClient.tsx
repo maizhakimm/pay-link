@@ -543,6 +543,45 @@ export default function ShopPageClient({
     })
   }
 
+  function incrementCartLine(lineId: string) {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === lineId
+          ? {
+              ...item,
+              quantity: item.quantity + 1,
+              line_total: item.unit_price * (item.quantity + 1),
+            }
+          : item
+      )
+    )
+  }
+
+  function decrementCartLine(lineId: string) {
+    setCart((prev) => {
+      const current = prev.find((item) => item.id === lineId)
+      if (!current) return prev
+
+      if (current.quantity <= 1) {
+        return prev.filter((item) => item.id !== lineId)
+      }
+
+      return prev.map((item) =>
+        item.id === lineId
+          ? {
+              ...item,
+              quantity: item.quantity - 1,
+              line_total: item.unit_price * (item.quantity - 1),
+            }
+          : item
+      )
+    })
+  }
+
+  function removeCartLine(lineId: string) {
+    setCart((prev) => prev.filter((item) => item.id !== lineId))
+  }
+
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>()
 
@@ -963,39 +1002,80 @@ export default function ShopPageClient({
             <>
               <div style={summaryList}>
                 {cartItems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => openAddonModalForEdit(item)}
-                    style={summaryRowButton}
-                  >
-                    <div style={summaryRow}>
-                      <div>
-                        <div style={{ fontWeight: 700 }}>
-                          {item.name} × {item.quantity}
+                  <div key={item.id} style={summaryCard}>
+                    <button
+                      type="button"
+                      onClick={() => openAddonModalForEdit(item)}
+                      style={summaryRowButton}
+                    >
+                      <div style={summaryRow}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>
+                            {item.name} × {item.quantity}
+                          </div>
+
+                          {item.addons.length > 0 && (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: '#64748b',
+                                marginTop: 4,
+                              }}
+                            >
+                              {item.addons.map((a) => (
+                                <div key={`${item.id}-${a.option_id}`}>
+                                  + {a.option_name} (RM {a.price.toFixed(2)})
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {item.note ? (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: '#94a3b8',
+                                marginTop: 4,
+                              }}
+                            >
+                              Note: {item.note}
+                            </div>
+                          ) : null}
+
+                          <div style={summaryEditHint}>Tap details to edit</div>
                         </div>
-
-                        {item.addons.length > 0 && (
-                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                            {item.addons.map((a) => (
-                              <div key={`${item.id}-${a.option_id}`}>
-                                + {a.option_name} (RM {a.price.toFixed(2)})
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {item.note ? (
-                          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
-                            Note: {item.note}
-                          </div>
-                        ) : null}
-
-                        <div style={summaryEditHint}>Tap to edit</div>
+                        <strong>RM {item.line_total.toFixed(2)}</strong>
                       </div>
-                      <strong>RM {item.line_total.toFixed(2)}</strong>
+                    </button>
+
+                    <div style={summaryActions}>
+                      <div style={lineQtyControls}>
+                        <button
+                          type="button"
+                          onClick={() => decrementCartLine(item.id)}
+                          style={lineQtyBtn}
+                        >
+                          -
+                        </button>
+                        <span style={lineQtyValue}>{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => incrementCartLine(item.id)}
+                          style={lineQtyBtn}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeCartLine(item.id)}
+                        style={deleteLineBtn}
+                      >
+                        Delete
+                      </button>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
 
@@ -1101,9 +1181,7 @@ export default function ShopPageClient({
       {addonModal.isOpen && addonModal.product ? (
         <div style={modalOverlay}>
           <div style={modalBox}>
-            <h3 style={{ marginBottom: 10 }}>
-              {addonModal.product.name}
-            </h3>
+            <h3 style={{ marginBottom: 10 }}>{addonModal.product.name}</h3>
 
             {addonModal.error ? (
               <div style={modalErrorBox}>{addonModal.error}</div>
@@ -1263,11 +1341,7 @@ export default function ShopPageClient({
               {addonModal.editingCartLineId ? 'Update Order' : 'Add to Order'}
             </button>
 
-            <button
-              type="button"
-              onClick={closeAddonModal}
-              style={cancelBtn}
-            >
+            <button type="button" onClick={closeAddonModal} style={cancelBtn}>
               Cancel
             </button>
           </div>
@@ -1680,6 +1754,13 @@ const summaryList = {
   marginBottom: 14,
 } as const
 
+const summaryCard = {
+  borderRadius: 12,
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  overflow: 'hidden',
+} as const
+
 const summaryRowButton = {
   width: '100%',
   padding: 0,
@@ -1695,10 +1776,58 @@ const summaryRow = {
   justifyContent: 'space-between',
   gap: 12,
   padding: '10px 12px',
-  borderRadius: 12,
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
   color: '#0f172a',
+} as const
+
+const summaryActions = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  padding: '10px 12px',
+  borderTop: '1px solid #e2e8f0',
+  background: '#fff',
+} as const
+
+const lineQtyControls = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+} as const
+
+const lineQtyBtn = {
+  width: 30,
+  height: 30,
+  borderRadius: '999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  cursor: 'pointer',
+  fontWeight: 700,
+  fontSize: 16,
+  color: '#0f172a',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 0,
+} as const
+
+const lineQtyValue = {
+  minWidth: 18,
+  textAlign: 'center' as const,
+  fontSize: 13,
+  fontWeight: 700,
+  color: '#0f172a',
+} as const
+
+const deleteLineBtn = {
+  border: '1px solid #fecaca',
+  background: '#fef2f2',
+  color: '#b91c1c',
+  borderRadius: 10,
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: 'pointer',
 } as const
 
 const summaryEditHint = {
