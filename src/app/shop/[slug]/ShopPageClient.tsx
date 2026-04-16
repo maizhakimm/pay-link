@@ -334,6 +334,7 @@ export default function ShopPageClient({
     note: string
     isOpen: boolean
     error: string
+    editingCartLineId: string | null
   }>({
     product: null,
     groups: [],
@@ -341,6 +342,7 @@ export default function ShopPageClient({
     note: '',
     isOpen: false,
     error: '',
+    editingCartLineId: null,
   })
 
   const productListRef = useRef<HTMLDivElement | null>(null)
@@ -357,7 +359,8 @@ export default function ShopPageClient({
     product: ProductRow,
     selections: Record<string, string[]>,
     groups: ProductAddonGroup[],
-    note: string
+    note: string,
+    quantity = 1
   ): CartLine {
     const selectedAddons: CartAddon[] = []
 
@@ -389,11 +392,11 @@ export default function ShopPageClient({
       product_id: product.id,
       name: product.name,
       base_price: Number(product.price),
-      quantity: 1,
+      quantity,
       addons: selectedAddons,
       note: normalizeNote(note),
       unit_price: unitPrice,
-      line_total: unitPrice,
+      line_total: unitPrice * quantity,
     }
   }
 
@@ -416,6 +419,31 @@ export default function ShopPageClient({
       }
 
       return updated
+    })
+  }
+
+  function updateCartLine(updatedLine: CartLine, originalLineId: string) {
+    setCart((prev) => {
+      const withoutOriginal = prev.filter((item) => item.id !== originalLineId)
+      const mergeIndex = withoutOriginal.findIndex((item) =>
+        isSameCartLine(item, updatedLine)
+      )
+
+      if (mergeIndex === -1) {
+        return [...withoutOriginal, { ...updatedLine, id: originalLineId }]
+      }
+
+      const merged = [...withoutOriginal]
+      const existing = merged[mergeIndex]
+      const nextQuantity = existing.quantity + updatedLine.quantity
+
+      merged[mergeIndex] = {
+        ...existing,
+        quantity: nextQuantity,
+        line_total: existing.unit_price * nextQuantity,
+      }
+
+      return merged
     })
   }
 
@@ -464,6 +492,55 @@ export default function ShopPageClient({
     }
 
     return ''
+  }
+
+  function openAddonModalForNew(product: ProductRow) {
+    setAddonModal({
+      product,
+      groups: getProductAddonGroups(product.id),
+      selections: {},
+      note: '',
+      isOpen: true,
+      error: '',
+      editingCartLineId: null,
+    })
+  }
+
+  function openAddonModalForEdit(cartLine: CartLine) {
+    const product = products.find((item) => item.id === cartLine.product_id)
+    if (!product) return
+
+    const groups = getProductAddonGroups(product.id)
+    const selections: Record<string, string[]> = {}
+
+    for (const addon of cartLine.addons || []) {
+      if (!selections[addon.group_id]) {
+        selections[addon.group_id] = []
+      }
+      selections[addon.group_id].push(addon.option_id)
+    }
+
+    setAddonModal({
+      product,
+      groups,
+      selections,
+      note: cartLine.note || '',
+      isOpen: true,
+      error: '',
+      editingCartLineId: cartLine.id,
+    })
+  }
+
+  function closeAddonModal() {
+    setAddonModal({
+      product: null,
+      groups: [],
+      selections: {},
+      note: '',
+      isOpen: false,
+      error: '',
+      editingCartLineId: null,
+    })
   }
 
   const categoryCounts = useMemo(() => {
@@ -534,14 +611,7 @@ export default function ShopPageClient({
     const addonGroups = getProductAddonGroups(product.id)
 
     if (addonGroups.length > 0) {
-      setAddonModal({
-        product,
-        groups: addonGroups,
-        selections: {},
-        note: '',
-        isOpen: true,
-        error: '',
-      })
+      openAddonModalForNew(product)
       return
     }
 
@@ -893,28 +963,39 @@ export default function ShopPageClient({
             <>
               <div style={summaryList}>
                 {cartItems.map((item) => (
-                  <div key={item.id} style={summaryRow}>
-                    <div>
-                      {item.name} × {item.quantity}
-
-                      {item.addons.length > 0 && (
-                        <div style={{ fontSize: 12, color: '#64748b' }}>
-                          {item.addons.map((a) => (
-                            <div key={`${item.id}-${a.option_id}`}>
-                              + {a.option_name} (RM {a.price.toFixed(2)})
-                            </div>
-                          ))}
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => openAddonModalForEdit(item)}
+                    style={summaryRowButton}
+                  >
+                    <div style={summaryRow}>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>
+                          {item.name} × {item.quantity}
                         </div>
-                      )}
 
-                      {item.note ? (
-                        <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                          Note: {item.note}
-                        </div>
-                      ) : null}
+                        {item.addons.length > 0 && (
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                            {item.addons.map((a) => (
+                              <div key={`${item.id}-${a.option_id}`}>
+                                + {a.option_name} (RM {a.price.toFixed(2)})
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {item.note ? (
+                          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+                            Note: {item.note}
+                          </div>
+                        ) : null}
+
+                        <div style={summaryEditHint}>Tap to edit</div>
+                      </div>
+                      <strong>RM {item.line_total.toFixed(2)}</strong>
                     </div>
-                    <strong>RM {item.line_total.toFixed(2)}</strong>
-                  </div>
+                  </button>
                 ))}
               </div>
 
@@ -1025,9 +1106,7 @@ export default function ShopPageClient({
             </h3>
 
             {addonModal.error ? (
-              <div style={modalErrorBox}>
-                {addonModal.error}
-              </div>
+              <div style={modalErrorBox}>{addonModal.error}</div>
             ) : null}
 
             {addonModal.groups.map((group) => {
@@ -1149,39 +1228,44 @@ export default function ShopPageClient({
                   return
                 }
 
-                addToCartWithAddons(
-                  addonModal.product,
-                  addonModal.selections,
-                  addonModal.groups,
-                  addonModal.note
-                )
+                if (addonModal.editingCartLineId) {
+                  const existingLine = cart.find(
+                    (item) => item.id === addonModal.editingCartLineId
+                  )
 
-                setAddonModal({
-                  product: null,
-                  groups: [],
-                  selections: {},
-                  note: '',
-                  isOpen: false,
-                  error: '',
-                })
+                  if (!existingLine) {
+                    closeAddonModal()
+                    return
+                  }
+
+                  const updatedLine = buildCartLine(
+                    addonModal.product,
+                    addonModal.selections,
+                    addonModal.groups,
+                    addonModal.note,
+                    existingLine.quantity
+                  )
+
+                  updateCartLine(updatedLine, existingLine.id)
+                } else {
+                  addToCartWithAddons(
+                    addonModal.product,
+                    addonModal.selections,
+                    addonModal.groups,
+                    addonModal.note
+                  )
+                }
+
+                closeAddonModal()
               }}
               style={confirmBtn}
             >
-              Add to Order
+              {addonModal.editingCartLineId ? 'Update Order' : 'Add to Order'}
             </button>
 
             <button
               type="button"
-              onClick={() =>
-                setAddonModal({
-                  product: null,
-                  groups: [],
-                  selections: {},
-                  note: '',
-                  isOpen: false,
-                  error: '',
-                })
-              }
+              onClick={closeAddonModal}
               style={cancelBtn}
             >
               Cancel
@@ -1596,6 +1680,16 @@ const summaryList = {
   marginBottom: 14,
 } as const
 
+const summaryRowButton = {
+  width: '100%',
+  padding: 0,
+  margin: 0,
+  border: 'none',
+  background: 'transparent',
+  textAlign: 'left' as const,
+  cursor: 'pointer',
+} as const
+
 const summaryRow = {
   display: 'flex',
   justifyContent: 'space-between',
@@ -1605,6 +1699,13 @@ const summaryRow = {
   background: '#f8fafc',
   border: '1px solid #e2e8f0',
   color: '#0f172a',
+} as const
+
+const summaryEditHint = {
+  marginTop: 6,
+  fontSize: 11,
+  color: '#7c3aed',
+  fontWeight: 700,
 } as const
 
 const galleryOverlay = {
