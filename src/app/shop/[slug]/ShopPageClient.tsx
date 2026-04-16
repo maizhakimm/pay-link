@@ -265,8 +265,6 @@ function getShopAvailability(seller: SellerProfile) {
   }
 }
 
-
-
 export default function ShopPageClient({
   seller,
   products,
@@ -280,6 +278,7 @@ export default function ShopPageClient({
   categories?: MenuCategory[]
   productAddons?: ProductAddonsMap
 }) {
+  
   const [cart, setCart] = useState<Record<string, number>>({})
   const [gallery, setGallery] = useState<GalleryState>({
     isOpen: false,
