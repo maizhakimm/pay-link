@@ -318,6 +318,20 @@ export default function ShopPageClient({
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
 
+  const [addonModal, setAddonModal] = useState<{
+  product: ProductRow | null
+  groups: ProductAddonGroup[]
+  selections: Record<string, string[]> // group_id -> option_id[]
+  note: string
+  isOpen: boolean
+}>({
+  product: null,
+  groups: [],
+  selections: {},
+  note: '',
+  isOpen: false,
+})
+
   useEffect(() => {
     setActiveCategoryId('all')
   }, [hasCategoryFeature])
@@ -354,15 +368,30 @@ export default function ShopPageClient({
     })
   }
 
-  function increase(product: ProductRow) {
-    if (!isShopOpen) return
-    if (product.sold_out) return
+ function increase(product: ProductRow) {
+  if (!isShopOpen) return
+  if (product.sold_out) return
 
-    setCart((prev) => ({
-      ...prev,
-      [product.id]: (prev[product.id] || 0) + 1,
-    }))
+  const addonGroups = getProductAddonGroups(product.id)
+
+  // ✅ kalau ada add-on → buka popup
+  if (addonGroups.length > 0) {
+    setAddonModal({
+      product,
+      groups: addonGroups,
+      selections: {},
+      note: '',
+      isOpen: true,
+    })
+    return
   }
+
+  // ✅ kalau tiada add-on → normal flow
+  setCart((prev) => ({
+    ...prev,
+    [product.id]: (prev[product.id] || 0) + 1,
+  }))
+}
 
   function decrease(productId: string) {
     setCart((prev) => {
@@ -817,6 +846,108 @@ export default function ShopPageClient({
           </div>
         </div>
       ) : null}
+
+      {addonModal.isOpen && addonModal.product && (
+  <div style={modalOverlay}>
+    <div style={modalBox}>
+      <h3 style={{ marginBottom: 10 }}>
+        {addonModal.product.name}
+      </h3>
+
+      {addonModal.groups.map((group) => (
+        <div key={group.id} style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>
+            {group.name}
+          </div>
+
+          {group.options.map((opt) => {
+            const selected =
+              addonModal.selections[group.id]?.includes(opt.id) || false
+
+            return (
+              <label key={opt.id} style={optionRow}>
+                <input
+                  type={group.selection_type === 'single' ? 'radio' : 'checkbox'}
+                  checked={selected}
+                  onChange={() => {
+                    setAddonModal((prev) => {
+                      const current = prev.selections[group.id] || []
+
+                      let updated: string[] = []
+
+                      if (group.selection_type === 'single') {
+                        updated = [opt.id]
+                      } else {
+                        if (current.includes(opt.id)) {
+                          updated = current.filter((id) => id !== opt.id)
+                        } else {
+                          updated = [...current, opt.id]
+                        }
+                      }
+
+                      return {
+                        ...prev,
+                        selections: {
+                          ...prev.selections,
+                          [group.id]: updated,
+                        },
+                      }
+                    })
+                  }}
+                />
+                {opt.name} (+RM {opt.price_delta})
+              </label>
+            )
+          })}
+        </div>
+      ))}
+
+      <textarea
+        placeholder="Note (optional)"
+        value={addonModal.note}
+        onChange={(e) =>
+          setAddonModal((prev) => ({
+            ...prev,
+            note: e.target.value,
+          }))
+        }
+        style={noteBox}
+      />
+
+      <button
+        onClick={() => {
+          if (!addonModal.product) return
+
+          // 👉 sementara: tambah seperti biasa dulu
+          setCart((prev) => ({
+            ...prev,
+            [addonModal.product!.id]:
+              (prev[addonModal.product!.id] || 0) + 1,
+          }))
+
+          setAddonModal((prev) => ({
+            ...prev,
+            isOpen: false,
+          }))
+        }}
+        style={confirmBtn}
+      >
+        Add to Order
+      </button>
+
+      <button
+        onClick={() =>
+          setAddonModal((prev) => ({ ...prev, isOpen: false }))
+        }
+        style={cancelBtn}
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
+
+      
     </main>
   )
 }
@@ -1407,3 +1538,56 @@ const galleryDot = {
   cursor: 'pointer',
   transition: 'all 0.2s ease',
 } as const
+
+const modalOverlay = {
+  position: 'fixed' as const,
+  inset: 0,
+  background: 'rgba(0,0,0,0.5)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 999,
+}
+
+const modalBox = {
+  background: '#fff',
+  padding: 16,
+  borderRadius: 16,
+  width: '90%',
+  maxWidth: 400,
+}
+
+const optionRow = {
+  display: 'flex',
+  gap: 8,
+  marginBottom: 6,
+  fontSize: 14,
+}
+
+const noteBox = {
+  width: '100%',
+  marginTop: 10,
+  padding: 8,
+  borderRadius: 8,
+  border: '1px solid #ccc',
+}
+
+const confirmBtn = {
+  marginTop: 12,
+  width: '100%',
+  padding: 10,
+  background: '#0f172a',
+  color: '#fff',
+  borderRadius: 10,
+  border: 'none',
+  fontWeight: 700,
+}
+
+const cancelBtn = {
+  marginTop: 6,
+  width: '100%',
+  padding: 10,
+  background: '#e5e7eb',
+  borderRadius: 10,
+  border: 'none',
+}
