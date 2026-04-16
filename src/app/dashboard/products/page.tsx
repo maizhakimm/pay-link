@@ -41,6 +41,34 @@ type MenuCategoryRow = {
   updated_at?: string
 }
 
+type ProductAddonGroupRow = {
+  id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  selection_type: 'single' | 'multiple'
+  is_required: boolean
+  min_select: number
+  max_select: number | null
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+type ProductAddonOptionRow = {
+  id: string
+  addon_group_id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  price_delta: number
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
 function createSlug(value: string) {
   return value
     .toLowerCase()
@@ -96,9 +124,15 @@ function getProductImages(product: ProductRow) {
   ].filter(Boolean) as string[]
 }
 
+function formatMoney(value?: number | null) {
+  return `RM ${Number(value || 0).toFixed(2)}`
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([])
   const [categories, setCategories] = useState<MenuCategoryRow[]>([])
+  const [addonGroups, setAddonGroups] = useState<ProductAddonGroupRow[]>([])
+  const [addonOptions, setAddonOptions] = useState<ProductAddonOptionRow[]>([])
   const [sellerProfile, setSellerProfile] = useState<SellerProfileRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -130,6 +164,25 @@ export default function ProductsPage() {
   const [editingCategoryName, setEditingCategoryName] = useState('')
   const [editingCategorySortOrder, setEditingCategorySortOrder] = useState('0')
 
+  const [savingAddonGroup, setSavingAddonGroup] = useState(false)
+  const [editingAddonGroupId, setEditingAddonGroupId] = useState<string | null>(null)
+  const [addonGroupName, setAddonGroupName] = useState('')
+  const [addonGroupSelectionType, setAddonGroupSelectionType] = useState<
+    'single' | 'multiple'
+  >('single')
+  const [addonGroupIsRequired, setAddonGroupIsRequired] = useState(false)
+  const [addonGroupMinSelect, setAddonGroupMinSelect] = useState('0')
+  const [addonGroupMaxSelect, setAddonGroupMaxSelect] = useState('')
+
+  const [savingAddonOption, setSavingAddonOption] = useState(false)
+  const [editingAddonOptionId, setEditingAddonOptionId] = useState<string | null>(
+    null
+  )
+  const [addonOptionGroupId, setAddonOptionGroupId] = useState('')
+  const [addonOptionName, setAddonOptionName] = useState('')
+  const [addonOptionPrice, setAddonOptionPrice] = useState('0')
+  const [addonOptionSortOrder, setAddonOptionSortOrder] = useState('0')
+
   const appUrl =
     typeof window !== 'undefined'
       ? window.location.origin
@@ -144,6 +197,51 @@ export default function ProductsPage() {
     categories.forEach((category) => map.set(category.id, category))
     return map
   }, [categories])
+
+  const groupsByProductId = useMemo(() => {
+    const map = new Map<string, ProductAddonGroupRow[]>()
+
+    addonGroups.forEach((group) => {
+      const current = map.get(group.product_id) || []
+      current.push(group)
+      map.set(group.product_id, current)
+    })
+
+    map.forEach((value) => {
+      value.sort((a, b) => {
+        const sortDiff = Number(a.sort_order || 0) - Number(b.sort_order || 0)
+        if (sortDiff !== 0) return sortDiff
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+      })
+    })
+
+    return map
+  }, [addonGroups])
+
+  const optionsByGroupId = useMemo(() => {
+    const map = new Map<string, ProductAddonOptionRow[]>()
+
+    addonOptions.forEach((option) => {
+      const current = map.get(option.addon_group_id) || []
+      current.push(option)
+      map.set(option.addon_group_id, current)
+    })
+
+    map.forEach((value) => {
+      value.sort((a, b) => {
+        const sortDiff = Number(a.sort_order || 0) - Number(b.sort_order || 0)
+        if (sortDiff !== 0) return sortDiff
+        return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
+      })
+    })
+
+    return map
+  }, [addonOptions])
+
+  const editingProductGroups = useMemo(() => {
+    if (!editingId) return []
+    return groupsByProductId.get(editingId) || []
+  }, [editingId, groupsByProductId])
 
   const buildProductLink = useCallback(
     (productSlug: string) => {
@@ -217,6 +315,38 @@ export default function ProductsPage() {
     }
 
     setProducts((productData || []) as ProductRow[])
+
+    const { data: groupData, error: groupError } = await supabase
+      .from('product_addon_groups')
+      .select('*')
+      .eq('seller_profile_id', sellerData.id)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+
+    if (groupError) {
+      setError(groupError.message)
+      setLoading(false)
+      return
+    }
+
+    setAddonGroups((groupData || []) as ProductAddonGroupRow[])
+
+    const { data: optionData, error: optionError } = await supabase
+      .from('product_addon_options')
+      .select('*')
+      .eq('seller_profile_id', sellerData.id)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+
+    if (optionError) {
+      setError(optionError.message)
+      setLoading(false)
+      return
+    }
+
+    setAddonOptions((optionData || []) as ProductAddonOptionRow[])
     setLoading(false)
   }, [])
 
@@ -356,62 +486,60 @@ export default function ProductsPage() {
   }
 
   function startEditCategory(category: MenuCategoryRow) {
-  setEditingCategoryId(category.id)
-  setEditingCategoryName(category.name)
-  setEditingCategorySortOrder(String(category.sort_order ?? 0))
-}
-
-function cancelEditCategory() {
-  setEditingCategoryId(null)
-  setEditingCategoryName('')
-  setEditingCategorySortOrder('0')
-}
-
-async function saveCategoryEdit(categoryId: string) {
-  if (!editingCategoryName.trim()) {
-    alert('Please enter category name.')
-    return
+    setEditingCategoryId(category.id)
+    setEditingCategoryName(category.name)
+    setEditingCategorySortOrder(String(category.sort_order ?? 0))
   }
 
-  const safeSortOrder = Number.isFinite(Number(editingCategorySortOrder))
-    ? Number(editingCategorySortOrder)
-    : 0
-
-  const { error } = await supabase
-    .from('menu_categories')
-    .update({
-      name: editingCategoryName.trim(),
-      sort_order: safeSortOrder,
-    })
-    .eq('id', categoryId)
-
-  if (error) {
-    alert(error.message)
-    return
+  function cancelEditCategory() {
+    setEditingCategoryId(null)
+    setEditingCategoryName('')
+    setEditingCategorySortOrder('0')
   }
 
-  cancelEditCategory()
-  await loadProductsPage()
-}
+  async function saveCategoryEdit(categoryId: string) {
+    if (!editingCategoryName.trim()) {
+      alert('Please enter category name.')
+      return
+    }
 
-async function deleteCategory(category: MenuCategoryRow) {
-  const confirmed = window.confirm(
-    `Delete category "${category.name}"?`
-  )
-  if (!confirmed) return
+    const safeSortOrder = Number.isFinite(Number(editingCategorySortOrder))
+      ? Number(editingCategorySortOrder)
+      : 0
 
-  const { error } = await supabase
-    .from('menu_categories')
-    .delete()
-    .eq('id', category.id)
+    const { error } = await supabase
+      .from('menu_categories')
+      .update({
+        name: editingCategoryName.trim(),
+        sort_order: safeSortOrder,
+      })
+      .eq('id', categoryId)
 
-  if (error) {
-    alert(error.message)
-    return
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    cancelEditCategory()
+    await loadProductsPage()
   }
 
-  await loadProductsPage()
-}
+  async function deleteCategory(category: MenuCategoryRow) {
+    const confirmed = window.confirm(`Delete category "${category.name}"?`)
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('menu_categories')
+      .delete()
+      .eq('id', category.id)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    await loadProductsPage()
+  }
 
   async function handleCreateProduct() {
     if (!sellerProfile) {
@@ -499,6 +627,19 @@ async function deleteCategory(category: MenuCategoryRow) {
     setEditingExistingImages(getProductImages(product))
     setEditingNewImages([])
     setEditingMenuCategoryId(product.menu_category_id || '')
+
+    setEditingAddonGroupId(null)
+    setAddonGroupName('')
+    setAddonGroupSelectionType('single')
+    setAddonGroupIsRequired(false)
+    setAddonGroupMinSelect('0')
+    setAddonGroupMaxSelect('')
+
+    setEditingAddonOptionId(null)
+    setAddonOptionGroupId('')
+    setAddonOptionName('')
+    setAddonOptionPrice('0')
+    setAddonOptionSortOrder('0')
   }
 
   function cancelEdit() {
@@ -512,6 +653,19 @@ async function deleteCategory(category: MenuCategoryRow) {
     setEditingExistingImages([])
     setEditingNewImages([])
     setEditingMenuCategoryId('')
+
+    setEditingAddonGroupId(null)
+    setAddonGroupName('')
+    setAddonGroupSelectionType('single')
+    setAddonGroupIsRequired(false)
+    setAddonGroupMinSelect('0')
+    setAddonGroupMaxSelect('')
+
+    setEditingAddonOptionId(null)
+    setAddonOptionGroupId('')
+    setAddonOptionName('')
+    setAddonOptionPrice('0')
+    setAddonOptionSortOrder('0')
   }
 
   async function saveEdit(product: ProductRow) {
@@ -661,6 +815,224 @@ async function deleteCategory(category: MenuCategoryRow) {
     }
   }
 
+  function resetAddonGroupForm() {
+    setEditingAddonGroupId(null)
+    setAddonGroupName('')
+    setAddonGroupSelectionType('single')
+    setAddonGroupIsRequired(false)
+    setAddonGroupMinSelect('0')
+    setAddonGroupMaxSelect('')
+  }
+
+  function resetAddonOptionForm() {
+    setEditingAddonOptionId(null)
+    setAddonOptionGroupId('')
+    setAddonOptionName('')
+    setAddonOptionPrice('0')
+    setAddonOptionSortOrder('0')
+  }
+
+  function startEditAddonGroup(group: ProductAddonGroupRow) {
+    setEditingAddonGroupId(group.id)
+    setAddonGroupName(group.name)
+    setAddonGroupSelectionType(group.selection_type || 'single')
+    setAddonGroupIsRequired(Boolean(group.is_required))
+    setAddonGroupMinSelect(String(group.min_select ?? 0))
+    setAddonGroupMaxSelect(
+      group.max_select === null || group.max_select === undefined
+        ? ''
+        : String(group.max_select)
+    )
+  }
+
+  function startEditAddonOption(option: ProductAddonOptionRow) {
+    setEditingAddonOptionId(option.id)
+    setAddonOptionGroupId(option.addon_group_id)
+    setAddonOptionName(option.name)
+    setAddonOptionPrice(String(option.price_delta ?? 0))
+    setAddonOptionSortOrder(String(option.sort_order ?? 0))
+  }
+
+  async function saveAddonGroup(product: ProductRow) {
+    if (!sellerProfile) {
+      alert('Seller profile not ready yet.')
+      return
+    }
+
+    if (!addonGroupName.trim()) {
+      alert('Please enter add-on group name.')
+      return
+    }
+
+    setSavingAddonGroup(true)
+
+    const currentGroups = groupsByProductId.get(product.id) || []
+    const nextSortOrder =
+      currentGroups.length > 0
+        ? Math.max(...currentGroups.map((group) => Number(group.sort_order || 0))) + 1
+        : 1
+
+    const payload = {
+      product_id: product.id,
+      seller_profile_id: sellerProfile.id,
+      name: addonGroupName.trim(),
+      selection_type: addonGroupSelectionType,
+      is_required: addonGroupIsRequired,
+      min_select: Number.isFinite(Number(addonGroupMinSelect))
+        ? Number(addonGroupMinSelect)
+        : 0,
+      max_select:
+        addonGroupMaxSelect.trim() === ''
+          ? null
+          : Number.isFinite(Number(addonGroupMaxSelect))
+            ? Number(addonGroupMaxSelect)
+            : null,
+      sort_order:
+        editingAddonGroupId && currentGroups.find((group) => group.id === editingAddonGroupId)
+          ? currentGroups.find((group) => group.id === editingAddonGroupId)?.sort_order || 0
+          : nextSortOrder,
+      is_active: true,
+    }
+
+    let errorMessage = ''
+
+    if (editingAddonGroupId) {
+      const { error } = await supabase
+        .from('product_addon_groups')
+        .update(payload)
+        .eq('id', editingAddonGroupId)
+
+      errorMessage = error?.message || ''
+    } else {
+      const { error } = await supabase.from('product_addon_groups').insert(payload)
+      errorMessage = error?.message || ''
+    }
+
+    setSavingAddonGroup(false)
+
+    if (errorMessage) {
+      alert(errorMessage)
+      return
+    }
+
+    resetAddonGroupForm()
+    await loadProductsPage()
+  }
+
+  async function deleteAddonGroup(group: ProductAddonGroupRow) {
+    const confirmed = window.confirm(
+      `Delete add-on group "${group.name}"? All options under this group will also be removed.`
+    )
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('product_addon_groups')
+      .delete()
+      .eq('id', group.id)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    if (editingAddonGroupId === group.id) {
+      resetAddonGroupForm()
+    }
+
+    await loadProductsPage()
+  }
+
+  async function saveAddonOption(product: ProductRow) {
+    if (!sellerProfile) {
+      alert('Seller profile not ready yet.')
+      return
+    }
+
+    if (!addonOptionGroupId) {
+      alert('Please choose add-on group first.')
+      return
+    }
+
+    if (!addonOptionName.trim()) {
+      alert('Please enter add-on option name.')
+      return
+    }
+
+    setSavingAddonOption(true)
+
+    const currentOptions = addonOptions.filter(
+      (option) => option.addon_group_id === addonOptionGroupId
+    )
+
+    const nextSortOrder =
+      currentOptions.length > 0
+        ? Math.max(...currentOptions.map((option) => Number(option.sort_order || 0))) + 1
+        : 1
+
+    const payload = {
+      addon_group_id: addonOptionGroupId,
+      product_id: product.id,
+      seller_profile_id: sellerProfile.id,
+      name: addonOptionName.trim(),
+      price_delta: Number.isFinite(Number(addonOptionPrice))
+        ? Number(addonOptionPrice)
+        : 0,
+      sort_order:
+        editingAddonOptionId &&
+        currentOptions.find((option) => option.id === editingAddonOptionId)
+          ? currentOptions.find((option) => option.id === editingAddonOptionId)?.sort_order || 0
+          : Number.isFinite(Number(addonOptionSortOrder))
+            ? Number(addonOptionSortOrder)
+            : nextSortOrder,
+      is_active: true,
+    }
+
+    let errorMessage = ''
+
+    if (editingAddonOptionId) {
+      const { error } = await supabase
+        .from('product_addon_options')
+        .update(payload)
+        .eq('id', editingAddonOptionId)
+
+      errorMessage = error?.message || ''
+    } else {
+      const { error } = await supabase.from('product_addon_options').insert(payload)
+      errorMessage = error?.message || ''
+    }
+
+    setSavingAddonOption(false)
+
+    if (errorMessage) {
+      alert(errorMessage)
+      return
+    }
+
+    resetAddonOptionForm()
+    await loadProductsPage()
+  }
+
+  async function deleteAddonOption(option: ProductAddonOptionRow) {
+    const confirmed = window.confirm(`Delete add-on option "${option.name}"?`)
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('product_addon_options')
+      .delete()
+      .eq('id', option.id)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    if (editingAddonOptionId === option.id) {
+      resetAddonOptionForm()
+    }
+
+    await loadProductsPage()
+  }
+
   return (
     <Layout>
       <div className="mb-6">
@@ -715,74 +1087,74 @@ async function deleteCategory(category: MenuCategoryRow) {
                   Existing Categories
                 </div>
                 <div className="grid gap-3">
-  {categories.map((category) => {
-    const isEditing = editingCategoryId === category.id
+                  {categories.map((category) => {
+                    const isEditing = editingCategoryId === category.id
 
-    return (
-      <div
-        key={category.id}
-        className="rounded-2xl border border-slate-200 bg-white p-3"
-      >
-        {isEditing ? (
-          <div className="grid gap-2">
-            <input
-              value={editingCategoryName}
-              onChange={(e) => setEditingCategoryName(e.target.value)}
-              className="w-full rounded-xl border px-3 py-2 text-sm"
-            />
+                    return (
+                      <div
+                        key={category.id}
+                        className="rounded-2xl border border-slate-200 bg-white p-3"
+                      >
+                        {isEditing ? (
+                          <div className="grid gap-2">
+                            <input
+                              value={editingCategoryName}
+                              onChange={(e) => setEditingCategoryName(e.target.value)}
+                              className="w-full rounded-xl border px-3 py-2 text-sm"
+                            />
 
-            <input
-              value={editingCategorySortOrder}
-              onChange={(e) =>
-                setEditingCategorySortOrder(
-                  e.target.value.replace(/[^\d-]/g, '')
-                )
-              }
-              className="w-full rounded-xl border px-3 py-2 text-sm"
-            />
+                            <input
+                              value={editingCategorySortOrder}
+                              onChange={(e) =>
+                                setEditingCategorySortOrder(
+                                  e.target.value.replace(/[^\d-]/g, '')
+                                )
+                              }
+                              className="w-full rounded-xl border px-3 py-2 text-sm"
+                            />
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => saveCategoryEdit(category.id)}
-                className="rounded-xl bg-black px-3 py-2 text-xs text-white"
-              >
-                Save
-              </button>
-              <button
-                onClick={cancelEditCategory}
-                className="rounded-xl border px-3 py-2 text-xs"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold">
-              {category.name}
-            </span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => saveCategoryEdit(category.id)}
+                                className="rounded-xl bg-black px-3 py-2 text-xs text-white"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={cancelEditCategory}
+                                className="rounded-xl border px-3 py-2 text-xs"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold">
+                              {category.name}
+                            </span>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => startEditCategory(category)}
-                className="text-xs"
-              >
-                ✏️
-              </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => startEditCategory(category)}
+                                className="text-xs"
+                              >
+                                ✏️
+                              </button>
 
-              <button
-                onClick={() => deleteCategory(category)}
-                className="text-xs text-red-600"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  })}
-</div>
+                              <button
+                                onClick={() => deleteCategory(category)}
+                                className="text-xs text-red-600"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             ) : null}
           </div>
@@ -913,6 +1285,13 @@ async function deleteCategory(category: MenuCategoryRow) {
               >
                 {saving ? 'Saving...' : 'Create Product'}
               </button>
+
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+                <strong>Add-on tip:</strong>
+                <div className="mt-1">
+                  Create the product first, then tap <strong>Edit</strong> on that product to add add-on groups and options.
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -937,6 +1316,7 @@ async function deleteCategory(category: MenuCategoryRow) {
                 const categoryName = product.menu_category_id
                   ? categoryMap.get(product.menu_category_id)?.name || 'Unknown category'
                   : 'No category'
+                const productGroups = groupsByProductId.get(product.id) || []
 
                 return (
                   <div
@@ -1082,6 +1462,311 @@ async function deleteCategory(category: MenuCategoryRow) {
                           </div>
                         )}
 
+                        <div className="mt-2 rounded-3xl border border-violet-200 bg-violet-50 p-4">
+                          <div className="mb-3 text-lg font-extrabold text-slate-900">
+                            Add-on Groups
+                          </div>
+
+                          <div className="grid gap-3 rounded-2xl border border-violet-100 bg-white p-4">
+                            <label className="text-sm font-bold text-slate-600">
+                              Group Name
+                            </label>
+                            <input
+                              value={addonGroupName}
+                              onChange={(e) => setAddonGroupName(e.target.value)}
+                              placeholder="Example: Extra, Size, Pilihan Kuah"
+                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                            />
+
+                            <label className="text-sm font-bold text-slate-600">
+                              Selection Type
+                            </label>
+                            <select
+                              value={addonGroupSelectionType}
+                              onChange={(e) =>
+                                setAddonGroupSelectionType(
+                                  e.target.value as 'single' | 'multiple'
+                                )
+                              }
+                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                            >
+                              <option value="single">Single choice</option>
+                              <option value="multiple">Multiple choice</option>
+                            </select>
+
+                            <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={addonGroupIsRequired}
+                                onChange={(e) => setAddonGroupIsRequired(e.target.checked)}
+                              />
+                              <span>Required group</span>
+                            </label>
+
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <div>
+                                <label className="mb-1 block text-sm font-bold text-slate-600">
+                                  Min Select
+                                </label>
+                                <input
+                                  value={addonGroupMinSelect}
+                                  onChange={(e) =>
+                                    setAddonGroupMinSelect(
+                                      e.target.value.replace(/[^\d]/g, '')
+                                    )
+                                  }
+                                  placeholder="0"
+                                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="mb-1 block text-sm font-bold text-slate-600">
+                                  Max Select
+                                </label>
+                                <input
+                                  value={addonGroupMaxSelect}
+                                  onChange={(e) =>
+                                    setAddonGroupMaxSelect(
+                                      e.target.value.replace(/[^\d]/g, '')
+                                    )
+                                  }
+                                  placeholder="Optional"
+                                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => saveAddonGroup(product)}
+                                disabled={savingAddonGroup}
+                                className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {savingAddonGroup
+                                  ? 'Saving...'
+                                  : editingAddonGroupId
+                                    ? 'Save Group'
+                                    : '+ Add Group'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={resetAddonGroupForm}
+                                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          </div>
+
+                          {editingProductGroups.length > 0 ? (
+                            <div className="mt-4 grid gap-3">
+                              {editingProductGroups.map((group) => {
+                                const groupOptions = optionsByGroupId.get(group.id) || []
+
+                                return (
+                                  <div
+                                    key={group.id}
+                                    className="rounded-2xl border border-violet-100 bg-white p-4"
+                                  >
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                      <div>
+                                        <div className="text-base font-extrabold text-slate-900">
+                                          {group.name}
+                                        </div>
+                                        <div className="mt-1 flex flex-wrap gap-2">
+                                          <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
+                                            {group.selection_type === 'single'
+                                              ? 'Single choice'
+                                              : 'Multiple choice'}
+                                          </span>
+                                          <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
+                                            {group.is_required ? 'Required' : 'Optional'}
+                                          </span>
+                                          <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
+                                            Min {Number(group.min_select || 0)}
+                                          </span>
+                                          <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
+                                            Max {group.max_select ?? '—'}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => startEditAddonGroup(group)}
+                                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-900 transition hover:bg-slate-50"
+                                        >
+                                          Edit Group
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => deleteAddonGroup(group)}
+                                          className="rounded-xl border border-red-200 bg-rose-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-rose-100"
+                                        >
+                                          Delete Group
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                      <div className="mb-3 text-sm font-extrabold text-slate-900">
+                                        Add-on Options
+                                      </div>
+
+                                      <div className="grid gap-3">
+                                        <div>
+                                          <label className="mb-1 block text-sm font-bold text-slate-600">
+                                            Group
+                                          </label>
+                                          <select
+                                            value={addonOptionGroupId}
+                                            onChange={(e) => setAddonOptionGroupId(e.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                          >
+                                            <option value="">Choose group</option>
+                                            {editingProductGroups.map((groupItem) => (
+                                              <option key={groupItem.id} value={groupItem.id}>
+                                                {groupItem.name}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                          <div className="sm:col-span-2">
+                                            <label className="mb-1 block text-sm font-bold text-slate-600">
+                                              Option Name
+                                            </label>
+                                            <input
+                                              value={addonOptionName}
+                                              onChange={(e) => setAddonOptionName(e.target.value)}
+                                              placeholder="Example: Cheese"
+                                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                            />
+                                          </div>
+
+                                          <div>
+                                            <label className="mb-1 block text-sm font-bold text-slate-600">
+                                              Price Delta
+                                            </label>
+                                            <input
+                                              value={addonOptionPrice}
+                                              onChange={(e) =>
+                                                setAddonOptionPrice(
+                                                  e.target.value.replace(/[^\d.]/g, '')
+                                                )
+                                              }
+                                              placeholder="0.00"
+                                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div>
+                                          <label className="mb-1 block text-sm font-bold text-slate-600">
+                                            Sort Order
+                                          </label>
+                                          <input
+                                            value={addonOptionSortOrder}
+                                            onChange={(e) =>
+                                              setAddonOptionSortOrder(
+                                                e.target.value.replace(/[^\d]/g, '')
+                                              )
+                                            }
+                                            placeholder="0"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                          />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (!addonOptionGroupId) {
+                                                setAddonOptionGroupId(group.id)
+                                              }
+                                              saveAddonOption(product)
+                                            }}
+                                            disabled={savingAddonOption}
+                                            className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                                          >
+                                            {savingAddonOption
+                                              ? 'Saving...'
+                                              : editingAddonOptionId
+                                                ? 'Save Option'
+                                                : '+ Add Option'}
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={resetAddonOptionForm}
+                                            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50"
+                                          >
+                                            Reset
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {groupOptions.length > 0 ? (
+                                        <div className="mt-4 grid gap-2">
+                                          {groupOptions.map((option) => (
+                                            <div
+                                              key={option.id}
+                                              className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                                            >
+                                              <div>
+                                                <div className="text-sm font-bold text-slate-900">
+                                                  {option.name}
+                                                </div>
+                                                <div className="text-xs text-slate-500">
+                                                  {formatMoney(option.price_delta)} • Sort{' '}
+                                                  {Number(option.sort_order || 0)}
+                                                </div>
+                                              </div>
+
+                                              <div className="flex gap-2">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    startEditAddonOption(option)
+                                                    setAddonOptionGroupId(option.addon_group_id)
+                                                  }}
+                                                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-900 transition hover:bg-slate-50"
+                                                >
+                                                  Edit
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => deleteAddonOption(option)}
+                                                  className="rounded-xl border border-red-200 bg-rose-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-rose-100"
+                                                >
+                                                  Delete
+                                                </button>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <div className="mt-4 text-sm text-slate-500">
+                                          No options yet for this group.
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="mt-4 rounded-2xl border border-dashed border-violet-200 bg-white p-4 text-sm text-slate-500">
+                              No add-on groups yet. Create a group first, then add options under it.
+                            </div>
+                          )}
+                        </div>
+
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
@@ -1151,6 +1836,11 @@ async function deleteCategory(category: MenuCategoryRow) {
                               <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold text-slate-700">
                                 {categoryName}
                               </span>
+
+                              <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">
+                                {productGroups.length} add-on group
+                                {productGroups.length === 1 ? '' : 's'}
+                              </span>
                             </div>
 
                             {product.description && (
@@ -1158,6 +1848,49 @@ async function deleteCategory(category: MenuCategoryRow) {
                                 {product.description}
                               </p>
                             )}
+
+                            {productGroups.length > 0 ? (
+                              <div className="mt-3 grid gap-2">
+                                {productGroups.map((group) => {
+                                  const groupOptions = optionsByGroupId.get(group.id) || []
+
+                                  return (
+                                    <div
+                                      key={group.id}
+                                      className="rounded-2xl border border-violet-100 bg-violet-50 p-3"
+                                    >
+                                      <div className="text-sm font-bold text-slate-900">
+                                        {group.name}
+                                      </div>
+                                      <div className="mt-1 text-xs text-slate-500">
+                                        {group.selection_type === 'single'
+                                          ? 'Single choice'
+                                          : 'Multiple choice'}
+                                        {' • '}
+                                        {group.is_required ? 'Required' : 'Optional'}
+                                      </div>
+
+                                      {groupOptions.length > 0 ? (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                          {groupOptions.map((option) => (
+                                            <span
+                                              key={option.id}
+                                              className="inline-flex rounded-full border border-white bg-white px-3 py-1 text-xs font-bold text-violet-700"
+                                            >
+                                              {option.name} ({formatMoney(option.price_delta)})
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <div className="mt-2 text-xs text-slate-500">
+                                          No options yet
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
 
