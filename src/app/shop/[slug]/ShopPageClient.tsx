@@ -271,7 +271,7 @@ export default function ShopPageClient({
   productAddons?: ProductAddonsMap
 }) {
   
-  const [cart, setCart] = useState<Record<string, number>>({})
+  const [cart, setCart] = useState<CartLine[]>([])
   const [gallery, setGallery] = useState<GalleryState>({
     isOpen: false,
     images: [],
@@ -292,6 +292,49 @@ export default function ShopPageClient({
   function productHasAddons(productId: string) {
     return getProductAddonGroups(productId).length > 0
   }
+
+  function addToCartWithAddons(
+  product: ProductRow,
+  selections: Record<string, string[]>,
+  groups: ProductAddonGroup[],
+  note: string
+) {
+  const selectedAddons: CartLine['addons'] = []
+
+  for (const group of groups) {
+    const selectedIds = selections[group.id] || []
+
+    for (const optId of selectedIds) {
+      const opt = group.options.find((o) => o.id === optId)
+      if (!opt) continue
+
+      selectedAddons.push({
+        group_id: group.id,
+        group_name: group.name,
+        option_id: opt.id,
+        option_name: opt.name,
+        price: Number(opt.price_delta || 0),
+      })
+    }
+  }
+
+  const addonTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0)
+  const unitPrice = product.price + addonTotal
+
+  const newLine: CartLine = {
+    id: crypto.randomUUID(),
+    product_id: product.id,
+    name: product.name,
+    base_price: product.price,
+    quantity: 1,
+    addons: selectedAddons,
+    note,
+    unit_price: unitPrice,
+    line_total: unitPrice,
+  }
+
+  setCart((prev) => [...prev, newLine])
+}
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -387,11 +430,12 @@ export default function ShopPageClient({
   }
 
   // ✅ kalau tiada add-on → normal flow
-  setCart((prev) => ({
-    ...prev,
-    [product.id]: (prev[product.id] || 0) + 1,
-  }))
-}
+addToCartWithAddons(
+  addonModal.product,
+  addonModal.selections,
+  addonModal.groups,
+  addonModal.note
+)
 
   function decrease(productId: string) {
     setCart((prev) => {
@@ -466,21 +510,11 @@ export default function ShopPageClient({
     )
   }, [products, hasCategoryFeature, activeCategoryId])
 
-  const cartItems = useMemo(() => {
-    return products
-      .filter((product) => (cart[product.id] || 0) > 0)
-      .map((product) => ({
-        product_id: product.id,
-        quantity: cart[product.id],
-        name: product.name,
-        price: product.price,
-        line_total: product.price * cart[product.id],
-      }))
-  }, [cart, products])
+  const cartItems = cart
 
   const grandTotal = useMemo(() => {
-    return cartItems.reduce((sum, item) => sum + item.line_total, 0)
-  }, [cartItems])
+  return cart.reduce((sum, item) => sum + item.line_total, 0)
+}, [cart])
 
   const sellerName = seller.store_name || 'Shop'
 
@@ -735,10 +769,26 @@ export default function ShopPageClient({
             <>
               <div style={summaryList}>
                 {cartItems.map((item) => (
-                  <div key={item.product_id} style={summaryRow}>
+                  <div key={item.id}> style={summaryRow}>
                     <div>
                       {item.name} × {item.quantity}
-                    </div>
+
+                        {item.addons.length > 0 && (
+                          <div style={{ fontSize: 12, color: '#64748b' }}>
+                            {item.addons.map((a) => (
+                              <div key={a.option_id}>
+                                + {a.option_name} (RM {a.price})
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {item.note && (
+                          <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                            Note: {item.note}
+                          </div>
+                        )}
+                      </div>
                     <strong>RM {item.line_total.toFixed(2)}</strong>
                   </div>
                 ))}
