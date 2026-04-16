@@ -15,6 +15,25 @@ type RequestItem = {
   quantity: number
 }
 
+type CheckoutAddon = {
+  group_id?: string
+  group_name?: string
+  option_id?: string
+  option_name?: string
+  price?: number
+}
+
+type RequestCheckoutItem = {
+  product_id: string
+  quantity: number
+  name?: string
+  base_price?: number
+  unit_price?: number
+  line_total?: number
+  note?: string
+  addons?: CheckoutAddon[]
+}
+
 type ProductRow = {
   id: string
   name: string
@@ -34,6 +53,15 @@ type ValidItem = {
   quantity: number
   unit_price: number
   line_total: number
+  base_price: number
+  addons: {
+    group_id: string
+    group_name: string
+    option_id: string
+    option_name: string
+    price: number
+  }[]
+  note: string
 }
 
 type BayarcashResponse = {
@@ -321,6 +349,51 @@ function getCurrentMalaysiaMinutes() {
   return hour * 60 + minute
 }
 
+function normalizeCheckoutItems(
+  checkoutItems: RequestCheckoutItem[] | undefined,
+  fallbackItems: RequestItem[]
+) {
+  if (Array.isArray(checkoutItems) && checkoutItems.length > 0) {
+    return checkoutItems
+      .filter((item) => item && item.product_id)
+      .map((item) => ({
+        product_id: String(item.product_id),
+        quantity: Math.max(1, Math.floor(Number(item.quantity || 1))),
+        name: item.name ? String(item.name) : '',
+        base_price: Number(item.base_price || 0),
+        unit_price: Number(item.unit_price || 0),
+        line_total: Number(item.line_total || 0),
+        note: item.note ? String(item.note) : '',
+        addons: Array.isArray(item.addons)
+          ? item.addons.map((addon) => ({
+              group_id: String(addon.group_id || ''),
+              group_name: String(addon.group_name || ''),
+              option_id: String(addon.option_id || ''),
+              option_name: String(addon.option_name || ''),
+              price: Number(addon.price || 0),
+            }))
+          : [],
+      }))
+  }
+
+  return fallbackItems.map((item) => ({
+    product_id: String(item.product_id),
+    quantity: Math.max(1, Math.floor(Number(item.quantity || 1))),
+    name: '',
+    base_price: 0,
+    unit_price: 0,
+    line_total: 0,
+    note: '',
+    addons: [] as {
+      group_id: string
+      group_name: string
+      option_id: string
+      option_name: string
+      price: number
+    }[],
+  }))
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -331,8 +404,10 @@ export async function POST(req: NextRequest) {
     const email = body.email as string
     const phone = body.phone as string
     const items = (body.items || []) as RequestItem[]
+    const checkoutItems = (body.checkoutItems || []) as RequestCheckoutItem[]
     const delivery = (body.delivery || null) as DeliveryPayload
 
+    const requestedSubtotal = Number(body.subtotal || 0)
     const deliveryRequired = Boolean(body.deliveryRequired)
     const deliveryMode = (
       body.deliveryMode || 'pay_rider_separately'
@@ -430,7 +505,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const productIds = items.map((item) => item.product_id)
+    const normalizedCheckoutItems = normalizeCheckoutItems(checkoutItems, items)
+    const productIds = normalizedCheckoutItems.map((item) => item.product_id)
 
     const { data: products, error: productError } = await supabase
       .from('products')
@@ -483,9 +559,9 @@ export async function POST(req: NextRequest) {
 
     const validItems: ValidItem[] = []
 
-    for (const item of items) {
+    for (const item of normalizedCheckoutItems) {
       const product = productMap.get(item.product_id)
-      const qty = Math.floor(item.quantity)
+      const qty = Math.max(1, Math.floor(Number(item.quantity || 1)))
 
       if (!product || !product.is_active || qty <= 0) continue
 
@@ -504,11 +580,46 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      const safeAddons = Array.isArray(item.addons)
+        ? item.addons.map((addon) => ({
+            group_id: String(addon.group_id || ''),
+            group_name: String(addon.group_name || ''),
+            option_id: String(addon.option_id || ''),
+            option_name: String(addon.option_name || ''),
+            price: Number(addon.price || 0),
+          }))
+        : []
+
+      const addonTotal = safeAddons.reduce(
+        (sum, addon) => sum + Number(addon.price || 0),
+        0
+      )
+
+      const basePrice =
+        Number.isFinite(Number(item.base_price)) && Number(item.base_price) >= 0
+          ? Number(item.base_price)
+          : Number(product.price || 0)
+
+      const fallbackUnitPrice = roundMoney(basePrice + addonTotal)
+
+      const unitPrice =
+        Number.isFinite(Number(item.unit_price)) && Number(item.unit_price) > 0
+          ? Number(item.unit_price)
+          : fallbackUnitPrice
+
+      const lineTotal =
+        Number.isFinite(Number(item.line_total)) && Number(item.line_total) > 0
+          ? roundMoney(Number(item.line_total))
+          : roundMoney(unitPrice * qty)
+
       validItems.push({
         product,
         quantity: qty,
-        unit_price: Number(product.price),
-        line_total: Number(product.price) * qty,
+        unit_price: unitPrice,
+        line_total: lineTotal,
+        base_price: basePrice,
+        addons: safeAddons,
+        note: item.note ? String(item.note) : '',
       })
     }
 
@@ -596,9 +707,12 @@ export async function POST(req: NextRequest) {
       product_id: item.product.id,
       product_name: item.product.name,
       product_slug: item.product.slug,
+      base_price: item.base_price,
       unit_price: item.unit_price,
       quantity: item.quantity,
       line_total: item.line_total,
+      addons: item.addons,
+      note: item.note,
     }))
 
     const deliveryInfoPayload = {
@@ -639,11 +753,15 @@ export async function POST(req: NextRequest) {
 
         delivery_info: deliveryInfoPayload,
         items: itemsSnapshot,
+        checkout_items: itemsSnapshot,
 
         quantity: totalQuantity,
         amount,
         total_amount: totalAmount,
         subtotal,
+        requested_subtotal: Number.isFinite(requestedSubtotal)
+          ? requestedSubtotal
+          : subtotal,
         gateway_fee: gatewayFee,
         platform_fee: platformFee,
         seller_net: sellerNet,
@@ -688,6 +806,8 @@ export async function POST(req: NextRequest) {
       unit_price: item.unit_price.toFixed(2),
       quantity: item.quantity,
       line_total: item.line_total.toFixed(2),
+      addons: item.addons,
+      note: item.note,
     }))
 
     const { error: itemInsertError } = await supabase

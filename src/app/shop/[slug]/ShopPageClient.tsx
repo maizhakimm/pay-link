@@ -3,6 +3,37 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ShopPayButton from './ShopPayButton'
 
+type ProductAddonOption = {
+  id: string
+  addon_group_id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  price_delta: number
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+type ProductAddonGroup = {
+  id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  selection_type: 'single' | 'multiple'
+  is_required: boolean
+  min_select: number
+  max_select: number | null
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+  options: ProductAddonOption[]
+}
+
+type ProductAddonsMap = Record<string, ProductAddonGroup[]>
+
 type SellerProfile = {
   id: string
   store_name: string | null
@@ -64,6 +95,26 @@ type GalleryState = {
   images: string[]
   productName: string
   currentIndex: number
+}
+
+type CartAddon = {
+  group_id: string
+  group_name: string
+  option_id: string
+  option_name: string
+  price: number
+}
+
+type CartLine = {
+  id: string
+  product_id: string
+  name: string
+  base_price: number
+  quantity: number
+  addons: CartAddon[]
+  note?: string
+  unit_price: number
+  line_total: number
 }
 
 function getImageUrl(path?: string | null) {
@@ -221,25 +272,54 @@ function getShopAvailability(seller: SellerProfile) {
   return {
     isOpen,
     label: isOpen ? 'Open Now' : 'Closed',
-    detail: '', // 🔥 REMOVE ayat panjang
+    detail: '',
     timeRange,
   }
 }
 
+function normalizeNote(note?: string) {
+  return (note || '').trim()
+}
 
+function sortAddons(addons: CartAddon[]) {
+  return [...addons].sort((a, b) => {
+    const keyA = `${a.group_id}|${a.option_id}|${a.price}`
+    const keyB = `${b.group_id}|${b.option_id}|${b.price}`
+    return keyA.localeCompare(keyB)
+  })
+}
+
+function isSameAddons(a: CartAddon[], b: CartAddon[]) {
+  if (a.length !== b.length) return false
+
+  const sortedA = sortAddons(a)
+  const sortedB = sortAddons(b)
+
+  return JSON.stringify(sortedA) === JSON.stringify(sortedB)
+}
+
+function isSameCartLine(a: CartLine, b: CartLine) {
+  return (
+    a.product_id === b.product_id &&
+    normalizeNote(a.note) === normalizeNote(b.note) &&
+    isSameAddons(a.addons || [], b.addons || [])
+  )
+}
 
 export default function ShopPageClient({
   seller,
   products,
   shopSlug,
   categories = [],
+  productAddons = {},
 }: {
   seller: SellerProfile
   products: ProductRow[]
   shopSlug: string
   categories?: MenuCategory[]
+  productAddons?: ProductAddonsMap
 }) {
-  const [cart, setCart] = useState<Record<string, number>>({})
+  const [cart, setCart] = useState<CartLine[]>([])
   const [gallery, setGallery] = useState<GalleryState>({
     isOpen: false,
     images: [],
@@ -247,11 +327,260 @@ export default function ShopPageClient({
     currentIndex: 0,
   })
 
+  const [addonModal, setAddonModal] = useState<{
+    product: ProductRow | null
+    groups: ProductAddonGroup[]
+    selections: Record<string, string[]>
+    note: string
+    isOpen: boolean
+    error: string
+    editingCartLineId: string | null
+  }>({
+    product: null,
+    groups: [],
+    selections: {},
+    note: '',
+    isOpen: false,
+    error: '',
+    editingCartLineId: null,
+  })
+
   const productListRef = useRef<HTMLDivElement | null>(null)
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
   const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
+
+  function getProductAddonGroups(productId: string) {
+    return productAddons[productId] || []
+  }
+
+  function buildCartLine(
+    product: ProductRow,
+    selections: Record<string, string[]>,
+    groups: ProductAddonGroup[],
+    note: string,
+    quantity = 1
+  ): CartLine {
+    const selectedAddons: CartAddon[] = []
+
+    for (const group of groups) {
+      const selectedIds = selections[group.id] || []
+
+      for (const optId of selectedIds) {
+        const opt = group.options.find((o) => o.id === optId)
+        if (!opt) continue
+
+        selectedAddons.push({
+          group_id: group.id,
+          group_name: group.name,
+          option_id: opt.id,
+          option_name: opt.name,
+          price: Number(opt.price_delta || 0),
+        })
+      }
+    }
+
+    const addonTotal = selectedAddons.reduce((sum, addon) => sum + addon.price, 0)
+    const unitPrice = Number(product.price) + addonTotal
+
+    return {
+      id:
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${product.id}-${Date.now()}`,
+      product_id: product.id,
+      name: product.name,
+      base_price: Number(product.price),
+      quantity,
+      addons: selectedAddons,
+      note: normalizeNote(note),
+      unit_price: unitPrice,
+      line_total: unitPrice * quantity,
+    }
+  }
+
+  function addOrMergeCartLine(newLine: CartLine) {
+    setCart((prev) => {
+      const index = prev.findIndex((item) => isSameCartLine(item, newLine))
+
+      if (index === -1) {
+        return [...prev, newLine]
+      }
+
+      const updated = [...prev]
+      const existing = updated[index]
+      const nextQuantity = existing.quantity + newLine.quantity
+
+      updated[index] = {
+        ...existing,
+        quantity: nextQuantity,
+        line_total: existing.unit_price * nextQuantity,
+      }
+
+      return updated
+    })
+  }
+
+  function updateCartLine(updatedLine: CartLine, originalLineId: string) {
+    setCart((prev) => {
+      const withoutOriginal = prev.filter((item) => item.id !== originalLineId)
+      const mergeIndex = withoutOriginal.findIndex((item) =>
+        isSameCartLine(item, updatedLine)
+      )
+
+      if (mergeIndex === -1) {
+        return [...withoutOriginal, { ...updatedLine, id: originalLineId }]
+      }
+
+      const merged = [...withoutOriginal]
+      const existing = merged[mergeIndex]
+      const nextQuantity = existing.quantity + updatedLine.quantity
+
+      merged[mergeIndex] = {
+        ...existing,
+        quantity: nextQuantity,
+        line_total: existing.unit_price * nextQuantity,
+      }
+
+      return merged
+    })
+  }
+
+  function addToCartWithAddons(
+    product: ProductRow,
+    selections: Record<string, string[]>,
+    groups: ProductAddonGroup[],
+    note: string
+  ) {
+    const newLine = buildCartLine(product, selections, groups, note)
+    addOrMergeCartLine(newLine)
+  }
+
+  function validateAddonSelections(
+    groups: ProductAddonGroup[],
+    selections: Record<string, string[]>
+  ) {
+    for (const group of groups) {
+      const selectedIds = selections[group.id] || []
+      const selectedCount = selectedIds.length
+      const minSelect = Number(group.min_select || 0)
+      const maxSelect =
+        group.max_select === null || group.max_select === undefined
+          ? null
+          : Number(group.max_select)
+
+      if (group.is_required && selectedCount === 0) {
+        return `Please select at least one option for "${group.name}".`
+      }
+
+      if (selectedCount < minSelect) {
+        return `Please select at least ${minSelect} option${
+          minSelect > 1 ? 's' : ''
+        } for "${group.name}".`
+      }
+
+      if (maxSelect !== null && selectedCount > maxSelect) {
+        return `You can only select up to ${maxSelect} option${
+          maxSelect > 1 ? 's' : ''
+        } for "${group.name}".`
+      }
+
+      if (group.selection_type === 'single' && selectedCount > 1) {
+        return `Only one option is allowed for "${group.name}".`
+      }
+    }
+
+    return ''
+  }
+
+  function openAddonModalForNew(product: ProductRow) {
+    setAddonModal({
+      product,
+      groups: getProductAddonGroups(product.id),
+      selections: {},
+      note: '',
+      isOpen: true,
+      error: '',
+      editingCartLineId: null,
+    })
+  }
+
+  function openAddonModalForEdit(cartLine: CartLine) {
+    const product = products.find((item) => item.id === cartLine.product_id)
+    if (!product) return
+
+    const groups = getProductAddonGroups(product.id)
+    const selections: Record<string, string[]> = {}
+
+    for (const addon of cartLine.addons || []) {
+      if (!selections[addon.group_id]) {
+        selections[addon.group_id] = []
+      }
+      selections[addon.group_id].push(addon.option_id)
+    }
+
+    setAddonModal({
+      product,
+      groups,
+      selections,
+      note: cartLine.note || '',
+      isOpen: true,
+      error: '',
+      editingCartLineId: cartLine.id,
+    })
+  }
+
+  function closeAddonModal() {
+    setAddonModal({
+      product: null,
+      groups: [],
+      selections: {},
+      note: '',
+      isOpen: false,
+      error: '',
+      editingCartLineId: null,
+    })
+  }
+
+  function incrementCartLine(lineId: string) {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === lineId
+          ? {
+              ...item,
+              quantity: item.quantity + 1,
+              line_total: item.unit_price * (item.quantity + 1),
+            }
+          : item
+      )
+    )
+  }
+
+  function decrementCartLine(lineId: string) {
+    setCart((prev) => {
+      const current = prev.find((item) => item.id === lineId)
+      if (!current) return prev
+
+      if (current.quantity <= 1) {
+        return prev.filter((item) => item.id !== lineId)
+      }
+
+      return prev.map((item) =>
+        item.id === lineId
+          ? {
+              ...item,
+              quantity: item.quantity - 1,
+              line_total: item.unit_price * (item.quantity - 1),
+            }
+          : item
+      )
+    })
+  }
+
+  function removeCartLine(lineId: string) {
+    setCart((prev) => prev.filter((item) => item.id !== lineId))
+  }
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -318,26 +647,39 @@ export default function ShopPageClient({
     if (!isShopOpen) return
     if (product.sold_out) return
 
-    setCart((prev) => ({
-      ...prev,
-      [product.id]: (prev[product.id] || 0) + 1,
-    }))
+    const addonGroups = getProductAddonGroups(product.id)
+
+    if (addonGroups.length > 0) {
+      openAddonModalForNew(product)
+      return
+    }
+
+    addToCartWithAddons(product, {}, [], '')
   }
 
   function decrease(productId: string) {
     setCart((prev) => {
-      const current = prev[productId] || 0
+      const index = [...prev]
+        .map((item) => item.product_id)
+        .lastIndexOf(productId)
 
-      if (current <= 1) {
-        const next = { ...prev }
-        delete next[productId]
+      if (index === -1) return prev
+
+      const next = [...prev]
+      const currentLine = next[index]
+
+      if (currentLine.quantity <= 1) {
+        next.splice(index, 1)
         return next
       }
 
-      return {
-        ...prev,
-        [productId]: current - 1,
+      next[index] = {
+        ...currentLine,
+        quantity: currentLine.quantity - 1,
+        line_total: currentLine.unit_price * (currentLine.quantity - 1),
       }
+
+      return next
     })
   }
 
@@ -397,21 +739,11 @@ export default function ShopPageClient({
     )
   }, [products, hasCategoryFeature, activeCategoryId])
 
-  const cartItems = useMemo(() => {
-    return products
-      .filter((product) => (cart[product.id] || 0) > 0)
-      .map((product) => ({
-        product_id: product.id,
-        quantity: cart[product.id],
-        name: product.name,
-        price: product.price,
-        line_total: product.price * cart[product.id],
-      }))
-  }, [cart, products])
+  const cartItems = cart
 
   const grandTotal = useMemo(() => {
-    return cartItems.reduce((sum, item) => sum + item.line_total, 0)
-  }, [cartItems])
+    return cart.reduce((sum, item) => sum + item.line_total, 0)
+  }, [cart])
 
   const sellerName = seller.store_name || 'Shop'
 
@@ -530,9 +862,15 @@ export default function ShopPageClient({
             <div style={productGrid}>
               {visibleProducts.map((product) => {
                 const image = getFirstImage(product)
-                const qty = cart[product.id] || 0
+                const qty = cart.reduce(
+                  (sum, item) =>
+                    item.product_id === product.id ? sum + item.quantity : sum,
+                  0
+                )
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
                 const allImages = getProductImages(product)
+                const addonGroups = getProductAddonGroups(product.id)
+                const hasAddons = addonGroups.length > 0
 
                 return (
                   <div key={product.id} style={productCard}>
@@ -553,6 +891,19 @@ export default function ShopPageClient({
                         <div style={productDesc}>
                           {product.description || 'Tiada deskripsi.'}
                         </div>
+
+                        {hasAddons ? (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: '#7c3aed',
+                              marginBottom: 8,
+                            }}
+                          >
+                            Add-on available
+                          </div>
+                        ) : null}
 
                         <div style={qtyWrap}>
                           <div style={qtyRow}>
@@ -651,23 +1002,87 @@ export default function ShopPageClient({
             <>
               <div style={summaryList}>
                 {cartItems.map((item) => (
-                  <div key={item.product_id} style={summaryRow}>
-                    <div>
-                      {item.name} × {item.quantity}
+                  <div key={item.id} style={summaryCard}>
+                    <button
+                      type="button"
+                      onClick={() => openAddonModalForEdit(item)}
+                      style={summaryRowButton}
+                    >
+                      <div style={summaryRow}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>
+                            {item.name} × {item.quantity}
+                          </div>
+
+                          {item.addons.length > 0 && (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: '#64748b',
+                                marginTop: 4,
+                              }}
+                            >
+                              {item.addons.map((a) => (
+                                <div key={`${item.id}-${a.option_id}`}>
+                                  + {a.option_name} (RM {a.price.toFixed(2)})
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {item.note ? (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: '#94a3b8',
+                                marginTop: 4,
+                              }}
+                            >
+                              Note: {item.note}
+                            </div>
+                          ) : null}
+
+                          <div style={summaryEditHint}>Tap details to edit</div>
+                        </div>
+                        <strong>RM {item.line_total.toFixed(2)}</strong>
+                      </div>
+                    </button>
+
+                    <div style={summaryActions}>
+                      <div style={lineQtyControls}>
+                        <button
+                          type="button"
+                          onClick={() => decrementCartLine(item.id)}
+                          style={lineQtyBtn}
+                        >
+                          -
+                        </button>
+                        <span style={lineQtyValue}>{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => incrementCartLine(item.id)}
+                          style={lineQtyBtn}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeCartLine(item.id)}
+                        style={deleteLineBtn}
+                      >
+                        Delete
+                      </button>
                     </div>
-                    <strong>RM {item.line_total.toFixed(2)}</strong>
                   </div>
                 ))}
               </div>
 
-                          
               <ShopPayButton
                 sellerId={seller.id}
                 shopSlug={shopSlug}
-                items={cartItems.map((item) => ({
-                product_id: item.product_id,
-                quantity: item.quantity,
-              }))}
+                items={cartItems}
                 total={grandTotal}
                 deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
                 deliveryFee={seller.delivery_fee || 0}
@@ -759,6 +1174,176 @@ export default function ShopPageClient({
                 ))}
               </div>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {addonModal.isOpen && addonModal.product ? (
+        <div style={modalOverlay}>
+          <div style={modalBox}>
+            <h3 style={{ marginBottom: 10 }}>{addonModal.product.name}</h3>
+
+            {addonModal.error ? (
+              <div style={modalErrorBox}>{addonModal.error}</div>
+            ) : null}
+
+            {addonModal.groups.map((group) => {
+              const selectedCount = (addonModal.selections[group.id] || []).length
+
+              return (
+                <div key={group.id} style={{ marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                    {group.name}
+                    {group.is_required ? (
+                      <span style={requiredMark}> *</span>
+                    ) : null}
+                  </div>
+
+                  <div style={groupMetaText}>
+                    {group.selection_type === 'single'
+                      ? 'Choose 1'
+                      : `Choose ${Number(group.min_select || 0)} or more`}
+                    {group.max_select !== null && group.max_select !== undefined
+                      ? ` • Max ${group.max_select}`
+                      : ''}
+                    {selectedCount > 0 ? ` • Selected ${selectedCount}` : ''}
+                  </div>
+
+                  {group.options.map((opt) => {
+                    const selected =
+                      addonModal.selections[group.id]?.includes(opt.id) || false
+
+                    return (
+                      <label key={opt.id} style={optionRow}>
+                        <input
+                          type={
+                            group.selection_type === 'single'
+                              ? 'radio'
+                              : 'checkbox'
+                          }
+                          checked={selected}
+                          onChange={() => {
+                            setAddonModal((prev) => {
+                              const current = prev.selections[group.id] || []
+
+                              let updated: string[] = []
+
+                              if (group.selection_type === 'single') {
+                                updated = [opt.id]
+                              } else {
+                                if (current.includes(opt.id)) {
+                                  updated = current.filter((id) => id !== opt.id)
+                                } else {
+                                  const maxSelect =
+                                    group.max_select === null ||
+                                    group.max_select === undefined
+                                      ? null
+                                      : Number(group.max_select)
+
+                                  if (
+                                    maxSelect !== null &&
+                                    current.length >= maxSelect
+                                  ) {
+                                    return {
+                                      ...prev,
+                                      error: `You can only select up to ${maxSelect} option${
+                                        maxSelect > 1 ? 's' : ''
+                                      } for "${group.name}".`,
+                                    }
+                                  }
+
+                                  updated = [...current, opt.id]
+                                }
+                              }
+
+                              return {
+                                ...prev,
+                                error: '',
+                                selections: {
+                                  ...prev.selections,
+                                  [group.id]: updated,
+                                },
+                              }
+                            })
+                          }}
+                        />
+                        {opt.name} (+RM {opt.price_delta})
+                      </label>
+                    )
+                  })}
+                </div>
+              )
+            })}
+
+            <textarea
+              placeholder="Note (optional)"
+              value={addonModal.note}
+              onChange={(e) =>
+                setAddonModal((prev) => ({
+                  ...prev,
+                  note: e.target.value,
+                  error: '',
+                }))
+              }
+              style={noteBox}
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!addonModal.product) return
+
+                const validationError = validateAddonSelections(
+                  addonModal.groups,
+                  addonModal.selections
+                )
+
+                if (validationError) {
+                  setAddonModal((prev) => ({
+                    ...prev,
+                    error: validationError,
+                  }))
+                  return
+                }
+
+                if (addonModal.editingCartLineId) {
+                  const existingLine = cart.find(
+                    (item) => item.id === addonModal.editingCartLineId
+                  )
+
+                  if (!existingLine) {
+                    closeAddonModal()
+                    return
+                  }
+
+                  const updatedLine = buildCartLine(
+                    addonModal.product,
+                    addonModal.selections,
+                    addonModal.groups,
+                    addonModal.note,
+                    existingLine.quantity
+                  )
+
+                  updateCartLine(updatedLine, existingLine.id)
+                } else {
+                  addToCartWithAddons(
+                    addonModal.product,
+                    addonModal.selections,
+                    addonModal.groups,
+                    addonModal.note
+                  )
+                }
+
+                closeAddonModal()
+              }}
+              style={confirmBtn}
+            >
+              {addonModal.editingCartLineId ? 'Update Order' : 'Add to Order'}
+            </button>
+
+            <button type="button" onClick={closeAddonModal} style={cancelBtn}>
+              Cancel
+            </button>
           </div>
         </div>
       ) : null}
@@ -904,45 +1489,17 @@ const noticeBox = {
   lineHeight: 1.6,
 } as const
 
-const deliveryBox = {
-  marginTop: 12,
-  border: '1px solid #dbeafe',
-  background: '#f8fbff',
-  borderRadius: 14,
-  padding: '12px 14px',
-} as const
-
-const deliveryTitle = {
-  fontSize: 13,
-  fontWeight: 800,
-  color: '#1d4ed8',
-  marginBottom: 6,
-} as const
-
-const deliveryText = {
-  fontSize: 14,
-  color: '#0f172a',
-  lineHeight: 1.6,
-} as const
-
-const deliveryMeta = {
-  fontSize: 12,
-  color: '#64748b',
-  lineHeight: 1.6,
-  marginTop: 6,
-} as const
-
 const stickyTabWrap = {
   position: 'sticky' as const,
-  top: 0, // 🔥 rapat ke atas (buang gap)
+  top: 0,
   zIndex: 50,
   marginBottom: 10,
 } as const
 
 const tabShell = {
-  padding: '6px 0', // 🔥 no left/right padding
-  borderRadius: 0, // 🔥 buang rounded bila sticky
-  background: '#f8fafc', // 🔥 solid supaya tak nampak belakang
+  padding: '6px 0',
+  borderRadius: 0,
+  background: '#f8fafc',
   boxShadow: '0 6px 12px rgba(15,23,42,0.06)',
   borderBottom: '1px solid #e2e8f0',
 } as const
@@ -1163,34 +1720,6 @@ const checkoutSub = {
   fontSize: 14,
 } as const
 
-const checkoutDeliveryBox = {
-  padding: 12,
-  borderRadius: 14,
-  background: '#f8fbff',
-  border: '1px solid #dbeafe',
-  marginBottom: 14,
-} as const
-
-const checkoutDeliveryTitle = {
-  fontSize: 13,
-  fontWeight: 800,
-  color: '#1d4ed8',
-  marginBottom: 6,
-} as const
-
-const checkoutDeliveryText = {
-  fontSize: 14,
-  color: '#0f172a',
-  lineHeight: 1.6,
-} as const
-
-const checkoutDeliveryMeta = {
-  fontSize: 12,
-  color: '#64748b',
-  lineHeight: 1.6,
-  marginTop: 6,
-} as const
-
 const emptyCartBox = {
   padding: 14,
   borderRadius: 14,
@@ -1225,15 +1754,87 @@ const summaryList = {
   marginBottom: 14,
 } as const
 
+const summaryCard = {
+  borderRadius: 12,
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  overflow: 'hidden',
+} as const
+
+const summaryRowButton = {
+  width: '100%',
+  padding: 0,
+  margin: 0,
+  border: 'none',
+  background: 'transparent',
+  textAlign: 'left' as const,
+  cursor: 'pointer',
+} as const
+
 const summaryRow = {
   display: 'flex',
   justifyContent: 'space-between',
   gap: 12,
   padding: '10px 12px',
-  borderRadius: 12,
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
   color: '#0f172a',
+} as const
+
+const summaryActions = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  padding: '10px 12px',
+  borderTop: '1px solid #e2e8f0',
+  background: '#fff',
+} as const
+
+const lineQtyControls = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+} as const
+
+const lineQtyBtn = {
+  width: 30,
+  height: 30,
+  borderRadius: '999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  cursor: 'pointer',
+  fontWeight: 700,
+  fontSize: 16,
+  color: '#0f172a',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 0,
+} as const
+
+const lineQtyValue = {
+  minWidth: 18,
+  textAlign: 'center' as const,
+  fontSize: 13,
+  fontWeight: 700,
+  color: '#0f172a',
+} as const
+
+const deleteLineBtn = {
+  border: '1px solid #fecaca',
+  background: '#fef2f2',
+  color: '#b91c1c',
+  borderRadius: 10,
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: 'pointer',
+} as const
+
+const summaryEditHint = {
+  marginTop: 6,
+  fontSize: 11,
+  color: '#7c3aed',
+  fontWeight: 700,
 } as const
 
 const galleryOverlay = {
@@ -1351,4 +1952,79 @@ const galleryDot = {
   background: '#fff',
   cursor: 'pointer',
   transition: 'all 0.2s ease',
+} as const
+
+const modalOverlay = {
+  position: 'fixed' as const,
+  inset: 0,
+  background: 'rgba(0,0,0,0.5)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 999,
+} as const
+
+const modalBox = {
+  background: '#fff',
+  padding: 16,
+  borderRadius: 16,
+  width: '90%',
+  maxWidth: 400,
+} as const
+
+const optionRow = {
+  display: 'flex',
+  gap: 8,
+  marginBottom: 6,
+  fontSize: 14,
+} as const
+
+const noteBox = {
+  width: '100%',
+  marginTop: 10,
+  padding: 8,
+  borderRadius: 8,
+  border: '1px solid #ccc',
+} as const
+
+const confirmBtn = {
+  marginTop: 12,
+  width: '100%',
+  padding: 10,
+  background: '#0f172a',
+  color: '#fff',
+  borderRadius: 10,
+  border: 'none',
+  fontWeight: 700,
+} as const
+
+const cancelBtn = {
+  marginTop: 6,
+  width: '100%',
+  padding: 10,
+  background: '#e5e7eb',
+  borderRadius: 10,
+  border: 'none',
+} as const
+
+const modalErrorBox = {
+  marginBottom: 12,
+  padding: '10px 12px',
+  borderRadius: 10,
+  background: '#fef2f2',
+  border: '1px solid #fecaca',
+  color: '#b91c1c',
+  fontSize: 13,
+  lineHeight: 1.5,
+} as const
+
+const requiredMark = {
+  color: '#dc2626',
+  fontWeight: 800,
+} as const
+
+const groupMetaText = {
+  fontSize: 12,
+  color: '#64748b',
+  marginBottom: 8,
 } as const

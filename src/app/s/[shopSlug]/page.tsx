@@ -68,6 +68,37 @@ type ProductRow = {
   menu_category_id?: string | null
 }
 
+type ProductAddonGroup = {
+  id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  selection_type: 'single' | 'multiple'
+  is_required: boolean
+  min_select: number
+  max_select: number | null
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+  options: ProductAddonOption[]
+}
+
+type ProductAddonOption = {
+  id: string
+  addon_group_id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  price_delta: number
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+type ProductAddonsMap = Record<string, ProductAddonGroup[]>
+
 type PageProps = {
   params: {
     shopSlug: string
@@ -467,6 +498,9 @@ export default async function Page({ params }: PageProps) {
     )
   }
 
+  const productRows = (products || []) as ProductRow[]
+  const productIds = productRows.map((item) => item.id)
+
   const { data: categories, error: categoryError } = await supabase
     .from('menu_categories')
     .select('id, name, sort_order, is_active')
@@ -486,12 +520,130 @@ export default async function Page({ params }: PageProps) {
     )
   }
 
+  let productAddons: ProductAddonsMap = {}
+
+  if (productIds.length > 0) {
+    const { data: addonGroups, error: addonGroupsError } = await supabase
+      .from('product_addon_groups')
+      .select(
+        `
+          id,
+          product_id,
+          seller_profile_id,
+          name,
+          selection_type,
+          is_required,
+          min_select,
+          max_select,
+          sort_order,
+          is_active,
+          created_at,
+          updated_at
+        `
+      )
+      .eq('seller_profile_id', seller.id)
+      .eq('is_active', true)
+      .in('product_id', productIds)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+
+    if (addonGroupsError) {
+      return (
+        <main style={errorMain}>
+          <div style={errorBox}>
+            <h2 style={errorTitle}>Unable to load add-on groups</h2>
+            <p style={errorText}>{addonGroupsError.message}</p>
+          </div>
+        </main>
+      )
+    }
+
+    const addonGroupRows = (addonGroups || []) as Omit<ProductAddonGroup, 'options'>[]
+
+    const addonGroupIds = addonGroupRows.map((group) => group.id)
+
+    let addonOptionsRows: ProductAddonOption[] = []
+
+    if (addonGroupIds.length > 0) {
+      const { data: addonOptions, error: addonOptionsError } = await supabase
+        .from('product_addon_options')
+        .select(
+          `
+            id,
+            addon_group_id,
+            product_id,
+            seller_profile_id,
+            name,
+            price_delta,
+            sort_order,
+            is_active,
+            created_at,
+            updated_at
+          `
+        )
+        .eq('seller_profile_id', seller.id)
+        .eq('is_active', true)
+        .in('addon_group_id', addonGroupIds)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+
+      if (addonOptionsError) {
+        return (
+          <main style={errorMain}>
+            <div style={errorBox}>
+              <h2 style={errorTitle}>Unable to load add-on options</h2>
+              <p style={errorText}>{addonOptionsError.message}</p>
+            </div>
+          </main>
+        )
+      }
+
+      addonOptionsRows = (addonOptions || []) as ProductAddonOption[]
+    }
+
+    const optionsByGroupId = new Map<string, ProductAddonOption[]>()
+
+    for (const option of addonOptionsRows) {
+      const existing = optionsByGroupId.get(option.addon_group_id) || []
+      existing.push({
+        ...option,
+        price_delta: Number(option.price_delta || 0),
+        sort_order: Number(option.sort_order || 0),
+      })
+      optionsByGroupId.set(option.addon_group_id, existing)
+    }
+
+    for (const group of addonGroupRows) {
+      const normalizedGroup: ProductAddonGroup = {
+        ...group,
+        selection_type:
+          group.selection_type === 'multiple' ? 'multiple' : 'single',
+        is_required: Boolean(group.is_required),
+        min_select: Number(group.min_select || 0),
+        max_select:
+          group.max_select === null || group.max_select === undefined
+            ? null
+            : Number(group.max_select),
+        sort_order: Number(group.sort_order || 0),
+        is_active: Boolean(group.is_active),
+        options: optionsByGroupId.get(group.id) || [],
+      }
+
+      if (!productAddons[normalizedGroup.product_id]) {
+        productAddons[normalizedGroup.product_id] = []
+      }
+
+      productAddons[normalizedGroup.product_id].push(normalizedGroup)
+    }
+  }
+
   return (
     <ShopPageClient
       seller={seller}
-      products={(products || []) as ProductRow[]}
+      products={productRows}
       categories={(categories || []) as MenuCategory[]}
       shopSlug={seller.shop_slug || requestedSlug}
+      productAddons={productAddons}
     />
   )
 }
