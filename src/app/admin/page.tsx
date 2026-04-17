@@ -3,6 +3,28 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
+useEffect(() => {
+  async function checkSession() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (data?.role === 'admin') {
+      window.location.href = '/admin/payout'
+    }
+  }
+
+  checkSession()
+}, [])
+
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
