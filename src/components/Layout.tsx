@@ -22,7 +22,6 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* HEADER */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/dashboard" className="shrink-0">
@@ -37,7 +36,6 @@ export default function Layout({ children }) {
             </div>
           </Link>
 
-          {/* DESKTOP NAV */}
           <nav className="hidden items-center gap-2 md:flex">
             {navItems.map((item) => {
               const active = isActive(item.href)
@@ -61,12 +59,10 @@ export default function Layout({ children }) {
         </div>
       </header>
 
-      {/* CONTENT */}
       <main className="mx-auto w-full max-w-6xl px-4 py-6 pb-24 sm:px-6 lg:px-8 md:pb-6">
         {children}
       </main>
 
-      {/* MOBILE NAV */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-3 py-2 backdrop-blur md:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-4 gap-2">
           {navItems.map((item) => {
@@ -102,35 +98,55 @@ function NavIcon({ type, active }) {
 
   if (type === 'home') {
     return (
-      <svg viewBox="0 0 24 24" fill="none" className={className}>
-        <path d="M3 10.5L12 3l9 7.5M5.25 9.75V21h13.5V9.75"
-          stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+        <path
+          d="M3 10.5L12 3l9 7.5M5.25 9.75V21h13.5V9.75"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     )
   }
 
   if (type === 'box') {
     return (
-      <svg viewBox="0 0 24 24" fill="none" className={className}>
-        <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18m8-13.5l-8 4.5-8-4.5"
-          stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+        <path
+          d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18m8-13.5l-8 4.5-8-4.5"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     )
   }
 
   if (type === 'receipt') {
     return (
-      <svg viewBox="0 0 24 24" fill="none" className={className}>
-        <path d="M7 3h10a2 2 0 012 2v16l-3-1.5L12 21l-4-1.5L5 21V5a2 2 0 012-2zm2 5h6M9 12h6M9 16h4"
-          stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+        <path
+          d="M7 3h10a2 2 0 012 2v16l-3-1.5L12 21l-4-1.5L5 21V5a2 2 0 012-2zm2 5h6M9 12h6M9 16h4"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     )
   }
 
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M12 9.75a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5zm7.5 2.25l1.5-1.5-1.5-2.598-2.04.33..."
-        stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 9.75a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5zm7.5 2.25l1.5-1.5-1.5-2.598-2.04.33a7.967 7.967 0 00-1.29-.75L15.75 4.5h-3.0l-.42 2.232c-.45.174-.882.42-1.29.75l-2.04-.33L7.5 9.75 9 11.25a7.95 7.95 0 000 1.5L7.5 14.25l1.5 2.598 2.04-.33c.408.33.84.576 1.29.75l.42 2.232h3l.42-2.232c.45-.174.882-.42 1.29-.75l2.04.33 1.5-2.598-1.5-1.5c.048-.246.072-.498.072-.75s-.024-.504-.072-.75z"
+        stroke={stroke}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
