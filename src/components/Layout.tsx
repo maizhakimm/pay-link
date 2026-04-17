@@ -9,12 +9,23 @@ type LayoutProps = {
   children: ReactNode
 }
 
-const navItems = [
+type NavItem = {
+  label: string
+  href: string
+  icon: 'home' | 'box' | 'receipt' | 'settings'
+}
+
+type NavIconProps = {
+  type: 'home' | 'box' | 'receipt' | 'settings'
+  active: boolean
+}
+
+const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'home' },
   { label: 'Products', href: '/dashboard/products', icon: 'box' },
   { label: 'Orders', href: '/dashboard/orders', icon: 'receipt' },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings' },
-] as const
+]
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname()
@@ -99,13 +110,7 @@ export default function Layout({ children }: LayoutProps) {
   )
 }
 
-function NavIcon({
-  type,
-  active,
-}: {
-  type: 'home' | 'box' | 'receipt' | 'settings'
-  active: boolean
-}) {
+function NavIcon({ type, active }: NavIconProps) {
   const className = active ? 'h-5 w-5' : 'h-5 w-5'
   const stroke = active ? 'currentColor' : 'currentColor'
 

@@ -18,6 +18,14 @@ type SellerProfile = {
   closing_time?: string | null
   temporarily_closed?: boolean | null
   closed_message?: string | null
+  operating_days?: Record<
+    'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday',
+    {
+      enabled: boolean
+      opening_time: string
+      closing_time: string
+    }
+  > | null
   delivery_mode?:
     | 'free_delivery'
     | 'fixed_fee'
@@ -195,6 +203,7 @@ async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> 
         closing_time,
         temporarily_closed,
         closed_message,
+        operating_days,
         delivery_mode,
         delivery_fee,
         delivery_area,
@@ -365,6 +374,7 @@ export default async function Page({ params }: PageProps) {
         closing_time,
         temporarily_closed,
         closed_message,
+        operating_days,
         delivery_mode,
         delivery_fee,
         delivery_area,
@@ -446,6 +456,7 @@ export default async function Page({ params }: PageProps) {
               closing_time,
               temporarily_closed,
               closed_message,
+              operating_days,
               delivery_mode,
               delivery_fee,
               delivery_area,

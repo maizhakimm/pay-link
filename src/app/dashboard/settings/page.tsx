@@ -35,6 +35,46 @@ const DELIVERY_MODES = [
   { value: 'distance_based', label: 'Distance Based' },
 ]
 
+const DAY_ORDER = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+] as const
+
+const DAY_LABELS: Record<DayKey, string> = {
+  monday: 'Monday',
+  tuesday: 'Tuesday',
+  wednesday: 'Wednesday',
+  thursday: 'Thursday',
+  friday: 'Friday',
+  saturday: 'Saturday',
+  sunday: 'Sunday',
+}
+
+type DayKey = (typeof DAY_ORDER)[number]
+
+type OperatingDayItem = {
+  enabled: boolean
+  opening_time: string
+  closing_time: string
+}
+
+type OperatingDays = Record<DayKey, OperatingDayItem>
+
+const DEFAULT_OPERATING_DAYS: OperatingDays = {
+  monday: { enabled: true, opening_time: '09:00', closing_time: '18:00' },
+  tuesday: { enabled: true, opening_time: '09:00', closing_time: '18:00' },
+  wednesday: { enabled: true, opening_time: '09:00', closing_time: '18:00' },
+  thursday: { enabled: true, opening_time: '09:00', closing_time: '18:00' },
+  friday: { enabled: true, opening_time: '09:00', closing_time: '18:00' },
+  saturday: { enabled: true, opening_time: '09:00', closing_time: '18:00' },
+  sunday: { enabled: false, opening_time: '09:00', closing_time: '18:00' },
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -81,6 +121,36 @@ function formatCurrency(amount: number) {
   }).format(amount)
 }
 
+function normalizeOperatingDays(value: any): OperatingDays {
+  const safe: OperatingDays = { ...DEFAULT_OPERATING_DAYS }
+
+  if (!value || typeof value !== 'object') {
+    return safe
+  }
+
+  for (const day of DAY_ORDER) {
+    const item = value?.[day]
+    if (!item || typeof item !== 'object') continue
+
+    safe[day] = {
+      enabled:
+        typeof item.enabled === 'boolean'
+          ? item.enabled
+          : DEFAULT_OPERATING_DAYS[day].enabled,
+      opening_time:
+        typeof item.opening_time === 'string' && item.opening_time
+          ? item.opening_time
+          : DEFAULT_OPERATING_DAYS[day].opening_time,
+      closing_time:
+        typeof item.closing_time === 'string' && item.closing_time
+          ? item.closing_time
+          : DEFAULT_OPERATING_DAYS[day].closing_time,
+    }
+  }
+
+  return safe
+}
+
 type DeliveryMode =
   | 'free_delivery'
   | 'fixed_fee'
@@ -117,6 +187,7 @@ type SellerProfileRow = {
   pickup_address?: string | null
   latitude?: number | null
   longitude?: number | null
+  operating_days?: OperatingDays | null
 }
 
 export default function SettingsPage() {
@@ -146,13 +217,15 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  const [acceptOrdersAnytime, setAcceptOrdersAnytime] = useState(true)
+  const [acceptOrdersAnytime, setAcceptOrdersAnytime] = useState(false)
   const [openingTime, setOpeningTime] = useState('09:00')
   const [closingTime, setClosingTime] = useState('22:00')
   const [temporarilyClosed, setTemporarilyClosed] = useState(false)
   const [closedMessage, setClosedMessage] = useState(
     'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
   )
+  const [operatingDays, setOperatingDays] =
+    useState<OperatingDays>(DEFAULT_OPERATING_DAYS)
 
   const [deliveryMode, setDeliveryMode] =
     useState<DeliveryMode>('pay_rider_separately')
@@ -188,8 +261,35 @@ export default function SettingsPage() {
       return 'Accepting orders anytime'
     }
 
-    return `Orders allowed from ${openingTime || '09:00'} to ${closingTime || '22:00'}`
-  }, [acceptOrdersAnytime, openingTime, closingTime, temporarilyClosed])
+    const enabledDays = DAY_ORDER.filter((day) => operatingDays[day].enabled)
+
+    if (enabledDays.length === 0) {
+      return 'No operating day selected'
+    }
+
+    if (enabledDays.length === 7) {
+      const monday = operatingDays.monday
+      const allSameTime = DAY_ORDER.every(
+        (day) =>
+          operatingDays[day].enabled &&
+          operatingDays[day].opening_time === monday.opening_time &&
+          operatingDays[day].closing_time === monday.closing_time
+      )
+
+      if (allSameTime) {
+        return `Open daily from ${monday.opening_time} to ${monday.closing_time}`
+      }
+    }
+
+    return `${enabledDays.length} operating day(s) configured`
+  }, [acceptOrdersAnytime, operatingDays, temporarilyClosed])
+
+  const enabledDayChips = useMemo(() => {
+    return DAY_ORDER.filter((day) => operatingDays[day].enabled).map((day) => {
+      const item = operatingDays[day]
+      return `${DAY_LABELS[day]} (${item.opening_time} - ${item.closing_time})`
+    })
+  }, [operatingDays])
 
   const deliverySummaryText = useMemo(() => {
     const fee = Number(deliveryFee || 0)
@@ -220,6 +320,16 @@ export default function SettingsPage() {
     loadProfile()
   }, [])
 
+  function updateOperatingDay(day: DayKey, patch: Partial<OperatingDayItem>) {
+    setOperatingDays((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        ...patch,
+      },
+    }))
+  }
+
   async function ensureSellerProfile(currentUserId: string, currentUserEmail: string) {
     const { data: existing, error: existingError } = await supabase
       .from('seller_profiles')
@@ -244,9 +354,9 @@ export default function SettingsPage() {
         email: currentUserEmail || null,
         store_name: fallbackStoreName,
         shop_slug: null,
-        accept_orders_anytime: true,
-        opening_time: '09:00',
-        closing_time: '22:00',
+        accept_orders_anytime: false,
+        opening_time: null,
+        closing_time: null,
         temporarily_closed: false,
         closed_message:
           'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
@@ -260,6 +370,7 @@ export default function SettingsPage() {
         pickup_address: null,
         latitude: null,
         longitude: null,
+        operating_days: DEFAULT_OPERATING_DAYS,
       })
       .select('*')
       .single()
@@ -309,7 +420,7 @@ export default function SettingsPage() {
       setAccountHolderName(profile.account_holder_name || '')
       setProfileImage(profile.profile_image || '')
 
-      setAcceptOrdersAnytime(profile.accept_orders_anytime ?? true)
+      setAcceptOrdersAnytime(profile.accept_orders_anytime ?? false)
       setOpeningTime(profile.opening_time || '09:00')
       setClosingTime(profile.closing_time || '22:00')
       setTemporarilyClosed(profile.temporarily_closed ?? false)
@@ -317,6 +428,7 @@ export default function SettingsPage() {
         profile.closed_message ||
           'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
       )
+      setOperatingDays(normalizeOperatingDays(profile.operating_days))
 
       setDeliveryMode(profile.delivery_mode || 'pay_rider_separately')
       setDeliveryFee(String(profile.delivery_fee ?? 0))
@@ -444,10 +556,8 @@ export default function SettingsPage() {
     const parsedDeliveryRatePerKm = Number(deliveryRatePerKm || 0)
     const parsedDeliveryMinFee = Number(deliveryMinFee || 0)
 
-    let parsedLatitude =
-      latitude.trim() === '' ? null : Number(latitude)
-    let parsedLongitude =
-      longitude.trim() === '' ? null : Number(longitude)
+    let parsedLatitude = latitude.trim() === '' ? null : Number(latitude)
+    let parsedLongitude = longitude.trim() === '' ? null : Number(longitude)
 
     if (!trimmedStoreName) {
       alert('Store Name is required')
@@ -455,14 +565,24 @@ export default function SettingsPage() {
     }
 
     if (!acceptOrdersAnytime) {
-      if (!openingTime || !closingTime) {
-        alert('Please set opening time and closing time.')
+      const enabledDays = DAY_ORDER.filter((day) => operatingDays[day].enabled)
+
+      if (enabledDays.length === 0) {
+        alert('Please enable at least one operating day.')
         return
       }
 
-      if (openingTime === closingTime) {
-        alert('Opening time and closing time cannot be the same.')
-        return
+      for (const day of enabledDays) {
+        const item = operatingDays[day]
+        if (!item.opening_time || !item.closing_time) {
+          alert(`Please set opening and closing time for ${DAY_LABELS[day]}.`)
+          return
+        }
+
+        if (item.opening_time === item.closing_time) {
+          alert(`${DAY_LABELS[day]} opening time and closing time cannot be the same.`)
+          return
+        }
       }
     }
 
@@ -525,6 +645,10 @@ export default function SettingsPage() {
         finalShopSlug = await generateUniqueShopSlug(trimmedStoreName, currentSellerId)
       }
 
+      const firstEnabledDay = DAY_ORDER.find((day) => operatingDays[day].enabled)
+      const fallbackOpening = firstEnabledDay ? operatingDays[firstEnabledDay].opening_time : null
+      const fallbackClosing = firstEnabledDay ? operatingDays[firstEnabledDay].closing_time : null
+
       const { error } = await supabase
         .from('seller_profiles')
         .update({
@@ -540,12 +664,13 @@ export default function SettingsPage() {
           profile_image: profileImage || null,
           shop_slug: finalShopSlug,
           accept_orders_anytime: acceptOrdersAnytime,
-          opening_time: acceptOrdersAnytime ? null : openingTime,
-          closing_time: acceptOrdersAnytime ? null : closingTime,
+          opening_time: acceptOrdersAnytime ? null : fallbackOpening,
+          closing_time: acceptOrdersAnytime ? null : fallbackClosing,
           temporarily_closed: temporarilyClosed,
           closed_message:
             trimmedClosedMessage ||
             'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+          operating_days: acceptOrdersAnytime ? null : operatingDays,
           delivery_mode: deliveryMode,
           delivery_fee: deliveryMode === 'fixed_fee' ? parsedDeliveryFee : 0,
           delivery_area: trimmedDeliveryArea || null,
@@ -558,10 +683,8 @@ export default function SettingsPage() {
             deliveryMode === 'distance_based' ? parsedDeliveryMinFee : null,
           pickup_address:
             deliveryMode === 'distance_based' ? trimmedPickupAddress : null,
-          latitude:
-            deliveryMode === 'distance_based' ? parsedLatitude : null,
-          longitude:
-            deliveryMode === 'distance_based' ? parsedLongitude : null,
+          latitude: deliveryMode === 'distance_based' ? parsedLatitude : null,
+          longitude: deliveryMode === 'distance_based' ? parsedLongitude : null,
         })
         .eq('id', currentSellerId)
 
@@ -996,13 +1119,26 @@ export default function SettingsPage() {
                         ? 'Temporarily Closed'
                         : acceptOrdersAnytime
                         ? 'Open Anytime'
-                        : 'Scheduled Hours'}
+                        : 'By Day Schedule'}
                     </span>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-sm font-bold text-slate-700">Current Status</p>
                     <p className="mt-1 text-sm text-slate-600">{availabilityStatusText}</p>
+
+                    {!acceptOrdersAnytime && enabledDayChips.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {enabledDayChips.map((item) => (
+                          <span
+                            key={item}
+                            className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200"
+                          >
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="mt-4 grid gap-4">
@@ -1016,35 +1152,77 @@ export default function SettingsPage() {
                       <div>
                         <p className="text-sm font-bold text-slate-900">Accept orders anytime</p>
                         <p className="mt-1 text-xs leading-5 text-slate-500">
-                          Sesuai jika seller sentiasa available untuk terima order.
+                          Untick jika seller nak set waktu operasi ikut hari.
                         </p>
                       </div>
                     </label>
 
                     {!acceptOrdersAnytime ? (
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-2 block text-sm font-bold text-slate-700">
-                            Opening Time
-                          </label>
-                          <input
-                            type="time"
-                            value={openingTime}
-                            onChange={(e) => setOpeningTime(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                          />
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <div className="mb-3">
+                          <p className="text-sm font-bold text-slate-900">Set by day</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Seller boleh pilih hari buka dan waktu operasi untuk setiap hari.
+                          </p>
                         </div>
 
-                        <div>
-                          <label className="mb-2 block text-sm font-bold text-slate-700">
-                            Closing Time
-                          </label>
-                          <input
-                            type="time"
-                            value={closingTime}
-                            onChange={(e) => setClosingTime(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                          />
+                        <div className="space-y-3">
+                          {DAY_ORDER.map((day) => {
+                            const item = operatingDays[day]
+
+                            return (
+                              <div
+                                key={day}
+                                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                              >
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                  <label className="flex items-center gap-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.enabled}
+                                      onChange={(e) =>
+                                        updateOperatingDay(day, { enabled: e.target.checked })
+                                      }
+                                      className="h-4 w-4"
+                                    />
+                                    <span className="text-sm font-bold text-slate-900">
+                                      {DAY_LABELS[day]}
+                                    </span>
+                                  </label>
+
+                                  {item.enabled ? (
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:w-[360px]">
+                                      <input
+                                        type="time"
+                                        value={item.opening_time}
+                                        onChange={(e) =>
+                                          updateOperatingDay(day, {
+                                            opening_time: e.target.value,
+                                          })
+                                        }
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                      />
+
+                                      <input
+                                        type="time"
+                                        value={item.closing_time}
+                                        onChange={(e) =>
+                                          updateOperatingDay(day, {
+                                            closing_time: e.target.value,
+                                          })
+                                        }
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs font-semibold text-slate-500">
+                                      Closed
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     ) : null}
@@ -1069,7 +1247,7 @@ export default function SettingsPage() {
                         Closed Message
                       </label>
                       <textarea
-                        placeholder="Contoh: Kedai kini ditutup. Tempahan dibuka semula pada 9:00 AM."
+                        placeholder="Contoh: Kedai kini ditutup. Tempahan dibuka semula esok."
                         value={closedMessage}
                         onChange={(e) => setClosedMessage(e.target.value)}
                         rows={3}
