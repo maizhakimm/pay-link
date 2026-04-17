@@ -18,7 +18,7 @@ type SellerProfile = {
   closing_time?: string | null
   temporarily_closed?: boolean | null
   closed_message?: string | null
-    operating_days?: Record<
+  operating_days?: Record<
     'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday',
     {
       enabled: boolean
