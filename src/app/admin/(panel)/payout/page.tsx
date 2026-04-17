@@ -254,7 +254,7 @@ export default function AdminPayoutPage() {
                     <tr key={row.id} className="border-t align-top">
                       <td className="px-4 py-3">
                         <div className="font-medium text-slate-900">
-                          {row.seller_profiles?.store_name || 'No store name'}
+                          {row.seller_profiles?.[0]?.store_name || 'No store name'}
                         </div>
                         <div className="text-xs text-slate-500">
                           {row.seller_profiles?.email || row.seller_id}
