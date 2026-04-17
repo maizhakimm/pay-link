@@ -105,6 +105,12 @@ function getTodayKey(date = new Date()): DayKey {
   return map[date.getDay()]
 }
 
+function getYesterdayKey(date = new Date()): DayKey {
+  const yesterday = new Date(date)
+  yesterday.setDate(date.getDate() - 1)
+  return getTodayKey(yesterday)
+}
+
 function timeToMinutes(value?: string | null) {
   if (!value || !value.includes(':')) return null
 
@@ -115,6 +121,38 @@ function timeToMinutes(value?: string | null) {
   if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
 
   return hour * 60 + minute
+}
+
+function isOpenForSchedule(
+  config: OperatingDayItem | undefined,
+  nowMinutes: number,
+  mode: 'same_day' | 'overnight_from_previous'
+) {
+  if (!config || !config.enabled) return false
+
+  const openingMinutes = timeToMinutes(config.opening_time)
+  const closingMinutes = timeToMinutes(config.closing_time)
+
+  if (openingMinutes === null || closingMinutes === null) return false
+
+  if (openingMinutes < closingMinutes) {
+    if (mode === 'same_day') {
+      return nowMinutes >= openingMinutes && nowMinutes < closingMinutes
+    }
+    return false
+  }
+
+  if (openingMinutes > closingMinutes) {
+    if (mode === 'same_day') {
+      return nowMinutes >= openingMinutes
+    }
+
+    if (mode === 'overnight_from_previous') {
+      return nowMinutes < closingMinutes
+    }
+  }
+
+  return false
 }
 
 function getStoreOpenStatus(seller?: SellerProfile | null) {
@@ -139,30 +177,28 @@ function getStoreOpenStatus(seller?: SellerProfile | null) {
     }
   }
 
-  const todayKey = getTodayKey(new Date())
-  const todayConfig = seller.operating_days?.[todayKey]
-
-  if (!todayConfig || !todayConfig.enabled) {
-    return {
-      isOpen: false,
-      label: 'Closed',
-    }
-  }
-
-  const openingMinutes = timeToMinutes(todayConfig.opening_time)
-  const closingMinutes = timeToMinutes(todayConfig.closing_time)
-
-  if (openingMinutes === null || closingMinutes === null) {
-    return {
-      isOpen: false,
-      label: 'Closed',
-    }
-  }
-
   const now = new Date()
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
 
-  const isOpen = nowMinutes >= openingMinutes && nowMinutes < closingMinutes
+  const todayKey = getTodayKey(now)
+  const yesterdayKey = getYesterdayKey(now)
+
+  const todayConfig = seller.operating_days?.[todayKey]
+  const yesterdayConfig = seller.operating_days?.[yesterdayKey]
+
+  const isOpenTodaySchedule = isOpenForSchedule(
+    todayConfig,
+    nowMinutes,
+    'same_day'
+  )
+
+  const isOpenFromYesterdayOvernight = isOpenForSchedule(
+    yesterdayConfig,
+    nowMinutes,
+    'overnight_from_previous'
+  )
+
+  const isOpen = isOpenTodaySchedule || isOpenFromYesterdayOvernight
 
   return {
     isOpen,
@@ -318,38 +354,38 @@ export default function DashboardPage() {
       : ''
 
   const paidOrders = useMemo(() => {
-  return orders.filter((order) =>
-    ['paid', 'success', 'completed'].includes(
-      normalizePaymentStatus(order.payment_status)
+    return orders.filter((order) =>
+      ['paid', 'success', 'completed'].includes(
+        normalizePaymentStatus(order.payment_status)
+      )
     )
-  )
-}, [orders])
+  }, [orders])
 
-const totalRevenue = useMemo(() => {
-  return paidOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0)
-}, [paidOrders])
+  const totalRevenue = useMemo(() => {
+    return paidOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0)
+  }, [paidOrders])
 
-const todayOrdersCount = useMemo(() => {
-  const now = new Date()
+  const todayOrdersCount = useMemo(() => {
+    const now = new Date()
 
-  return orders.filter((order) => {
-    if (!order.created_at) return false
-    const d = new Date(order.created_at)
-    if (Number.isNaN(d.getTime())) return false
+    return orders.filter((order) => {
+      if (!order.created_at) return false
+      const d = new Date(order.created_at)
+      if (Number.isNaN(d.getTime())) return false
 
-    return (
-      d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth() &&
-      d.getDate() === now.getDate()
-    )
-  }).length
-}, [orders])
+      return (
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate()
+      )
+    }).length
+  }, [orders])
 
-const storeStatus = useMemo(() => {
-  return getStoreOpenStatus(seller)
-}, [seller])
+  const storeStatus = useMemo(() => {
+    return getStoreOpenStatus(seller)
+  }, [seller])
 
-const isOpen = storeStatus.isOpen
+  const isOpen = storeStatus.isOpen
 
   const promoLines = useMemo(() => {
     if (topCategories.length > 0) {
@@ -502,21 +538,20 @@ ${shopLink}`.trim()
               {seller?.store_name || 'Seller'}
             </h1>
 
-          <div className="mt-2">
-  <span
-    className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${
-      isOpen
-        ? 'bg-emerald-100 text-emerald-700'
-        : 'bg-rose-100 text-rose-700'
-    }`}
-  >
-    {storeStatus.label}
-  </span>
-</div>
-        
+            <div className="mt-2">
+              <span
+                className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${
+                  isOpen
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-rose-100 text-rose-700'
+                }`}
+              >
+                {storeStatus.label}
+              </span>
             </div>
           </div>
         </div>
+      </div>
 
       <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
         <div className="mb-4">
