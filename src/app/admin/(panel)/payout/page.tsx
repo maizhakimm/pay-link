@@ -3,104 +3,89 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../../lib/supabase'
 
-export default function AdminLoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+export default function AdminPayoutPage() {
+  const [checking, setChecking] = useState(true)
+  const [authorized, setAuthorized] = useState(false)
 
   useEffect(() => {
-    async function checkSession() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+    let mounted = true
 
-      if (!user) return
+    async function checkAccess() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle()
+        const user = session?.user
 
-      if (data?.role === 'admin') {
-        window.location.href = '/admin/payout'
+        if (!user) {
+          if (mounted) {
+            setAuthorized(false)
+            setChecking(false)
+            window.location.href = '/admin/login'
+          }
+          return
+        }
+
+        const { data: roleRow, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (error || !roleRow || roleRow.role !== 'admin') {
+          await supabase.auth.signOut()
+
+          if (mounted) {
+            setAuthorized(false)
+            setChecking(false)
+            window.location.href = '/admin/login'
+          }
+          return
+        }
+
+        if (mounted) {
+          setAuthorized(true)
+          setChecking(false)
+        }
+      } catch (error) {
+        console.error('Admin access check failed:', error)
+
+        if (mounted) {
+          setAuthorized(false)
+          setChecking(false)
+          window.location.href = '/admin/login'
+        }
       }
     }
 
-    checkSession()
+    checkAccess()
+
+    return () => {
+      mounted = false
+    }
   }, [])
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+  if (checking) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm text-slate-600">Loading admin panel...</p>
+      </main>
+    )
+  }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      alert(error.message)
-      setLoading(false)
-      return
-    }
-
-    const user = data.user
-
-    if (!user) {
-      alert('User not found')
-      setLoading(false)
-      return
-    }
-
-    const { data: roleRow } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (!roleRow || roleRow.role !== 'admin') {
-      alert('Not authorized as admin')
-      await supabase.auth.signOut()
-      setLoading(false)
-      return
-    }
-
-    window.location.href = '/admin/payout'
+  if (!authorized) {
+    return null
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50">
-      <form
-        onSubmit={handleLogin}
-        className="w-full max-w-sm rounded-2xl border bg-white p-6 shadow"
-      >
-        <h1 className="mb-4 text-xl font-bold">Admin Login</h1>
-
-        <input
-          type="email"
-          placeholder="Email"
-          className="mb-3 w-full rounded border p-2"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          className="mb-4 w-full rounded border p-2"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded bg-black p-2 text-white"
-        >
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
-      </form>
+    <main className="min-h-screen bg-slate-50 p-6">
+      <div className="rounded-2xl border bg-white p-6 shadow-sm">
+        <h1 className="text-2xl font-bold text-slate-900">Payout</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          Admin payout page content here.
+        </p>
+      </div>
     </main>
   )
 }
