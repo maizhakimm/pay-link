@@ -1,24 +1,20 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { ReactNode } from 'react'
-
-type LayoutProps = {
-  children: ReactNode
-}
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: 'home' },
   { label: 'Products', href: '/dashboard/products', icon: 'box' },
   { label: 'Orders', href: '/dashboard/orders', icon: 'receipt' },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings' },
-] as const
+]
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children }) {
   const pathname = usePathname()
 
-  function isActive(href: string) {
+  function isActive(href) {
     if (!pathname) return false
     if (href === '/dashboard') return pathname === '/dashboard'
     return pathname.startsWith(href)
@@ -29,12 +25,14 @@ export default function Layout({ children }: LayoutProps) {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/dashboard" className="shrink-0">
-            <div className="text-2xl font-extrabold leading-none">
-              <span className="text-pink-500">Bayar</span>
-              <span className="text-blue-600">Link</span>
-            </div>
-            <div className="mt-1 text-[11px] text-slate-500">
-              Mudah Jual. Mudah Bayar
+            <div className="relative h-7 w-[120px] sm:h-8 sm:w-[140px]">
+              <Image
+                src="/BayarLink-Logo-Shop-Page-Dashboard.png"
+                alt="BayarLink"
+                fill
+                priority
+                className="object-contain object-left"
+              />
             </div>
           </Link>
 
@@ -46,7 +44,6 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  aria-current={active ? 'page' : undefined}
                   className={[
                     'inline-flex items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-semibold transition',
                     active
@@ -75,7 +72,6 @@ export default function Layout({ children }: LayoutProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                aria-current={active ? 'page' : undefined}
                 className={[
                   'flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-[11px] font-semibold transition',
                   active
@@ -84,7 +80,7 @@ export default function Layout({ children }: LayoutProps) {
                 ].join(' ')}
               >
                 <span className="mb-1 inline-flex h-5 w-5 items-center justify-center">
-                  <NavIcon type={item.icon} active={active} />
+                  <NavIcon type={item.icon} />
                 </span>
                 <span className="truncate">{item.label}</span>
               </Link>
@@ -96,15 +92,9 @@ export default function Layout({ children }: LayoutProps) {
   )
 }
 
-function NavIcon({
-  type,
-  active,
-}: {
-  type: 'home' | 'box' | 'receipt' | 'settings'
-  active: boolean
-}) {
-  const className = active ? 'h-5 w-5' : 'h-5 w-5'
-  const stroke = active ? 'currentColor' : 'currentColor'
+function NavIcon({ type }) {
+  const className = 'h-5 w-5'
+  const stroke = 'currentColor'
 
   if (type === 'home') {
     return (
