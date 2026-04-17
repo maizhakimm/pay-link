@@ -121,36 +121,39 @@ export default function AdminPayoutPage() {
   const [history, setHistory] = useState<HistoryRow[]>([])
   const [breakdowns, setBreakdowns] = useState<BreakdownRow[]>([])
   const [search, setSearch] = useState('')
-  // ✅ AUTH CHECK
-const {
-  data: { user },
-} = await supabase.auth.getUser()
-
-if (!user) {
-  window.location.href = '/login'
-  return
-}
-
-// ✅ ROLE CHECK
-const { data: roleRow, error: roleError } = await supabase
-  .from('user_roles')
-  .select('role')
-  .eq('user_id', user.id)
-  .maybeSingle()
-
-if (roleError) {
-  alert(roleError.message)
-  setLoading(false)
-  return
-}
-
-if (!roleRow || roleRow.role !== 'admin') {
-  alert('Access denied. Admin only.')
-  window.location.href = '/dashboard'
-  return
-}
   const loadPayoutData = useCallback(async () => {
-    setLoading(true)
+  setLoading(true)
+
+  // ✅ AUTH CHECK
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    window.location.href = '/login'
+    return
+  }
+
+  // ✅ ROLE CHECK
+  const { data: roleRow, error: roleError } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (roleError) {
+    alert(roleError.message)
+    setLoading(false)
+    return
+  }
+
+  if (!roleRow || roleRow.role !== 'admin') {
+    alert('Access denied. Admin only.')
+    window.location.href = '/dashboard'
+    return
+  }
+
+  // ⬇️ BARU sambung code asal awak (query orders dll)
 
     const { data: allOrders, error } = await supabase
       .from('orders')
