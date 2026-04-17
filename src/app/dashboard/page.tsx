@@ -1,8 +1,39 @@
 'use client'
 
-import Layout from '../../components/Layout'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import Layout from '../../../components/Layout'
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../../../lib/supabase'
+
+const MALAYSIAN_BANKS = [
+  'Affin Bank',
+  'Agrobank',
+  'Alliance Bank',
+  'AmBank',
+  'Bank Islam',
+  'Bank Muamalat',
+  'Bank Rakyat',
+  'BSN',
+  'CIMB Bank',
+  'Citibank',
+  'Hong Leong Bank',
+  'HSBC',
+  'Kuwait Finance House',
+  'Maybank',
+  'MBSB Bank',
+  'OCBC Bank',
+  'Public Bank',
+  'RHB Bank',
+  'Standard Chartered',
+  'UOB Bank',
+]
+
+const DELIVERY_MODES = [
+  { value: 'free_delivery', label: 'Free Delivery' },
+  { value: 'fixed_fee', label: 'Delivery Fee (Fixed)' },
+  { value: 'included_in_price', label: 'Included in Price' },
+  { value: 'pay_rider_separately', label: 'Pay Rider Separately' },
+  { value: 'distance_based', label: 'Distance Based' },
+]
 
 type DeliveryMode =
   | 'free_delivery'
@@ -11,82 +42,322 @@ type DeliveryMode =
   | 'pay_rider_separately'
   | 'distance_based'
 
-type SellerProfile = {
+type DayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
+type OperatingDay = {
+  enabled: boolean
+  open: string
+  close: string
+}
+
+type OperatingHours = Record<DayKey, OperatingDay>
+
+const DAY_OPTIONS: Array<{ key: DayKey; label: string }> = [
+  { key: 'monday', label: 'Isnin' },
+  { key: 'tuesday', label: 'Selasa' },
+  { key: 'wednesday', label: 'Rabu' },
+  { key: 'thursday', label: 'Khamis' },
+  { key: 'friday', label: 'Jumaat' },
+  { key: 'saturday', label: 'Sabtu' },
+  { key: 'sunday', label: 'Ahad' },
+]
+
+function getDefaultOperatingHours(): OperatingHours {
+  return {
+    monday: { enabled: true, open: '08:00', close: '22:00' },
+    tuesday: { enabled: true, open: '08:00', close: '22:00' },
+    wednesday: { enabled: true, open: '08:00', close: '22:00' },
+    thursday: { enabled: true, open: '08:00', close: '22:00' },
+    friday: { enabled: true, open: '08:00', close: '22:00' },
+    saturday: { enabled: true, open: '08:00', close: '22:00' },
+    sunday: { enabled: true, open: '08:00', close: '22:00' },
+  }
+}
+
+function normalizeOperatingHours(value: unknown): OperatingHours {
+  const defaults = getDefaultOperatingHours()
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return defaults
+  }
+
+  const source = value as Partial<Record<DayKey, Partial<OperatingDay>>>
+  const next = { ...defaults }
+
+  DAY_OPTIONS.forEach(({ key }) => {
+    const row = source[key]
+    if (!row || typeof row !== 'object') return
+
+    next[key] = {
+      enabled:
+        typeof row.enabled === 'boolean' ? row.enabled : defaults[key].enabled,
+      open:
+        typeof row.open === 'string' && row.open.trim()
+          ? row.open
+          : defaults[key].open,
+      close:
+        typeof row.close === 'string' && row.close.trim()
+          ? row.close
+          : defaults[key].close,
+    }
+  })
+
+  return next
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
+async function generateUniqueShopSlug(base: string, currentSellerId?: string | null) {
+  const cleanBase = slugify(base || 'shop')
+  let candidate = cleanBase || 'shop'
+  let counter = 1
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('seller_profiles')
+      .select('id')
+      .eq('shop_slug', candidate)
+      .maybeSingle()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    if (!data) {
+      return candidate
+    }
+
+    if (currentSellerId && data.id === currentSellerId) {
+      return candidate
+    }
+
+    counter += 1
+    candidate = `${cleanBase}-${counter}`
+  }
+}
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('ms-MY', {
+    style: 'currency',
+    currency: 'MYR',
+    minimumFractionDigits: 2,
+  }).format(amount)
+}
+
+type SellerProfileRow = {
   id: string
-  store_name: string | null
+  user_id: string
+  store_name?: string | null
   shop_slug?: string | null
-  profile_image?: string | null
-  daily_note?: string | null
+  email?: string | null
   whatsapp?: string | null
+  company_name?: string | null
+  company_registration?: string | null
+  business_address?: string | null
+  bank_name?: string | null
+  account_number?: string | null
+  account_holder_name?: string | null
+  profile_image?: string | null
+  accept_orders_anytime?: boolean | null
+  opening_time?: string | null
+  closing_time?: string | null
+  temporarily_closed?: boolean | null
+  closed_message?: string | null
   delivery_mode?: DeliveryMode | null
+  delivery_fee?: number | null
+  delivery_area?: string | null
+  delivery_note?: string | null
+  delivery_radius_km?: number | null
+  delivery_rate_per_km?: number | null
+  delivery_min_fee?: number | null
+  pickup_address?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  operating_hours?: OperatingHours | null
 }
 
-type Product = {
-  id: string
-  name?: string
-  price?: number
-  is_active?: boolean
-  menu_category_id?: string | null
-  product_image_url?: string | null
-}
-
-type MenuCategory = {
-  id: string
-  name: string
-  sort_order?: number | null
-  is_active?: boolean | null
-}
-
-type Order = {
-  id: string
-  product_name?: string
-  amount?: number
-  payment_status?: string | null
-  created_at?: string | null
-}
-
-function getImageUrl(path?: string | null) {
-  if (!path) return ''
-
-  const trimmed = path.trim()
-  if (!trimmed) return ''
-
-  if (/^https?:\/\//i.test(trimmed)) return trimmed
-
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (!baseUrl) return trimmed
-
-  const cleanPath = trimmed
-    .replace(/^storage\/v1\/object\/public\//, '')
-    .replace(/^\/+/, '')
-
-  return `${baseUrl}/storage/v1/object/public/${cleanPath}`
-}
-
-function formatMoney(value?: number) {
-  return `RM ${Number(value || 0).toFixed(2)}`
-}
-
-function normalizePaymentStatus(value?: string | null) {
-  return (value || '').toString().toLowerCase().trim()
-}
-
-export default function DashboardPage() {
+export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
-  const [pageError, setPageError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [detectingLocation, setDetectingLocation] = useState(false)
 
-  const [seller, setSeller] = useState<SellerProfile | null>(null)
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<MenuCategory[]>([])
-  const [orders, setOrders] = useState<Order[]>([])
+  const [sellerId, setSellerId] = useState<string | null>(null)
+  const [accountEmail, setAccountEmail] = useState('')
+  const [userId, setUserId] = useState<string | null>(null)
 
-  const [dailyNote, setDailyNote] = useState('')
-  const [copied, setCopied] = useState(false)
-  const [savingNote, setSavingNote] = useState(false)
+  const [storeName, setStoreName] = useState('')
+  const [savedShopSlug, setSavedShopSlug] = useState('')
+  const [slugLocked, setSlugLocked] = useState(false)
 
-  const loadDashboard = useCallback(async () => {
+  const [email, setEmail] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [companyReg, setCompanyReg] = useState('')
+  const [businessAddress, setBusinessAddress] = useState('')
+
+  const [bankName, setBankName] = useState('')
+  const [accountNumber, setAccountNumber] = useState('')
+  const [accountHolderName, setAccountHolderName] = useState('')
+
+  const [profileImage, setProfileImage] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const [operatingHours, setOperatingHours] = useState<OperatingHours>(
+    getDefaultOperatingHours()
+  )
+  const [temporarilyClosed, setTemporarilyClosed] = useState(false)
+  const [closedMessage, setClosedMessage] = useState(
+    'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
+  )
+
+  const [deliveryMode, setDeliveryMode] =
+    useState<DeliveryMode>('pay_rider_separately')
+  const [deliveryFee, setDeliveryFee] = useState('0')
+  const [deliveryArea, setDeliveryArea] = useState('')
+  const [deliveryNote, setDeliveryNote] = useState('')
+
+  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('10')
+  const [deliveryRatePerKm, setDeliveryRatePerKm] = useState('1')
+  const [deliveryMinFee, setDeliveryMinFee] = useState('5')
+  const [pickupAddress, setPickupAddress] = useState('')
+  const [latitude, setLatitude] = useState('')
+  const [longitude, setLongitude] = useState('')
+  const [resolvedPickupAddress, setResolvedPickupAddress] = useState('')
+
+  const previewBaseUrl =
+    (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
+
+  const livePreviewSlug = useMemo(() => {
+    if (slugLocked && savedShopSlug) {
+      return savedShopSlug
+    }
+
+    return slugify(storeName || 'your-shop')
+  }, [slugLocked, savedShopSlug, storeName])
+
+  const operatingSummaryText = useMemo(() => {
+    if (temporarilyClosed) {
+      return 'Kedai sedang ditutup sementara.'
+    }
+
+    const enabledDays = DAY_OPTIONS.filter(({ key }) => operatingHours[key].enabled)
+
+    if (enabledDays.length === 0) {
+      return 'Tiada hari operasi ditetapkan.'
+    }
+
+    if (enabledDays.length === 7) {
+      const sameHours = DAY_OPTIONS.every(({ key }) => {
+        const row = operatingHours[key]
+        return row.enabled && row.open === operatingHours.monday.open && row.close === operatingHours.monday.close
+      })
+
+      if (sameHours) {
+        return `Buka setiap hari dari ${operatingHours.monday.open} hingga ${operatingHours.monday.close}.`
+      }
+    }
+
+    return `${enabledDays.length} hari operasi aktif telah ditetapkan.`
+  }, [operatingHours, temporarilyClosed])
+
+  const deliverySummaryText = useMemo(() => {
+    const fee = Number(deliveryFee || 0)
+    const rate = Number(deliveryRatePerKm || 0)
+    const minFee = Number(deliveryMinFee || 0)
+    const radius = Number(deliveryRadiusKm || 0)
+
+    switch (deliveryMode) {
+      case 'free_delivery':
+        return 'Free delivery tersedia untuk kawasan terpilih.'
+      case 'fixed_fee':
+        return fee > 0
+          ? `Delivery fee sebanyak ${formatCurrency(fee)} akan dikenakan.`
+          : 'Delivery fee akan dikenakan.'
+      case 'included_in_price':
+        return 'Harga produk telah termasuk delivery.'
+      case 'distance_based':
+        return `Caj delivery dikira berdasarkan jarak. Kadar ${formatCurrency(
+          rate
+        )}/km, minimum ${formatCurrency(minFee)}, radius maksimum ${radius}km.`
+      case 'pay_rider_separately':
+      default:
+        return 'Caj delivery tidak termasuk dalam harga. Bayaran delivery harus dibuat terus kepada rider semasa penghantaran.'
+    }
+  }, [deliveryMode, deliveryFee, deliveryRatePerKm, deliveryMinFee, deliveryRadiusKm])
+
+  useEffect(() => {
+    loadProfile()
+  }, [])
+
+  async function ensureSellerProfile(currentUserId: string, currentUserEmail: string) {
+    const { data: existing, error: existingError } = await supabase
+      .from('seller_profiles')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .maybeSingle()
+
+    if (existingError) {
+      throw new Error(existingError.message)
+    }
+
+    if (existing) {
+      return existing as SellerProfileRow
+    }
+
+    const fallbackStoreName = 'My Store'
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('seller_profiles')
+      .insert({
+        user_id: currentUserId,
+        email: currentUserEmail || null,
+        store_name: fallbackStoreName,
+        shop_slug: null,
+        accept_orders_anytime: true,
+        opening_time: '09:00',
+        closing_time: '22:00',
+        temporarily_closed: false,
+        closed_message:
+          'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+        delivery_mode: 'pay_rider_separately',
+        delivery_fee: 0,
+        delivery_area: null,
+        delivery_note: null,
+        delivery_radius_km: 10,
+        delivery_rate_per_km: 1,
+        delivery_min_fee: 5,
+        pickup_address: null,
+        latitude: null,
+        longitude: null,
+        operating_hours: getDefaultOperatingHours(),
+      })
+      .select('*')
+      .single()
+
+    if (insertError || !inserted) {
+      throw new Error(insertError?.message || 'Failed to create seller profile')
+    }
+
+    return inserted as SellerProfileRow
+  }
+
+  async function loadProfile() {
     setLoading(true)
-    setPageError('')
 
     try {
       const {
@@ -99,503 +370,919 @@ export default function DashboardPage() {
       }
 
       if (!user) {
-        window.location.href = '/login'
         return
       }
 
-      const { data: sellerData, error: sellerError } = await supabase
-        .from('seller_profiles')
-        .select(
-          'id, store_name, shop_slug, profile_image, daily_note, whatsapp, delivery_mode'
-        )
-        .eq('user_id', user.id)
-        .maybeSingle()
+      setUserId(user.id)
+      setAccountEmail(user.email || '')
 
-      if (sellerError) {
-        throw new Error(sellerError.message)
-      }
+      const profile = await ensureSellerProfile(user.id, user.email || '')
 
-      if (!sellerData) {
-        window.location.href = '/dashboard/onboarding'
-        return
-      }
+      const existingSlug = profile.shop_slug || ''
+      const existingStoreName = profile.store_name || ''
+      const isDefaultName = existingStoreName === 'My Store'
 
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('seller_profile_id', sellerData.id)
+      setSellerId(profile.id)
+      setSavedShopSlug(existingSlug)
+      setEmail(profile.email || '')
+      setWhatsapp(profile.whatsapp || '')
+      setCompanyName(profile.company_name || '')
+      setCompanyReg(profile.company_registration || '')
+      setBusinessAddress(profile.business_address || '')
+      setBankName(profile.bank_name || '')
+      setAccountNumber(profile.account_number || '')
+      setAccountHolderName(profile.account_holder_name || '')
+      setProfileImage(profile.profile_image || '')
 
-      if (productError) {
-        throw new Error(productError.message)
-      }
+      setOperatingHours(normalizeOperatingHours(profile.operating_hours))
+      setTemporarilyClosed(profile.temporarily_closed ?? false)
+      setClosedMessage(
+        profile.closed_message ||
+          'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.'
+      )
 
-      const allProducts = (productData || []) as Product[]
-      const activeProducts = allProducts.filter((p) => p.is_active)
+      setDeliveryMode(profile.delivery_mode || 'pay_rider_separately')
+      setDeliveryFee(String(profile.delivery_fee ?? 0))
+      setDeliveryArea(profile.delivery_area || '')
+      setDeliveryNote(profile.delivery_note || '')
+      setDeliveryRadiusKm(String(profile.delivery_radius_km ?? 10))
+      setDeliveryRatePerKm(String(profile.delivery_rate_per_km ?? 1))
+      setDeliveryMinFee(String(profile.delivery_min_fee ?? 5))
+      setPickupAddress(profile.pickup_address || '')
+      setResolvedPickupAddress(profile.pickup_address || '')
+      setLatitude(
+        profile.latitude !== null && profile.latitude !== undefined
+          ? String(profile.latitude)
+          : ''
+      )
+      setLongitude(
+        profile.longitude !== null && profile.longitude !== undefined
+          ? String(profile.longitude)
+          : ''
+      )
 
-      const hasStoreName = Boolean(sellerData.store_name?.trim())
-      const hasShopSlug = Boolean(sellerData.shop_slug?.trim())
-      const hasWhatsapp = Boolean(sellerData.whatsapp?.trim())
-      const hasDeliveryMode = Boolean(sellerData.delivery_mode)
-      const hasAtLeastOneActiveProduct = activeProducts.length > 0
-
-      const isOnboardingComplete =
-        hasStoreName &&
-        hasShopSlug &&
-        hasWhatsapp &&
-        hasDeliveryMode &&
-        hasAtLeastOneActiveProduct
-
-      if (!isOnboardingComplete) {
-        window.location.href = '/dashboard/onboarding'
-        return
-      }
-
-      setSeller(sellerData)
-      setDailyNote(sellerData.daily_note || '')
-      setProducts(allProducts)
-
-      const { data: categoryData, error: categoryError } = await supabase
-        .from('menu_categories')
-        .select('id, name, sort_order, is_active')
-        .eq('seller_profile_id', sellerData.id)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true })
-
-      if (categoryError) {
-        throw new Error(categoryError.message)
-      }
-
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .select('id, product_name, amount, payment_status, created_at')
-        .eq('seller_profile_id', sellerData.id)
-        .order('created_at', { ascending: false })
-
-      if (orderError) {
-        throw new Error(orderError.message)
-      }
-
-      setCategories(categoryData || [])
-      setOrders(orderData || [])
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to load dashboard.'
-      setPageError(message)
+      setStoreName(!existingSlug && isDefaultName ? '' : existingStoreName)
+      setSlugLocked(Boolean(existingSlug))
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load profile'
+      alert(message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
-  useEffect(() => {
-    loadDashboard()
-  }, [loadDashboard])
-
-  const activeProducts = useMemo(() => {
-    return products.filter((p) => p.is_active)
-  }, [products])
-
-  const activeCategories = useMemo(() => {
-    if (!categories.length || !activeProducts.length) return []
-
-    return categories.filter((category) =>
-      activeProducts.some(
-        (product) => (product.menu_category_id || '') === category.id
-      )
-    )
-  }, [categories, activeProducts])
-
-  const topCategories = useMemo(() => {
-    return activeCategories.slice(0, 5)
-  }, [activeCategories])
-
-  const topProducts = useMemo(() => {
-    return activeProducts.slice(0, 5)
-  }, [activeProducts])
-
-  const shopLink =
-    seller?.shop_slug && typeof window !== 'undefined'
-      ? `${window.location.origin}/s/${seller.shop_slug}`
-      : ''
-
-  const paidOrders = useMemo(() => {
-    return orders.filter((order) =>
-      ['paid', 'success', 'completed'].includes(
-        normalizePaymentStatus(order.payment_status)
-      )
-    )
-  }, [orders])
-
-  const totalRevenue = useMemo(() => {
-    return paidOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0)
-  }, [paidOrders])
-
-  const todayOrdersCount = useMemo(() => {
-    const now = new Date()
-
-    return orders.filter((order) => {
-      if (!order.created_at) return false
-      const d = new Date(order.created_at)
-      if (Number.isNaN(d.getTime())) return false
-
-      return (
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate()
-      )
-    }).length
-  }, [orders])
-
-  const promoLines = useMemo(() => {
-    if (topCategories.length > 0) {
-      return `Antara kategori:\n${topCategories
-        .map((category) => `• ${category.name}`)
-        .join('\n')}\n\n...dan banyak lagi menu tersedia.`
+  async function uploadImage(file: File) {
+    if (!sellerId) {
+      alert('Seller profile not ready yet. Please refresh and try again.')
+      return
     }
 
-    if (topProducts.length > 0) {
-      return `Antara menu:\n${topProducts
-        .map((p, i) => `${i + 1}. ${p.name} - ${formatMoney(p.price)}`)
-        .join('\n')}\n\n...dan banyak lagi menu tersedia.`
-    }
+    const ext = file.name.split('.').pop() || 'jpg'
+    const filePath = `seller-${sellerId}-${Date.now()}.${ext}`
 
-    return 'Tiada produk aktif buat masa ini.'
-  }, [topCategories, topProducts])
-
-  const message = useMemo(() => {
-    const customBlock = dailyNote.trim()
-
-    return `${customBlock ? `${customBlock}\n\n` : ''}${promoLines}
-
-Order sini:
-${shopLink}`.trim()
-  }, [dailyNote, promoLines, shopLink])
-
-  const previewImage = useMemo(() => {
-    if (seller?.profile_image) {
-      return getImageUrl(seller.profile_image)
-    }
-
-    return '/default-share.png'
-  }, [seller])
-
-  async function saveAllShareSettings() {
-    if (!seller) return
-
-    setSavingNote(true)
-
-    const { error } = await supabase
-      .from('seller_profiles')
-      .update({
-        daily_note: dailyNote,
-      })
-      .eq('id', seller.id)
-
-    setSavingNote(false)
+    const { error } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, file, { upsert: true })
 
     if (error) {
       alert(error.message)
       return
     }
 
-    alert('Saved')
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath)
+
+    setProfileImage(data.publicUrl)
   }
 
-  async function copyMessage() {
-    try {
-      await navigator.clipboard.writeText(message)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      alert('Unable to copy message')
-    }
-  }
+  async function detectPickupLocation() {
+    const trimmedPickupAddress = pickupAddress.trim()
 
-  function shareWhatsApp() {
-    const url = `https://wa.me/?text=${encodeURIComponent(message)}`
-    window.open(url, '_blank')
-  }
-
-  function goToSettings() {
-    window.location.href = '/dashboard/settings'
-  }
-
-  function goToProducts() {
-    window.location.href = '/dashboard/products'
-  }
-
-  function goToOrders() {
-    window.location.href = '/dashboard/orders'
-  }
-
-  function openShop() {
-    if (!shopLink) {
-      alert('Shop link not ready yet.')
-      return
-    }
-
-    window.open(shopLink, '_blank')
-  }
-
-  async function copyShopLink() {
-    if (!shopLink) {
-      alert('Shop link not ready yet.')
-      return
+    if (!trimmedPickupAddress) {
+      alert('Please enter pickup address first.')
+      return null
     }
 
     try {
-      await navigator.clipboard.writeText(shopLink)
-      alert('Shop link copied')
-    } catch {
-      alert('Unable to copy link')
+      setDetectingLocation(true)
+
+      const response = await fetch('/api/maps/geocode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address: trimmedPickupAddress,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.ok) {
+        throw new Error(
+          data.error || 'Alamat tidak dapat dikenal pasti. Sila semak semula alamat pickup.'
+        )
+      }
+
+      const nextLat = String(data.latitude)
+      const nextLng = String(data.longitude)
+      const nextAddress = String(data.formatted_address || trimmedPickupAddress)
+
+      setLatitude(nextLat)
+      setLongitude(nextLng)
+      setResolvedPickupAddress(nextAddress)
+
+      return {
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+        formattedAddress: nextAddress,
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to detect pickup location'
+      alert(message)
+      return null
+    } finally {
+      setDetectingLocation(false)
     }
   }
 
-  function shareShopToWhatsApp() {
-    if (!shopLink) {
-      alert('Shop link not ready yet.')
+  function updateOperatingDay(day: DayKey, updates: Partial<OperatingDay>) {
+    setOperatingHours((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        ...updates,
+      },
+    }))
+  }
+
+  async function handleSave() {
+    if (saving) return
+
+    if (!userId) {
+      alert('User session not found. Please log in again.')
       return
     }
 
-    const text = `${seller?.store_name || 'Kedai saya'}\n\nOrder di sini:\n${shopLink}`
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`
-    window.open(url, '_blank')
+    const trimmedStoreName = storeName.trim()
+    const trimmedClosedMessage = closedMessage.trim()
+    const trimmedDeliveryArea = deliveryArea.trim()
+    const trimmedDeliveryNote = deliveryNote.trim()
+    let trimmedPickupAddress = pickupAddress.trim()
+
+    const parsedDeliveryFee = Number(deliveryFee || 0)
+    const parsedDeliveryRadiusKm = Number(deliveryRadiusKm || 0)
+    const parsedDeliveryRatePerKm = Number(deliveryRatePerKm || 0)
+    const parsedDeliveryMinFee = Number(deliveryMinFee || 0)
+
+    let parsedLatitude =
+      latitude.trim() === '' ? null : Number(latitude)
+    let parsedLongitude =
+      longitude.trim() === '' ? null : Number(longitude)
+
+    if (!trimmedStoreName) {
+      alert('Store Name is required')
+      return
+    }
+
+    const enabledDays = DAY_OPTIONS.filter(({ key }) => operatingHours[key].enabled)
+
+    if (enabledDays.length === 0) {
+      alert('Please select at least one operating day.')
+      return
+    }
+
+    for (const { key, label } of DAY_OPTIONS) {
+      const row = operatingHours[key]
+      if (!row.enabled) continue
+
+      if (!row.open || !row.close) {
+        alert(`Please complete operating hours for ${label}.`)
+        return
+      }
+
+      if (row.open === row.close) {
+        alert(`Opening time and closing time for ${label} cannot be the same.`)
+        return
+      }
+    }
+
+    if (!Number.isFinite(parsedDeliveryFee) || parsedDeliveryFee < 0) {
+      alert('Please enter a valid delivery fee.')
+      return
+    }
+
+    if (deliveryMode === 'fixed_fee' && parsedDeliveryFee <= 0) {
+      alert('Please enter delivery fee more than 0.')
+      return
+    }
+
+    if (deliveryMode === 'distance_based') {
+      if (!Number.isFinite(parsedDeliveryRadiusKm) || parsedDeliveryRadiusKm <= 0) {
+        alert('Please enter max delivery radius more than 0.')
+        return
+      }
+
+      if (!Number.isFinite(parsedDeliveryRatePerKm) || parsedDeliveryRatePerKm <= 0) {
+        alert('Please enter rate per km more than 0.')
+        return
+      }
+
+      if (!Number.isFinite(parsedDeliveryMinFee) || parsedDeliveryMinFee < 0) {
+        alert('Please enter a valid minimum delivery fee.')
+        return
+      }
+
+      if (!trimmedPickupAddress) {
+        alert('Please enter pickup address for distance based delivery.')
+        return
+      }
+
+      const geocoded = await detectPickupLocation()
+
+      if (!geocoded) {
+        return
+      }
+
+      parsedLatitude = geocoded.latitude
+      parsedLongitude = geocoded.longitude
+      trimmedPickupAddress = geocoded.formattedAddress
+    }
+
+    setSaving(true)
+
+    try {
+      let currentSellerId = sellerId
+
+      if (!currentSellerId) {
+        const profile = await ensureSellerProfile(userId, accountEmail || '')
+        currentSellerId = profile.id
+        setSellerId(profile.id)
+      }
+
+      let finalShopSlug = savedShopSlug
+
+      if (!finalShopSlug) {
+        finalShopSlug = await generateUniqueShopSlug(trimmedStoreName, currentSellerId)
+      }
+
+      const { error } = await supabase
+        .from('seller_profiles')
+        .update({
+          store_name: trimmedStoreName,
+          email: email.trim() || null,
+          whatsapp: whatsapp.trim() || null,
+          company_name: companyName.trim() || null,
+          company_registration: companyReg.trim() || null,
+          business_address: businessAddress.trim() || null,
+          bank_name: bankName || null,
+          account_number: accountNumber.trim() || null,
+          account_holder_name: accountHolderName.trim() || null,
+          profile_image: profileImage || null,
+          shop_slug: finalShopSlug,
+
+          operating_hours: operatingHours,
+          temporarily_closed: temporarilyClosed,
+          closed_message:
+            trimmedClosedMessage ||
+            'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+
+          delivery_mode: deliveryMode,
+          delivery_fee: deliveryMode === 'fixed_fee' ? parsedDeliveryFee : 0,
+          delivery_area: trimmedDeliveryArea || null,
+          delivery_note: trimmedDeliveryNote || null,
+          delivery_radius_km:
+            deliveryMode === 'distance_based' ? parsedDeliveryRadiusKm : null,
+          delivery_rate_per_km:
+            deliveryMode === 'distance_based' ? parsedDeliveryRatePerKm : null,
+          delivery_min_fee:
+            deliveryMode === 'distance_based' ? parsedDeliveryMinFee : null,
+          pickup_address:
+            deliveryMode === 'distance_based' ? trimmedPickupAddress : null,
+          latitude:
+            deliveryMode === 'distance_based' ? parsedLatitude : null,
+          longitude:
+            deliveryMode === 'distance_based' ? parsedLongitude : null,
+
+          accept_orders_anytime: null,
+          opening_time: null,
+          closing_time: null,
+        })
+        .eq('id', currentSellerId)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      setStoreName(trimmedStoreName)
+      setSavedShopSlug(finalShopSlug)
+      setSlugLocked(true)
+      setPickupAddress(trimmedPickupAddress)
+      setResolvedPickupAddress(trimmedPickupAddress)
+
+      alert('Settings updated successfully!')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save settings'
+      alert(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  if (loading) {
-    return <Layout>Loading...</Layout>
+  async function handleChangePassword() {
+    if (!newPassword || !confirmPassword) {
+      alert('Please fill in new password and confirm password.')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      alert('Password must be at least 6 characters.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert('Password confirmation does not match.')
+      return
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    })
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    setNewPassword('')
+    setConfirmPassword('')
+    alert('Password updated successfully!')
   }
 
-  if (pageError) {
-    return (
-      <Layout>
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-5 shadow-sm">
-          <p className="text-sm font-medium text-red-700">{pageError}</p>
-        </div>
-      </Layout>
-    )
+  async function handleLogout() {
+    const confirmed = window.confirm('Log out from your account?')
+    if (!confirmed) return
+
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    window.location.href = '/login'
   }
 
   return (
     <Layout>
-      <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-        <div className="flex items-center gap-4">
-          {seller?.profile_image ? (
-            <img
-              src={getImageUrl(seller.profile_image) || '/default-avatar.png'}
-              alt={seller.store_name || 'Seller profile'}
-              className="h-16 w-16 rounded-full border border-slate-200 object-cover"
-            />
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-500">
-              {(seller?.store_name || 'S').slice(0, 1).toUpperCase()}
-            </div>
-          )}
-
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold text-slate-900 sm:text-3xl">
-              {seller?.store_name || 'Seller'}
-            </h1>
-            <p className="mt-1 break-all text-sm text-slate-500">
-              {shopLink || 'Complete your settings to activate your shop link.'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">Quick Actions</h2>
-          <p className="text-sm text-slate-500">
-            Akses pantas untuk urus kedai anda.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <button
-            onClick={shareShopToWhatsApp}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:bg-slate-50"
-          >
-            <div className="text-sm font-bold text-slate-900">Share Kedai</div>
-            <div className="mt-1 text-xs text-slate-500">
-              Hantar link kedai ke WhatsApp
-            </div>
-          </button>
-
-          <button
-            onClick={goToProducts}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:bg-slate-50"
-          >
-            <div className="text-sm font-bold text-slate-900">Tambah Menu</div>
-            <div className="mt-1 text-xs text-slate-500">
-              Tambah produk baru
-            </div>
-          </button>
-
-          <button
-            onClick={goToOrders}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:bg-slate-50"
-          >
-            <div className="text-sm font-bold text-slate-900">Lihat Order</div>
-            <div className="mt-1 text-xs text-slate-500">
-              Semak order masuk
-            </div>
-          </button>
-
-          <button
-            onClick={openShop}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:bg-slate-50"
-          >
-            <div className="text-sm font-bold text-slate-900">View Shop</div>
-            <div className="mt-1 text-xs text-slate-500">
-              Buka shop page anda
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Card title="Products" value={products.length} />
-        <Card title="Active Products" value={activeProducts.length} />
-        <Card title="Orders Today" value={todayOrdersCount} />
-        <Card title="Revenue" value={formatMoney(totalRevenue)} />
-      </div>
-
-      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Link Kedai Anda</h2>
-            <p className="text-sm text-slate-500">
-              Customer boleh order & bayar terus melalui link ini.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={copyShopLink}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition hover:bg-slate-50"
-            >
-              Copy Link
-            </button>
-
-            <button
-              onClick={shareShopToWhatsApp}
-              className="rounded-lg bg-green-500 px-3 py-2 text-sm text-white transition hover:bg-green-600"
-            >
-              Share WhatsApp
-            </button>
-          </div>
-        </div>
-
-        <div className="break-all rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          {shopLink || 'Shop link not ready yet'}
-        </div>
-
-        <p className="mt-3 text-xs text-slate-500">
-          Semua paid order yang complete akan diproses untuk payout automatik mengikut cycle payout.
+      <div className="mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+          Settings
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
+          Manage your store, payout details, account settings, and order availability.
         </p>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-slate-900">Share Preview</h2>
-          <p className="text-sm text-slate-500">
-            Tulis caption. Preview akan dikemaskini secara automatik.
-          </p>
+      {loading ? (
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-slate-500">Loading...</p>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_0.85fr]">
+          <div className="space-y-5">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Seller Profile</h2>
 
-        <div className="mb-5">
-          <textarea
-            value={dailyNote}
-            onChange={(e) => setDailyNote(e.target.value)}
-            placeholder="Contoh: Open order hari ini! Delivery petang 🚚"
-            rows={3}
-            className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
-          />
-        </div>
+              <div className="mb-5">
+                <p className="mb-2 text-sm font-bold text-slate-700">Logo Biz</p>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Link Preview
-            </p>
+                {profileImage ? (
+                  <img
+                    src={profileImage}
+                    alt="Seller profile"
+                    className="mb-3 h-20 w-20 rounded-full object-cover"
+                  />
+                ) : null}
 
-            <div className="overflow-hidden rounded-lg border bg-white">
-              {previewImage ? (
-                <img
-                  src={previewImage}
-                  alt="Preview"
-                  className="h-40 w-full object-cover transition duration-300 hover:scale-[1.02]"
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      uploadImage(e.target.files[0])
+                    }
+                  }}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
                 />
-              ) : null}
+              </div>
 
-              <div className="p-3">
-                <p className="text-sm font-semibold text-slate-900">
-                  {seller?.store_name || 'Nama Kedai'}
-                </p>
+              <div className="space-y-5">
+                <div>
+                  <p className="mb-3 text-sm font-extrabold text-slate-900">Nama Biz</p>
 
-                <p className="mt-1 line-clamp-2 text-sm text-slate-500">
-                  {dailyNote.trim() || 'Order dengan mudah di sini.'}
-                </p>
+                  <div className="grid gap-3">
+                    <div>
+                      <input
+                        placeholder="Store Name"
+                        value={storeName}
+                        onChange={(e) => setStoreName(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
 
-                <p className="mt-2 break-all text-xs text-slate-400">
-                  {shopLink || 'https://www.bayarlink.my'}
+                      <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                          Shop URL {slugLocked ? 'Locked' : 'Preview'}
+                        </p>
+
+                        <p className="mt-1 break-all text-sm font-bold text-slate-900">
+                          {previewBaseUrl}/s/{livePreviewSlug}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          {slugLocked
+                            ? 'Your shop URL is locked after first successful save.'
+                            : 'Preview only. Type your store name to preview your future shop URL.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <input
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+
+                    <input
+                      placeholder="WhatsApp Number"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-extrabold text-slate-900">Company Info</p>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                      Optional
+                    </span>
+                  </div>
+
+                  <div className="grid gap-3">
+                    <input
+                      placeholder="Company Name (Optional)"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+
+                    <input
+                      placeholder="Company Registration No (Optional)"
+                      value={companyReg}
+                      onChange={(e) => setCompanyReg(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+
+                    <textarea
+                      placeholder="Business Address (Optional)"
+                      value={businessAddress}
+                      onChange={(e) => setBusinessAddress(e.target.value)}
+                      rows={4}
+                      className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-3 text-sm font-extrabold text-slate-900">Payout Details</p>
+
+                  <div className="grid gap-3">
+                    <select
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                    >
+                      <option value="">Select Bank</option>
+                      {MALAYSIAN_BANKS.map((bank) => (
+                        <option key={bank} value={bank}>
+                          {bank}
+                        </option>
+                      ))}
+                    </select>
+
+                    <input
+                      placeholder="Account Number"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+
+                    <input
+                      placeholder="Account Holder Name"
+                      value={accountHolderName}
+                      onChange={(e) => setAccountHolderName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-extrabold text-slate-900">Delivery Settings</p>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                      Customer-facing
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-bold text-slate-700">Preview</p>
+                    <p className="mt-1 text-sm text-slate-600">{deliverySummaryText}</p>
+
+                    {deliveryArea.trim() ? (
+                      <p className="mt-2 text-xs text-slate-500">
+                        Kawasan liputan: {deliveryArea.trim()}
+                      </p>
+                    ) : null}
+
+                    {deliveryNote.trim() ? (
+                      <p className="mt-1 text-xs text-slate-500">{deliveryNote.trim()}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid gap-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Delivery Mode
+                      </label>
+                      <select
+                        value={deliveryMode}
+                        onChange={(e) => setDeliveryMode(e.target.value as DeliveryMode)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                      >
+                        {DELIVERY_MODES.map((mode) => (
+                          <option key={mode.value} value={mode.value}>
+                            {mode.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {deliveryMode === 'fixed_fee' ? (
+                      <div>
+                        <label className="mb-2 block text-sm font-bold text-slate-700">
+                          Delivery Fee (RM)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Contoh: 5.00"
+                          value={deliveryFee}
+                          onChange={(e) => setDeliveryFee(e.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                        />
+                      </div>
+                    ) : null}
+
+                    {deliveryMode === 'distance_based' ? (
+                      <div className="grid gap-4 rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Rate Per KM (RM)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Contoh: 1.00"
+                            value={deliveryRatePerKm}
+                            onChange={(e) => setDeliveryRatePerKm(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Minimum Delivery Fee (RM)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Contoh: 5.00"
+                            value={deliveryMinFee}
+                            onChange={(e) => setDeliveryMinFee(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Maximum Delivery Radius (KM)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Contoh: 10"
+                            value={deliveryRadiusKm}
+                            onChange={(e) => setDeliveryRadiusKm(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-bold text-slate-700">
+                            Pickup Address
+                          </label>
+                          <textarea
+                            placeholder="Alamat pickup / lokasi kedai untuk kiraan jarak"
+                            value={pickupAddress}
+                            onChange={(e) => setPickupAddress(e.target.value)}
+                            rows={3}
+                            className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                          />
+                          <p className="mt-2 text-xs text-slate-500">
+                            Seller hanya isi alamat. Sistem akan auto detect latitude dan longitude.
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <button
+                            type="button"
+                            onClick={detectPickupLocation}
+                            disabled={detectingLocation}
+                            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {detectingLocation ? 'Detecting...' : 'Detect Pickup Location'}
+                          </button>
+
+                          {latitude && longitude ? (
+                            <div className="text-xs text-slate-600">
+                              Latitude: <strong>{latitude}</strong> &nbsp;•&nbsp; Longitude:{' '}
+                              <strong>{longitude}</strong>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500">
+                              Lokasi belum dikesan lagi.
+                            </div>
+                          )}
+                        </div>
+
+                        {resolvedPickupAddress ? (
+                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                              Resolved Address
+                            </p>
+                            <p className="mt-1 text-sm text-emerald-900">
+                              {resolvedPickupAddress}
+                            </p>
+                          </div>
+                        ) : null}
+
+                        <input type="hidden" value={latitude} readOnly />
+                        <input type="hidden" value={longitude} readOnly />
+
+                        <p className="text-xs leading-5 text-slate-500">
+                          Sistem akan simpan latitude dan longitude secara automatik bila alamat
+                          berjaya dikenal pasti.
+                        </p>
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Delivery Area
+                      </label>
+                      <input
+                        placeholder="Contoh: Shah Alam, Subang, Klang"
+                        value={deliveryArea}
+                        onChange={(e) => setDeliveryArea(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Optional. Customer boleh nampak kawasan liputan seller.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Delivery Note
+                      </label>
+                      <textarea
+                        placeholder="Contoh: Caj rider dibayar terus kepada rider semasa barang sampai."
+                        value={deliveryNote}
+                        onChange={(e) => setDeliveryNote(e.target.value)}
+                        rows={3}
+                        className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Nota tambahan ini boleh dipaparkan kepada customer semasa checkout /
+                        shop page.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-extrabold text-slate-900">Order Availability</p>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${
+                        temporarilyClosed
+                          ? 'bg-rose-100 text-rose-700'
+                          : 'bg-emerald-100 text-emerald-700'
+                      }`}
+                    >
+                      {temporarilyClosed ? 'Temporarily Closed' : 'Weekly Schedule'}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-bold text-slate-700">Current Status</p>
+                    <p className="mt-1 text-sm text-slate-600">{operatingSummaryText}</p>
+                  </div>
+
+                  <div className="mt-4 grid gap-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <p className="text-sm font-bold text-slate-900">Operating Hours</p>
+                        <span className="text-xs text-slate-500">
+                          Pilih hari buka & masa operasi
+                        </span>
+                      </div>
+
+                      <div className="grid gap-3">
+                        {DAY_OPTIONS.map(({ key, label }) => {
+                          const row = operatingHours[key]
+
+                          return (
+                            <div
+                              key={key}
+                              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                            >
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    id={`settings-day-${key}`}
+                                    type="checkbox"
+                                    checked={row.enabled}
+                                    onChange={(e) =>
+                                      updateOperatingDay(key, { enabled: e.target.checked })
+                                    }
+                                    className="h-4 w-4"
+                                  />
+                                  <label
+                                    htmlFor={`settings-day-${key}`}
+                                    className="text-sm font-bold text-slate-900"
+                                  >
+                                    {label}
+                                  </label>
+                                </div>
+
+                                {row.enabled ? (
+                                  <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                                    <input
+                                      type="time"
+                                      value={row.open}
+                                      onChange={(e) =>
+                                        updateOperatingDay(key, { open: e.target.value })
+                                      }
+                                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                    />
+                                    <input
+                                      type="time"
+                                      value={row.close}
+                                      onChange={(e) =>
+                                        updateOperatingDay(key, { close: e.target.value })
+                                      }
+                                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="text-xs font-semibold text-slate-500">
+                                    Tutup
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                      <input
+                        type="checkbox"
+                        checked={temporarilyClosed}
+                        onChange={(e) => setTemporarilyClosed(e.target.checked)}
+                        className="mt-1 h-4 w-4"
+                      />
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Temporarily closed</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          Gunakan bila anda perlu tutup sementara walaupun hari dan waktu operasi biasa masih aktif.
+                        </p>
+                      </div>
+                    </label>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Closed Message
+                      </label>
+                      <textarea
+                        placeholder="Contoh: Kedai kini ditutup. Tempahan dibuka semula pada waktu operasi seterusnya."
+                        value={closedMessage}
+                        onChange={(e) => setClosedMessage(e.target.value)}
+                        rows={3}
+                        className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Mesej ini boleh dipaparkan kepada customer bila kedai tidak menerima order.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || detectingLocation}
+                  className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {saving ? 'Saving...' : detectingLocation ? 'Detecting location...' : 'Save Settings'}
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <div className="space-y-5">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Account</h2>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-bold text-slate-700">Login Email</p>
+                <p className="mt-1 break-all text-sm text-slate-600">
+                  {accountEmail || '-'}
                 </p>
               </div>
-            </div>
-          </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              WhatsApp Preview
-            </p>
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-extrabold text-slate-900">Change Password</p>
 
-            <div className="whitespace-pre-line rounded-lg border bg-white p-3 text-sm text-slate-800">
-              {message}
-            </div>
+                <input
+                  type="password"
+                  placeholder="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                />
+
+                <input
+                  type="password"
+                  placeholder="Confirm New Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleChangePassword}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50"
+                >
+                  Update Password
+                </button>
+
+                <p className="text-xs text-slate-500">
+                  Gunakan password sekurang-kurangnya 6 aksara.
+                </p>
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Session</h2>
+
+              <p className="mb-4 text-sm leading-6 text-slate-500">
+                Log out jika anda ingin keluar dari akaun seller ini.
+              </p>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full rounded-2xl border border-red-200 bg-rose-50 px-4 py-3 text-sm font-extrabold text-red-700 transition hover:bg-rose-100"
+              >
+                Log Out
+              </button>
+            </section>
           </div>
         </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            onClick={saveAllShareSettings}
-            disabled={savingNote}
-            className="rounded-lg bg-black px-4 py-2 text-sm text-white transition hover:opacity-90 disabled:opacity-70"
-          >
-            {savingNote ? 'Saving...' : 'Save Changes'}
-          </button>
-
-          <button
-            onClick={copyMessage}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition hover:bg-slate-50"
-          >
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-
-          <button
-            onClick={shareWhatsApp}
-            className="rounded-lg bg-green-500 px-3 py-2 text-sm text-white transition hover:bg-green-600"
-          >
-            Share to WhatsApp
-          </button>
-
-          <button
-            onClick={goToSettings}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition hover:bg-slate-50"
-          >
-            Settings
-          </button>
-        </div>
-      </div>
+      )}
     </Layout>
-  )
-}
-
-function Card({ title, value }: { title: string; value: string | number }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="text-sm text-gray-500">{title}</div>
-      <div className="text-xl font-bold text-slate-900">{value}</div>
-    </div>
   )
 }
