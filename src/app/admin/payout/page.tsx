@@ -35,8 +35,82 @@ type HistoryRow = {
   total_orders: number
 }
 
+type SellerProfileMini =
+  | {
+      id?: string
+      store_name?: string | null
+      email?: string | null
+    }
+  | null
+  | undefined
+
+type OrderPayoutRecord = {
+  seller_profile_id?: string | null
+  payment_method?: string | null
+  gross_amount?: number | null
+  amount?: number | null
+  platform_fee_amount?: number | null
+  net_seller_amount?: number | null
+  payout_status?: string | null
+  payment_status?: string | null
+  payout_at?: string | null
+  seller_profiles?: SellerProfileMini | SellerProfileMini[]
+}
+
 function formatMoney(value?: number | null) {
   return `RM ${Number(value || 0).toFixed(2)}`
+}
+
+function normalizeStatus(value?: string | null) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function isPaidPaymentStatus(value?: string | null) {
+  const normalized = normalizeStatus(value)
+  return ['paid', 'success', 'completed'].includes(normalized)
+}
+
+function isPendingPayoutStatus(value?: string | null) {
+  const normalized = normalizeStatus(value)
+  return (
+    normalized === '' ||
+    normalized === 'unpaid' ||
+    normalized === 'eligible'
+  )
+}
+
+function isPaidOutStatus(value?: string | null) {
+  return normalizeStatus(value) === 'paid'
+}
+
+function getSellerProfile(raw: OrderPayoutRecord['seller_profiles']) {
+  if (Array.isArray(raw)) {
+    return raw[0] || null
+  }
+  return raw || null
+}
+
+function getGrossAmount(order: OrderPayoutRecord) {
+  const gross = Number(order.gross_amount ?? order.amount ?? 0)
+  return Number.isFinite(gross) ? gross : 0
+}
+
+function getFeeAmount(order: OrderPayoutRecord) {
+  const fee = Number(order.platform_fee_amount ?? 0)
+  return Number.isFinite(fee) ? fee : 0
+}
+
+function getNetSellerAmount(order: OrderPayoutRecord) {
+  const explicitNet = Number(order.net_seller_amount)
+  if (Number.isFinite(explicitNet) && explicitNet > 0) {
+    return explicitNet
+  }
+
+  const gross = getGrossAmount(order)
+  const fee = getFeeAmount(order)
+  const fallbackNet = gross - fee
+
+  return fallbackNet > 0 ? fallbackNet : 0
 }
 
 export default function AdminPayoutPage() {
@@ -51,24 +125,24 @@ export default function AdminPayoutPage() {
   const loadPayoutData = useCallback(async () => {
     setLoading(true)
 
-    const { data: paidOrders, error } = await supabase
+    const { data: allOrders, error } = await supabase
       .from('orders')
       .select(`
         seller_profile_id,
         payment_method,
+        amount,
         gross_amount,
         platform_fee_amount,
         net_seller_amount,
         payout_status,
         payment_status,
+        payout_at,
         seller_profiles (
           id,
           store_name,
           email
         )
       `)
-      .eq('payment_status', 'paid')
-      .in('payout_status', ['unpaid', 'eligible'])
 
     if (error) {
       alert(error.message)
@@ -76,28 +150,29 @@ export default function AdminPayoutPage() {
       return
     }
 
+    const orders = (allOrders || []) as OrderPayoutRecord[]
+
+    const pendingPaidOrders = orders.filter((order) => {
+      return (
+        isPaidPaymentStatus(order.payment_status) &&
+        isPendingPayoutStatus(order.payout_status)
+      )
+    })
+
     const payoutMap = new Map<string, PayoutRow>()
     const breakdownMap = new Map<string, BreakdownRow>()
 
-    for (const order of paidOrders || []) {
+    for (const order of pendingPaidOrders) {
       const sellerProfileId = String(order.seller_profile_id || '')
       if (!sellerProfileId) continue
 
-      const sellerProfileRaw = Array.isArray(order.seller_profiles)
-        ? order.seller_profiles[0]
-        : order.seller_profiles
-
-      const sellerProfile = sellerProfileRaw as
-        | { id?: string; store_name?: string | null; email?: string | null }
-        | null
-        | undefined
-
+      const sellerProfile = getSellerProfile(order.seller_profiles)
       const storeName = sellerProfile?.store_name || 'Unnamed Seller'
       const email = sellerProfile?.email || null
 
-      const gross = Number(order.gross_amount || 0)
-      const fee = Number(order.platform_fee_amount || 0)
-      const payout = Number(order.net_seller_amount || 0)
+      const gross = getGrossAmount(order)
+      const fee = getFeeAmount(order)
+      const payout = getNetSellerAmount(order)
       const paymentMethod = String(order.payment_method || 'UNKNOWN')
 
       if (!payoutMap.has(sellerProfileId)) {
@@ -149,40 +224,14 @@ export default function AdminPayoutPage() {
       return a.seller_profile_id.localeCompare(b.seller_profile_id)
     })
 
-    const { data: paidOutOrders, error: paidOutError } = await supabase
-      .from('orders')
-      .select(`
-        seller_profile_id,
-        gross_amount,
-        platform_fee_amount,
-        net_seller_amount,
-        payout_at,
-        seller_profiles (
-          store_name,
-          email
-        )
-      `)
-      .eq('payout_status', 'paid')
-
-    if (paidOutError) {
-      alert(paidOutError.message)
-      setLoading(false)
-      return
-    }
+    const paidOutOrders = orders.filter((order) => isPaidOutStatus(order.payout_status))
 
     const historyMap = new Map<string, HistoryRow>()
 
-    for (const o of paidOutOrders || []) {
-      const key = `${o.seller_profile_id}__${o.payout_at}`
+    for (const o of paidOutOrders) {
+      const key = `${o.seller_profile_id || ''}__${o.payout_at || ''}`
 
-      const sellerProfileRaw = Array.isArray(o.seller_profiles)
-        ? o.seller_profiles[0]
-        : o.seller_profiles
-
-      const sellerProfile = sellerProfileRaw as
-        | { store_name?: string | null; email?: string | null }
-        | null
-        | undefined
+      const sellerProfile = getSellerProfile(o.seller_profiles)
 
       if (!historyMap.has(key)) {
         historyMap.set(key, {
@@ -200,9 +249,9 @@ export default function AdminPayoutPage() {
       const row = historyMap.get(key)
       if (!row) continue
 
-      row.total_sales += Number(o.gross_amount || 0)
-      row.total_fee += Number(o.platform_fee_amount || 0)
-      row.total_payout += Number(o.net_seller_amount || 0)
+      row.total_sales += getGrossAmount(o)
+      row.total_fee += getFeeAmount(o)
+      row.total_payout += getNetSellerAmount(o)
       row.total_orders += 1
     }
 
@@ -275,8 +324,8 @@ export default function AdminPayoutPage() {
         payout_at: new Date().toISOString(),
       })
       .eq('seller_profile_id', sellerProfileId)
-      .eq('payment_status', 'paid')
-      .in('payout_status', ['unpaid', 'eligible'])
+      .in('payment_status', ['paid', 'success', 'completed'])
+      .or('payout_status.is.null,payout_status.eq.unpaid,payout_status.eq.eligible')
 
     setMarkingSellerId(null)
 
