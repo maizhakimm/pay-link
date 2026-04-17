@@ -196,7 +196,6 @@ async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> 
         temporarily_closed,
         closed_message,
         operating_days,
-        operating_days,
         delivery_mode,
         delivery_fee,
         delivery_area,
