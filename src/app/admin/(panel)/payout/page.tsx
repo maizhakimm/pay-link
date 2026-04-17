@@ -1,34 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../../../../lib/supabase'
-
-useEffect(() => {
-  async function checkSession() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) return
-
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (data?.role === 'admin') {
-      window.location.href = '/admin/payout'
-    }
-  }
-
-  checkSession()
-}, [])
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    async function checkSession() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) return
+
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (data?.role === 'admin') {
+        window.location.href = '/admin/payout'
+      }
+    }
+
+    checkSession()
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -47,7 +47,12 @@ export default function AdminLoginPage() {
 
     const user = data.user
 
-    // ✅ CHECK ADMIN ROLE
+    if (!user) {
+      alert('User not found')
+      setLoading(false)
+      return
+    }
+
     const { data: roleRow } = await supabase
       .from('user_roles')
       .select('role')
@@ -61,7 +66,6 @@ export default function AdminLoginPage() {
       return
     }
 
-    // ✅ SUCCESS → ADMIN PANEL
     window.location.href = '/admin/payout'
   }
 
