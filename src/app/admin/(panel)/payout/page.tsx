@@ -15,7 +15,7 @@ type PayoutRow = {
   seller_profiles?: {
     store_name: string | null
     email: string | null
-  } | null
+  }[] | null
 }
 
 export default function AdminPayoutPage() {
