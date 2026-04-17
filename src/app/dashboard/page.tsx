@@ -116,25 +116,9 @@ export default function DashboardPage() {
       }
 
       if (!sellerData) {
-        window.location.href = '/dashboard/settings?setup=1'
+        window.location.href = '/dashboard/onboarding'
         return
       }
-
-      const hasStoreName = Boolean(sellerData.store_name?.trim())
-      const hasShopSlug = Boolean(sellerData.shop_slug?.trim())
-      const hasWhatsapp = Boolean(sellerData.whatsapp?.trim())
-      const hasDeliveryMode = Boolean(sellerData.delivery_mode)
-
-      const isBasicSetupComplete =
-        hasStoreName && hasShopSlug && hasWhatsapp && hasDeliveryMode
-
-      if (!isBasicSetupComplete) {
-        window.location.href = '/dashboard/onboarding
-        return
-      }
-
-      setSeller(sellerData)
-      setDailyNote(sellerData.daily_note || '')
 
       const { data: productData, error: productError } = await supabase
         .from('products')
@@ -144,6 +128,31 @@ export default function DashboardPage() {
       if (productError) {
         throw new Error(productError.message)
       }
+
+      const allProducts = (productData || []) as Product[]
+      const activeProducts = allProducts.filter((p) => p.is_active)
+
+      const hasStoreName = Boolean(sellerData.store_name?.trim())
+      const hasShopSlug = Boolean(sellerData.shop_slug?.trim())
+      const hasWhatsapp = Boolean(sellerData.whatsapp?.trim())
+      const hasDeliveryMode = Boolean(sellerData.delivery_mode)
+      const hasAtLeastOneActiveProduct = activeProducts.length > 0
+
+      const isOnboardingComplete =
+        hasStoreName &&
+        hasShopSlug &&
+        hasWhatsapp &&
+        hasDeliveryMode &&
+        hasAtLeastOneActiveProduct
+
+      if (!isOnboardingComplete) {
+        window.location.href = '/dashboard/onboarding'
+        return
+      }
+
+      setSeller(sellerData)
+      setDailyNote(sellerData.daily_note || '')
+      setProducts(allProducts)
 
       const { data: categoryData, error: categoryError } = await supabase
         .from('menu_categories')
@@ -167,7 +176,6 @@ export default function DashboardPage() {
         throw new Error(orderError.message)
       }
 
-      setProducts(productData || [])
       setCategories(categoryData || [])
       setOrders(orderData || [])
     } catch (error) {
@@ -237,8 +245,6 @@ export default function DashboardPage() {
       )
     }).length
   }, [orders])
-
-  const hasAtLeastOneActiveProduct = activeProducts.length > 0
 
   const promoLines = useMemo(() => {
     if (topCategories.length > 0) {
@@ -396,38 +402,6 @@ ${shopLink}`.trim()
           </div>
         </div>
       </div>
-
-      {!hasAtLeastOneActiveProduct ? (
-        <div className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-amber-900">
-                Kedai anda hampir siap
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-amber-800">
-                Basic setup dah lengkap. Langkah seterusnya ialah tambah sekurang-kurangnya
-                1 produk aktif supaya anda boleh mula terima order.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={goToProducts}
-                className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
-                Tambah Produk
-              </button>
-
-              <button
-                onClick={goToSettings}
-                className="rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-900 transition hover:bg-amber-100"
-              >
-                Semak Settings
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
         <div className="mb-4">
@@ -603,6 +577,13 @@ ${shopLink}`.trim()
             className="rounded-lg bg-green-500 px-3 py-2 text-sm text-white transition hover:bg-green-600"
           >
             Share to WhatsApp
+          </button>
+
+          <button
+            onClick={goToSettings}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 transition hover:bg-slate-50"
+          >
+            Settings
           </button>
         </div>
       </div>
