@@ -654,7 +654,7 @@ export default function OnboardingPage() {
       const { error } = await supabase.from('products').insert({
         name: productName.trim(),
         slug: finalSlug,
-        description: productDescription.trim() || null,
+        description: productDescription.trim() || '',
         price: Number(productPrice),
         is_active: true,
         track_stock: false,
