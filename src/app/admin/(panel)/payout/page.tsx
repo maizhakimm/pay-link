@@ -116,7 +116,7 @@ export default function AdminPayoutPage() {
         return
       }
 
-      setRows((data as PayoutRow[]) || [])
+      setRows(((data || []) as unknown) as PayoutRow[])
       setLoading(false)
     }
 
@@ -125,7 +125,7 @@ export default function AdminPayoutPage() {
 
   const stats = useMemo(() => {
     const total = rows.length
-    const pending = rows.filter((r) => r.status === 'pending').length
+    const pending = rows.filter((r) => (r.status || 'pending') === 'pending').length
     const approved = rows.filter((r) => r.status === 'approved').length
     const paid = rows.filter((r) => r.status === 'paid').length
 
@@ -169,6 +169,28 @@ export default function AdminPayoutPage() {
     } catch {
       return value
     }
+  }
+
+  function getStatusBadgeClass(status: string | null) {
+    const value = status || 'pending'
+
+    if (value === 'pending') {
+      return 'bg-amber-100 text-amber-700'
+    }
+
+    if (value === 'approved') {
+      return 'bg-blue-100 text-blue-700'
+    }
+
+    if (value === 'paid') {
+      return 'bg-emerald-100 text-emerald-700'
+    }
+
+    if (value === 'rejected') {
+      return 'bg-rose-100 text-rose-700'
+    }
+
+    return 'bg-slate-100 text-slate-700'
   }
 
   if (checking) {
@@ -257,7 +279,7 @@ export default function AdminPayoutPage() {
                           {row.seller_profiles?.[0]?.store_name || 'No store name'}
                         </div>
                         <div className="text-xs text-slate-500">
-                          {row.seller_profiles?.email || row.seller_id}
+                          {row.seller_profiles?.[0]?.email || row.seller_id}
                         </div>
                       </td>
 
@@ -277,7 +299,11 @@ export default function AdminPayoutPage() {
                       </td>
 
                       <td className="px-4 py-3">
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium capitalize text-slate-700">
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${getStatusBadgeClass(
+                            row.status
+                          )}`}
+                        >
                           {row.status || 'pending'}
                         </span>
                       </td>
@@ -294,12 +320,14 @@ export default function AdminPayoutPage() {
                           >
                             Approve
                           </button>
+
                           <button
                             onClick={() => updateStatus(row.id, 'paid')}
                             className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
                           >
                             Mark Paid
                           </button>
+
                           <button
                             onClick={() => updateStatus(row.id, 'rejected')}
                             className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
