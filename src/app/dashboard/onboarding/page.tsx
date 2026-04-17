@@ -11,6 +11,23 @@ type DeliveryMode =
   | 'pay_rider_separately'
   | 'distance_based'
 
+type DayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
+type OperatingDay = {
+  enabled: boolean
+  open: string
+  close: string
+}
+
+type OperatingHours = Record<DayKey, OperatingDay>
+
 type SellerProfileRow = {
   id: string
   user_id: string
@@ -29,6 +46,8 @@ type SellerProfileRow = {
   pickup_address?: string | null
   latitude?: number | null
   longitude?: number | null
+  operating_hours?: OperatingHours | null
+  temporarily_closed?: boolean | null
 }
 
 type ProductRow = {
@@ -62,6 +81,59 @@ const DELIVERY_MODES = [
     desc: 'Caj delivery dikira berdasarkan jarak.',
   },
 ] as const
+
+const DAY_OPTIONS: Array<{ key: DayKey; label: string }> = [
+  { key: 'monday', label: 'Isnin' },
+  { key: 'tuesday', label: 'Selasa' },
+  { key: 'wednesday', label: 'Rabu' },
+  { key: 'thursday', label: 'Khamis' },
+  { key: 'friday', label: 'Jumaat' },
+  { key: 'saturday', label: 'Sabtu' },
+  { key: 'sunday', label: 'Ahad' },
+]
+
+function getDefaultOperatingHours(): OperatingHours {
+  return {
+    monday: { enabled: true, open: '08:00', close: '22:00' },
+    tuesday: { enabled: true, open: '08:00', close: '22:00' },
+    wednesday: { enabled: true, open: '08:00', close: '22:00' },
+    thursday: { enabled: true, open: '08:00', close: '22:00' },
+    friday: { enabled: true, open: '08:00', close: '22:00' },
+    saturday: { enabled: true, open: '08:00', close: '22:00' },
+    sunday: { enabled: true, open: '08:00', close: '22:00' },
+  }
+}
+
+function normalizeOperatingHours(value: unknown): OperatingHours {
+  const defaults = getDefaultOperatingHours()
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return defaults
+  }
+
+  const source = value as Partial<Record<DayKey, Partial<OperatingDay>>>
+  const next = { ...defaults }
+
+  DAY_OPTIONS.forEach(({ key }) => {
+    const row = source[key]
+    if (!row || typeof row !== 'object') return
+
+    next[key] = {
+      enabled:
+        typeof row.enabled === 'boolean' ? row.enabled : defaults[key].enabled,
+      open:
+        typeof row.open === 'string' && row.open.trim()
+          ? row.open
+          : defaults[key].open,
+      close:
+        typeof row.close === 'string' && row.close.trim()
+          ? row.close
+          : defaults[key].close,
+    }
+  })
+
+  return next
+}
 
 function slugify(value: string) {
   return value
@@ -196,6 +268,8 @@ async function ensureSellerProfile(currentUserId: string, currentUserEmail: stri
       pickup_address: null,
       latitude: null,
       longitude: null,
+      operating_hours: getDefaultOperatingHours(),
+      temporarily_closed: false,
     })
     .select('*')
     .single()
@@ -219,8 +293,6 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
 
-  const [userId, setUserId] = useState<string | null>(null)
-  const [accountEmail, setAccountEmail] = useState('')
   const [sellerId, setSellerId] = useState<string | null>(null)
 
   const [step, setStep] = useState(1)
@@ -229,6 +301,10 @@ export default function OnboardingPage() {
   const [whatsapp, setWhatsapp] = useState('')
   const [profileImage, setProfileImage] = useState('')
   const [shopSlug, setShopSlug] = useState('')
+
+  const [operatingHours, setOperatingHours] = useState<OperatingHours>(
+    getDefaultOperatingHours()
+  )
 
   const [deliveryMode, setDeliveryMode] =
     useState<DeliveryMode>('pay_rider_separately')
@@ -265,7 +341,7 @@ export default function OnboardingPage() {
   }, [previewBaseUrl, livePreviewSlug])
 
   const progressPercent = useMemo(() => {
-    return (step / 4) * 100
+    return (step / 5) * 100
   }, [step])
 
   const deliverySummaryText = useMemo(() => {
@@ -316,9 +392,6 @@ export default function OnboardingPage() {
         return
       }
 
-      setUserId(user.id)
-      setAccountEmail(user.email || '')
-
       const seller = await ensureSellerProfile(user.id, user.email || '')
       setSellerId(seller.id)
 
@@ -329,6 +402,8 @@ export default function OnboardingPage() {
       setWhatsapp(seller.whatsapp || '')
       setProfileImage(seller.profile_image || '')
       setShopSlug(existingSlug)
+
+      setOperatingHours(normalizeOperatingHours(seller.operating_hours))
 
       setDeliveryMode(seller.delivery_mode || 'pay_rider_separately')
       setDeliveryFee(String(seller.delivery_fee ?? 5))
@@ -365,17 +440,20 @@ export default function OnboardingPage() {
       const hasStoreName = Boolean(existingStoreName && existingStoreName !== 'My Store')
       const hasWhatsapp = Boolean(seller.whatsapp?.trim())
       const hasShopSlug = Boolean(existingSlug?.trim())
+      const hasOperatingHours = Boolean(seller.operating_hours)
       const hasDeliveryMode = Boolean(seller.delivery_mode)
       const hasProduct = existing.some((p) => p.is_active)
 
       if (!hasStoreName || !hasWhatsapp || !hasShopSlug) {
         setStep(1)
-      } else if (!hasDeliveryMode) {
+      } else if (!hasOperatingHours) {
         setStep(2)
-      } else if (!hasProduct) {
+      } else if (!hasDeliveryMode) {
         setStep(3)
-      } else {
+      } else if (!hasProduct) {
         setStep(4)
+      } else {
+        setStep(5)
       }
     } catch (error) {
       const message =
@@ -480,6 +558,19 @@ export default function OnboardingPage() {
     }
   }
 
+  function updateOperatingDay(
+    day: DayKey,
+    updates: Partial<OperatingDay>
+  ) {
+    setOperatingHours((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        ...updates,
+      },
+    }))
+  }
+
   async function handleSaveStep1() {
     if (!sellerId) {
       alert('Seller profile not ready yet.')
@@ -531,6 +622,58 @@ export default function OnboardingPage() {
   }
 
   async function handleSaveStep2() {
+    if (!sellerId) {
+      alert('Seller profile not ready yet.')
+      return
+    }
+
+    const enabledDays = DAY_OPTIONS.filter(({ key }) => operatingHours[key].enabled)
+
+    if (enabledDays.length === 0) {
+      alert('Pilih sekurang-kurangnya satu hari operasi.')
+      return
+    }
+
+    for (const { key, label } of DAY_OPTIONS) {
+      const row = operatingHours[key]
+      if (!row.enabled) continue
+
+      if (!row.open || !row.close) {
+        alert(`Sila lengkapkan waktu operasi untuk ${label}.`)
+        return
+      }
+
+      if (row.open === row.close) {
+        alert(`Waktu buka dan tutup untuk ${label} tidak boleh sama.`)
+        return
+      }
+    }
+
+    setSavingStep(true)
+
+    try {
+      const { error } = await supabase
+        .from('seller_profiles')
+        .update({
+          operating_hours: operatingHours,
+        })
+        .eq('id', sellerId)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      setStep(3)
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to save operating hours.'
+      alert(message)
+    } finally {
+      setSavingStep(false)
+    }
+  }
+
+  async function handleSaveStep3() {
     if (!sellerId) {
       alert('Seller profile not ready yet.')
       return
@@ -608,7 +751,7 @@ export default function OnboardingPage() {
         throw new Error(error.message)
       }
 
-      setStep(3)
+      setStep(4)
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to save delivery.'
@@ -618,7 +761,7 @@ export default function OnboardingPage() {
     }
   }
 
-  async function handleSaveStep3() {
+  async function handleSaveStep4() {
     if (!sellerId) {
       alert('Seller profile not ready yet.')
       return
@@ -626,7 +769,7 @@ export default function OnboardingPage() {
 
     const hasExistingActive = existingProducts.some((p) => p.is_active)
     if (hasExistingActive) {
-      setStep(4)
+      setStep(5)
       return
     }
 
@@ -637,6 +780,11 @@ export default function OnboardingPage() {
 
     if (!productPrice.trim()) {
       alert('Harga produk diperlukan.')
+      return
+    }
+
+    if (!productImage) {
+      alert('Gambar produk diperlukan.')
       return
     }
 
@@ -668,7 +816,7 @@ export default function OnboardingPage() {
         throw new Error(error.message)
       }
 
-      setStep(4)
+      setStep(5)
 
       const { data: productData } = await supabase
         .from('products')
@@ -771,7 +919,7 @@ export default function OnboardingPage() {
 
             <div className="hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right sm:block">
               <div className="text-xs uppercase tracking-wide text-slate-500">Step</div>
-              <div className="text-lg font-extrabold text-slate-900">{step} / 4</div>
+              <div className="text-lg font-extrabold text-slate-900">{step} / 5</div>
             </div>
           </div>
 
@@ -787,11 +935,12 @@ export default function OnboardingPage() {
             />
           </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-2 text-center text-[11px] sm:text-xs">
+          <div className="mt-4 grid grid-cols-5 gap-2 text-center text-[11px] sm:text-xs">
             <StepPill active={step >= 1} label="Maklumat" />
-            <StepPill active={step >= 2} label="Delivery" />
-            <StepPill active={step >= 3} label="Produk" />
-            <StepPill active={step >= 4} label="Siap" />
+            <StepPill active={step >= 2} label="Waktu" />
+            <StepPill active={step >= 3} label="Delivery" />
+            <StepPill active={step >= 4} label="Produk" />
+            <StepPill active={step >= 5} label="Siap" />
           </div>
         </div>
 
@@ -889,6 +1038,107 @@ export default function OnboardingPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-5">
               <p className="text-sm font-semibold text-blue-600">Step 2</p>
+              <h2 className="mt-1 text-2xl font-extrabold text-slate-900">
+                Waktu Operasi
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Pilih hari anda buka dan tetapkan waktu untuk terima tempahan.
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              {DAY_OPTIONS.map(({ key, label }) => {
+                const row = operatingHours[key]
+
+                return (
+                  <div
+                    key={key}
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        <input
+                          id={`day-${key}`}
+                          type="checkbox"
+                          checked={row.enabled}
+                          onChange={(e) =>
+                            updateOperatingDay(key, { enabled: e.target.checked })
+                          }
+                          className="h-4 w-4"
+                        />
+                        <label
+                          htmlFor={`day-${key}`}
+                          className="text-sm font-bold text-slate-900"
+                        >
+                          {label}
+                        </label>
+                      </div>
+
+                      {row.enabled ? (
+                        <div className="grid grid-cols-2 gap-2 sm:w-auto">
+                          <input
+                            type="time"
+                            value={row.open}
+                            onChange={(e) =>
+                              updateOperatingDay(key, { open: e.target.value })
+                            }
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                          />
+                          <input
+                            type="time"
+                            value={row.close}
+                            onChange={(e) =>
+                              updateOperatingDay(key, { close: e.target.value })
+                            }
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-500">
+                          Tutup
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-bold text-amber-900">
+                Temporary Close
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                Kalau ada emergency atau perlu tutup sekejap, anda boleh guna fungsi
+                temporary close kemudian di Settings / Dashboard.
+              </p>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50"
+              >
+                Back
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveStep2}
+                disabled={savingStep}
+                className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {savingStep ? 'Saving...' : 'Simpan & Teruskan'}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {step === 3 ? (
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-5">
+              <p className="text-sm font-semibold text-blue-600">Step 3</p>
               <h2 className="mt-1 text-2xl font-extrabold text-slate-900">
                 Tetapan Delivery
               </h2>
@@ -1059,7 +1309,7 @@ export default function OnboardingPage() {
 
               <button
                 type="button"
-                onClick={handleSaveStep2}
+                onClick={handleSaveStep3}
                 disabled={savingStep || detectingLocation}
                 className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
               >
@@ -1069,10 +1319,10 @@ export default function OnboardingPage() {
           </div>
         ) : null}
 
-        {step === 3 ? (
+        {step === 4 ? (
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-5">
-              <p className="text-sm font-semibold text-blue-600">Step 3</p>
+              <p className="text-sm font-semibold text-blue-600">Step 4</p>
               <h2 className="mt-1 text-2xl font-extrabold text-slate-900">
                 Tambah Produk Pertama
               </h2>
@@ -1093,7 +1343,7 @@ export default function OnboardingPage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => setStep(4)}
+                    onClick={() => setStep(5)}
                     className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800"
                   >
                     Teruskan
@@ -1149,7 +1399,7 @@ export default function OnboardingPage() {
 
                 <div>
                   <label className="mb-2 block text-sm font-bold text-slate-700">
-                    Gambar Produk (Optional)
+                    Gambar Produk <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="file"
@@ -1157,6 +1407,9 @@ export default function OnboardingPage() {
                     onChange={(e) => setProductImage(e.target.files?.[0] || null)}
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
                   />
+                  <p className="mt-2 text-xs text-slate-500">
+                    Untuk onboarding pertama, gambar produk diwajibkan.
+                  </p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
@@ -1174,7 +1427,7 @@ export default function OnboardingPage() {
 
                   <button
                     type="button"
-                    onClick={handleSaveStep3}
+                    onClick={handleSaveStep4}
                     disabled={savingStep}
                     className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
                   >
@@ -1186,13 +1439,13 @@ export default function OnboardingPage() {
           </div>
         ) : null}
 
-        {step === 4 ? (
+        {step === 5 ? (
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-5 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-2xl">
                 🎉
               </div>
-              <p className="mt-4 text-sm font-semibold text-emerald-700">Step 4</p>
+              <p className="mt-4 text-sm font-semibold text-emerald-700">Step 5</p>
               <h2 className="mt-1 text-2xl font-extrabold text-slate-900">
                 Kedai anda dah siap
               </h2>
@@ -1246,7 +1499,7 @@ export default function OnboardingPage() {
             <div className="mt-6 flex justify-start">
               <button
                 type="button"
-                onClick={() => setStep(3)}
+                onClick={() => setStep(4)}
                 className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50"
               >
                 Back
