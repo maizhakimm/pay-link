@@ -1,148 +1,276 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { supabase } from '../../../../lib/supabase'
 
-export default function AdminLoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [checkingSession, setCheckingSession] = useState(true)
+type DashboardOrderRow = {
+  id: string
+  amount?: number | null
+  gross_amount?: number | null
+  payment_status?: string | null
+  payout_status?: string | null
+  created_at?: string | null
+  seller_profile_id?: string | null
+}
 
-  useEffect(() => {
-    async function checkExistingAdminSession() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+type SellerProfileRow = {
+  id: string
+  user_id?: string | null
+  store_name?: string | null
+  created_at?: string | null
+}
 
-      if (!user) {
-        setCheckingSession(false)
-        return
+type RoleRow = {
+  role: string
+}
+
+function formatMoney(value?: number | null) {
+  return `RM ${Number(value || 0).toFixed(2)}`
+}
+
+function normalizeStatus(value?: string | null) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function isPaidPaymentStatus(value?: string | null) {
+  return ['paid', 'success', 'completed'].includes(normalizeStatus(value))
+}
+
+export default function AdminDashboardPage() {
+  const [loading, setLoading] = useState(true)
+  const [pageError, setPageError] = useState('')
+
+  const [orders, setOrders] = useState<DashboardOrderRow[]>([])
+  const [sellers, setSellers] = useState<SellerProfileRow[]>([])
+  const [userRoles, setUserRoles] = useState<RoleRow[]>([])
+
+  const loadAdminDashboard = useCallback(async () => {
+    setLoading(true)
+    setPageError('')
+
+    try {
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('id, amount, gross_amount, payment_status, payout_status, created_at, seller_profile_id')
+        .order('created_at', { ascending: false })
+
+      if (orderError) {
+        throw new Error(orderError.message)
       }
 
-      const { data: roleRow } = await supabase
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('seller_profiles')
+        .select('id, user_id, store_name, created_at')
+        .order('created_at', { ascending: false })
+
+      if (sellerError) {
+        throw new Error(sellerError.message)
+      }
+
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle()
 
-      if (roleRow?.role === 'admin') {
-        window.location.href = '/admin/dashboard'
-        return
+      if (roleError) {
+        throw new Error(roleError.message)
       }
 
-      await supabase.auth.signOut()
-      setCheckingSession(false)
+      setOrders((orderData || []) as DashboardOrderRow[])
+      setSellers((sellerData || []) as SellerProfileRow[])
+      setUserRoles((roleData || []) as RoleRow[])
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to load admin dashboard.'
+      setPageError(message)
+    } finally {
+      setLoading(false)
     }
-
-    checkExistingAdminSession()
   }, [])
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+  useEffect(() => {
+    loadAdminDashboard()
+  }, [loadAdminDashboard])
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+  const totalUsers = useMemo(() => {
+    return userRoles.length
+  }, [userRoles])
+
+  const totalSellers = useMemo(() => {
+    return sellers.length
+  }, [sellers])
+
+  const paidOrders = useMemo(() => {
+    return orders.filter((order) => isPaidPaymentStatus(order.payment_status))
+  }, [orders])
+
+  const totalTransactions = useMemo(() => {
+    return paidOrders.length
+  }, [paidOrders])
+
+  const totalRevenue = useMemo(() => {
+    return paidOrders.reduce((sum, order) => {
+      const gross = Number(order.gross_amount ?? order.amount ?? 0)
+      return sum + gross
+    }, 0)
+  }, [paidOrders])
+
+  const pendingPayoutOrders = useMemo(() => {
+    return paidOrders.filter((order) => {
+      const payoutStatus = normalizeStatus(order.payout_status)
+      return payoutStatus === '' || payoutStatus === 'unpaid' || payoutStatus === 'eligible'
     })
+  }, [paidOrders])
 
-    if (error) {
-      alert(error.message)
-      setLoading(false)
-      return
-    }
+  const pendingPayoutValue = useMemo(() => {
+    return pendingPayoutOrders.reduce((sum, order) => {
+      const gross = Number(order.gross_amount ?? order.amount ?? 0)
+      return sum + gross
+    }, 0)
+  }, [pendingPayoutOrders])
 
-    const user = data.user
-
-    const { data: roleRow, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (roleError) {
-      alert(roleError.message)
-      await supabase.auth.signOut()
-      setLoading(false)
-      return
-    }
-
-    if (!roleRow || roleRow.role !== 'admin') {
-      alert('Akses ditolak. Akaun ini bukan admin.')
-      await supabase.auth.signOut()
-      setLoading(false)
-      return
-    }
-
-    window.location.href = '/admin/dashboard'
+  if (loading) {
+    return (
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-sm font-medium text-slate-600">Loading admin dashboard...</p>
+      </div>
+    )
   }
 
-  if (checkingSession) {
+  if (pageError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-600">Checking admin session...</p>
-        </div>
-      </main>
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-5 shadow-sm">
+        <p className="text-sm font-medium text-red-700">{pageError}</p>
+      </div>
     )
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="mb-6 text-center">
-          <img
-            src="/BayarLink-Logo-Shop-Page.svg"
-            alt="BayarLink"
-            className="mx-auto mb-4 h-8 w-auto"
-          />
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
-            Admin Login
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Log masuk untuk akses panel pentadbiran BayarLink.
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
+          Admin Dashboard
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
+          Ringkasan prestasi platform BayarLink secara keseluruhan.
+        </p>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatCard label="Total Users" value={String(totalUsers)} />
+        <StatCard label="Total Sellers" value={String(totalSellers)} />
+        <StatCard label="Total Transactions" value={String(totalTransactions)} />
+        <StatCard label="Total Revenue" value={formatMoney(totalRevenue)} />
+        <StatCard label="Pending Payout" value={formatMoney(pendingPayoutValue)} />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="text-xl font-bold text-slate-900">Quick Access</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Shortcut untuk pengurusan platform.
           </p>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <QuickLinkCard
+              href="/admin/payout"
+              title="Payout"
+              description="Semak payout seller dan mark paid."
+            />
+            <QuickLinkCard
+              href="/admin/reports"
+              title="Reports"
+              description="Lihat laporan prestasi platform."
+            />
+            <QuickLinkCard
+              href="/admin/users"
+              title="Users"
+              description="Semak pengguna sistem."
+            />
+            <QuickLinkCard
+              href="/admin/sellers"
+              title="Sellers"
+              description="Semak maklumat seller berdaftar."
+            />
+          </div>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              placeholder="admin@bayarlink.my"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="text-xl font-bold text-slate-900">Current Snapshot</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Gambaran ringkas keadaan semasa platform.
+          </p>
+
+          <div className="mt-4 space-y-3">
+            <SnapshotRow
+              label="Paid orders ready for payout"
+              value={String(pendingPayoutOrders.length)}
+            />
+            <SnapshotRow
+              label="Total sellers onboarded"
+              value={String(totalSellers)}
+            />
+            <SnapshotRow
+              label="Paid orders processed"
+              value={String(totalTransactions)}
+            />
+            <SnapshotRow
+              label="Platform gross revenue"
+              value={formatMoney(totalRevenue)}
             />
           </div>
+        </div>
+      </section>
+    </div>
+  )
+}
 
-          <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {loading ? 'Logging in...' : 'Login as Admin'}
-          </button>
-        </form>
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
       </div>
-    </main>
+      <div className="mt-2 break-words text-xl font-extrabold text-slate-900 sm:text-2xl">
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function QuickLinkCard({
+  href,
+  title,
+  description,
+}: {
+  href: string
+  title: string
+  description: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-slate-100"
+    >
+      <div className="text-sm font-bold text-slate-900">{title}</div>
+      <div className="mt-1 text-sm text-slate-500">{description}</div>
+    </Link>
+  )
+}
+
+function SnapshotRow({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <span className="text-sm font-medium text-slate-600">{label}</span>
+      <span className="text-sm font-bold text-slate-900">{value}</span>
+    </div>
   )
 }
