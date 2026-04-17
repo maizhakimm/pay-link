@@ -15,3 +15,11 @@ export default function AdminLayout({
     </div>
   )
 }
+
+<div className="flex">
+  <aside className="w-60 border-r bg-white p-4">
+    <a href="/admin/payout" className="block mb-2">Payout</a>
+  </aside>
+
+  <main className="flex-1 p-6">{children}</main>
+</div>
