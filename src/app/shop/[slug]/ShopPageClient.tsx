@@ -3,6 +3,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ShopPayButton from './ShopPayButton'
 
+type DeliveryMode =
+  | 'free_delivery'
+  | 'fixed_fee'
+  | 'included_in_price'
+  | 'pay_rider_separately'
+  | 'distance_based'
+
+type DayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
+type OperatingDayItem = {
+  enabled: boolean
+  opening_time: string
+  closing_time: string
+}
+
+type OperatingDays = Record<DayKey, OperatingDayItem>
+
 type ProductAddonOption = {
   id: string
   addon_group_id: string
@@ -46,13 +70,8 @@ type SellerProfile = {
   closing_time?: string | null
   temporarily_closed?: boolean | null
   closed_message?: string | null
-  delivery_mode?:
-    | 'free_delivery'
-    | 'fixed_fee'
-    | 'included_in_price'
-    | 'pay_rider_separately'
-    | 'distance_based'
-    | null
+  operating_days?: OperatingDays | null
+  delivery_mode?: DeliveryMode | null
   delivery_fee?: number | null
   delivery_area?: string | null
   delivery_note?: string | null
@@ -179,6 +198,20 @@ function formatTime(value?: string | null) {
   return `${normalizedHour}:${normalizedMinute} ${period}`
 }
 
+function getTodayKey(date = new Date()): DayKey {
+  const map: DayKey[] = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ]
+
+  return map[date.getDay()]
+}
+
 function getMinutesFromTime(value?: string | null) {
   if (!value || !value.includes(':')) return null
 
@@ -232,6 +265,7 @@ function getShopAvailability(seller: SellerProfile) {
       detail:
         seller.closed_message ||
         'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+      timeRange: '',
     }
   }
 
@@ -240,6 +274,61 @@ function getShopAvailability(seller: SellerProfile) {
       isOpen: true,
       label: 'Open Now',
       detail: 'Kedai ini menerima tempahan pada bila-bila masa.',
+      timeRange: '',
+    }
+  }
+
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+  if (seller.operating_days) {
+    const todayKey = getTodayKey(now)
+    const todayConfig = seller.operating_days[todayKey]
+
+    if (!todayConfig || !todayConfig.enabled) {
+      return {
+        isOpen: false,
+        label: 'Closed',
+        detail:
+          seller.closed_message || 'Kedai tidak menerima tempahan pada hari ini.',
+        timeRange: '',
+      }
+    }
+
+    const openMinutes = getMinutesFromTime(todayConfig.opening_time)
+    const closeMinutes = getMinutesFromTime(todayConfig.closing_time)
+
+    if (openMinutes === null || closeMinutes === null) {
+      return {
+        isOpen: false,
+        label: 'Closed',
+        detail:
+          seller.closed_message ||
+          'Waktu operasi tidak lengkap. Sila cuba lagi kemudian.',
+        timeRange: '',
+      }
+    }
+
+    let isOpen = false
+
+    if (openMinutes < closeMinutes) {
+      isOpen = currentMinutes >= openMinutes && currentMinutes <= closeMinutes
+    } else if (openMinutes > closeMinutes) {
+      isOpen = currentMinutes >= openMinutes || currentMinutes <= closeMinutes
+    }
+
+    const timeRange = `${formatTime(todayConfig.opening_time)} - ${formatTime(
+      todayConfig.closing_time
+    )}`
+
+    return {
+      isOpen,
+      label: isOpen ? 'Open Now' : 'Closed',
+      detail: isOpen
+        ? ''
+        : seller.closed_message ||
+          'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
+      timeRange,
     }
   }
 
@@ -251,11 +340,9 @@ function getShopAvailability(seller: SellerProfile) {
       isOpen: true,
       label: 'Open Now',
       detail: '',
+      timeRange: '',
     }
   }
-
-  const now = new Date()
-  const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
   let isOpen = false
 
@@ -272,7 +359,10 @@ function getShopAvailability(seller: SellerProfile) {
   return {
     isOpen,
     label: isOpen ? 'Open Now' : 'Closed',
-    detail: '',
+    detail: isOpen
+      ? ''
+      : seller.closed_message ||
+        'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
     timeRange,
   }
 }
@@ -792,9 +882,7 @@ export default function ShopPageClient({
             </div>
 
             {seller.accept_orders_anytime === false && availability.timeRange ? (
-              <div style={hoursText}>
-                {availability.timeRange}
-              </div>
+              <div style={hoursText}>{availability.timeRange}</div>
             ) : null}
           </div>
 
