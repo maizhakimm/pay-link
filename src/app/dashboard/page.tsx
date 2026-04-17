@@ -11,6 +11,23 @@ type DeliveryMode =
   | 'pay_rider_separately'
   | 'distance_based'
 
+type DayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
+type OperatingDayItem = {
+  enabled: boolean
+  opening_time: string
+  closing_time: string
+}
+
+type OperatingDays = Record<DayKey, OperatingDayItem>
+
 type SellerProfile = {
   id: string
   store_name: string | null
@@ -19,6 +36,9 @@ type SellerProfile = {
   daily_note?: string | null
   whatsapp?: string | null
   delivery_mode?: DeliveryMode | null
+  accept_orders_anytime?: boolean | null
+  temporarily_closed?: boolean | null
+  operating_days?: OperatingDays | null
 }
 
 type Product = {
@@ -71,6 +91,85 @@ function normalizePaymentStatus(value?: string | null) {
   return (value || '').toString().toLowerCase().trim()
 }
 
+function getTodayKey(date = new Date()): DayKey {
+  const map: DayKey[] = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ]
+
+  return map[date.getDay()]
+}
+
+function timeToMinutes(value?: string | null) {
+  if (!value || !value.includes(':')) return null
+
+  const [hourStr, minuteStr] = value.split(':')
+  const hour = Number(hourStr)
+  const minute = Number(minuteStr)
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
+
+  return hour * 60 + minute
+}
+
+function getStoreOpenStatus(seller?: SellerProfile | null) {
+  if (!seller) {
+    return {
+      isOpen: false,
+      label: 'Closed',
+    }
+  }
+
+  if (seller.temporarily_closed) {
+    return {
+      isOpen: false,
+      label: 'Closed',
+    }
+  }
+
+  if (seller.accept_orders_anytime) {
+    return {
+      isOpen: true,
+      label: 'Open',
+    }
+  }
+
+  const todayKey = getTodayKey(new Date())
+  const todayConfig = seller.operating_days?.[todayKey]
+
+  if (!todayConfig || !todayConfig.enabled) {
+    return {
+      isOpen: false,
+      label: 'Closed',
+    }
+  }
+
+  const openingMinutes = timeToMinutes(todayConfig.opening_time)
+  const closingMinutes = timeToMinutes(todayConfig.closing_time)
+
+  if (openingMinutes === null || closingMinutes === null) {
+    return {
+      isOpen: false,
+      label: 'Closed',
+    }
+  }
+
+  const now = new Date()
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+  const isOpen = nowMinutes >= openingMinutes && nowMinutes < closingMinutes
+
+  return {
+    isOpen,
+    label: isOpen ? 'Open' : 'Closed',
+  }
+}
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
@@ -106,7 +205,7 @@ export default function DashboardPage() {
       const { data: sellerData, error: sellerError } = await supabase
         .from('seller_profiles')
         .select(
-          'id, store_name, shop_slug, profile_image, daily_note, whatsapp, delivery_mode'
+          'id, store_name, shop_slug, profile_image, daily_note, whatsapp, delivery_mode, accept_orders_anytime, temporarily_closed, operating_days'
         )
         .eq('user_id', user.id)
         .maybeSingle()
@@ -219,32 +318,38 @@ export default function DashboardPage() {
       : ''
 
   const paidOrders = useMemo(() => {
-    return orders.filter((order) =>
-      ['paid', 'success', 'completed'].includes(
-        normalizePaymentStatus(order.payment_status)
-      )
+  return orders.filter((order) =>
+    ['paid', 'success', 'completed'].includes(
+      normalizePaymentStatus(order.payment_status)
     )
-  }, [orders])
+  )
+}, [orders])
 
-  const totalRevenue = useMemo(() => {
-    return paidOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0)
-  }, [paidOrders])
+const totalRevenue = useMemo(() => {
+  return paidOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0)
+}, [paidOrders])
 
-  const todayOrdersCount = useMemo(() => {
-    const now = new Date()
+const todayOrdersCount = useMemo(() => {
+  const now = new Date()
 
-    return orders.filter((order) => {
-      if (!order.created_at) return false
-      const d = new Date(order.created_at)
-      if (Number.isNaN(d.getTime())) return false
+  return orders.filter((order) => {
+    if (!order.created_at) return false
+    const d = new Date(order.created_at)
+    if (Number.isNaN(d.getTime())) return false
 
-      return (
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate()
-      )
-    }).length
-  }, [orders])
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    )
+  }).length
+}, [orders])
+
+const storeStatus = useMemo(() => {
+  return getStoreOpenStatus(seller)
+}, [seller])
+
+const isOpen = storeStatus.isOpen
 
   const promoLines = useMemo(() => {
     if (topCategories.length > 0) {
@@ -396,9 +501,20 @@ ${shopLink}`.trim()
             <h1 className="truncate text-2xl font-bold text-slate-900 sm:text-3xl">
               {seller?.store_name || 'Seller'}
             </h1>
-            <p className="mt-1 break-all text-sm text-slate-500">
-              {shopLink || 'Complete your settings to activate your shop link.'}
-            </p>
+
+          <div className="mt-2">
+  <span
+    className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${
+      isOpen
+        ? 'bg-emerald-100 text-emerald-700'
+        : 'bg-rose-100 text-rose-700'
+    }`}
+  >
+    {storeStatus.label}
+  </span>
+</div>
+        
+            </div>
           </div>
         </div>
       </div>
@@ -406,19 +522,16 @@ ${shopLink}`.trim()
       <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
         <div className="mb-4">
           <h2 className="text-lg font-semibold text-slate-900">Quick Actions</h2>
-          <p className="text-sm text-slate-500">
-            Akses pantas untuk urus kedai anda.
-          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <button
-            onClick={shareShopToWhatsApp}
+            onClick={goToSettings}
             className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:bg-slate-50"
           >
-            <div className="text-sm font-bold text-slate-900">Share Kedai</div>
+            <div className="text-sm font-bold text-slate-900">Waktu Operasi</div>
             <div className="mt-1 text-xs text-slate-500">
-              Hantar link kedai ke WhatsApp
+              Set waktu untuk terima order
             </div>
           </button>
 
