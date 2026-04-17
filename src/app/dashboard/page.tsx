@@ -517,7 +517,6 @@ ${shopLink}`.trim()
             </div>
           </div>
         </div>
-      </div>
 
       <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
         <div className="mb-4">
