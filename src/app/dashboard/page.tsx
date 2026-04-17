@@ -2,7 +2,7 @@
 
 import Layout from '../../../components/Layout'
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../lib/supabase'
 
 const MALAYSIAN_BANKS = [
   'Affin Bank',
