@@ -3,18 +3,34 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import type { ReactNode } from 'react'
 
-const navItems = [
+type LayoutProps = {
+  children: ReactNode
+}
+
+type NavItem = {
+  label: string
+  href: string
+  icon: 'home' | 'box' | 'receipt' | 'settings'
+}
+
+type NavIconProps = {
+  type: 'home' | 'box' | 'receipt' | 'settings'
+  active: boolean
+}
+
+const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'home' },
   { label: 'Products', href: '/dashboard/products', icon: 'box' },
   { label: 'Orders', href: '/dashboard/orders', icon: 'receipt' },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings' },
 ]
 
-export default function Layout({ children }) {
+export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname()
 
-  function isActive(href) {
+  function isActive(href: string) {
     if (!pathname) return false
     if (href === '/dashboard') return pathname === '/dashboard'
     return pathname.startsWith(href)
@@ -44,6 +60,7 @@ export default function Layout({ children }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={active ? 'page' : undefined}
                   className={[
                     'inline-flex items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-semibold transition',
                     active
@@ -72,6 +89,7 @@ export default function Layout({ children }) {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? 'page' : undefined}
                 className={[
                   'flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-[11px] font-semibold transition',
                   active
@@ -92,9 +110,9 @@ export default function Layout({ children }) {
   )
 }
 
-function NavIcon({ type, active }) {
-  const className = 'h-5 w-5'
-  const stroke = 'currentColor'
+function NavIcon({ type, active }: NavIconProps) {
+  const className = active ? 'h-5 w-5' : 'h-5 w-5'
+  const stroke = active ? 'currentColor' : 'currentColor'
 
   if (type === 'home') {
     return (
