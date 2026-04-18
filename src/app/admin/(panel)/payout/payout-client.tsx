@@ -64,10 +64,13 @@ type SellerGroup = {
   pendingSettlementCount: number
 
   paidOutGross: number
+  paidOutFee: number
+  paidOutNet: number
 
   paymentWindowStart: string | null
   paymentWindowEnd: string | null
   payoutAt: string | null
+  payoutReference: string | null
 
   hasBankInfo: boolean
 }
@@ -240,9 +243,12 @@ function buildGroups(
         pendingSettlementGross: 0,
         pendingSettlementCount: 0,
         paidOutGross: 0,
+        paidOutFee: 0,
+        paidOutNet: 0,
         paymentWindowStart: null,
         paymentWindowEnd: null,
         payoutAt: null,
+        payoutReference: null,
         hasBankInfo: Boolean(bankName && bankAccountNo && bankAccountHolder),
       })
     }
@@ -273,8 +279,14 @@ function buildGroups(
     } else {
       group.paidOutOrders.push(order)
       group.paidOutGross += gross
+      group.paidOutFee += fee
+      group.paidOutNet += net
+
       if (!group.payoutAt && order.payout_at) {
         group.payoutAt = order.payout_at
+      }
+      if (!group.payoutReference && order.payout_reference) {
+        group.payoutReference = order.payout_reference
       }
     }
 
@@ -310,7 +322,14 @@ function buildGroups(
     )
   }
 
-  groups.sort((a, b) => b.eligibleNet - a.eligibleNet)
+  groups.sort((a, b) => {
+    if (statusFilter === "paid") {
+      return (
+        new Date(b.payoutAt || 0).getTime() - new Date(a.payoutAt || 0).getTime()
+      )
+    }
+    return b.eligibleNet - a.eligibleNet
+  })
 
   return groups
 }
@@ -384,13 +403,34 @@ export default function PayoutClient({
   )
 
   const summary = useMemo(() => {
+    if (statusFilter === "paid") {
+      const paidSellers = groups.length
+      const gross = groups.reduce((sum, g) => sum + g.paidOutGross, 0)
+      const fee = groups.reduce((sum, g) => sum + g.paidOutFee, 0)
+      const net = groups.reduce((sum, g) => sum + g.paidOutNet, 0)
+
+      return {
+        title: "Paid Sellers",
+        count: paidSellers,
+        gross,
+        fee,
+        net,
+      }
+    }
+
     const pendingSellers = groups.filter((g) => g.eligibleOrdersCount > 0).length
     const gross = groups.reduce((sum, g) => sum + g.eligibleGross, 0)
     const fee = groups.reduce((sum, g) => sum + g.eligibleFee, 0)
     const net = groups.reduce((sum, g) => sum + g.eligibleNet, 0)
 
-    return { pendingSellers, gross, fee, net }
-  }, [groups])
+    return {
+      title: "Pending Sellers",
+      count: pendingSellers,
+      gross,
+      fee,
+      net,
+    }
+  }, [groups, statusFilter])
 
   function openPayoutModal(group: SellerGroup) {
     setPayoutTarget(group)
@@ -480,12 +520,16 @@ export default function PayoutClient({
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
-          title="Pending Sellers"
-          value={String(summary.pendingSellers)}
-          subtitle="Seller yang layak dibayar"
+          title={summary.title}
+          value={String(summary.count)}
+          subtitle={
+            statusFilter === "paid"
+              ? "Seller yang telah dibayar"
+              : "Seller yang layak dibayar"
+          }
         />
         <SummaryCard
-          title="Total Eligible Gross"
+          title={statusFilter === "paid" ? "Total Paid Gross" : "Total Eligible Gross"}
           value={formatCurrency(summary.gross)}
         />
         <SummaryCard
@@ -493,7 +537,7 @@ export default function PayoutClient({
           value={formatCurrency(summary.fee)}
         />
         <SummaryCard
-          title="Total Net Payout"
+          title={statusFilter === "paid" ? "Total Paid Net" : "Total Net Payout"}
           value={formatCurrency(summary.net)}
         />
       </div>
@@ -563,13 +607,19 @@ export default function PayoutClient({
             <thead className="bg-slate-50 text-left text-slate-600">
               <tr>
                 <th className="px-5 py-4 font-semibold">Seller</th>
-                <th className="px-5 py-4 font-semibold">Eligible Orders</th>
+                <th className="px-5 py-4 font-semibold">
+                  {statusFilter === "paid" ? "Paid Orders" : "Eligible Orders"}
+                </th>
                 <th className="px-5 py-4 font-semibold">Gross</th>
                 <th className="px-5 py-4 font-semibold">Fee</th>
                 <th className="px-5 py-4 font-semibold">Net</th>
-                <th className="px-5 py-4 font-semibold">Pending Settlement</th>
+                <th className="px-5 py-4 font-semibold">
+                  {statusFilter === "paid" ? "Payout Reference" : "Pending Settlement"}
+                </th>
                 <th className="px-5 py-4 font-semibold">Bank Info</th>
-                <th className="px-5 py-4 font-semibold">Payment Window</th>
+                <th className="px-5 py-4 font-semibold">
+                  {statusFilter === "paid" ? "Paid At" : "Payment Window"}
+                </th>
                 <th className="px-5 py-4 font-semibold">Status</th>
                 <th className="px-5 py-4 font-semibold text-right">Actions</th>
               </tr>
@@ -583,104 +633,122 @@ export default function PayoutClient({
                   </td>
                 </tr>
               ) : (
-                groups.map((group) => (
-                  <tr key={group.sellerProfileId} className="border-t border-slate-100">
-                    <td className="px-5 py-5 align-top">
-                      <div>
-                        <p className="font-semibold text-slate-900">{group.sellerName}</p>
-                        <p className="mt-1 text-xs text-slate-500">{group.sellerEmail}</p>
-                      </div>
-                    </td>
+                groups.map((group) => {
+                  const rowGross =
+                    statusFilter === "paid" ? group.paidOutGross : group.eligibleGross
+                  const rowFee =
+                    statusFilter === "paid" ? group.paidOutFee : group.eligibleFee
+                  const rowNet =
+                    statusFilter === "paid" ? group.paidOutNet : group.eligibleNet
+                  const rowCount =
+                    statusFilter === "paid"
+                      ? group.paidOutOrders.length
+                      : group.eligibleOrdersCount
 
-                    <td className="px-5 py-5 align-top text-slate-700">
-                      {group.eligibleOrdersCount}
-                    </td>
-
-                    <td className="px-5 py-5 align-top font-medium text-slate-900">
-                      {formatCurrency(group.eligibleGross)}
-                    </td>
-
-                    <td className="px-5 py-5 align-top text-slate-700">
-                      {formatCurrency(group.eligibleFee)}
-                    </td>
-
-                    <td className="px-5 py-5 align-top font-semibold text-emerald-700">
-                      {formatCurrency(group.eligibleNet)}
-                    </td>
-
-                    <td className="px-5 py-5 align-top">
-                      {group.pendingSettlementCount > 0 ? (
-                        <div className="text-amber-700">
-                          <p className="font-medium">
-                            {group.pendingSettlementCount} order
-                          </p>
-                          <p className="text-xs">
-                            {formatCurrency(group.pendingSettlementGross)}
-                          </p>
+                  return (
+                    <tr key={group.sellerProfileId} className="border-t border-slate-100">
+                      <td className="px-5 py-5 align-top">
+                        <div>
+                          <p className="font-semibold text-slate-900">{group.sellerName}</p>
+                          <p className="mt-1 text-xs text-slate-500">{group.sellerEmail}</p>
                         </div>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </td>
+                      </td>
 
-                    <td className="px-5 py-5 align-top">
-                      {group.hasBankInfo ? (
-                        <div className="text-slate-700">
-                          <p className="font-medium">{group.bankName}</p>
-                          <p className="text-xs">{group.bankAccountNo}</p>
-                          <p className="text-xs">{group.bankAccountHolder}</p>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-medium text-red-600">
-                          Bank info incomplete
-                        </span>
-                      )}
-                    </td>
+                      <td className="px-5 py-5 align-top text-slate-700">{rowCount}</td>
 
-                    <td className="px-5 py-5 align-top text-sm text-slate-600">
-                      {formatShortDate(group.paymentWindowStart)} →{" "}
-                      {formatShortDate(group.paymentWindowEnd)}
-                    </td>
+                      <td className="px-5 py-5 align-top font-medium text-slate-900">
+                        {formatCurrency(rowGross)}
+                      </td>
 
-                    <td className="px-5 py-5 align-top">
-                      {group.eligibleNet > 0 ? (
-                        <StatusBadge label="Eligible" />
-                      ) : group.paidOutOrders.length > 0 ? (
-                        <StatusBadge label="Paid" />
-                      ) : (
-                        <StatusBadge label="Pending Settlement" />
-                      )}
-                    </td>
+                      <td className="px-5 py-5 align-top text-slate-700">
+                        {formatCurrency(rowFee)}
+                      </td>
 
-                    <td className="px-5 py-5 align-top">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setSelectedGroup(group)}
-                          className="rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                          View Details
-                        </button>
+                      <td className="px-5 py-5 align-top font-semibold text-emerald-700">
+                        {formatCurrency(rowNet)}
+                      </td>
 
-                        {statusFilter !== "paid" &&
-                        group.eligibleOrdersCount > 0 &&
-                        group.eligibleNet > 0 ? (
+                      <td className="px-5 py-5 align-top">
+                        {statusFilter === "paid" ? (
+                          <div className="text-slate-700">
+                            <p className="font-medium">{group.payoutReference || "-"}</p>
+                          </div>
+                        ) : group.pendingSettlementCount > 0 ? (
+                          <div className="text-amber-700">
+                            <p className="font-medium">
+                              {group.pendingSettlementCount} orders pending
+                            </p>
+                            <p className="text-xs">
+                              {formatCurrency(group.pendingSettlementGross)}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-5 align-top">
+                        {group.hasBankInfo ? (
+                          <div className="text-slate-700">
+                            <p className="font-medium">{group.bankName}</p>
+                            <p className="text-xs">{group.bankAccountNo}</p>
+                            <p className="text-xs">{group.bankAccountHolder}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-medium text-red-600">
+                            Bank info incomplete
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-5 align-top text-sm text-slate-600">
+                        {statusFilter === "paid"
+                          ? formatDate(group.payoutAt)
+                          : `${formatShortDate(group.paymentWindowStart)} → ${formatShortDate(group.paymentWindowEnd)}`}
+                      </td>
+
+                      <td className="px-5 py-5 align-top">
+                        {statusFilter === "paid" ? (
+                          <StatusBadge label="Paid" />
+                        ) : group.eligibleNet > 0 ? (
+                          <StatusBadge label="Eligible" />
+                        ) : group.paidOutOrders.length > 0 ? (
+                          <StatusBadge label="Paid" />
+                        ) : (
+                          <StatusBadge label="Pending Settlement" />
+                        )}
+                      </td>
+
+                      <td className="px-5 py-5 align-top">
+                        <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => openPayoutModal(group)}
-                            disabled={
-                              !group.hasBankInfo ||
-                              loadingSellerId === group.sellerProfileId
-                            }
-                            className="rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            onClick={() => setSelectedGroup(group)}
+                            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            {loadingSellerId === group.sellerProfileId
-                              ? "Processing..."
-                              : "Mark as Paid"}
+                            View Details
                           </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+
+                          {statusFilter !== "paid" &&
+                          group.eligibleOrdersCount > 0 &&
+                          group.eligibleNet > 0 ? (
+                            <button
+                              onClick={() => openPayoutModal(group)}
+                              disabled={
+                                !group.hasBankInfo ||
+                                loadingSellerId === group.sellerProfileId
+                              }
+                              className="rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            >
+                              {loadingSellerId === group.sellerProfileId
+                                ? "Processing..."
+                                : "Mark as Paid"}
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -711,16 +779,30 @@ export default function PayoutClient({
             <div className="max-h-[calc(90vh-80px)] overflow-y-auto p-6">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <SummaryCard
-                  title="Eligible Gross"
-                  value={formatCurrency(selectedGroup.eligibleGross)}
+                  title={
+                    statusFilter === "paid" ? "Paid Gross" : "Eligible Gross"
+                  }
+                  value={formatCurrency(
+                    statusFilter === "paid"
+                      ? selectedGroup.paidOutGross
+                      : selectedGroup.eligibleGross
+                  )}
                 />
                 <SummaryCard
-                  title="Eligible Fee"
-                  value={formatCurrency(selectedGroup.eligibleFee)}
+                  title="Fee"
+                  value={formatCurrency(
+                    statusFilter === "paid"
+                      ? selectedGroup.paidOutFee
+                      : selectedGroup.eligibleFee
+                  )}
                 />
                 <SummaryCard
-                  title="Eligible Net"
-                  value={formatCurrency(selectedGroup.eligibleNet)}
+                  title={statusFilter === "paid" ? "Paid Net" : "Eligible Net"}
+                  value={formatCurrency(
+                    statusFilter === "paid"
+                      ? selectedGroup.paidOutNet
+                      : selectedGroup.eligibleNet
+                  )}
                 />
                 <SummaryCard
                   title="Pending Settlement"
@@ -747,18 +829,31 @@ export default function PayoutClient({
 
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Payment Window
+                    {statusFilter === "paid" ? "Paid Info" : "Payment Window"}
                   </p>
-                  <p className="mt-2 text-sm text-slate-700">
-                    {formatDate(selectedGroup.paymentWindowStart)} →{" "}
-                    {formatDate(selectedGroup.paymentWindowEnd)}
-                  </p>
+                  {statusFilter === "paid" ? (
+                    <div className="mt-2 space-y-1 text-sm text-slate-700">
+                      <p>
+                        <span className="font-semibold">Paid At:</span>{" "}
+                        {formatDate(selectedGroup.payoutAt)}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Reference:</span>{" "}
+                        {selectedGroup.payoutReference || "-"}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-700">
+                      {formatDate(selectedGroup.paymentWindowStart)} →{" "}
+                      {formatDate(selectedGroup.paymentWindowEnd)}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="mt-8">
                 <h3 className="text-lg font-bold text-slate-900">
-                  Eligible for Payout
+                  {statusFilter === "paid" ? "Paid Transactions" : "Eligible for Payout"}
                 </h3>
                 <div className="mt-3 overflow-hidden rounded-3xl border border-slate-200">
                   <table className="min-w-full text-sm">
@@ -768,21 +863,29 @@ export default function PayoutClient({
                         <th className="px-4 py-3 font-semibold">Buyer</th>
                         <th className="px-4 py-3 font-semibold">Method</th>
                         <th className="px-4 py-3 font-semibold">Paid At</th>
-                        <th className="px-4 py-3 font-semibold">Eligible At</th>
+                        <th className="px-4 py-3 font-semibold">
+                          {statusFilter === "paid" ? "Payout Ref" : "Eligible At"}
+                        </th>
                         <th className="px-4 py-3 font-semibold">Gross</th>
                         <th className="px-4 py-3 font-semibold">Fee</th>
                         <th className="px-4 py-3 font-semibold">Net</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedGroup.eligibleOrders.length === 0 ? (
+                      {(statusFilter === "paid"
+                        ? selectedGroup.paidOutOrders
+                        : selectedGroup.eligibleOrders
+                      ).length === 0 ? (
                         <tr>
                           <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
-                            No eligible transactions.
+                            No transactions found.
                           </td>
                         </tr>
                       ) : (
-                        selectedGroup.eligibleOrders.map((order) => {
+                        (statusFilter === "paid"
+                          ? selectedGroup.paidOutOrders
+                          : selectedGroup.eligibleOrders
+                        ).map((order) => {
                           const gross = toNumber(order.total_amount)
                           const fee = toNumber(order.seller_fee_amount)
                           const net = toNumber(order.net_seller_amount)
@@ -808,7 +911,9 @@ export default function PayoutClient({
                                 {formatDate(order.paid_at)}
                               </td>
                               <td className="px-4 py-3 text-slate-700">
-                                {formatDate(order.eligible_payout_at)}
+                                {statusFilter === "paid"
+                                  ? order.payout_reference || "-"
+                                  : formatDate(order.eligible_payout_at)}
                               </td>
                               <td className="px-4 py-3 text-slate-700">
                                 {formatCurrency(gross)}
@@ -822,7 +927,7 @@ export default function PayoutClient({
                                 }`}
                               >
                                 {formatCurrency(net)}
-                                {net <= 0 && (
+                                {statusFilter !== "paid" && net <= 0 && (
                                   <span className="block text-xs text-red-500">
                                     Excluded (negative payout)
                                   </span>
@@ -837,83 +942,7 @@ export default function PayoutClient({
                 </div>
               </div>
 
-              <div className="mt-8">
-                <h3 className="text-lg font-bold text-slate-900">
-                  Pending Settlement
-                </h3>
-                <div className="mt-3 overflow-hidden rounded-3xl border border-slate-200">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50 text-left text-slate-600">
-                      <tr>
-                        <th className="px-4 py-3 font-semibold">Order</th>
-                        <th className="px-4 py-3 font-semibold">Buyer</th>
-                        <th className="px-4 py-3 font-semibold">Method</th>
-                        <th className="px-4 py-3 font-semibold">Paid At</th>
-                        <th className="px-4 py-3 font-semibold">Eligible At</th>
-                        <th className="px-4 py-3 font-semibold">Gross</th>
-                        <th className="px-4 py-3 font-semibold">Fee</th>
-                        <th className="px-4 py-3 font-semibold">Net</th>
-                        <th className="px-4 py-3 font-semibold">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedGroup.pendingSettlementOrders.length === 0 ? (
-                        <tr>
-                          <td colSpan={9} className="px-4 py-6 text-center text-slate-500">
-                            No pending settlement transactions.
-                          </td>
-                        </tr>
-                      ) : (
-                        selectedGroup.pendingSettlementOrders.map((order) => {
-                          const gross = toNumber(order.total_amount)
-                          const fee = toNumber(order.seller_fee_amount)
-                          const net = toNumber(order.net_seller_amount)
-
-                          return (
-                            <tr key={order.id} className="border-t border-slate-100">
-                              <td className="px-4 py-3 font-medium text-slate-900">
-                                {order.order_number || order.order_no || "-"}
-                              </td>
-                              <td className="px-4 py-3 text-slate-700">
-                                {order.buyer_name ||
-                                  order.customer_name ||
-                                  order.buyer_email ||
-                                  order.customer_email ||
-                                  order.buyer_phone ||
-                                  order.customer_phone ||
-                                  "-"}
-                              </td>
-                              <td className="px-4 py-3 text-slate-700">
-                                {getPaymentMethodLabel(order)}
-                              </td>
-                              <td className="px-4 py-3 text-slate-700">
-                                {formatDate(order.paid_at)}
-                              </td>
-                              <td className="px-4 py-3 text-slate-700">
-                                {formatDate(order.eligible_payout_at)}
-                              </td>
-                              <td className="px-4 py-3 text-slate-700">
-                                {formatCurrency(gross)}
-                              </td>
-                              <td className="px-4 py-3 text-slate-700">
-                                {formatCurrency(fee)}
-                              </td>
-                              <td className="px-4 py-3 font-medium text-slate-900">
-                                {formatCurrency(net)}
-                              </td>
-                              <td className="px-4 py-3">
-                                <StatusBadge label="Pending Settlement" />
-                              </td>
-                            </tr>
-                          )
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {selectedGroup.eligibleOrdersCount > 0 ? (
+              {statusFilter !== "paid" && selectedGroup.eligibleOrdersCount > 0 ? (
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => openPayoutModal(selectedGroup)}
@@ -964,7 +993,7 @@ export default function PayoutClient({
                 </p>
                 <p>
                   <span className="font-semibold text-slate-700">Net Payout:</span>{" "}
-                  <span className="text-emerald-700 font-bold">
+                  <span className="font-bold text-emerald-700">
                     {formatCurrency(payoutTarget.eligibleNet)}
                   </span>
                 </p>
