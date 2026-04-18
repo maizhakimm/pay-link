@@ -3,18 +3,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../../lib/supabase'
 
-type PayoutRow = {
+type PayoutOrderRow = {
   id: string
-  seller_id: string
-  amount: number
-  bank_name: string | null
-  account_name: string | null
-  account_number: string | null
-  status: string | null
+  order_number: string | null
+  seller_profile_id: string | null
+  seller_id: string | null
+  payment_status: string | null
+  payout_status: string | null
+  net_seller_amount: number | null
+  seller_net: number | null
+  amount: number | null
+  total_amount: number | null
   created_at: string
+  payout_at: string | null
   seller_profiles?: {
     store_name: string | null
     email: string | null
+    bank_name?: string | null
+    account_name?: string | null
+    account_number?: string | null
   }[] | null
 }
 
@@ -22,7 +29,7 @@ export default function AdminPayoutPage() {
   const [checking, setChecking] = useState(true)
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [rows, setRows] = useState<PayoutRow[]>([])
+  const [rows, setRows] = useState<PayoutOrderRow[]>([])
 
   useEffect(() => {
     let mounted = true
@@ -90,33 +97,39 @@ export default function AdminPayoutPage() {
       setLoading(true)
 
       const { data, error } = await supabase
-        .from('payout_requests')
+        .from('orders')
         .select(
           `
             id,
+            order_number,
+            seller_profile_id,
             seller_id,
+            payment_status,
+            payout_status,
+            net_seller_amount,
+            seller_net,
             amount,
-            bank_name,
-            account_name,
-            account_number,
-            status,
+            total_amount,
             created_at,
+            payout_at,
             seller_profiles (
               store_name,
               email
             )
           `
         )
+        .eq('payment_status', 'paid')
+        .neq('payout_status', 'paid')
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Load payout error:', error)
+        console.error('Load payout orders error:', error)
         setRows([])
         setLoading(false)
         return
       }
 
-      setRows(((data || []) as unknown) as PayoutRow[])
+      setRows(((data || []) as unknown) as PayoutOrderRow[])
       setLoading(false)
     }
 
@@ -125,39 +138,28 @@ export default function AdminPayoutPage() {
 
   const stats = useMemo(() => {
     const total = rows.length
-    const pending = rows.filter((r) => (r.status || 'pending') === 'pending').length
-    const approved = rows.filter((r) => r.status === 'approved').length
-    const paid = rows.filter((r) => r.status === 'paid').length
+    const pending = rows.filter((r) => {
+      const status = (r.payout_status || '').toLowerCase()
+      return status === 'unpaid' || status === 'eligible' || status === 'pending' || status === ''
+    }).length
+
+    const approved = rows.filter((r) => (r.payout_status || '').toLowerCase() === 'approved').length
+    const paid = rows.filter((r) => (r.payout_status || '').toLowerCase() === 'paid').length
 
     return { total, pending, approved, paid }
   }, [rows])
 
-  async function updateStatus(id: string, newStatus: string) {
-    const ok = window.confirm(`Update payout status to "${newStatus}"?`)
-    if (!ok) return
-
-    const { error } = await supabase
-      .from('payout_requests')
-      .update({ status: newStatus })
-      .eq('id', id)
-
-    if (error) {
-      alert(error.message)
-      return
-    }
-
-    setRows((prev) =>
-      prev.map((row) =>
-        row.id === id ? { ...row, status: newStatus } : row
-      )
-    )
+  function getNetAmount(row: PayoutOrderRow) {
+    return Number(row.net_seller_amount ?? row.seller_net ?? row.total_amount ?? row.amount ?? 0)
   }
 
   function formatAmount(amount: number | null | undefined) {
     return `RM ${Number(amount || 0).toFixed(2)}`
   }
 
-  function formatDate(value: string) {
+  function formatDate(value: string | null) {
+    if (!value) return '-'
+
     try {
       return new Date(value).toLocaleString('en-MY', {
         year: 'numeric',
@@ -172,9 +174,9 @@ export default function AdminPayoutPage() {
   }
 
   function getStatusBadgeClass(status: string | null) {
-    const value = status || 'pending'
+    const value = (status || 'unpaid').toLowerCase()
 
-    if (value === 'pending') {
+    if (value === 'unpaid' || value === 'eligible' || value === 'pending') {
       return 'bg-amber-100 text-amber-700'
     }
 
@@ -191,6 +193,41 @@ export default function AdminPayoutPage() {
     }
 
     return 'bg-slate-100 text-slate-700'
+  }
+
+  async function updateStatus(id: string, newStatus: string) {
+    const ok = window.confirm(`Update payout status to "${newStatus}"?`)
+    if (!ok) return
+
+    const updatePayload: Record<string, string> = {
+      payout_status: newStatus,
+    }
+
+    if (newStatus === 'paid') {
+      updatePayload.payout_at = new Date().toISOString()
+    }
+
+    const { error } = await supabase
+      .from('orders')
+      .update(updatePayload)
+      .eq('id', id)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              payout_status: newStatus,
+              payout_at: newStatus === 'paid' ? new Date().toISOString() : row.payout_at,
+            }
+          : row
+      )
+    )
   }
 
   if (checking) {
@@ -211,62 +248,52 @@ export default function AdminPayoutPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Payout</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Manage seller payout requests here.
+            Manage seller payouts from paid orders.
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
           <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Total Requests</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">
-              {stats.total}
-            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-900">{stats.total}</p>
           </div>
 
           <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Pending</p>
-            <p className="mt-2 text-2xl font-bold text-amber-600">
-              {stats.pending}
-            </p>
+            <p className="mt-2 text-2xl font-bold text-amber-600">{stats.pending}</p>
           </div>
 
           <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Approved</p>
-            <p className="mt-2 text-2xl font-bold text-blue-600">
-              {stats.approved}
-            </p>
+            <p className="mt-2 text-2xl font-bold text-blue-600">{stats.approved}</p>
           </div>
 
           <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-500">Paid</p>
-            <p className="mt-2 text-2xl font-bold text-emerald-600">
-              {stats.paid}
-            </p>
+            <p className="mt-2 text-2xl font-bold text-emerald-600">{stats.paid}</p>
           </div>
         </div>
 
         <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
           <div className="border-b px-5 py-4">
-            <h2 className="font-semibold text-slate-900">Payout Requests</h2>
+            <h2 className="font-semibold text-slate-900">Payout Orders</h2>
           </div>
 
           {loading ? (
             <div className="p-5 text-sm text-slate-500">Loading payouts...</div>
           ) : rows.length === 0 ? (
-            <div className="p-5 text-sm text-slate-500">
-              No payout requests found.
-            </div>
+            <div className="p-5 text-sm text-slate-500">No payout records found.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-left text-slate-600">
                   <tr>
+                    <th className="px-4 py-3 font-medium">Order</th>
                     <th className="px-4 py-3 font-medium">Seller</th>
-                    <th className="px-4 py-3 font-medium">Amount</th>
-                    <th className="px-4 py-3 font-medium">Bank</th>
-                    <th className="px-4 py-3 font-medium">Account</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Requested At</th>
+                    <th className="px-4 py-3 font-medium">Net Payout</th>
+                    <th className="px-4 py-3 font-medium">Payment</th>
+                    <th className="px-4 py-3 font-medium">Payout Status</th>
+                    <th className="px-4 py-3 font-medium">Created At</th>
                     <th className="px-4 py-3 font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -276,35 +303,37 @@ export default function AdminPayoutPage() {
                     <tr key={row.id} className="border-t align-top">
                       <td className="px-4 py-3">
                         <div className="font-medium text-slate-900">
+                          {row.order_number || row.id}
+                        </div>
+                        <div className="text-xs text-slate-500">{row.id}</div>
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-slate-900">
                           {row.seller_profiles?.[0]?.store_name || 'No store name'}
                         </div>
                         <div className="text-xs text-slate-500">
-                          {row.seller_profiles?.[0]?.email || row.seller_id}
+                          {row.seller_profiles?.[0]?.email || row.seller_profile_id || row.seller_id}
                         </div>
                       </td>
 
                       <td className="px-4 py-3 font-medium text-slate-900">
-                        {formatAmount(row.amount)}
+                        {formatAmount(getNetAmount(row))}
                       </td>
 
-                      <td className="px-4 py-3 text-slate-700">
-                        {row.bank_name || '-'}
-                      </td>
-
-                      <td className="px-4 py-3 text-slate-700">
-                        <div>{row.account_name || '-'}</div>
-                        <div className="text-xs text-slate-500">
-                          {row.account_number || '-'}
-                        </div>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium capitalize text-slate-700">
+                          {row.payment_status || '-'}
+                        </span>
                       </td>
 
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${getStatusBadgeClass(
-                            row.status
+                            row.payout_status
                           )}`}
                         >
-                          {row.status || 'pending'}
+                          {row.payout_status || 'unpaid'}
                         </span>
                       </td>
 
