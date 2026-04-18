@@ -13,8 +13,9 @@ export type SellerProfileLite = {
   id: string
   store_name: string | null
   bank_name: string | null
-  bank_account_no: string | null
-  bank_account_holder: string | null
+  account_number: string | null
+  account_holder_name: string | null
+  email: string | null
 }
 
 export type OrderRow = {
@@ -31,7 +32,7 @@ export type OrderRow = {
   customer_phone: string | null
 
   total_amount: number | string | null
-  platform_fee_amount: number | string | null
+  seller_fee_amount: number | string | null
   net_seller_amount: number | string | null
 
   payment_method: string | null
@@ -48,8 +49,9 @@ export type OrderRow = {
   seller_profiles?: {
     store_name?: string | null
     bank_name?: string | null
-    bank_account_no?: string | null
-    bank_account_holder?: string | null
+    account_number?: string | null
+    account_holder_name?: string | null
+    email?: string | null
   } | null
 }
 
@@ -68,7 +70,7 @@ async function getOrders(): Promise<OrderRow[]> {
       customer_email,
       customer_phone,
       total_amount,
-      platform_fee_amount,
+      seller_fee_amount,
       net_seller_amount,
       payment_method,
       payment_status,
@@ -103,7 +105,7 @@ async function getOrders(): Promise<OrderRow[]> {
 
   const { data: sellers, error: sellersError } = await supabase
     .from("seller_profiles")
-    .select("id, store_name, bank_name, bank_account_no, bank_account_holder")
+    .select("id, store_name, bank_name, account_number, account_holder_name, email")
     .in("id", sellerProfileIds)
 
   if (sellersError) {
@@ -127,8 +129,9 @@ async function getOrders(): Promise<OrderRow[]> {
         ? {
             store_name: seller.store_name,
             bank_name: seller.bank_name,
-            bank_account_no: seller.bank_account_no,
-            bank_account_holder: seller.bank_account_holder,
+            account_number: seller.account_number,
+            account_holder_name: seller.account_holder_name,
+            email: seller.email,
           }
         : null,
     }
