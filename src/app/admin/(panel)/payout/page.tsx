@@ -40,6 +40,7 @@ type PayoutOrderRow = {
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected'
 
 export default function AdminPayoutPage() {
+  const [apiError, setApiError] = useState('')
   const [checking, setChecking] = useState(true)
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -115,57 +116,61 @@ export default function AdminPayoutPage() {
     if (!authorized) return
 
     async function loadPayouts() {
-      setLoading(true)
+  setLoading(true)
+  setApiError('')
 
-      try {
-        const res = await fetch('/api/admin/payouts', { cache: 'no-store' })
-        const json = await res.json()
+  try {
+    const res = await fetch('/api/admin/payouts', { cache: 'no-store' })
+    const json = await res.json()
 
-        if (!res.ok) {
-          console.error('API payout error:', json)
-          setRows([])
-          setSellerMap({})
-          setLoading(false)
-          return
-        }
+    console.log('admin payouts api response:', json)
 
-        const orderRows: PayoutOrderRow[] = json.orders || []
-        const sellerProfiles = json.sellerProfiles || []
+    if (!res.ok) {
+      setApiError(json?.error || 'Failed to load payout data')
+      setRows([])
+      setSellerMap({})
+      setLoading(false)
+      return
+    }
 
-        setRows(orderRows)
+    const orderRows: PayoutOrderRow[] = json.orders || []
+    const sellerProfiles = json.sellerProfiles || []
 
-        const nextReferenceInputs: Record<string, string> = {}
-        const nextProofInputs: Record<string, string> = {}
+    setRows(orderRows)
 
-        for (const row of orderRows) {
-          nextReferenceInputs[row.id] = row.payout_reference || ''
-          nextProofInputs[row.id] = row.payout_proof_url || ''
-        }
+    const nextReferenceInputs: Record<string, string> = {}
+    const nextProofInputs: Record<string, string> = {}
 
-        setReferenceInputs(nextReferenceInputs)
-        setProofInputs(nextProofInputs)
+    for (const row of orderRows) {
+      nextReferenceInputs[row.id] = row.payout_reference || ''
+      nextProofInputs[row.id] = row.payout_proof_url || ''
+    }
 
-        const nextSellerMap: SellerProfileMap = {}
+    setReferenceInputs(nextReferenceInputs)
+    setProofInputs(nextProofInputs)
 
-        for (const seller of sellerProfiles) {
-          nextSellerMap[seller.id] = {
-            store_name: seller.store_name,
-            email: seller.email,
-            bank_name: seller.bank_name,
-            account_name: seller.account_name,
-            account_number: seller.account_number,
-          }
-        }
+    const nextSellerMap: SellerProfileMap = {}
 
-        setSellerMap(nextSellerMap)
-      } catch (error) {
-        console.error('Load payouts failed:', error)
-        setRows([])
-        setSellerMap({})
-      } finally {
-        setLoading(false)
+    for (const seller of sellerProfiles) {
+      nextSellerMap[seller.id] = {
+        store_name: seller.store_name,
+        email: seller.email,
+        bank_name: seller.bank_name,
+        account_name: seller.account_name,
+        account_number: seller.account_number,
       }
     }
+
+    setSellerMap(nextSellerMap)
+  } catch (error: any) {
+    console.error('Load payouts failed:', error)
+    setApiError(error?.message || 'Unexpected error loading payouts')
+    setRows([])
+    setSellerMap({})
+  } finally {
+    setLoading(false)
+  }
+}
 
     loadPayouts()
   }, [authorized])
@@ -473,6 +478,11 @@ export default function AdminPayoutPage() {
           </div>
         </div>
 
+        {apiError ? (
+  <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+    {apiError}
+  </div>
+) : null}
         <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
           <div className="border-b px-5 py-4">
             <h2 className="font-semibold text-slate-900">Payout Orders</h2>
