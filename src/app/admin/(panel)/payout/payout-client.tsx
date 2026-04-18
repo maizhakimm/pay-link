@@ -88,6 +88,217 @@ function formatDate(value: string | null | undefined) {
   if (!value) return "-"
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return "-"
+  return d.toLocaleString("en-MY")
+}
+
+function formatShortDate(value: string | null | undefined) {
+  if (!value) return "-"
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return "-"
+  return d.toLocaleDateString("en-MY")
+}
+
+function getPaymentMethodLabel(order: OrderRow) {
+  const method = (order.payment_method || "").trim().toUpperCase()
+
+  if (method) {
+    if (method === "DUITNOW_QR") return "DuitNow QR"
+    if (method === "FPX") return "FPX"
+    if (method === "CARD") return "Card"
+    return method.replaceAll("_", " ")
+  }
+
+  return "FPX"
+}
+
+function getDerivedBucket(order: OrderRow, now: Date) {
+  if (order.payout_status === "paid") return "paid_out"
+
+  const eligibleAt = order.eligible_payout_at
+    ? new Date(order.eligible_payout_at)
+    : null
+
+  if (eligibleAt && eligibleAt <= now) return "eligible"
+  return "pending_settlement"
+}
+
+function buildGroups(orders: OrderRow[]): SellerGroup[] {
+  const now = new Date()
+  const map = new Map<string, SellerGroup>()
+
+  for (const order of orders) {
+    if (order.payment_status !== "paid") continue
+
+    const sellerId = order.seller_profile_id || "unknown"
+    const sellerName = order.seller_profiles?.store_name || "Unknown Seller"
+
+    if (!map.has(sellerId)) {
+      map.set(sellerId, {
+        sellerProfileId: sellerId,
+        sellerName,
+        sellerEmail: order.seller_profiles?.email || "-",
+        bankName: order.seller_profiles?.bank_name || "",
+        bankAccountNo: order.seller_profiles?.account_number || "",
+        bankAccountHolder: order.seller_profiles?.account_holder_name || "",
+
+        eligibleOrders: [],
+        pendingSettlementOrders: [],
+        paidOutOrders: [],
+
+        eligibleOrdersCount: 0,
+        eligibleGross: 0,
+        eligibleFee: 0,
+        eligibleNet: 0,
+
+        pendingSettlementGross: 0,
+        pendingSettlementCount: 0,
+
+        paidOutGross: 0,
+
+        paymentWindowStart: null,
+        paymentWindowEnd: null,
+        payoutAt: null,
+
+        hasBankInfo: Boolean(
+          order.seller_profiles?.bank_name &&
+            order.seller_profiles?.account_number &&
+            order.seller_profiles?.account_holder_name
+        ),
+      })
+    }
+
+    const group = map.get(sellerId)!
+    const bucket = getDerivedBucket(order, now)
+
+    const gross = toNumber(order.total_amount)
+    const fee = toNumber(order.seller_fee_amount)
+    const net = toNumber(order.net_seller_amount)
+
+    if (bucket === "eligible") {
+      group.eligibleOrders.push(order)
+      group.eligibleOrdersCount++
+      group.eligibleGross += gross
+      group.eligibleFee += fee
+      group.eligibleNet += net
+    } else if (bucket === "pending_settlement") {
+      group.pendingSettlementOrders.push(order)
+      group.pendingSettlementCount++
+      group.pendingSettlementGross += gross
+    } else {
+      group.paidOutOrders.push(order)
+    }
+
+    if (order.paid_at) {
+      if (!group.paymentWindowStart) group.paymentWindowStart = order.paid_at
+      group.paymentWindowEnd = order.paid_at
+    }
+  }
+
+  return Array.from(map.values())
+}
+
+export default function PayoutClient({
+  initialOrders,
+}: {
+  initialOrders: OrderRow[]
+}) {
+  const [selectedGroup, setSelectedGroup] = useState<SellerGroup | null>(null)
+
+  const groups = useMemo(() => buildGroups(initialOrders), [initialOrders])
+
+  return (
+    <div className="space-y-6">
+      <table className="min-w-full text-sm bg-white rounded-3xl border">
+        <thead>
+          <tr>
+            <th>Seller</th>
+            <th>Orders</th>
+            <th>Gross</th>
+            <th>Fee</th>
+            <th>Net</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {groups.map((g) => (
+            <tr key={g.sellerProfileId}>
+              <td>{g.sellerName}</td>
+              <td>{g.eligibleOrdersCount}</td>
+              <td>{formatCurrency(g.eligibleGross)}</td>
+              <td>{formatCurrency(g.eligibleFee)}</td>
+              <td>{formatCurrency(g.eligibleNet)}</td>
+              <td>
+                <button onClick={() => setSelectedGroup(g)}>
+                  View Details
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {selectedGroup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-4xl">
+            <h2 className="text-xl font-bold">{selectedGroup.sellerName}</h2>
+
+            <table className="mt-4 w-full text-sm">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Method</th>
+                  <th>Gross</th>
+                  <th>Fee</th>
+                  <th>Net</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {selectedGroup.eligibleOrders.map((o) => (
+                  <tr key={o.id}>
+                    <td>{o.order_number}</td>
+                    <td>{getPaymentMethodLabel(o)}</td>
+                    <td>{formatCurrency(toNumber(o.total_amount))}</td>
+                    <td>{formatCurrency(toNumber(o.seller_fee_amount))}</td>
+                    <td>{formatCurrency(toNumber(o.net_seller_amount))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <button onClick={() => setSelectedGroup(null)}>Close</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}  paidOutGross: number
+
+  paymentWindowStart: string | null
+  paymentWindowEnd: string | null
+  payoutAt: string | null
+
+  hasBankInfo: boolean
+}
+
+function toNumber(value: number | string | null | undefined) {
+  const num = Number(value || 0)
+  return Number.isFinite(num) ? num : 0
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-MY", {
+    style: "currency",
+    currency: "MYR",
+    minimumFractionDigits: 2,
+  }).format(value)
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "-"
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return "-"
   return d.toLocaleString("en-MY", {
     year: "numeric",
     month: "short",
