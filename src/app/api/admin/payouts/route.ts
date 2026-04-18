@@ -25,30 +25,27 @@ export async function GET() {
 
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
-      .select(
-        `
-          id,
-          order_number,
-          seller_profile_id,
-          seller_id,
-          payment_status,
-          payout_status,
-          payment_method,
-          payment_channel,
-          net_seller_amount,
-          seller_net,
-          amount,
-          total_amount,
-          platform_fee,
-          fee_amount,
-          admin_fee,
-          created_at,
-          updated_at,
-          payout_at,
-          payout_reference,
-          payout_proof_url
-        `
-      )
+      .select(`
+        id,
+        order_number,
+        seller_profile_id,
+        seller_id,
+        payment_status,
+        payout_status,
+        payment_method,
+        payment_channel,
+        net_seller_amount,
+        seller_net,
+        amount,
+        total_amount,
+        platform_fee,
+        admin_fee,
+        created_at,
+        updated_at,
+        payout_at,
+        payout_reference,
+        payout_proof_url
+      `)
       .eq('payment_status', 'paid')
       .order('created_at', { ascending: false })
 
