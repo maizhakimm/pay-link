@@ -31,6 +31,7 @@ type OrderRow = {
 
   payout_status: string | null
   payout_at: string | null
+  payout_reference?: string | null
   created_at: string | null
 
   seller_profiles?: {
@@ -253,29 +254,29 @@ function buildGroups(
     const fee = toNumber(order.seller_fee_amount)
     const net = toNumber(order.net_seller_amount)
 
-   if (bucket === "eligible") {
-  if (net > 0) {
-    group.eligibleOrders.push(order)
-    group.eligibleOrdersCount += 1
-    group.eligibleGross += gross
-    group.eligibleFee += fee
-    group.eligibleNet += net
-  } else {
-    group.pendingSettlementOrders.push(order)
-    group.pendingSettlementCount += 1
-    group.pendingSettlementGross += gross
-  }
-} else if (bucket === "pending_settlement") {
-  group.pendingSettlementOrders.push(order)
-  group.pendingSettlementCount += 1
-  group.pendingSettlementGross += gross
-} else {
-  group.paidOutOrders.push(order)
-  group.paidOutGross += gross
-  if (!group.payoutAt && order.payout_at) {
-    group.payoutAt = order.payout_at
-  }
-}
+    if (bucket === "eligible") {
+      if (net > 0) {
+        group.eligibleOrders.push(order)
+        group.eligibleOrdersCount += 1
+        group.eligibleGross += gross
+        group.eligibleFee += fee
+        group.eligibleNet += net
+      } else {
+        group.pendingSettlementOrders.push(order)
+        group.pendingSettlementCount += 1
+        group.pendingSettlementGross += gross
+      }
+    } else if (bucket === "pending_settlement") {
+      group.pendingSettlementOrders.push(order)
+      group.pendingSettlementCount += 1
+      group.pendingSettlementGross += gross
+    } else {
+      group.paidOutOrders.push(order)
+      group.paidOutGross += gross
+      if (!group.payoutAt && order.payout_at) {
+        group.payoutAt = order.payout_at
+      }
+    }
 
     if (order.paid_at) {
       if (
@@ -373,6 +374,10 @@ export default function PayoutClient({
   const [loadingSellerId, setLoadingSellerId] = useState<string | null>(null)
   const [orders, setOrders] = useState<OrderRow[]>(initialOrders)
 
+  const [showPayoutModal, setShowPayoutModal] = useState(false)
+  const [payoutTarget, setPayoutTarget] = useState<SellerGroup | null>(null)
+  const [payoutReference, setPayoutReference] = useState("")
+
   const groups = useMemo(
     () => buildGroups(orders, datePreset, search, statusFilter),
     [orders, datePreset, search, statusFilter]
@@ -387,15 +392,30 @@ export default function PayoutClient({
     return { pendingSellers, gross, fee, net }
   }, [groups])
 
-  async function handleMarkPaid(group: SellerGroup) {
-    const confirmed = window.confirm(
-      `Anda akan tandakan semua transaksi seller "${group.sellerName}" yang telah layak payout dalam filter semasa sebagai PAID. Teruskan?`
-    )
+  function openPayoutModal(group: SellerGroup) {
+    setPayoutTarget(group)
+    setPayoutReference("")
+    setShowPayoutModal(true)
+  }
 
-    if (!confirmed) return
+  function closePayoutModal() {
+    if (loadingSellerId) return
+    setShowPayoutModal(false)
+    setPayoutTarget(null)
+    setPayoutReference("")
+  }
+
+  async function confirmMarkPaid() {
+    if (!payoutTarget) return
+
+    const trimmedReference = payoutReference.trim()
+    if (!trimmedReference) {
+      alert("Sila isi payout reference terlebih dahulu.")
+      return
+    }
 
     try {
-      setLoadingSellerId(group.sellerProfileId)
+      setLoadingSellerId(payoutTarget.sellerProfileId)
 
       const res = await fetch("/api/admin/payout/mark-paid", {
         method: "POST",
@@ -403,8 +423,9 @@ export default function PayoutClient({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          sellerProfileId: group.sellerProfileId,
+          sellerProfileId: payoutTarget.sellerProfileId,
           datePreset,
+          payoutReference: trimmedReference,
         }),
       })
 
@@ -419,7 +440,7 @@ export default function PayoutClient({
       setOrders((prev) =>
         prev.map((order) => {
           if (
-            order.seller_profile_id === group.sellerProfileId &&
+            order.seller_profile_id === payoutTarget.sellerProfileId &&
             order.payment_status === "paid" &&
             order.payout_status !== "paid" &&
             isWithinPreset(order.paid_at, datePreset)
@@ -427,12 +448,14 @@ export default function PayoutClient({
             const eligibleAt = order.eligible_payout_at
               ? new Date(order.eligible_payout_at)
               : null
+            const net = toNumber(order.net_seller_amount)
 
-            if (eligibleAt && eligibleAt <= new Date()) {
+            if (eligibleAt && eligibleAt <= new Date() && net > 0) {
               return {
                 ...order,
                 payout_status: "paid",
                 payout_at: nowIso,
+                payout_reference: trimmedReference,
               }
             }
           }
@@ -441,6 +464,7 @@ export default function PayoutClient({
         })
       )
 
+      closePayoutModal()
       setSelectedGroup(null)
       alert("Payout batch berjaya ditandakan sebagai paid.")
     } catch (error) {
@@ -619,14 +643,14 @@ export default function PayoutClient({
                     </td>
 
                     <td className="px-5 py-5 align-top">
-  {group.eligibleNet > 0 ? (
-    <StatusBadge label="Eligible" />
-  ) : group.paidOutOrders.length > 0 ? (
-    <StatusBadge label="Paid" />
-  ) : (
-    <StatusBadge label="Pending Settlement" />
-  )}
-</td>
+                      {group.eligibleNet > 0 ? (
+                        <StatusBadge label="Eligible" />
+                      ) : group.paidOutOrders.length > 0 ? (
+                        <StatusBadge label="Paid" />
+                      ) : (
+                        <StatusBadge label="Pending Settlement" />
+                      )}
+                    </td>
 
                     <td className="px-5 py-5 align-top">
                       <div className="flex items-center justify-end gap-2">
@@ -637,11 +661,11 @@ export default function PayoutClient({
                           View Details
                         </button>
 
-                       {statusFilter !== "paid" &&
-                         group.eligibleOrdersCount > 0 &&
-                           group.eligibleNet > 0 ? (
+                        {statusFilter !== "paid" &&
+                        group.eligibleOrdersCount > 0 &&
+                        group.eligibleNet > 0 ? (
                           <button
-                            onClick={() => handleMarkPaid(group)}
+                            onClick={() => openPayoutModal(group)}
                             disabled={
                               !group.hasBankInfo ||
                               loadingSellerId === group.sellerProfileId
@@ -792,8 +816,17 @@ export default function PayoutClient({
                               <td className="px-4 py-3 text-slate-700">
                                 {formatCurrency(fee)}
                               </td>
-                              <td className="px-4 py-3 font-medium text-emerald-700">
+                              <td
+                                className={`px-4 py-3 font-medium ${
+                                  net > 0 ? "text-emerald-700" : "text-red-600"
+                                }`}
+                              >
                                 {formatCurrency(net)}
+                                {net <= 0 && (
+                                  <span className="block text-xs text-red-500">
+                                    Excluded (negative payout)
+                                  </span>
+                                )}
                               </td>
                             </tr>
                           )
@@ -883,10 +916,11 @@ export default function PayoutClient({
               {selectedGroup.eligibleOrdersCount > 0 ? (
                 <div className="mt-6 flex justify-end">
                   <button
-                    onClick={() => handleMarkPaid(selectedGroup)}
+                    onClick={() => openPayoutModal(selectedGroup)}
                     disabled={
                       !selectedGroup.hasBankInfo ||
-                      loadingSellerId === selectedGroup.sellerProfileId
+                      loadingSellerId === selectedGroup.sellerProfileId ||
+                      selectedGroup.eligibleNet <= 0
                     }
                     className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
@@ -896,6 +930,77 @@ export default function PayoutClient({
                   </button>
                 </div>
               ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showPayoutModal && payoutTarget ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="w-full max-w-lg rounded-[28px] bg-white p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-900">Confirm Payout</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Sahkan payout untuk seller ini. Pastikan anda sudah membuat transfer
+              bank sebelum tandakan sebagai paid.
+            </p>
+
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="space-y-2 text-sm">
+                <p>
+                  <span className="font-semibold text-slate-700">Seller:</span>{" "}
+                  {payoutTarget.sellerName}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-700">Bank:</span>{" "}
+                  {payoutTarget.bankName} / {payoutTarget.bankAccountNo}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-700">Account Holder:</span>{" "}
+                  {payoutTarget.bankAccountHolder}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-700">Eligible Orders:</span>{" "}
+                  {payoutTarget.eligibleOrdersCount}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-700">Net Payout:</span>{" "}
+                  <span className="text-emerald-700 font-bold">
+                    {formatCurrency(payoutTarget.eligibleNet)}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Payout Reference
+              </label>
+              <input
+                value={payoutReference}
+                onChange={(e) => setPayoutReference(e.target.value)}
+                placeholder="Contoh: MBB-TRX-20260419-001"
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none placeholder:text-slate-400 focus:border-slate-400"
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                Masukkan reference transfer bank / transaction ID untuk audit trail.
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={closePayoutModal}
+                disabled={Boolean(loadingSellerId)}
+                className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmMarkPaid}
+                disabled={Boolean(loadingSellerId) || !payoutReference.trim()}
+                className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {loadingSellerId ? "Processing..." : "Confirm & Mark as Paid"}
+              </button>
             </div>
           </div>
         </div>
