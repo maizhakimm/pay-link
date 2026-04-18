@@ -9,6 +9,14 @@ const supabase = createClient(
 
 export const dynamic = "force-dynamic"
 
+export type SellerProfileLite = {
+  id: string
+  store_name: string | null
+  bank_name: string | null
+  bank_account_no: string | null
+  bank_account_holder: string | null
+}
+
 export type OrderRow = {
   id: string
   order_number: string | null
@@ -46,7 +54,7 @@ export type OrderRow = {
 }
 
 async function getOrders(): Promise<OrderRow[]> {
-  const { data, error } = await supabase
+  const { data: orders, error: ordersError } = await supabase
     .from("orders")
     .select(`
       id,
@@ -69,53 +77,90 @@ async function getOrders(): Promise<OrderRow[]> {
       eligible_payout_at,
       payout_status,
       payout_at,
-      created_at,
-      seller_profiles (
-        store_name,
-        bank_name,
-        bank_account_no,
-        bank_account_holder
-      )
+      created_at
     `)
-    .in("payment_status", ["paid", "completed"])
-    .order("created_at", { ascending: false })
+    .eq("payment_status", "paid")
+    .order("paid_at", { ascending: false })
 
-  if (error) {
-    console.error("Payout orders query failed:", error.message)
+  if (ordersError) {
+    console.error("Payout orders query failed:", ordersError.message)
     return []
   }
 
-  return (data || []) as OrderRow[]
+  const safeOrders = (orders || []) as OrderRow[]
+
+  const sellerProfileIds = Array.from(
+    new Set(
+      safeOrders
+        .map((o) => o.seller_profile_id)
+        .filter((id): id is string => Boolean(id))
+    )
+  )
+
+  if (sellerProfileIds.length === 0) {
+    return safeOrders
+  }
+
+  const { data: sellers, error: sellersError } = await supabase
+    .from("seller_profiles")
+    .select("id, store_name, bank_name, bank_account_no, bank_account_holder")
+    .in("id", sellerProfileIds)
+
+  if (sellersError) {
+    console.error("Seller profiles query failed:", sellersError.message)
+    return safeOrders
+  }
+
+  const sellerMap = new Map<string, SellerProfileLite>()
+  ;((sellers || []) as SellerProfileLite[]).forEach((seller) => {
+    sellerMap.set(seller.id, seller)
+  })
+
+  return safeOrders.map((order) => {
+    const seller = order.seller_profile_id
+      ? sellerMap.get(order.seller_profile_id)
+      : null
+
+    return {
+      ...order,
+      seller_profiles: seller
+        ? {
+            store_name: seller.store_name,
+            bank_name: seller.bank_name,
+            bank_account_no: seller.bank_account_no,
+            bank_account_holder: seller.bank_account_holder,
+          }
+        : null,
+    }
+  })
 }
 
 export default async function AdminPayoutPage() {
   const orders = await getOrders()
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <div className="space-y-6">
+      <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Admin Payout</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900">
+              Admin Payout
+            </h1>
+            <p className="mt-3 text-xl text-slate-500">
               Settlement-aware payout grouped by seller
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/admin/dashboard"
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Back
-            </Link>
-          </div>
+          <Link
+            href="/admin/dashboard"
+            className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Back
+          </Link>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl p-6">
-        <PayoutClient initialOrders={orders} />
-      </div>
+      <PayoutClient initialOrders={orders} />
     </div>
   )
 }
