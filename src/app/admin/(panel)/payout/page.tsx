@@ -28,8 +28,6 @@ type PayoutOrderRow = {
   amount: number | null
   total_amount: number | null
   platform_fee: number | null
-  fee_amount: number | null
-  admin_fee: number | null
   created_at: string
   updated_at: string | null
   payout_at: string | null
@@ -258,7 +256,7 @@ export default function AdminPayoutPage() {
   }
 
   function getFeeAmount(row: PayoutOrderRow) {
-    return Number(row.platform_fee ?? row.fee_amount ?? row.admin_fee ?? 0)
+    return Number(row.platform_fee ?? 0)
   }
 
   function getNetAmount(row: PayoutOrderRow) {
