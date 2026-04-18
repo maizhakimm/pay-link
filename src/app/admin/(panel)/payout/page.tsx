@@ -31,7 +31,7 @@ type PayoutOrderRow = {
   fee_amount: number | null
   admin_fee: number | null
   created_at: string
-  paid_at: string | null
+  updated_at: string | null
   payout_at: string | null
   payout_reference: string | null
   payout_proof_url: string | null
@@ -140,7 +140,7 @@ export default function AdminPayoutPage() {
             fee_amount,
             admin_fee,
             created_at,
-            paid_at,
+            updated_at,
             payout_at,
             payout_reference,
             payout_proof_url
@@ -669,9 +669,9 @@ export default function AdminPayoutPage() {
                                         </span>
                                       </div>
                                       <div>
-                                        <span className="text-slate-500">Paid At:</span>{' '}
+                                        <span className="text-slate-500">Last Updated:</span>{' '}
                                         <span className="font-medium text-slate-900">
-                                          {formatDate(row.paid_at)}
+                                          {formatDate(row.updated_at)}
                                         </span>
                                       </div>
                                       <div>
