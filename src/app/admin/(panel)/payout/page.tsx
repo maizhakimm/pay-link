@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../../lib/supabase'
 
 type SellerProfileMap = Record<
@@ -8,6 +8,9 @@ type SellerProfileMap = Record<
   {
     store_name: string | null
     email: string | null
+    bank_name: string | null
+    account_name: string | null
+    account_number: string | null
   }
 >
 
@@ -30,15 +33,27 @@ type PayoutOrderRow = {
   created_at: string
   paid_at: string | null
   payout_at: string | null
+  payout_reference: string | null
+  payout_proof_url: string | null
 }
+
+type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected'
 
 export default function AdminPayoutPage() {
   const [checking, setChecking] = useState(true)
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
+
   const [rows, setRows] = useState<PayoutOrderRow[]>([])
   const [sellerMap, setSellerMap] = useState<SellerProfileMap>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [search, setSearch] = useState('')
+
+  const [referenceInputs, setReferenceInputs] = useState<Record<string, string>>({})
+  const [proofInputs, setProofInputs] = useState<Record<string, string>>({})
+  const [savingPaidId, setSavingPaidId] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -126,11 +141,12 @@ export default function AdminPayoutPage() {
             admin_fee,
             created_at,
             paid_at,
-            payout_at
+            payout_at,
+            payout_reference,
+            payout_proof_url
           `
         )
         .eq('payment_status', 'paid')
-        .neq('payout_status', 'paid')
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -143,6 +159,17 @@ export default function AdminPayoutPage() {
 
       const orderRows = ((data || []) as unknown) as PayoutOrderRow[]
       setRows(orderRows)
+
+      const nextReferenceInputs: Record<string, string> = {}
+      const nextProofInputs: Record<string, string> = {}
+
+      for (const row of orderRows) {
+        nextReferenceInputs[row.id] = row.payout_reference || ''
+        nextProofInputs[row.id] = row.payout_proof_url || ''
+      }
+
+      setReferenceInputs(nextReferenceInputs)
+      setProofInputs(nextProofInputs)
 
       const sellerProfileIds = Array.from(
         new Set(
@@ -160,7 +187,7 @@ export default function AdminPayoutPage() {
 
       const { data: sellerData, error: sellerError } = await supabase
         .from('seller_profiles')
-        .select('id, store_name, email')
+        .select('id, store_name, email, bank_name, account_name, account_number')
         .in('id', sellerProfileIds)
 
       if (sellerError) {
@@ -176,6 +203,9 @@ export default function AdminPayoutPage() {
         nextSellerMap[seller.id] = {
           store_name: seller.store_name,
           email: seller.email,
+          bank_name: seller.bank_name,
+          account_name: seller.account_name,
+          account_number: seller.account_number,
         }
       }
 
@@ -186,37 +216,90 @@ export default function AdminPayoutPage() {
     loadPayouts()
   }, [authorized])
 
+  function normalizePayoutStatus(status: string | null) {
+    const value = (status || '').toLowerCase()
+
+    if (!value || value === 'unpaid' || value === 'eligible' || value === 'pending') {
+      return 'pending'
+    }
+
+    if (value === 'approved') {
+      return 'approved'
+    }
+
+    if (value === 'rejected') {
+      return 'rejected'
+    }
+
+    if (value === 'paid') {
+      return 'paid'
+    }
+
+    return value
+  }
+
+  const filteredRows = useMemo(() => {
+    const keyword = search.trim().toLowerCase()
+
+    return rows.filter((row) => {
+      const normalizedStatus = normalizePayoutStatus(row.payout_status)
+
+      if (statusFilter !== 'all' && normalizedStatus !== statusFilter) {
+        return false
+      }
+
+      if (!keyword) return true
+
+      const seller = row.seller_profile_id ? sellerMap[row.seller_profile_id] : null
+
+      const haystack = [
+        row.order_number || '',
+        row.id || '',
+        seller?.store_name || '',
+        seller?.email || '',
+        row.seller_profile_id || '',
+        row.seller_id || '',
+        row.payment_method || '',
+        row.payment_channel || '',
+      ]
+        .join(' ')
+        .toLowerCase()
+
+      return haystack.includes(keyword)
+    })
+  }, [rows, search, sellerMap, statusFilter])
+
   const stats = useMemo(() => {
-    const total = rows.length
-    const pending = rows.filter((r) => {
-      const status = (r.payout_status || '').toLowerCase()
-      return (
-        status === 'unpaid' ||
-        status === 'eligible' ||
-        status === 'pending' ||
-        status === ''
-      )
-    }).length
-
-    const approved = rows.filter(
-      (r) => (r.payout_status || '').toLowerCase() === 'approved'
-    ).length
-
-    const paid = rows.filter(
-      (r) => (r.payout_status || '').toLowerCase() === 'paid'
-    ).length
+    const total = rows.filter((r) => normalizePayoutStatus(r.payout_status) !== 'paid').length
+    const pending = rows.filter((r) => normalizePayoutStatus(r.payout_status) === 'pending').length
+    const approved = rows.filter((r) => normalizePayoutStatus(r.payout_status) === 'approved').length
+    const paid = rows.filter((r) => normalizePayoutStatus(r.payout_status) === 'paid').length
 
     return { total, pending, approved, paid }
   }, [rows])
 
+  function getSeller(row: PayoutOrderRow) {
+    return row.seller_profile_id ? sellerMap[row.seller_profile_id] : null
+  }
+
   function getSellerName(row: PayoutOrderRow) {
-    const profile = row.seller_profile_id ? sellerMap[row.seller_profile_id] : null
-    return profile?.store_name || 'No store name'
+    return getSeller(row)?.store_name || 'No store name'
   }
 
   function getSellerEmail(row: PayoutOrderRow) {
-    const profile = row.seller_profile_id ? sellerMap[row.seller_profile_id] : null
-    return profile?.email || row.seller_profile_id || row.seller_id || '-'
+    return getSeller(row)?.email || row.seller_profile_id || row.seller_id || '-'
+  }
+
+  function getBankName(row: PayoutOrderRow) {
+    return getSeller(row)?.bank_name || '-'
+  }
+
+  function getAccountName(row: PayoutOrderRow) {
+    return getSeller(row)?.account_name || '-'
+  }
+
+  function getAccountNumber(row: PayoutOrderRow) {
+    return getSeller(row)?.account_number || '-'
   }
 
   function getGrossAmount(row: PayoutOrderRow) {
@@ -260,9 +343,9 @@ export default function AdminPayoutPage() {
   }
 
   function getStatusBadgeClass(status: string | null) {
-    const value = (status || 'unpaid').toLowerCase()
+    const value = normalizePayoutStatus(status)
 
-    if (value === 'unpaid' || value === 'eligible' || value === 'pending') {
+    if (value === 'pending') {
       return 'bg-amber-100 text-amber-700'
     }
 
@@ -279,6 +362,21 @@ export default function AdminPayoutPage() {
     }
 
     return 'bg-slate-100 text-slate-700'
+  }
+
+  async function copyToClipboard(text: string, label: string) {
+    if (!text || text === '-') {
+      alert(`${label} not available`)
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(text)
+      alert(`${label} copied`)
+    } catch (error) {
+      console.error('Copy failed:', error)
+      alert(`Failed to copy ${label.toLowerCase()}`)
+    }
   }
 
   async function updateStatus(id: string, newStatus: string) {
@@ -315,6 +413,53 @@ export default function AdminPayoutPage() {
           : row
       )
     )
+  }
+
+  async function handleMarkPaid(row: PayoutOrderRow) {
+    const reference = (referenceInputs[row.id] || '').trim()
+    const proofUrl = (proofInputs[row.id] || '').trim()
+
+    if (!reference) {
+      alert('Please fill payout reference first')
+      return
+    }
+
+    setSavingPaidId(row.id)
+
+    const now = new Date().toISOString()
+
+    const { error } = await supabase
+      .from('orders')
+      .update({
+        payout_status: 'paid',
+        payout_at: now,
+        payout_reference: reference,
+        payout_proof_url: proofUrl || null,
+      })
+      .eq('id', row.id)
+
+    setSavingPaidId(null)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    setRows((prev) =>
+      prev.map((item) =>
+        item.id === row.id
+          ? {
+              ...item,
+              payout_status: 'paid',
+              payout_at: now,
+              payout_reference: reference,
+              payout_proof_url: proofUrl || null,
+            }
+          : item
+      )
+    )
+
+    alert('Payout marked as paid')
   }
 
   if (checking) {
@@ -361,6 +506,38 @@ export default function AdminPayoutPage() {
           </div>
         </div>
 
+        <div className="rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'pending', 'approved', 'rejected'] as StatusFilter[]).map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setStatusFilter(item)}
+                  className={`rounded-full px-4 py-2 text-sm font-medium ${
+                    statusFilter === item
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {item === 'all'
+                    ? 'All'
+                    : item.charAt(0).toUpperCase() + item.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-full lg:w-80">
+              <input
+                type="text"
+                placeholder="Search seller, email, order number..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:border-slate-400"
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
           <div className="border-b px-5 py-4">
             <h2 className="font-semibold text-slate-900">Payout Orders</h2>
@@ -368,7 +545,7 @@ export default function AdminPayoutPage() {
 
           {loading ? (
             <div className="p-5 text-sm text-slate-500">Loading payouts...</div>
-          ) : rows.length === 0 ? (
+          ) : filteredRows.length === 0 ? (
             <div className="p-5 text-sm text-slate-500">No payout records found.</div>
           ) : (
             <div className="overflow-x-auto">
@@ -386,12 +563,13 @@ export default function AdminPayoutPage() {
                 </thead>
 
                 <tbody>
-                  {rows.map((row) => {
+                  {filteredRows.map((row) => {
                     const isExpanded = expandedId === row.id
+                    const normalizedStatus = normalizePayoutStatus(row.payout_status)
 
                     return (
-                      <>
-                        <tr key={row.id} className="border-t align-top">
+                      <Fragment key={row.id}>
+                        <tr className="border-t align-top">
                           <td className="px-4 py-3">
                             <div className="font-medium text-slate-900">
                               {row.order_number || row.id}
@@ -424,7 +602,7 @@ export default function AdminPayoutPage() {
                                 row.payout_status
                               )}`}
                             >
-                              {row.payout_status || 'unpaid'}
+                              {normalizedStatus}
                             </span>
                           </td>
 
@@ -443,26 +621,23 @@ export default function AdminPayoutPage() {
                                 {isExpanded ? 'Hide Details' : 'View Details'}
                               </button>
 
-                              <button
-                                onClick={() => updateStatus(row.id, 'approved')}
-                                className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                              >
-                                Approve
-                              </button>
+                              {normalizedStatus !== 'approved' && normalizedStatus !== 'paid' && (
+                                <button
+                                  onClick={() => updateStatus(row.id, 'approved')}
+                                  className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                                >
+                                  Approve
+                                </button>
+                              )}
 
-                              <button
-                                onClick={() => updateStatus(row.id, 'paid')}
-                                className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                              >
-                                Mark Paid
-                              </button>
-
-                              <button
-                                onClick={() => updateStatus(row.id, 'rejected')}
-                                className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                              >
-                                Reject
-                              </button>
+                              {normalizedStatus !== 'paid' && (
+                                <button
+                                  onClick={() => updateStatus(row.id, 'rejected')}
+                                  className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                                >
+                                  Reject
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -470,123 +645,259 @@ export default function AdminPayoutPage() {
                         {isExpanded && (
                           <tr className="border-t bg-slate-50/50">
                             <td colSpan={7} className="px-4 py-4">
-                              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                                <div className="rounded-xl border bg-white p-4">
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    Order Info
-                                  </p>
-                                  <div className="mt-3 space-y-2 text-sm">
-                                    <div>
-                                      <span className="text-slate-500">Order ID:</span>{' '}
-                                      <span className="font-medium text-slate-900">{row.id}</span>
+                              <div className="space-y-4">
+                                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                  <div className="rounded-xl border bg-white p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Order Info
+                                    </p>
+                                    <div className="mt-3 space-y-2 text-sm">
+                                      <div>
+                                        <span className="text-slate-500">Order ID:</span>{' '}
+                                        <span className="font-medium text-slate-900">{row.id}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Order Number:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {row.order_number || '-'}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Created At:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {formatDate(row.created_at)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Paid At:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {formatDate(row.paid_at)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Payout At:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {formatDate(row.payout_at)}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="text-slate-500">Order Number:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {row.order_number || '-'}
-                                      </span>
+                                  </div>
+
+                                  <div className="rounded-xl border bg-white p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Seller Info
+                                    </p>
+                                    <div className="mt-3 space-y-2 text-sm">
+                                      <div>
+                                        <span className="text-slate-500">Store Name:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {getSellerName(row)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Seller Email:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {getSellerEmail(row)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Seller Profile ID:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {row.seller_profile_id || '-'}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Seller ID:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {row.seller_id || '-'}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="text-slate-500">Created At:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {formatDate(row.created_at)}
-                                      </span>
+                                  </div>
+
+                                  <div className="rounded-xl border bg-white p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Bank Details
+                                    </p>
+                                    <div className="mt-3 space-y-2 text-sm">
+                                      <div>
+                                        <span className="text-slate-500">Bank:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {getBankName(row)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Account Name:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {getAccountName(row)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Account Number:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {getAccountNumber(row)}
+                                        </span>
+                                      </div>
+                                      <div className="pt-2">
+                                        <button
+                                          onClick={() =>
+                                            copyToClipboard(
+                                              getAccountNumber(row),
+                                              'Account number'
+                                            )
+                                          }
+                                          className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                                        >
+                                          Copy Account Number
+                                        </button>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="text-slate-500">Paid At:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {formatDate(row.paid_at)}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500">Payout At:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {formatDate(row.payout_at)}
-                                      </span>
+                                  </div>
+
+                                  <div className="rounded-xl border bg-white p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Payment Breakdown
+                                    </p>
+                                    <div className="mt-3 space-y-2 text-sm">
+                                      <div>
+                                        <span className="text-slate-500">Payment Method:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {getPaymentMethod(row)}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Gross Amount:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {formatAmount(getGrossAmount(row))}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Platform Fee:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {formatAmount(getFeeAmount(row))}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Net Seller Payout:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {formatAmount(getNetAmount(row))}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Payment Status:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {row.payment_status || '-'}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Payout Status:</span>{' '}
+                                        <span className="font-medium text-slate-900">
+                                          {normalizePayoutStatus(row.payout_status)}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
 
                                 <div className="rounded-xl border bg-white p-4">
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    Seller Info
-                                  </p>
-                                  <div className="mt-3 space-y-2 text-sm">
+                                  <div className="mb-3">
+                                    <p className="text-sm font-semibold text-slate-900">
+                                      Payout Action
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                      Fill reference and proof URL before marking as paid.
+                                    </p>
+                                  </div>
+
+                                  <div className="grid gap-3 md:grid-cols-2">
                                     <div>
-                                      <span className="text-slate-500">Store Name:</span>{' '}
+                                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                                        Payout Reference
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={referenceInputs[row.id] || ''}
+                                        onChange={(e) =>
+                                          setReferenceInputs((prev) => ({
+                                            ...prev,
+                                            [row.id]: e.target.value,
+                                          }))
+                                        }
+                                        placeholder="Example: IBG-18042026-001"
+                                        className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:border-slate-400"
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                                        Proof URL
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={proofInputs[row.id] || ''}
+                                        onChange={(e) =>
+                                          setProofInputs((prev) => ({
+                                            ...prev,
+                                            [row.id]: e.target.value,
+                                          }))
+                                        }
+                                        placeholder="Optional receipt / proof link"
+                                        className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:border-slate-400"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+                                    <div>
+                                      <span className="text-slate-500">Saved Reference:</span>{' '}
                                       <span className="font-medium text-slate-900">
-                                        {getSellerName(row)}
+                                        {row.payout_reference || '-'}
                                       </span>
                                     </div>
                                     <div>
-                                      <span className="text-slate-500">Seller Email:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {getSellerEmail(row)}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500">Seller Profile ID:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {row.seller_profile_id || '-'}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500">Seller ID:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {row.seller_id || '-'}
+                                      <span className="text-slate-500">Saved Proof URL:</span>{' '}
+                                      <span className="font-medium text-slate-900 break-all">
+                                        {row.payout_proof_url || '-'}
                                       </span>
                                     </div>
                                   </div>
-                                </div>
 
-                                <div className="rounded-xl border bg-white p-4">
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    Payment Breakdown
-                                  </p>
-                                  <div className="mt-3 space-y-2 text-sm">
-                                    <div>
-                                      <span className="text-slate-500">Payment Method:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {getPaymentMethod(row)}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500">Gross Amount:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {formatAmount(getGrossAmount(row))}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500">Platform Fee:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {formatAmount(getFeeAmount(row))}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500">Net Seller Payout:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {formatAmount(getNetAmount(row))}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500">Payment Status:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {row.payment_status || '-'}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-slate-500">Payout Status:</span>{' '}
-                                      <span className="font-medium text-slate-900">
-                                        {row.payout_status || 'unpaid'}
-                                      </span>
-                                    </div>
+                                  <div className="mt-4 flex flex-wrap gap-2">
+                                    {normalizePayoutStatus(row.payout_status) !== 'approved' &&
+                                      normalizePayoutStatus(row.payout_status) !== 'paid' && (
+                                        <button
+                                          onClick={() => updateStatus(row.id, 'approved')}
+                                          className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50"
+                                        >
+                                          Approve
+                                        </button>
+                                      )}
+
+                                    {normalizePayoutStatus(row.payout_status) !== 'paid' && (
+                                      <button
+                                        onClick={() => handleMarkPaid(row)}
+                                        disabled={savingPaidId === row.id}
+                                        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                                      >
+                                        {savingPaidId === row.id ? 'Saving...' : 'Confirm Mark Paid'}
+                                      </button>
+                                    )}
+
+                                    {normalizePayoutStatus(row.payout_status) !== 'paid' && (
+                                      <button
+                                        onClick={() => updateStatus(row.id, 'rejected')}
+                                        className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50"
+                                      >
+                                        Reject
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               </div>
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     )
                   })}
                 </tbody>
