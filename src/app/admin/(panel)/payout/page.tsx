@@ -43,6 +43,7 @@ export type OrderRow = {
   eligible_payout_at: string | null
 
   payout_status: string | null
+  payout_reference: string | null
   payout_at: string | null
   created_at: string | null
 
@@ -79,6 +80,7 @@ async function getOrders(): Promise<OrderRow[]> {
       eligible_payout_at,
       payout_status,
       payout_at,
+      payout_reference,
       created_at
     `)
     .eq("payment_status", "paid")
