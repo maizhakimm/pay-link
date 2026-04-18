@@ -61,10 +61,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const sellerProfileId = body?.sellerProfileId as string | undefined
     const datePreset = (body?.datePreset || "all") as DatePreset
+    const payoutReference = (body?.payoutReference || "").trim()
 
     if (!sellerProfileId) {
       return NextResponse.json(
         { error: "sellerProfileId is required" },
+        { status: 400 }
+      )
+    }
+
+    if (!payoutReference) {
+      return NextResponse.json(
+        { error: "Payout reference is required" },
         { status: 400 }
       )
     }
@@ -77,6 +85,7 @@ export async function POST(req: NextRequest) {
       .update({
         payout_status: "paid",
         payout_at: nowIso,
+        payout_reference: payoutReference,
       })
       .eq("seller_profile_id", sellerProfileId)
       .eq("payment_status", "paid")
