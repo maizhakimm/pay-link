@@ -253,23 +253,29 @@ function buildGroups(
     const fee = toNumber(order.seller_fee_amount)
     const net = toNumber(order.net_seller_amount)
 
-    if (bucket === "eligible") {
-      group.eligibleOrders.push(order)
-      group.eligibleOrdersCount += 1
-      group.eligibleGross += gross
-      group.eligibleFee += fee
-      group.eligibleNet += net
-    } else if (bucket === "pending_settlement") {
-      group.pendingSettlementOrders.push(order)
-      group.pendingSettlementCount += 1
-      group.pendingSettlementGross += gross
-    } else {
-      group.paidOutOrders.push(order)
-      group.paidOutGross += gross
-      if (!group.payoutAt && order.payout_at) {
-        group.payoutAt = order.payout_at
-      }
-    }
+   if (bucket === "eligible") {
+  if (net > 0) {
+    group.eligibleOrders.push(order)
+    group.eligibleOrdersCount += 1
+    group.eligibleGross += gross
+    group.eligibleFee += fee
+    group.eligibleNet += net
+  } else {
+    group.pendingSettlementOrders.push(order)
+    group.pendingSettlementCount += 1
+    group.pendingSettlementGross += gross
+  }
+} else if (bucket === "pending_settlement") {
+  group.pendingSettlementOrders.push(order)
+  group.pendingSettlementCount += 1
+  group.pendingSettlementGross += gross
+} else {
+  group.paidOutOrders.push(order)
+  group.paidOutGross += gross
+  if (!group.payoutAt && order.payout_at) {
+    group.payoutAt = order.payout_at
+  }
+}
 
     if (order.paid_at) {
       if (
@@ -613,14 +619,14 @@ export default function PayoutClient({
                     </td>
 
                     <td className="px-5 py-5 align-top">
-                      {group.eligibleOrdersCount > 0 ? (
-                        <StatusBadge label="Eligible" />
-                      ) : group.paidOutOrders.length > 0 ? (
-                        <StatusBadge label="Paid" />
-                      ) : (
-                        <StatusBadge label="Pending Settlement" />
-                      )}
-                    </td>
+  {group.eligibleNet > 0 ? (
+    <StatusBadge label="Eligible" />
+  ) : group.paidOutOrders.length > 0 ? (
+    <StatusBadge label="Paid" />
+  ) : (
+    <StatusBadge label="Pending Settlement" />
+  )}
+</td>
 
                     <td className="px-5 py-5 align-top">
                       <div className="flex items-center justify-end gap-2">
@@ -631,7 +637,9 @@ export default function PayoutClient({
                           View Details
                         </button>
 
-                        {statusFilter !== "paid" && group.eligibleOrdersCount > 0 ? (
+                       {statusFilter !== "paid" &&
+                         group.eligibleOrdersCount > 0 &&
+                           group.eligibleNet > 0 ? (
                           <button
                             onClick={() => handleMarkPaid(group)}
                             disabled={
