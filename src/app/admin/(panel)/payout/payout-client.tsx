@@ -71,12 +71,12 @@ type SellerGroup = {
   hasBankInfo: boolean
 }
 
-function toNumber(value: number | string | null | undefined) {
+function toNumber(value: number | string | null | undefined): number {
   const num = Number(value || 0)
   return Number.isFinite(num) ? num : 0
 }
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-MY", {
     style: "currency",
     currency: "MYR",
@@ -84,7 +84,7 @@ function formatCurrency(value: number) {
   }).format(value)
 }
 
-function formatDate(value: string | null | undefined) {
+function formatDate(value: string | null | undefined): string {
   if (!value) return "-"
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return "-"
@@ -97,7 +97,7 @@ function formatDate(value: string | null | undefined) {
   })
 }
 
-function formatShortDate(value: string | null | undefined) {
+function formatShortDate(value: string | null | undefined): string {
   if (!value) return "-"
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return "-"
@@ -108,7 +108,10 @@ function formatShortDate(value: string | null | undefined) {
   })
 }
 
-function isWithinPreset(dateStr: string | null | undefined, preset: DatePreset) {
+function isWithinPreset(
+  dateStr: string | null | undefined,
+  preset: DatePreset
+): boolean {
   if (!dateStr) return false
   if (preset === "all") return true
 
@@ -155,7 +158,7 @@ function isWithinPreset(dateStr: string | null | undefined, preset: DatePreset) 
   return true
 }
 
-function getPaymentMethodLabel(order: OrderRow) {
+function getPaymentMethodLabel(order: OrderRow): string {
   const method = (order.payment_method || "").trim().toUpperCase()
 
   if (method) {
@@ -364,9 +367,10 @@ export default function PayoutClient({
   const [loadingSellerId, setLoadingSellerId] = useState<string | null>(null)
   const [orders, setOrders] = useState<OrderRow[]>(initialOrders)
 
-  const groups = useMemo(() => {
-    return buildGroups(orders, datePreset, search, statusFilter)
-  }, [orders, datePreset, search, statusFilter])
+  const groups = useMemo(
+    () => buildGroups(orders, datePreset, search, statusFilter),
+    [orders, datePreset, search, statusFilter]
+  )
 
   const summary = useMemo(() => {
     const pendingSellers = groups.filter((g) => g.eligibleOrdersCount > 0).length
@@ -374,12 +378,7 @@ export default function PayoutClient({
     const fee = groups.reduce((sum, g) => sum + g.eligibleFee, 0)
     const net = groups.reduce((sum, g) => sum + g.eligibleNet, 0)
 
-    return {
-      pendingSellers,
-      gross,
-      fee,
-      net,
-    }
+    return { pendingSellers, gross, fee, net }
   }, [groups])
 
   async function handleMarkPaid(group: SellerGroup) {
@@ -449,7 +448,7 @@ export default function PayoutClient({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 xl:grid-cols-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           title="Pending Sellers"
           value={String(summary.pendingSellers)}
@@ -472,7 +471,7 @@ export default function PayoutClient({
       <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
-            {(["eligible", "paid", "all"] as StatusFilter[]).map((item) => (
+            {(["eligible", "paid", "all"] as const).map((item) => (
               <button
                 key={item}
                 onClick={() => setStatusFilter(item)}
@@ -493,29 +492,29 @@ export default function PayoutClient({
 
           <div className="flex flex-col gap-3 lg:flex-row">
             <div className="flex flex-wrap gap-2">
-              {(
-                ["all", "today", "this_week", "this_month", "this_year"] as DatePreset[]
-              ).map((item) => (
-                <button
-                  key={item}
-                  onClick={() => setDatePreset(item)}
-                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                    datePreset === item
-                      ? "bg-blue-600 text-white"
-                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  {item === "all"
-                    ? "All Time"
-                    : item === "today"
-                    ? "Today"
-                    : item === "this_week"
-                    ? "This Week"
-                    : item === "this_month"
-                    ? "This Month"
-                    : "This Year"}
-                </button>
-              ))}
+              {(["all", "today", "this_week", "this_month", "this_year"] as const).map(
+                (item) => (
+                  <button
+                    key={item}
+                    onClick={() => setDatePreset(item)}
+                    className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                      datePreset === item
+                        ? "bg-blue-600 text-white"
+                        : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {item === "all"
+                      ? "All Time"
+                      : item === "today"
+                      ? "Today"
+                      : item === "this_week"
+                      ? "This Week"
+                      : item === "this_month"
+                      ? "This Month"
+                      : "This Year"}
+                  </button>
+                )
+              )}
             </div>
 
             <input
@@ -558,12 +557,8 @@ export default function PayoutClient({
                   <tr key={group.sellerProfileId} className="border-t border-slate-100">
                     <td className="px-5 py-5 align-top">
                       <div>
-                        <p className="font-semibold text-slate-900">
-                          {group.sellerName}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {group.sellerEmail}
-                        </p>
+                        <p className="font-semibold text-slate-900">{group.sellerName}</p>
+                        <p className="mt-1 text-xs text-slate-500">{group.sellerEmail}</p>
                       </div>
                     </td>
 
@@ -896,7 +891,7 @@ export default function PayoutClient({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
