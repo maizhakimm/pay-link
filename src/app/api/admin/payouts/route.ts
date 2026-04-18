@@ -3,10 +3,25 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function GET() {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabaseUrl =
+      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl) {
+      return NextResponse.json(
+        { error: 'Missing SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL' },
+        { status: 500 }
+      )
+    }
+
+    if (!serviceRoleKey) {
+      return NextResponse.json(
+        { error: 'Missing SUPABASE_SERVICE_ROLE_KEY' },
+        { status: 500 }
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
@@ -39,17 +54,13 @@ export async function GET() {
 
     if (ordersError) {
       return NextResponse.json(
-        { error: ordersError.message },
+        { error: `Orders query failed: ${ordersError.message}` },
         { status: 500 }
       )
     }
 
     const sellerProfileIds = Array.from(
-      new Set(
-        (orders || [])
-          .map((row) => row.seller_profile_id)
-          .filter(Boolean)
-      )
+      new Set((orders || []).map((row) => row.seller_profile_id).filter(Boolean))
     )
 
     let sellerProfiles: any[] = []
@@ -62,7 +73,7 @@ export async function GET() {
 
       if (sellersError) {
         return NextResponse.json(
-          { error: sellersError.message },
+          { error: `Seller profiles query failed: ${sellersError.message}` },
           { status: 500 }
         )
       }
@@ -71,12 +82,15 @@ export async function GET() {
     }
 
     return NextResponse.json({
+      ok: true,
+      ordersCount: (orders || []).length,
+      sellerProfilesCount: sellerProfiles.length,
       orders: orders || [],
       sellerProfiles,
     })
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Unexpected error' },
+      { error: error?.message || 'Unexpected error in admin payouts API' },
       { status: 500 }
     )
   }
