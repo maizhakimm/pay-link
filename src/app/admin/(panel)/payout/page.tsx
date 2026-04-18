@@ -77,8 +77,8 @@ async function getOrders(): Promise<OrderRow[]> {
         bank_account_holder
       )
     `)
-    .eq("payment_status", "paid")
-    .order("paid_at", { ascending: false })
+    .in("payment_status", ["paid", "completed"])
+    .order("created_at", { ascending: false })
 
   if (error) {
     console.error("Payout orders query failed:", error.message)
