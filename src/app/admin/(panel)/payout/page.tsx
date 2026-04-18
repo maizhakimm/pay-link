@@ -43,14 +43,11 @@ export default function AdminPayoutPage() {
   const [checking, setChecking] = useState(true)
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
-
   const [rows, setRows] = useState<PayoutOrderRow[]>([])
   const [sellerMap, setSellerMap] = useState<SellerProfileMap>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
-
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [search, setSearch] = useState('')
-
   const [referenceInputs, setReferenceInputs] = useState<Record<string, string>>({})
   const [proofInputs, setProofInputs] = useState<Record<string, string>>({})
   const [savingPaidId, setSavingPaidId] = useState<string | null>(null)
@@ -120,97 +117,54 @@ export default function AdminPayoutPage() {
     async function loadPayouts() {
       setLoading(true)
 
-      const { data, error } = await supabase
-        .from('orders')
-        .select(
-          `
-            id,
-            order_number,
-            seller_profile_id,
-            seller_id,
-            payment_status,
-            payout_status,
-            payment_method,
-            payment_channel,
-            net_seller_amount,
-            seller_net,
-            amount,
-            total_amount,
-            platform_fee,
-            fee_amount,
-            admin_fee,
-            created_at,
-            updated_at,
-            payout_at,
-            payout_reference,
-            payout_proof_url
-          `
-        )
-        .eq('payment_status', 'paid')
-        .order('created_at', { ascending: false })
+      try {
+        const res = await fetch('/api/admin/payouts', { cache: 'no-store' })
+        const json = await res.json()
 
-      if (error) {
-        console.error('Load payout orders error:', error)
+        if (!res.ok) {
+          console.error('API payout error:', json)
+          setRows([])
+          setSellerMap({})
+          setLoading(false)
+          return
+        }
+
+        const orderRows: PayoutOrderRow[] = json.orders || []
+        const sellerProfiles = json.sellerProfiles || []
+
+        setRows(orderRows)
+
+        const nextReferenceInputs: Record<string, string> = {}
+        const nextProofInputs: Record<string, string> = {}
+
+        for (const row of orderRows) {
+          nextReferenceInputs[row.id] = row.payout_reference || ''
+          nextProofInputs[row.id] = row.payout_proof_url || ''
+        }
+
+        setReferenceInputs(nextReferenceInputs)
+        setProofInputs(nextProofInputs)
+
+        const nextSellerMap: SellerProfileMap = {}
+
+        for (const seller of sellerProfiles) {
+          nextSellerMap[seller.id] = {
+            store_name: seller.store_name,
+            email: seller.email,
+            bank_name: seller.bank_name,
+            account_name: seller.account_name,
+            account_number: seller.account_number,
+          }
+        }
+
+        setSellerMap(nextSellerMap)
+      } catch (error) {
+        console.error('Load payouts failed:', error)
         setRows([])
         setSellerMap({})
+      } finally {
         setLoading(false)
-        return
       }
-
-      const orderRows = ((data || []) as unknown) as PayoutOrderRow[]
-      setRows(orderRows)
-
-      const nextReferenceInputs: Record<string, string> = {}
-      const nextProofInputs: Record<string, string> = {}
-
-      for (const row of orderRows) {
-        nextReferenceInputs[row.id] = row.payout_reference || ''
-        nextProofInputs[row.id] = row.payout_proof_url || ''
-      }
-
-      setReferenceInputs(nextReferenceInputs)
-      setProofInputs(nextProofInputs)
-
-      const sellerProfileIds = Array.from(
-        new Set(
-          orderRows
-            .map((row) => row.seller_profile_id)
-            .filter((id): id is string => Boolean(id))
-        )
-      )
-
-      if (sellerProfileIds.length === 0) {
-        setSellerMap({})
-        setLoading(false)
-        return
-      }
-
-      const { data: sellerData, error: sellerError } = await supabase
-        .from('seller_profiles')
-        .select('id, store_name, email, bank_name, account_name, account_number')
-        .in('id', sellerProfileIds)
-
-      if (sellerError) {
-        console.error('Load seller profiles error:', sellerError)
-        setSellerMap({})
-        setLoading(false)
-        return
-      }
-
-      const nextSellerMap: SellerProfileMap = {}
-
-      for (const seller of sellerData || []) {
-        nextSellerMap[seller.id] = {
-          store_name: seller.store_name,
-          email: seller.email,
-          bank_name: seller.bank_name,
-          account_name: seller.account_name,
-          account_number: seller.account_number,
-        }
-      }
-
-      setSellerMap(nextSellerMap)
-      setLoading(false)
     }
 
     loadPayouts()
@@ -223,17 +177,9 @@ export default function AdminPayoutPage() {
       return 'pending'
     }
 
-    if (value === 'approved') {
-      return 'approved'
-    }
-
-    if (value === 'rejected') {
-      return 'rejected'
-    }
-
-    if (value === 'paid') {
-      return 'paid'
-    }
+    if (value === 'approved') return 'approved'
+    if (value === 'rejected') return 'rejected'
+    if (value === 'paid') return 'paid'
 
     return value
   }
@@ -345,21 +291,10 @@ export default function AdminPayoutPage() {
   function getStatusBadgeClass(status: string | null) {
     const value = normalizePayoutStatus(status)
 
-    if (value === 'pending') {
-      return 'bg-amber-100 text-amber-700'
-    }
-
-    if (value === 'approved') {
-      return 'bg-blue-100 text-blue-700'
-    }
-
-    if (value === 'paid') {
-      return 'bg-emerald-100 text-emerald-700'
-    }
-
-    if (value === 'rejected') {
-      return 'bg-rose-100 text-rose-700'
-    }
+    if (value === 'pending') return 'bg-amber-100 text-amber-700'
+    if (value === 'approved') return 'bg-blue-100 text-blue-700'
+    if (value === 'paid') return 'bg-emerald-100 text-emerald-700'
+    if (value === 'rejected') return 'bg-rose-100 text-rose-700'
 
     return 'bg-slate-100 text-slate-700'
   }
