@@ -980,20 +980,7 @@ export default function ShopPageClient({
                           {product.description || 'Tiada deskripsi.'}
                         </div>
 
-                        {hasAddons ? (
-                          <div
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: '#7c3aed',
-                              marginBottom: 8,
-                            }}
-                          >
-                            Add-on available
-                          </div>
-                        ) : null}
-
-                        <div style={qtyWrap}>
+                         <div style={qtyWrap}>
                           <div style={qtyRow}>
                             <button
                               type="button"
@@ -1267,8 +1254,8 @@ export default function ShopPageClient({
       ) : null}
 
       {addonModal.isOpen && addonModal.product ? (
-        <div style={modalOverlay}>
-          <div style={modalBox}>
+        <div style={modalOverlay} onClick={closeAddonModal}>
+          <div style={modalBox} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginBottom: 10 }}>{addonModal.product.name}</h3>
 
             {addonModal.error ? (
@@ -1531,7 +1518,7 @@ const sellerFallback = {
 
 const shopTitle = {
   margin: '0 0 4px 0',
-  fontSize: 28,
+  fontSize: 20,
   fontWeight: 800,
   color: '#0f172a',
   lineHeight: 1.2,
