@@ -65,6 +65,8 @@ type OperatingDayItem = {
 
 type OperatingDays = Record<DayKey, OperatingDayItem>
 
+type OrderMode = 'anytime' | 'scheduled' | 'preorder'
+
 const DEFAULT_OPERATING_DAYS: OperatingDays = {
   monday: { enabled: true, opening_time: '09:00', closing_time: '18:00' },
   tuesday: { enabled: true, opening_time: '09:00', closing_time: '18:00' },
@@ -84,7 +86,10 @@ function slugify(value: string) {
     .replace(/-+/g, '-')
 }
 
-async function generateUniqueShopSlug(base: string, currentSellerId?: string | null) {
+async function generateUniqueShopSlug(
+  base: string,
+  currentSellerId?: string | null
+) {
   const cleanBase = slugify(base || 'shop')
   let candidate = cleanBase || 'shop'
   let counter = 1
@@ -188,6 +193,8 @@ type SellerProfileRow = {
   latitude?: number | null
   longitude?: number | null
   operating_days?: OperatingDays | null
+  order_mode?: OrderMode | null
+  preorder_days?: number | null
 }
 
 export default function SettingsPage() {
@@ -217,7 +224,9 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  const [acceptOrdersAnytime, setAcceptOrdersAnytime] = useState(false)
+  const [orderMode, setOrderMode] = useState<OrderMode>('scheduled')
+  const [preorderDays, setPreorderDays] = useState('1')
+
   const [openingTime, setOpeningTime] = useState('09:00')
   const [closingTime, setClosingTime] = useState('22:00')
   const [temporarilyClosed, setTemporarilyClosed] = useState(false)
@@ -241,8 +250,9 @@ export default function SettingsPage() {
   const [longitude, setLongitude] = useState('')
   const [resolvedPickupAddress, setResolvedPickupAddress] = useState('')
 
-  const previewBaseUrl =
-    (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
+  const previewBaseUrl = (
+    process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my'
+  ).replace(/\/$/, '')
 
   const livePreviewSlug = useMemo(() => {
     if (slugLocked && savedShopSlug) {
@@ -257,8 +267,13 @@ export default function SettingsPage() {
       return 'Temporarily Closed'
     }
 
-    if (acceptOrdersAnytime) {
-      return 'Accepting orders anytime'
+    if (orderMode === 'anytime') {
+      return 'Open 24 hours'
+    }
+
+    if (orderMode === 'preorder') {
+      const days = Number(preorderDays || 1)
+      return `Pre-order • Customer perlu order sekurang-kurangnya ${days} hari awal`
     }
 
     const enabledDays = DAY_ORDER.filter((day) => operatingDays[day].enabled)
@@ -282,14 +297,16 @@ export default function SettingsPage() {
     }
 
     return `${enabledDays.length} operating day(s) configured`
-  }, [acceptOrdersAnytime, operatingDays, temporarilyClosed])
+  }, [operatingDays, temporarilyClosed, orderMode, preorderDays])
 
   const enabledDayChips = useMemo(() => {
+    if (orderMode !== 'scheduled') return []
+
     return DAY_ORDER.filter((day) => operatingDays[day].enabled).map((day) => {
       const item = operatingDays[day]
       return `${DAY_LABELS[day]} (${item.opening_time} - ${item.closing_time})`
     })
-  }, [operatingDays])
+  }, [operatingDays, orderMode])
 
   const deliverySummaryText = useMemo(() => {
     const fee = Number(deliveryFee || 0)
@@ -314,7 +331,13 @@ export default function SettingsPage() {
       default:
         return 'Caj delivery tidak termasuk dalam harga. Bayaran delivery harus dibuat terus kepada rider semasa penghantaran.'
     }
-  }, [deliveryMode, deliveryFee, deliveryRatePerKm, deliveryMinFee, deliveryRadiusKm])
+  }, [
+    deliveryMode,
+    deliveryFee,
+    deliveryRatePerKm,
+    deliveryMinFee,
+    deliveryRadiusKm,
+  ])
 
   useEffect(() => {
     loadProfile()
@@ -330,7 +353,10 @@ export default function SettingsPage() {
     }))
   }
 
-  async function ensureSellerProfile(currentUserId: string, currentUserEmail: string) {
+  async function ensureSellerProfile(
+    currentUserId: string,
+    currentUserEmail: string
+  ) {
     const { data: existing, error: existingError } = await supabase
       .from('seller_profiles')
       .select('*')
@@ -355,6 +381,8 @@ export default function SettingsPage() {
         store_name: fallbackStoreName,
         shop_slug: null,
         accept_orders_anytime: false,
+        order_mode: 'scheduled',
+        preorder_days: 1,
         opening_time: null,
         closing_time: null,
         temporarily_closed: false,
@@ -420,7 +448,13 @@ export default function SettingsPage() {
       setAccountHolderName(profile.account_holder_name || '')
       setProfileImage(profile.profile_image || '')
 
-      setAcceptOrdersAnytime(profile.accept_orders_anytime ?? false)
+      const derivedOrderMode: OrderMode =
+        profile.order_mode ||
+        (profile.accept_orders_anytime ? 'anytime' : 'scheduled')
+
+      setOrderMode(derivedOrderMode)
+      setPreorderDays(String(profile.preorder_days ?? 1))
+
       setOpeningTime(profile.opening_time || '09:00')
       setClosingTime(profile.closing_time || '22:00')
       setTemporarilyClosed(profile.temporarily_closed ?? false)
@@ -453,7 +487,8 @@ export default function SettingsPage() {
       setStoreName(!existingSlug && isDefaultName ? '' : existingStoreName)
       setSlugLocked(Boolean(existingSlug))
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load profile'
+      const message =
+        err instanceof Error ? err.message : 'Failed to load profile'
       alert(message)
     } finally {
       setLoading(false)
@@ -555,6 +590,7 @@ export default function SettingsPage() {
     const parsedDeliveryRadiusKm = Number(deliveryRadiusKm || 0)
     const parsedDeliveryRatePerKm = Number(deliveryRatePerKm || 0)
     const parsedDeliveryMinFee = Number(deliveryMinFee || 0)
+    const parsedPreorderDays = Number(preorderDays || 1)
 
     let parsedLatitude = latitude.trim() === '' ? null : Number(latitude)
     let parsedLongitude = longitude.trim() === '' ? null : Number(longitude)
@@ -564,7 +600,12 @@ export default function SettingsPage() {
       return
     }
 
-    if (!acceptOrdersAnytime) {
+    if (!['anytime', 'scheduled', 'preorder'].includes(orderMode)) {
+      alert('Please select valid order mode.')
+      return
+    }
+
+    if (orderMode === 'scheduled') {
       const enabledDays = DAY_ORDER.filter((day) => operatingDays[day].enabled)
 
       if (enabledDays.length === 0) {
@@ -580,9 +621,18 @@ export default function SettingsPage() {
         }
 
         if (item.opening_time === item.closing_time) {
-          alert(`${DAY_LABELS[day]} opening time and closing time cannot be the same.`)
+          alert(
+            `${DAY_LABELS[day]} opening time and closing time cannot be the same.`
+          )
           return
         }
+      }
+    }
+
+    if (orderMode === 'preorder') {
+      if (!Number.isFinite(parsedPreorderDays) || parsedPreorderDays < 1) {
+        alert('Please enter preorder days minimum 1.')
+        return
       }
     }
 
@@ -646,8 +696,12 @@ export default function SettingsPage() {
       }
 
       const firstEnabledDay = DAY_ORDER.find((day) => operatingDays[day].enabled)
-      const fallbackOpening = firstEnabledDay ? operatingDays[firstEnabledDay].opening_time : null
-      const fallbackClosing = firstEnabledDay ? operatingDays[firstEnabledDay].closing_time : null
+      const fallbackOpening = firstEnabledDay
+        ? operatingDays[firstEnabledDay].opening_time
+        : null
+      const fallbackClosing = firstEnabledDay
+        ? operatingDays[firstEnabledDay].closing_time
+        : null
 
       const { error } = await supabase
         .from('seller_profiles')
@@ -663,14 +717,20 @@ export default function SettingsPage() {
           account_holder_name: accountHolderName.trim() || null,
           profile_image: profileImage || null,
           shop_slug: finalShopSlug,
-          accept_orders_anytime: acceptOrdersAnytime,
-          opening_time: acceptOrdersAnytime ? null : fallbackOpening,
-          closing_time: acceptOrdersAnytime ? null : fallbackClosing,
+
+          order_mode: orderMode,
+          preorder_days: orderMode === 'preorder' ? parsedPreorderDays : 1,
+
+          accept_orders_anytime: orderMode === 'anytime',
+          opening_time: orderMode === 'scheduled' ? fallbackOpening : null,
+          closing_time: orderMode === 'scheduled' ? fallbackClosing : null,
+
           temporarily_closed: temporarilyClosed,
           closed_message:
             trimmedClosedMessage ||
             'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
-          operating_days: acceptOrdersAnytime ? null : operatingDays,
+          operating_days: orderMode === 'scheduled' ? operatingDays : null,
+
           delivery_mode: deliveryMode,
           delivery_fee: deliveryMode === 'fixed_fee' ? parsedDeliveryFee : 0,
           delivery_area: trimmedDeliveryArea || null,
@@ -700,7 +760,8 @@ export default function SettingsPage() {
 
       alert('Settings updated successfully!')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save settings'
+      const message =
+        err instanceof Error ? err.message : 'Failed to save settings'
       alert(message)
     } finally {
       setSaving(false)
@@ -787,554 +848,4 @@ export default function SettingsPage() {
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      uploadImage(e.target.files[0])
-                    }
-                  }}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none"
-                />
-              </div>
-
-              <div className="space-y-5">
-                <div>
-                  <p className="mb-3 text-sm font-extrabold text-slate-900">Nama Biz</p>
-
-                  <div className="grid gap-3">
-                    <div>
-                      <input
-                        placeholder="Store Name"
-                        value={storeName}
-                        onChange={(e) => setStoreName(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                      />
-
-                      <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                          Shop URL {slugLocked ? 'Locked' : 'Preview'}
-                        </p>
-
-                        <p className="mt-1 break-all text-sm font-bold text-slate-900">
-                          {previewBaseUrl}/s/{livePreviewSlug}
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-500">
-                          {slugLocked
-                            ? 'Your shop URL is locked after first successful save.'
-                            : 'Preview only. Type your store name to preview your future shop URL.'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <input
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
-
-                    <input
-                      placeholder="WhatsApp Number"
-                      value={whatsapp}
-                      onChange={(e) => setWhatsapp(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-extrabold text-slate-900">Company Info</p>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                      Optional
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3">
-                    <input
-                      placeholder="Company Name (Optional)"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
-
-                    <input
-                      placeholder="Company Registration No (Optional)"
-                      value={companyReg}
-                      onChange={(e) => setCompanyReg(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
-
-                    <textarea
-                      placeholder="Business Address (Optional)"
-                      value={businessAddress}
-                      onChange={(e) => setBusinessAddress(e.target.value)}
-                      rows={4}
-                      className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <p className="mb-3 text-sm font-extrabold text-slate-900">Payout Details</p>
-
-                  <div className="grid gap-3">
-                    <select
-                      value={bankName}
-                      onChange={(e) => setBankName(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                    >
-                      <option value="">Select Bank</option>
-                      {MALAYSIAN_BANKS.map((bank) => (
-                        <option key={bank} value={bank}>
-                          {bank}
-                        </option>
-                      ))}
-                    </select>
-
-                    <input
-                      placeholder="Account Number"
-                      value={accountNumber}
-                      onChange={(e) => setAccountNumber(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
-
-                    <input
-                      placeholder="Account Holder Name"
-                      value={accountHolderName}
-                      onChange={(e) => setAccountHolderName(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-extrabold text-slate-900">Delivery Settings</p>
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                      Customer-facing
-                    </span>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-sm font-bold text-slate-700">Preview</p>
-                    <p className="mt-1 text-sm text-slate-600">{deliverySummaryText}</p>
-
-                    {deliveryArea.trim() ? (
-                      <p className="mt-2 text-xs text-slate-500">
-                        Kawasan liputan: {deliveryArea.trim()}
-                      </p>
-                    ) : null}
-
-                    {deliveryNote.trim() ? (
-                      <p className="mt-1 text-xs text-slate-500">{deliveryNote.trim()}</p>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-4 grid gap-4">
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-slate-700">
-                        Delivery Mode
-                      </label>
-                      <select
-                        value={deliveryMode}
-                        onChange={(e) => setDeliveryMode(e.target.value as DeliveryMode)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                      >
-                        {DELIVERY_MODES.map((mode) => (
-                          <option key={mode.value} value={mode.value}>
-                            {mode.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {deliveryMode === 'fixed_fee' ? (
-                      <div>
-                        <label className="mb-2 block text-sm font-bold text-slate-700">
-                          Delivery Fee (RM)
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Contoh: 5.00"
-                          value={deliveryFee}
-                          onChange={(e) => setDeliveryFee(e.target.value)}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                        />
-                      </div>
-                    ) : null}
-
-                    {deliveryMode === 'distance_based' ? (
-                      <div className="grid gap-4 rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
-                        <div>
-                          <label className="mb-2 block text-sm font-bold text-slate-700">
-                            Rate Per KM (RM)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="Contoh: 1.00"
-                            value={deliveryRatePerKm}
-                            onChange={(e) => setDeliveryRatePerKm(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="mb-2 block text-sm font-bold text-slate-700">
-                            Minimum Delivery Fee (RM)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="Contoh: 5.00"
-                            value={deliveryMinFee}
-                            onChange={(e) => setDeliveryMinFee(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="mb-2 block text-sm font-bold text-slate-700">
-                            Maximum Delivery Radius (KM)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="Contoh: 10"
-                            value={deliveryRadiusKm}
-                            onChange={(e) => setDeliveryRadiusKm(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="mb-2 block text-sm font-bold text-slate-700">
-                            Pickup Address
-                          </label>
-                          <textarea
-                            placeholder="Alamat pickup / lokasi kedai untuk kiraan jarak"
-                            value={pickupAddress}
-                            onChange={(e) => setPickupAddress(e.target.value)}
-                            rows={3}
-                            className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                          />
-                          <p className="mt-2 text-xs text-slate-500">
-                            Seller hanya isi alamat. Sistem akan auto detect latitude dan longitude.
-                          </p>
-                        </div>
-
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                          <button
-                            type="button"
-                            onClick={detectPickupLocation}
-                            disabled={detectingLocation}
-                            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
-                          >
-                            {detectingLocation ? 'Detecting...' : 'Detect Pickup Location'}
-                          </button>
-
-                          {latitude && longitude ? (
-                            <div className="text-xs text-slate-600">
-                              Latitude: <strong>{latitude}</strong> &nbsp;•&nbsp; Longitude:{' '}
-                              <strong>{longitude}</strong>
-                            </div>
-                          ) : (
-                            <div className="text-xs text-slate-500">
-                              Lokasi belum dikesan lagi.
-                            </div>
-                          )}
-                        </div>
-
-                        {resolvedPickupAddress ? (
-                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                              Resolved Address
-                            </p>
-                            <p className="mt-1 text-sm text-emerald-900">
-                              {resolvedPickupAddress}
-                            </p>
-                          </div>
-                        ) : null}
-
-                        <input type="hidden" value={latitude} readOnly />
-                        <input type="hidden" value={longitude} readOnly />
-
-                        <p className="text-xs leading-5 text-slate-500">
-                          Sistem akan simpan latitude dan longitude secara automatik bila alamat
-                          berjaya dikenal pasti.
-                        </p>
-                      </div>
-                    ) : null}
-
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-slate-700">
-                        Delivery Area
-                      </label>
-                      <input
-                        placeholder="Contoh: Shah Alam, Subang, Klang"
-                        value={deliveryArea}
-                        onChange={(e) => setDeliveryArea(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                      />
-                      <p className="mt-2 text-xs text-slate-500">
-                        Optional. Customer boleh nampak kawasan liputan seller.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-slate-700">
-                        Delivery Note
-                      </label>
-                      <textarea
-                        placeholder="Contoh: Caj rider dibayar terus kepada rider semasa barang sampai."
-                        value={deliveryNote}
-                        onChange={(e) => setDeliveryNote(e.target.value)}
-                        rows={3}
-                        className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                      />
-                      <p className="mt-2 text-xs text-slate-500">
-                        Nota tambahan ini boleh dipaparkan kepada customer semasa checkout /
-                        shop page.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-extrabold text-slate-900">Order Availability</p>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-bold ${
-                        temporarilyClosed
-                          ? 'bg-rose-100 text-rose-700'
-                          : 'bg-emerald-100 text-emerald-700'
-                      }`}
-                    >
-                      {temporarilyClosed
-                        ? 'Temporarily Closed'
-                        : acceptOrdersAnytime
-                        ? 'Open Anytime'
-                        : 'By Day Schedule'}
-                    </span>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-sm font-bold text-slate-700">Current Status</p>
-                    <p className="mt-1 text-sm text-slate-600">{availabilityStatusText}</p>
-
-                    {!acceptOrdersAnytime && enabledDayChips.length > 0 ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {enabledDayChips.map((item) => (
-                          <span
-                            key={item}
-                            className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200"
-                          >
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-4 grid gap-4">
-                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                      <input
-                        type="checkbox"
-                        checked={acceptOrdersAnytime}
-                        onChange={(e) => setAcceptOrdersAnytime(e.target.checked)}
-                        className="mt-1 h-4 w-4"
-                      />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">Accept orders anytime</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          Untick jika seller nak set waktu operasi ikut hari.
-                        </p>
-                      </div>
-                    </label>
-
-                    {!acceptOrdersAnytime ? (
-                      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                        <div className="mb-3">
-                          <p className="text-sm font-bold text-slate-900">Set by day</p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Seller boleh pilih hari buka dan waktu operasi untuk setiap hari.
-                          </p>
-                        </div>
-
-                        <div className="space-y-3">
-                          {DAY_ORDER.map((day) => {
-                            const item = operatingDays[day]
-
-                            return (
-                              <div
-                                key={day}
-                                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                              >
-                                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                                  <label className="flex items-center gap-3">
-                                    <input
-                                      type="checkbox"
-                                      checked={item.enabled}
-                                      onChange={(e) =>
-                                        updateOperatingDay(day, { enabled: e.target.checked })
-                                      }
-                                      className="h-4 w-4"
-                                    />
-                                    <span className="text-sm font-bold text-slate-900">
-                                      {DAY_LABELS[day]}
-                                    </span>
-                                  </label>
-
-                                  {item.enabled ? (
-                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:w-[360px]">
-                                      <input
-                                        type="time"
-                                        value={item.opening_time}
-                                        onChange={(e) =>
-                                          updateOperatingDay(day, {
-                                            opening_time: e.target.value,
-                                          })
-                                        }
-                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                                      />
-
-                                      <input
-                                        type="time"
-                                        value={item.closing_time}
-                                        onChange={(e) =>
-                                          updateOperatingDay(day, {
-                                            closing_time: e.target.value,
-                                          })
-                                        }
-                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs font-semibold text-slate-500">
-                                      Closed
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                      <input
-                        type="checkbox"
-                        checked={temporarilyClosed}
-                        onChange={(e) => setTemporarilyClosed(e.target.checked)}
-                        className="mt-1 h-4 w-4"
-                      />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">Temporarily closed</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          Tutup sementara walaupun waktu operasi masih aktif.
-                        </p>
-                      </div>
-                    </label>
-
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-slate-700">
-                        Closed Message
-                      </label>
-                      <textarea
-                        placeholder="Contoh: Kedai kini ditutup. Tempahan dibuka semula esok."
-                        value={closedMessage}
-                        onChange={(e) => setClosedMessage(e.target.value)}
-                        rows={3}
-                        className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                      />
-                      <p className="mt-2 text-xs text-slate-500">
-                        Mesej ini boleh dipaparkan kepada customer bila kedai tidak menerima
-                        order.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving || detectingLocation}
-                  className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {saving ? 'Saving...' : detectingLocation ? 'Detecting location...' : 'Save Settings'}
-                </button>
-              </div>
-            </section>
-          </div>
-
-          <div className="space-y-5">
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Account</h2>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-bold text-slate-700">Login Email</p>
-                <p className="mt-1 break-all text-sm text-slate-600">
-                  {accountEmail || '-'}
-                </p>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                <p className="text-sm font-extrabold text-slate-900">Change Password</p>
-
-                <input
-                  type="password"
-                  placeholder="New Password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                />
-
-                <input
-                  type="password"
-                  placeholder="Confirm New Password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                />
-
-                <button
-                  type="button"
-                  onClick={handleChangePassword}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50"
-                >
-                  Update Password
-                </button>
-
-                <p className="text-xs text-slate-500">
-                  Gunakan password sekurang-kurangnya 6 aksara.
-                </p>
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Session</h2>
-
-              <p className="mb-4 text-sm leading-6 text-slate-500">
-                Log out jika anda ingin keluar dari akaun seller ini.
-              </p>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="w-full rounded-2xl border border-red-200 bg-rose-50 px-4 py-3 text-sm font-extrabold text-red-700 transition hover:bg-rose-100"
-              >
-                Log Out
-              </button>
-            </section>
-          </div>
-        </div>
-      )}
-    </Layout>
-  )
-}
+                    if (e.target.files?.[0])
