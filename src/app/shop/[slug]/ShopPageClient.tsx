@@ -309,7 +309,11 @@ function getNextOpeningText(seller: SellerProfile) {
         return `Buka semula hari ini, ${formatTime(config.opening_time)}`
       }
 
-      if (openMinutes > closeMinutes && currentMinutes < openMinutes && currentMinutes > closeMinutes) {
+      if (
+        openMinutes > closeMinutes &&
+        currentMinutes < openMinutes &&
+        currentMinutes > closeMinutes
+      ) {
         return `Buka semula hari ini, ${formatTime(config.opening_time)}`
       }
 
@@ -1064,7 +1068,6 @@ export default function ShopPageClient({
                 )
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
                 const allImages = getProductImages(product)
-                const addonGroups = getProductAddonGroups(product.id)
 
                 return (
                   <div key={product.id} style={productCard}>
@@ -1287,3 +1290,971 @@ export default function ShopPageClient({
             style={galleryDialog}
             onClick={(event) => event.stopPropagation()}
           >
+            <button type="button" onClick={closeGallery} style={galleryCloseBtn}>
+              ✕
+            </button>
+
+            <div style={galleryHeader}>
+              <div style={galleryTitle}>{gallery.productName}</div>
+              <div style={galleryCounter}>
+                {gallery.currentIndex + 1} / {gallery.images.length}
+              </div>
+            </div>
+
+            <div style={galleryBody}>
+              <button type="button" onClick={showPrevImage} style={galleryNavBtn}>
+                ‹
+              </button>
+
+              <div style={galleryImageWrap}>
+                <img
+                  src={gallery.images[gallery.currentIndex]}
+                  alt={gallery.productName}
+                  style={galleryImage}
+                />
+              </div>
+
+              <button type="button" onClick={showNextImage} style={galleryNavBtn}>
+                ›
+              </button>
+            </div>
+
+            {gallery.images.length > 1 ? (
+              <div style={galleryThumbRow}>
+                {gallery.images.map((img, index) => (
+                  <button
+                    key={`${img}-${index}`}
+                    type="button"
+                    onClick={() =>
+                      setGallery((prev) => ({
+                        ...prev,
+                        currentIndex: index,
+                      }))
+                    }
+                    style={{
+                      ...galleryThumbBtn,
+                      borderColor:
+                        gallery.currentIndex === index ? '#0f172a' : '#e2e8f0',
+                    }}
+                  >
+                    <img
+                      src={img}
+                      alt={`${gallery.productName} ${index + 1}`}
+                      style={galleryThumbImg}
+                    />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {addonModal.isOpen && addonModal.product ? (
+        <div style={modalOverlay} onClick={closeAddonModal}>
+          <div
+            style={modalDialog}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={modalHeader}>
+              <div>
+                <div style={modalTitle}>{addonModal.product.name}</div>
+                <div style={modalSubtitle}>
+                  Base price: RM {addonModal.product.price.toFixed(2)}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeAddonModal}
+                style={modalCloseBtn}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={modalContent}>
+              {addonModal.groups.length === 0 ? (
+                <div style={emptyCartBox}>Tiada add-on untuk produk ini.</div>
+              ) : (
+                addonModal.groups.map((group) => {
+                  const selectedIds = addonModal.selections[group.id] || []
+
+                  return (
+                    <div key={group.id} style={addonGroupCard}>
+                      <div style={addonGroupHeader}>
+                        <div style={addonGroupTitle}>{group.name}</div>
+                        <div style={addonGroupMeta}>
+                          {group.selection_type === 'single'
+                            ? 'Pilih satu'
+                            : 'Boleh pilih banyak'}
+                          {group.is_required ? ' • Required' : ''}
+                        </div>
+                      </div>
+
+                      <div style={addonOptionsWrap}>
+                        {group.options
+                          .filter((option) => option.is_active !== false)
+                          .sort(
+                            (a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
+                          )
+                          .map((option) => {
+                            const checked = selectedIds.includes(option.id)
+
+                            return (
+                              <label key={option.id} style={addonOptionRow}>
+                                <input
+                                  type={
+                                    group.selection_type === 'single'
+                                      ? 'radio'
+                                      : 'checkbox'
+                                  }
+                                  name={`group-${group.id}`}
+                                  checked={checked}
+                                  onChange={(event) => {
+                                    setAddonModal((prev) => {
+                                      const current = prev.selections[group.id] || []
+                                      let nextSelections = [...current]
+
+                                      if (group.selection_type === 'single') {
+                                        nextSelections = event.target.checked
+                                          ? [option.id]
+                                          : []
+                                      } else if (event.target.checked) {
+                                        if (!nextSelections.includes(option.id)) {
+                                          nextSelections.push(option.id)
+                                        }
+                                      } else {
+                                        nextSelections = nextSelections.filter(
+                                          (id) => id !== option.id
+                                        )
+                                      }
+
+                                      return {
+                                        ...prev,
+                                        selections: {
+                                          ...prev.selections,
+                                          [group.id]: nextSelections,
+                                        },
+                                        error: '',
+                                      }
+                                    })
+                                  }}
+                                />
+
+                                <div style={{ flex: 1 }}>
+                                  <div style={addonOptionName}>{option.name}</div>
+                                </div>
+
+                                <div style={addonOptionPrice}>
+                                  {Number(option.price_delta || 0) > 0
+                                    ? `+ RM ${Number(option.price_delta).toFixed(2)}`
+                                    : 'Free'}
+                                </div>
+                              </label>
+                            )
+                          })}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+
+              <div style={noteWrap}>
+                <label style={noteLabel}>Customer Note</label>
+                <textarea
+                  value={addonModal.note}
+                  onChange={(event) =>
+                    setAddonModal((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                      error: '',
+                    }))
+                  }
+                  rows={3}
+                  placeholder="Contoh: kurang pedas, asingkan sambal"
+                  style={noteTextarea}
+                />
+              </div>
+
+              {addonModal.error ? (
+                <div style={modalError}>{addonModal.error}</div>
+              ) : null}
+            </div>
+
+            <div style={modalFooter}>
+              <button
+                type="button"
+                onClick={closeAddonModal}
+                style={secondaryBtn}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!addonModal.product) return
+
+                  const validationMessage = validateAddonSelections(
+                    addonModal.groups,
+                    addonModal.selections
+                  )
+
+                  if (validationMessage) {
+                    setAddonModal((prev) => ({
+                      ...prev,
+                      error: validationMessage,
+                    }))
+                    return
+                  }
+
+                  const cartLine = buildCartLine(
+                    addonModal.product,
+                    addonModal.selections,
+                    addonModal.groups,
+                    addonModal.note
+                  )
+
+                  if (addonModal.editingCartLineId) {
+                    updateCartLine(cartLine, addonModal.editingCartLineId)
+                  } else {
+                    addOrMergeCartLine(cartLine)
+                  }
+
+                  closeAddonModal()
+                }}
+                style={primaryBtn}
+              >
+                {addonModal.editingCartLineId ? 'Update Item' : 'Add to Cart'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </main>
+  )
+}
+
+const main: React.CSSProperties = {
+  minHeight: '100vh',
+  background: '#f8fafc',
+  padding: '24px 16px 80px',
+}
+
+const container: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 1180,
+  margin: '0 auto',
+}
+
+const logoWrap: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  marginBottom: 16,
+}
+
+const logo: React.CSSProperties = {
+  height: 34,
+  width: 'auto',
+}
+
+const heroCard: React.CSSProperties = {
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 24,
+  padding: 20,
+  boxShadow: '0 8px 30px rgba(15, 23, 42, 0.06)',
+  marginBottom: 16,
+}
+
+const sellerRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 14,
+}
+
+const sellerImg: React.CSSProperties = {
+  width: 64,
+  height: 64,
+  borderRadius: '9999px',
+  objectFit: 'cover',
+  border: '1px solid #e2e8f0',
+}
+
+const sellerFallback: React.CSSProperties = {
+  width: 64,
+  height: 64,
+  borderRadius: '9999px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#e2e8f0',
+  color: '#0f172a',
+  fontSize: 24,
+  fontWeight: 800,
+}
+
+const shopTitle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 24,
+  lineHeight: 1.2,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const shopSub: React.CSSProperties = {
+  margin: '6px 0 0',
+  color: '#64748b',
+  fontSize: 14,
+  lineHeight: 1.5,
+}
+
+const statusWrap: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  flexWrap: 'wrap',
+  marginTop: 14,
+}
+
+const statusBadge: React.CSSProperties = {
+  borderRadius: 999,
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 800,
+}
+
+const hoursText: React.CSSProperties = {
+  fontSize: 13,
+  color: '#475569',
+  fontWeight: 600,
+}
+
+const noticeBox: React.CSSProperties = {
+  marginTop: 12,
+  border: '1px solid #e2e8f0',
+  borderRadius: 16,
+  padding: '10px 12px',
+  fontSize: 14,
+  lineHeight: 1.5,
+}
+
+const stickyTabWrap: React.CSSProperties = {
+  position: 'sticky',
+  top: 0,
+  zIndex: 10,
+  marginBottom: 16,
+}
+
+const tabShell: React.CSSProperties = {
+  background: 'rgba(248, 250, 252, 0.92)',
+  backdropFilter: 'blur(8px)',
+  padding: '8px 0',
+}
+
+const tabScroller: React.CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  overflowX: 'auto',
+  paddingBottom: 4,
+}
+
+const tabButton: React.CSSProperties = {
+  borderRadius: 999,
+  padding: '10px 14px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#334155',
+  fontSize: 14,
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+}
+
+const activeTabButton: React.CSSProperties = {
+  background: '#0f172a',
+  color: '#fff',
+  borderColor: '#0f172a',
+}
+
+const inactiveTabButton: React.CSSProperties = {
+  background: '#fff',
+  color: '#334155',
+  borderColor: '#cbd5e1',
+}
+
+const emptyCard: React.CSSProperties = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 20,
+  padding: 18,
+}
+
+const productGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+  gap: 16,
+}
+
+const productCard: React.CSSProperties = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 24,
+  padding: 16,
+  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
+}
+
+const productContent: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 120px',
+  gap: 14,
+  alignItems: 'start',
+}
+
+const productInfo: React.CSSProperties = {
+  minWidth: 0,
+}
+
+const productName: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 800,
+  color: '#0f172a',
+  lineHeight: 1.3,
+}
+
+const productPrice: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 16,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const stockText: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 12,
+  color: '#64748b',
+  fontWeight: 700,
+}
+
+const productDesc: React.CSSProperties = {
+  marginTop: 8,
+  color: '#64748b',
+  fontSize: 14,
+  lineHeight: 1.5,
+}
+
+const qtyWrap: React.CSSProperties = {
+  marginTop: 14,
+}
+
+const qtyRow: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 10,
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: 999,
+  padding: 6,
+}
+
+const qtyBtn: React.CSSProperties = {
+  width: 34,
+  height: 34,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  fontSize: 18,
+  fontWeight: 800,
+  cursor: 'pointer',
+}
+
+const qtyValue: React.CSSProperties = {
+  minWidth: 18,
+  textAlign: 'center',
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const qtyHintClosed: React.CSSProperties = {
+  marginTop: 8,
+  fontSize: 12,
+  color: '#b91c1c',
+  fontWeight: 700,
+}
+
+const productImageButton: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  padding: 0,
+}
+
+const productImageWrap: React.CSSProperties = {
+  position: 'relative',
+  width: 120,
+  height: 120,
+  borderRadius: 20,
+  overflow: 'hidden',
+  background: '#f1f5f9',
+  border: '1px solid #e2e8f0',
+}
+
+const productImage: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+}
+
+const productImagePlaceholder: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#94a3b8',
+  fontSize: 13,
+  fontWeight: 700,
+}
+
+const soldOutBadge: React.CSSProperties = {
+  position: 'absolute',
+  top: 8,
+  left: 8,
+  background: '#fee2e2',
+  color: '#b91c1c',
+  fontSize: 11,
+  fontWeight: 800,
+  borderRadius: 999,
+  padding: '6px 8px',
+}
+
+const multiImageBadge: React.CSSProperties = {
+  position: 'absolute',
+  right: 8,
+  bottom: 8,
+  background: 'rgba(15, 23, 42, 0.8)',
+  color: '#fff',
+  fontSize: 11,
+  fontWeight: 800,
+  borderRadius: 999,
+  padding: '6px 8px',
+}
+
+const checkoutCard: React.CSSProperties = {
+  marginTop: 18,
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 24,
+  padding: 18,
+  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
+}
+
+const checkoutHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  marginBottom: 14,
+}
+
+const checkoutTitle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 20,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const checkoutSub: React.CSSProperties = {
+  margin: '4px 0 0',
+  fontSize: 14,
+  color: '#64748b',
+}
+
+const closedCheckoutBox: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px solid #fed7aa',
+  background: '#fff7ed',
+  padding: 14,
+}
+
+const closedCheckoutTitle: React.CSSProperties = {
+  fontWeight: 800,
+  color: '#9a3412',
+}
+
+const closedCheckoutText: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 14,
+  color: '#9a3412',
+}
+
+const emptyCartBox: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px dashed #cbd5e1',
+  background: '#f8fafc',
+  padding: 16,
+  color: '#64748b',
+  fontSize: 14,
+}
+
+const summaryList: React.CSSProperties = {
+  display: 'grid',
+  gap: 12,
+  marginBottom: 16,
+}
+
+const summaryCard: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
+  borderRadius: 18,
+  padding: 12,
+  background: '#fff',
+}
+
+const summaryRowButton: React.CSSProperties = {
+  width: '100%',
+  border: 'none',
+  background: 'transparent',
+  padding: 0,
+  textAlign: 'left',
+  cursor: 'pointer',
+}
+
+const summaryRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 12,
+}
+
+const summaryEditHint: React.CSSProperties = {
+  marginTop: 8,
+  fontSize: 12,
+  color: '#2563eb',
+  fontWeight: 700,
+}
+
+const summaryActions: React.CSSProperties = {
+  marginTop: 10,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+}
+
+const lineQtyControls: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+}
+
+const lineQtyBtn: React.CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  fontSize: 16,
+  fontWeight: 800,
+  cursor: 'pointer',
+}
+
+const lineQtyValue: React.CSSProperties = {
+  minWidth: 16,
+  textAlign: 'center',
+  fontWeight: 800,
+}
+
+const deleteLineBtn: React.CSSProperties = {
+  border: '1px solid #fecaca',
+  background: '#fef2f2',
+  color: '#b91c1c',
+  borderRadius: 999,
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: 'pointer',
+}
+
+const galleryOverlay: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(15, 23, 42, 0.78)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 16,
+  zIndex: 1000,
+}
+
+const galleryDialog: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 980,
+  background: '#fff',
+  borderRadius: 24,
+  padding: 16,
+  position: 'relative',
+}
+
+const galleryCloseBtn: React.CSSProperties = {
+  position: 'absolute',
+  top: 12,
+  right: 12,
+  width: 36,
+  height: 36,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  cursor: 'pointer',
+  fontWeight: 800,
+}
+
+const galleryHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  marginBottom: 12,
+  paddingRight: 42,
+}
+
+const galleryTitle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const galleryCounter: React.CSSProperties = {
+  fontSize: 13,
+  color: '#64748b',
+  fontWeight: 700,
+}
+
+const galleryBody: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '48px 1fr 48px',
+  gap: 12,
+  alignItems: 'center',
+}
+
+const galleryNavBtn: React.CSSProperties = {
+  width: 48,
+  height: 48,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  fontSize: 26,
+  cursor: 'pointer',
+}
+
+const galleryImageWrap: React.CSSProperties = {
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: 20,
+  overflow: 'hidden',
+  minHeight: 320,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const galleryImage: React.CSSProperties = {
+  width: '100%',
+  maxHeight: '70vh',
+  objectFit: 'contain',
+  display: 'block',
+}
+
+const galleryThumbRow: React.CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  overflowX: 'auto',
+  marginTop: 14,
+}
+
+const galleryThumbBtn: React.CSSProperties = {
+  border: '2px solid #e2e8f0',
+  borderRadius: 14,
+  padding: 0,
+  background: '#fff',
+  overflow: 'hidden',
+  width: 72,
+  height: 72,
+  cursor: 'pointer',
+  flex: '0 0 auto',
+}
+
+const galleryThumbImg: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+}
+
+const modalOverlay: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(15, 23, 42, 0.62)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 16,
+  zIndex: 1100,
+}
+
+const modalDialog: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 680,
+  background: '#fff',
+  borderRadius: 24,
+  overflow: 'hidden',
+  boxShadow: '0 16px 50px rgba(15, 23, 42, 0.18)',
+}
+
+const modalHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 12,
+  padding: 18,
+  borderBottom: '1px solid #e2e8f0',
+}
+
+const modalTitle: React.CSSProperties = {
+  fontSize: 20,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const modalSubtitle: React.CSSProperties = {
+  marginTop: 4,
+  color: '#64748b',
+  fontSize: 14,
+}
+
+const modalCloseBtn: React.CSSProperties = {
+  width: 36,
+  height: 36,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  cursor: 'pointer',
+  fontWeight: 800,
+}
+
+const modalContent: React.CSSProperties = {
+  padding: 18,
+  display: 'grid',
+  gap: 14,
+  maxHeight: '70vh',
+  overflowY: 'auto',
+}
+
+const addonGroupCard: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
+  borderRadius: 18,
+  padding: 14,
+  background: '#fff',
+}
+
+const addonGroupHeader: React.CSSProperties = {
+  marginBottom: 10,
+}
+
+const addonGroupTitle: React.CSSProperties = {
+  fontSize: 16,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const addonGroupMeta: React.CSSProperties = {
+  marginTop: 4,
+  fontSize: 12,
+  color: '#64748b',
+  fontWeight: 600,
+}
+
+const addonOptionsWrap: React.CSSProperties = {
+  display: 'grid',
+  gap: 10,
+}
+
+const addonOptionRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  border: '1px solid #e2e8f0',
+  borderRadius: 14,
+  padding: '10px 12px',
+  background: '#f8fafc',
+}
+
+const addonOptionName: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 700,
+  color: '#0f172a',
+}
+
+const addonOptionPrice: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: '#334155',
+}
+
+const noteWrap: React.CSSProperties = {
+  display: 'grid',
+  gap: 8,
+}
+
+const noteLabel: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const noteTextarea: React.CSSProperties = {
+  width: '100%',
+  borderRadius: 14,
+  border: '1px solid #cbd5e1',
+  padding: 12,
+  fontSize: 14,
+  fontFamily: 'inherit',
+  resize: 'vertical',
+}
+
+const modalError: React.CSSProperties = {
+  borderRadius: 14,
+  border: '1px solid #fecaca',
+  background: '#fef2f2',
+  padding: 12,
+  color: '#b91c1c',
+  fontSize: 14,
+  fontWeight: 700,
+}
+
+const modalFooter: React.CSSProperties = {
+  padding: 18,
+  borderTop: '1px solid #e2e8f0',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  gap: 10,
+}
+
+const secondaryBtn: React.CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#0f172a',
+  padding: '10px 16px',
+  fontWeight: 800,
+  cursor: 'pointer',
+}
+
+const primaryBtn: React.CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid #0f172a',
+  background: '#0f172a',
+  color: '#fff',
+  padding: '10px 16px',
+  fontWeight: 800,
+  cursor: 'pointer',
+}
