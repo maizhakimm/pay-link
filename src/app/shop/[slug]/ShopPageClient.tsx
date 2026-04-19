@@ -27,6 +27,8 @@ type OperatingDayItem = {
 
 type OperatingDays = Record<DayKey, OperatingDayItem>
 
+type OrderMode = 'anytime' | 'scheduled' | 'preorder'
+
 type ProductAddonOption = {
   id: string
   addon_group_id: string
@@ -81,6 +83,8 @@ type SellerProfile = {
   pickup_address?: string | null
   latitude?: number | null
   longitude?: number | null
+  order_mode?: OrderMode | null
+  preorder_days?: number | null
 }
 
 type MenuCategory = {
@@ -134,6 +138,26 @@ type CartLine = {
   note?: string
   unit_price: number
   line_total: number
+}
+
+const DAY_KEYS_SUNDAY_FIRST: DayKey[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+]
+
+const DAY_LABELS_MY: Record<DayKey, string> = {
+  sunday: 'Ahad',
+  monday: 'Isnin',
+  tuesday: 'Selasa',
+  wednesday: 'Rabu',
+  thursday: 'Khamis',
+  friday: 'Jumaat',
+  saturday: 'Sabtu',
 }
 
 function getImageUrl(path?: string | null) {
@@ -199,17 +223,7 @@ function formatTime(value?: string | null) {
 }
 
 function getTodayKey(date = new Date()): DayKey {
-  const map: DayKey[] = [
-    'sunday',
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-  ]
-
-  return map[date.getDay()]
+  return DAY_KEYS_SUNDAY_FIRST[date.getDay()]
 }
 
 function getMinutesFromTime(value?: string | null) {
@@ -257,6 +271,61 @@ function getDeliverySummary(seller: SellerProfile) {
   }
 }
 
+function getEffectiveOrderMode(seller: SellerProfile): OrderMode {
+  if (seller.order_mode === 'anytime') return 'anytime'
+  if (seller.order_mode === 'preorder') return 'preorder'
+  if (seller.order_mode === 'scheduled') return 'scheduled'
+
+  if (seller.accept_orders_anytime === true) {
+    return 'anytime'
+  }
+
+  return 'scheduled'
+}
+
+function getNextOpeningText(seller: SellerProfile) {
+  if (!seller.operating_days) {
+    return seller.closed_message || 'Kedai kini ditutup.'
+  }
+
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const todayIndex = now.getDay()
+
+  for (let offset = 0; offset < 7; offset += 1) {
+    const dayIndex = (todayIndex + offset) % 7
+    const dayKey = DAY_KEYS_SUNDAY_FIRST[dayIndex]
+    const config = seller.operating_days[dayKey]
+
+    if (!config?.enabled) continue
+
+    const openMinutes = getMinutesFromTime(config.opening_time)
+    const closeMinutes = getMinutesFromTime(config.closing_time)
+
+    if (openMinutes === null || closeMinutes === null) continue
+
+    if (offset === 0) {
+      if (openMinutes < closeMinutes && currentMinutes < openMinutes) {
+        return `Buka semula hari ini, ${formatTime(config.opening_time)}`
+      }
+
+      if (openMinutes > closeMinutes && currentMinutes < openMinutes && currentMinutes > closeMinutes) {
+        return `Buka semula hari ini, ${formatTime(config.opening_time)}`
+      }
+
+      continue
+    }
+
+    if (offset === 1) {
+      return `Buka semula esok, ${formatTime(config.opening_time)}`
+    }
+
+    return `Buka semula ${DAY_LABELS_MY[dayKey]}, ${formatTime(config.opening_time)}`
+  }
+
+  return seller.closed_message || 'Kedai kini ditutup.'
+}
+
 function getShopAvailability(seller: SellerProfile) {
   if (seller.temporarily_closed) {
     return {
@@ -264,16 +333,29 @@ function getShopAvailability(seller: SellerProfile) {
       label: 'Temporarily Closed',
       detail:
         seller.closed_message ||
-        'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+        'Kedai ditutup sementara. Sila cuba lagi kemudian.',
       timeRange: '',
     }
   }
 
-  if (seller.accept_orders_anytime === true) {
+  const orderMode = getEffectiveOrderMode(seller)
+
+  if (orderMode === 'preorder') {
+    const days = Number(seller.preorder_days || 1)
+
+    return {
+      isOpen: true,
+      label: 'Pre-order',
+      detail: `Perlu order sekurang-kurangnya ${days} hari awal.`,
+      timeRange: '',
+    }
+  }
+
+  if (orderMode === 'anytime') {
     return {
       isOpen: true,
       label: 'Open Now',
-      detail: 'Kedai ini menerima tempahan pada bila-bila masa.',
+      detail: 'Order dibuka 24 jam.',
       timeRange: '',
     }
   }
@@ -289,8 +371,7 @@ function getShopAvailability(seller: SellerProfile) {
       return {
         isOpen: false,
         label: 'Closed',
-        detail:
-          seller.closed_message || 'Kedai tidak menerima tempahan pada hari ini.',
+        detail: getNextOpeningText(seller),
         timeRange: '',
       }
     }
@@ -324,10 +405,7 @@ function getShopAvailability(seller: SellerProfile) {
     return {
       isOpen,
       label: isOpen ? 'Open Now' : 'Closed',
-      detail: isOpen
-        ? ''
-        : seller.closed_message ||
-          'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
+      detail: isOpen ? '' : getNextOpeningText(seller),
       timeRange,
     }
   }
@@ -874,14 +952,24 @@ export default function ShopPageClient({
             <div
               style={{
                 ...statusBadge,
-                background: isShopOpen ? '#dcfce7' : '#fee2e2',
-                color: isShopOpen ? '#166534' : '#b91c1c',
+                background:
+                  availability.label === 'Pre-order'
+                    ? '#ede9fe'
+                    : isShopOpen
+                    ? '#dcfce7'
+                    : '#fee2e2',
+                color:
+                  availability.label === 'Pre-order'
+                    ? '#6d28d9'
+                    : isShopOpen
+                    ? '#166534'
+                    : '#b91c1c',
               }}
             >
               {availability.label}
             </div>
 
-            {seller.accept_orders_anytime === false && availability.timeRange ? (
+            {availability.timeRange ? (
               <div style={hoursText}>{availability.timeRange}</div>
             ) : null}
           </div>
@@ -890,14 +978,33 @@ export default function ShopPageClient({
             <div
               style={{
                 ...noticeBox,
-                background: isShopOpen ? '#eff6ff' : '#fff7ed',
-                borderColor: isShopOpen ? '#bfdbfe' : '#fed7aa',
-                color: isShopOpen ? '#1e3a8a' : '#9a3412',
+                background:
+                  availability.label === 'Pre-order'
+                    ? '#f5f3ff'
+                    : isShopOpen
+                    ? '#eff6ff'
+                    : '#fff7ed',
+                borderColor:
+                  availability.label === 'Pre-order'
+                    ? '#ddd6fe'
+                    : isShopOpen
+                    ? '#bfdbfe'
+                    : '#fed7aa',
+                color:
+                  availability.label === 'Pre-order'
+                    ? '#5b21b6'
+                    : isShopOpen
+                    ? '#1e3a8a'
+                    : '#9a3412',
               }}
             >
               {availability.detail}
             </div>
           )}
+
+          {deliverySummary ? (
+            <div style={{ ...shopSub, marginTop: 10 }}>{deliverySummary}</div>
+          ) : null}
         </div>
 
         {hasCategoryFeature ? (
@@ -958,7 +1065,6 @@ export default function ShopPageClient({
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
                 const allImages = getProductImages(product)
                 const addonGroups = getProductAddonGroups(product.id)
-                const hasAddons = addonGroups.length > 0
 
                 return (
                   <div key={product.id} style={productCard}>
@@ -980,7 +1086,7 @@ export default function ShopPageClient({
                           {product.description || 'Tiada deskripsi.'}
                         </div>
 
-                         <div style={qtyWrap}>
+                        <div style={qtyWrap}>
                           <div style={qtyRow}>
                             <button
                               type="button"
@@ -1181,925 +1287,3 @@ export default function ShopPageClient({
             style={galleryDialog}
             onClick={(event) => event.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={closeGallery}
-              style={galleryCloseButton}
-              aria-label="Close image gallery"
-            >
-              ✕
-            </button>
-
-            <div style={galleryTopBar}>
-              <div style={galleryTitle}>{gallery.productName}</div>
-              <div style={galleryCounter}>
-                {gallery.currentIndex + 1} / {gallery.images.length}
-              </div>
-            </div>
-
-            <div style={galleryImageArea}>
-              {gallery.images.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={showPrevImage}
-                  style={{ ...galleryNavButton, ...galleryNavLeft }}
-                  aria-label="Previous image"
-                >
-                  ‹
-                </button>
-              ) : null}
-
-              <img
-                src={gallery.images[gallery.currentIndex]}
-                alt={gallery.productName}
-                style={galleryImage}
-              />
-
-              {gallery.images.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={showNextImage}
-                  style={{ ...galleryNavButton, ...galleryNavRight }}
-                  aria-label="Next image"
-                >
-                  ›
-                </button>
-              ) : null}
-            </div>
-
-            {gallery.images.length > 1 ? (
-              <div style={galleryDots}>
-                {gallery.images.map((_, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() =>
-                      setGallery((prev) => ({ ...prev, currentIndex: index }))
-                    }
-                    style={{
-                      ...galleryDot,
-                      opacity: gallery.currentIndex === index ? 1 : 0.35,
-                      transform:
-                        gallery.currentIndex === index
-                          ? 'scale(1.15)'
-                          : 'scale(1)',
-                    }}
-                    aria-label={`Go to image ${index + 1}`}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {addonModal.isOpen && addonModal.product ? (
-        <div style={modalOverlay} onClick={closeAddonModal}>
-          <div style={modalBox} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 10 }}>{addonModal.product.name}</h3>
-
-            {addonModal.error ? (
-              <div style={modalErrorBox}>{addonModal.error}</div>
-            ) : null}
-
-            {addonModal.groups.map((group) => {
-              const selectedCount = (addonModal.selections[group.id] || []).length
-
-              return (
-                <div key={group.id} style={{ marginBottom: 12 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                    {group.name}
-                    {group.is_required ? (
-                      <span style={requiredMark}> *</span>
-                    ) : null}
-                  </div>
-
-                  <div style={groupMetaText}>
-                    {group.selection_type === 'single'
-                      ? 'Choose 1'
-                      : `Choose ${Number(group.min_select || 0)} or more`}
-                    {group.max_select !== null && group.max_select !== undefined
-                      ? ` • Max ${group.max_select}`
-                      : ''}
-                    {selectedCount > 0 ? ` • Selected ${selectedCount}` : ''}
-                  </div>
-
-                  {group.options.map((opt) => {
-                    const selected =
-                      addonModal.selections[group.id]?.includes(opt.id) || false
-
-                    return (
-                      <label key={opt.id} style={optionRow}>
-                        <input
-                          type={
-                            group.selection_type === 'single'
-                              ? 'radio'
-                              : 'checkbox'
-                          }
-                          checked={selected}
-                          onChange={() => {
-                            setAddonModal((prev) => {
-                              const current = prev.selections[group.id] || []
-
-                              let updated: string[] = []
-
-                              if (group.selection_type === 'single') {
-                                updated = [opt.id]
-                              } else {
-                                if (current.includes(opt.id)) {
-                                  updated = current.filter((id) => id !== opt.id)
-                                } else {
-                                  const maxSelect =
-                                    group.max_select === null ||
-                                    group.max_select === undefined
-                                      ? null
-                                      : Number(group.max_select)
-
-                                  if (
-                                    maxSelect !== null &&
-                                    current.length >= maxSelect
-                                  ) {
-                                    return {
-                                      ...prev,
-                                      error: `You can only select up to ${maxSelect} option${
-                                        maxSelect > 1 ? 's' : ''
-                                      } for "${group.name}".`,
-                                    }
-                                  }
-
-                                  updated = [...current, opt.id]
-                                }
-                              }
-
-                              return {
-                                ...prev,
-                                error: '',
-                                selections: {
-                                  ...prev.selections,
-                                  [group.id]: updated,
-                                },
-                              }
-                            })
-                          }}
-                        />
-                        {opt.name} (+RM {opt.price_delta})
-                      </label>
-                    )
-                  })}
-                </div>
-              )
-            })}
-
-            <textarea
-              placeholder="Note (optional)"
-              value={addonModal.note}
-              onChange={(e) =>
-                setAddonModal((prev) => ({
-                  ...prev,
-                  note: e.target.value,
-                  error: '',
-                }))
-              }
-              style={noteBox}
-            />
-
-            <button
-              type="button"
-              onClick={() => {
-                if (!addonModal.product) return
-
-                const validationError = validateAddonSelections(
-                  addonModal.groups,
-                  addonModal.selections
-                )
-
-                if (validationError) {
-                  setAddonModal((prev) => ({
-                    ...prev,
-                    error: validationError,
-                  }))
-                  return
-                }
-
-                if (addonModal.editingCartLineId) {
-                  const existingLine = cart.find(
-                    (item) => item.id === addonModal.editingCartLineId
-                  )
-
-                  if (!existingLine) {
-                    closeAddonModal()
-                    return
-                  }
-
-                  const updatedLine = buildCartLine(
-                    addonModal.product,
-                    addonModal.selections,
-                    addonModal.groups,
-                    addonModal.note,
-                    existingLine.quantity
-                  )
-
-                  updateCartLine(updatedLine, existingLine.id)
-                } else {
-                  addToCartWithAddons(
-                    addonModal.product,
-                    addonModal.selections,
-                    addonModal.groups,
-                    addonModal.note
-                  )
-                }
-
-                closeAddonModal()
-              }}
-              style={confirmBtn}
-            >
-              {addonModal.editingCartLineId ? 'Update Order' : 'Add to Order'}
-            </button>
-
-            <button type="button" onClick={closeAddonModal} style={cancelBtn}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </main>
-  )
-}
-
-const soldOutBadge = {
-  position: 'absolute' as const,
-  top: 6,
-  right: 6,
-  background: '#ef4444',
-  color: '#fff',
-  fontSize: 10,
-  fontWeight: 800,
-  padding: '4px 7px',
-  borderRadius: 8,
-} as const
-
-const multiImageBadge = {
-  position: 'absolute' as const,
-  left: 6,
-  bottom: 6,
-  background: 'rgba(15,23,42,0.82)',
-  color: '#fff',
-  fontSize: 10,
-  fontWeight: 800,
-  padding: '4px 7px',
-  borderRadius: 999,
-} as const
-
-const stockText = {
-  fontSize: 11,
-  color: '#64748b',
-  marginBottom: 4,
-  lineHeight: 1.35,
-} as const
-
-const main = {
-  minHeight: '100vh',
-  background: '#f8fafc',
-  padding: 16,
-} as const
-
-const container = {
-  maxWidth: 760,
-  margin: '0 auto',
-} as const
-
-const logoWrap = {
-  textAlign: 'center' as const,
-  marginBottom: 12,
-} as const
-
-const logo = {
-  height: 16,
-  margin: '0 auto',
-  display: 'block',
-} as const
-
-const heroCard = {
-  background: '#fff',
-  borderRadius: 22,
-  padding: 18,
-  border: '1px solid #e2e8f0',
-  boxShadow: '0 10px 30px rgba(15,23,42,0.05)',
-  marginBottom: 16,
-} as const
-
-const sellerRow = {
-  display: 'flex',
-  gap: 12,
-  alignItems: 'center',
-  marginBottom: 14,
-} as const
-
-const sellerImg = {
-  width: 56,
-  height: 56,
-  borderRadius: '999px',
-  objectFit: 'cover' as const,
-} as const
-
-const sellerFallback = {
-  width: 56,
-  height: 56,
-  borderRadius: '999px',
-  background: '#0f172a',
-  color: '#fff',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontWeight: 800,
-  fontSize: 20,
-  flexShrink: 0,
-} as const
-
-const shopTitle = {
-  margin: '0 0 4px 0',
-  fontSize: 20,
-  fontWeight: 800,
-  color: '#0f172a',
-  lineHeight: 1.2,
-} as const
-
-const shopSub = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: 14,
-  lineHeight: 1.5,
-} as const
-
-const statusWrap = {
-  display: 'flex',
-  flexWrap: 'wrap' as const,
-  gap: 10,
-  alignItems: 'center',
-  marginBottom: 12,
-} as const
-
-const statusBadge = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: 999,
-  padding: '8px 12px',
-  fontSize: 12,
-  fontWeight: 800,
-} as const
-
-const hoursText = {
-  fontSize: 13,
-  color: '#475569',
-  fontWeight: 600,
-} as const
-
-const noticeBox = {
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderRadius: 14,
-  padding: '12px 14px',
-  fontSize: 14,
-  lineHeight: 1.6,
-} as const
-
-const stickyTabWrap = {
-  position: 'sticky' as const,
-  top: 0,
-  zIndex: 50,
-  marginBottom: 10,
-} as const
-
-const tabShell = {
-  padding: '6px 0',
-  borderRadius: 0,
-  background: '#f8fafc',
-  boxShadow: '0 6px 12px rgba(15,23,42,0.06)',
-  borderBottom: '1px solid #e2e8f0',
-} as const
-
-const tabScroller = {
-  display: 'flex',
-  gap: 10,
-  overflowX: 'auto' as const,
-  WebkitOverflowScrolling: 'touch' as const,
-  scrollbarWidth: 'none' as const,
-} as const
-
-const tabButton = {
-  flexShrink: 0,
-  borderRadius: 999,
-  border: '1px solid #e2e8f0',
-  padding: '8px 12px',
-  fontSize: 12,
-  fontWeight: 800,
-  whiteSpace: 'nowrap' as const,
-  cursor: 'pointer',
-  transition: 'all 0.2s ease',
-} as const
-
-const activeTabButton = {
-  background: '#0f172a',
-  color: '#fff',
-  borderColor: '#0f172a',
-  boxShadow: '0 10px 20px rgba(15,23,42,0.18)',
-} as const
-
-const inactiveTabButton = {
-  background: '#fff',
-  color: '#0f172a',
-  borderColor: '#e2e8f0',
-} as const
-
-const emptyCard = {
-  background: '#fff',
-  borderRadius: 20,
-  padding: 18,
-  border: '1px solid #e2e8f0',
-  marginBottom: 16,
-} as const
-
-const productGrid = {
-  display: 'grid',
-  gap: 10,
-  marginBottom: 16,
-} as const
-
-const productCard = {
-  background: '#fff',
-  borderRadius: 18,
-  padding: 12,
-  border: '1px solid #e2e8f0',
-  overflow: 'hidden',
-} as const
-
-const productContent = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1fr) 84px',
-  alignItems: 'start',
-  columnGap: 12,
-  minWidth: 0,
-  width: '100%',
-} as const
-
-const productInfo = {
-  minWidth: 0,
-  width: '100%',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'flex-start',
-} as const
-
-const productImageButton = {
-  padding: 0,
-  margin: 0,
-  border: 'none',
-  background: 'transparent',
-  width: 84,
-  minWidth: 84,
-  justifySelf: 'end' as const,
-  alignSelf: 'start' as const,
-} as const
-
-const productImageWrap = {
-  width: 84,
-  height: 84,
-  borderRadius: 14,
-  overflow: 'hidden',
-  background: '#e2e8f0',
-  position: 'relative' as const,
-} as const
-
-const productImage = {
-  width: '100%',
-  height: '100%',
-  objectFit: 'cover' as const,
-  display: 'block',
-} as const
-
-const productImagePlaceholder = {
-  width: '100%',
-  height: '100%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#64748b',
-  fontSize: 12,
-} as const
-
-const productName = {
-  fontWeight: 700,
-  color: '#0f172a',
-  marginBottom: 4,
-  fontSize: 13,
-  lineHeight: 1.3,
-  display: '-webkit-box',
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: 'vertical' as const,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis' as const,
-  wordBreak: 'break-word' as const,
-  maxWidth: '100%',
-} as const
-
-const productPrice = {
-  color: '#1d4ed8',
-  fontWeight: 700,
-  marginBottom: 4,
-  fontSize: 14,
-  lineHeight: 1.35,
-} as const
-
-const productDesc = {
-  color: '#64748b',
-  fontSize: 11,
-  lineHeight: 1.35,
-  marginBottom: 8,
-  width: '100%',
-  display: '-webkit-box',
-  WebkitLineClamp: 1,
-  WebkitBoxOrient: 'vertical' as const,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis' as const,
-} as const
-
-const qtyWrap = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'flex-start',
-  gap: 6,
-  marginTop: 2,
-} as const
-
-const qtyRow = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-} as const
-
-const qtyBtn = {
-  width: 28,
-  height: 28,
-  borderRadius: '999px',
-  border: '1px solid #cbd5e1',
-  background: '#fff',
-  cursor: 'pointer',
-  fontWeight: 700,
-  fontSize: 15,
-  color: '#0f172a',
-  lineHeight: 1,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 0,
-} as const
-
-const qtyValue = {
-  minWidth: 16,
-  fontWeight: 700,
-  color: '#0f172a',
-  fontSize: 13,
-  textAlign: 'center' as const,
-} as const
-
-const qtyHintClosed = {
-  fontSize: 11,
-  lineHeight: 1.35,
-  color: '#b45309',
-  fontWeight: 700,
-} as const
-
-const checkoutCard = {
-  background: '#fff',
-  borderRadius: 22,
-  padding: 18,
-  border: '1px solid #e2e8f0',
-  boxShadow: '0 10px 30px rgba(15,23,42,0.05)',
-} as const
-
-const checkoutHeader = {
-  marginBottom: 14,
-} as const
-
-const checkoutTitle = {
-  margin: '0 0 4px 0',
-  fontSize: 22,
-  fontWeight: 800,
-  color: '#0f172a',
-} as const
-
-const checkoutSub = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: 14,
-} as const
-
-const emptyCartBox = {
-  padding: 14,
-  borderRadius: 14,
-  background: '#f8fafc',
-  color: '#64748b',
-  fontSize: 14,
-  border: '1px solid #e2e8f0',
-} as const
-
-const closedCheckoutBox = {
-  padding: 16,
-  borderRadius: 14,
-  background: '#fff7ed',
-  color: '#9a3412',
-  fontSize: 14,
-  border: '1px solid #fed7aa',
-} as const
-
-const closedCheckoutTitle = {
-  fontSize: 15,
-  fontWeight: 800,
-  marginBottom: 6,
-} as const
-
-const closedCheckoutText = {
-  lineHeight: 1.6,
-} as const
-
-const summaryList = {
-  display: 'grid',
-  gap: 10,
-  marginBottom: 14,
-} as const
-
-const summaryCard = {
-  borderRadius: 12,
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  overflow: 'hidden',
-} as const
-
-const summaryRowButton = {
-  width: '100%',
-  padding: 0,
-  margin: 0,
-  border: 'none',
-  background: 'transparent',
-  textAlign: 'left' as const,
-  cursor: 'pointer',
-} as const
-
-const summaryRow = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 12,
-  padding: '10px 12px',
-  color: '#0f172a',
-} as const
-
-const summaryActions = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 12,
-  padding: '10px 12px',
-  borderTop: '1px solid #e2e8f0',
-  background: '#fff',
-} as const
-
-const lineQtyControls = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-} as const
-
-const lineQtyBtn = {
-  width: 30,
-  height: 30,
-  borderRadius: '999px',
-  border: '1px solid #cbd5e1',
-  background: '#fff',
-  cursor: 'pointer',
-  fontWeight: 700,
-  fontSize: 16,
-  color: '#0f172a',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 0,
-} as const
-
-const lineQtyValue = {
-  minWidth: 18,
-  textAlign: 'center' as const,
-  fontSize: 13,
-  fontWeight: 700,
-  color: '#0f172a',
-} as const
-
-const deleteLineBtn = {
-  border: '1px solid #fecaca',
-  background: '#fef2f2',
-  color: '#b91c1c',
-  borderRadius: 10,
-  padding: '8px 12px',
-  fontSize: 12,
-  fontWeight: 700,
-  cursor: 'pointer',
-} as const
-
-const summaryEditHint = {
-  marginTop: 6,
-  fontSize: 11,
-  color: '#7c3aed',
-  fontWeight: 700,
-} as const
-
-const galleryOverlay = {
-  position: 'fixed' as const,
-  inset: 0,
-  zIndex: 999,
-  background: 'rgba(2, 6, 23, 0.82)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 16,
-} as const
-
-const galleryDialog = {
-  width: '100%',
-  maxWidth: 920,
-  position: 'relative' as const,
-} as const
-
-const galleryCloseButton = {
-  position: 'absolute' as const,
-  top: -8,
-  right: -4,
-  width: 42,
-  height: 42,
-  borderRadius: '999px',
-  border: '1px solid rgba(255,255,255,0.18)',
-  background: 'rgba(15,23,42,0.82)',
-  color: '#fff',
-  fontSize: 18,
-  fontWeight: 700,
-  cursor: 'pointer',
-  zIndex: 2,
-} as const
-
-const galleryTopBar = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 12,
-  color: '#fff',
-  marginBottom: 12,
-  paddingRight: 44,
-} as const
-
-const galleryTitle = {
-  fontSize: 16,
-  fontWeight: 800,
-  lineHeight: 1.4,
-} as const
-
-const galleryCounter = {
-  fontSize: 13,
-  fontWeight: 700,
-  color: 'rgba(255,255,255,0.78)',
-  flexShrink: 0,
-} as const
-
-const galleryImageArea = {
-  position: 'relative' as const,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 320,
-} as const
-
-const galleryImage = {
-  width: '100%',
-  maxHeight: '78vh',
-  objectFit: 'contain' as const,
-  borderRadius: 18,
-  background: '#fff',
-} as const
-
-const galleryNavButton = {
-  position: 'absolute' as const,
-  top: '50%',
-  transform: 'translateY(-50%)',
-  width: 42,
-  height: 42,
-  borderRadius: '999px',
-  border: '1px solid rgba(255,255,255,0.2)',
-  background: 'rgba(15,23,42,0.72)',
-  color: '#fff',
-  fontSize: 28,
-  lineHeight: 1,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-} as const
-
-const galleryNavLeft = {
-  left: 12,
-} as const
-
-const galleryNavRight = {
-  right: 12,
-} as const
-
-const galleryDots = {
-  marginTop: 14,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 8,
-  flexWrap: 'wrap' as const,
-} as const
-
-const galleryDot = {
-  width: 10,
-  height: 10,
-  borderRadius: '999px',
-  border: 'none',
-  background: '#fff',
-  cursor: 'pointer',
-  transition: 'all 0.2s ease',
-} as const
-
-const modalOverlay = {
-  position: 'fixed' as const,
-  inset: 0,
-  background: 'rgba(0,0,0,0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 999,
-} as const
-
-const modalBox = {
-  background: '#fff',
-  padding: 16,
-  borderRadius: 16,
-  width: '90%',
-  maxWidth: 400,
-} as const
-
-const optionRow = {
-  display: 'flex',
-  gap: 8,
-  marginBottom: 6,
-  fontSize: 14,
-} as const
-
-const noteBox = {
-  width: '100%',
-  marginTop: 10,
-  padding: 8,
-  borderRadius: 8,
-  border: '1px solid #ccc',
-} as const
-
-const confirmBtn = {
-  marginTop: 12,
-  width: '100%',
-  padding: 10,
-  background: '#0f172a',
-  color: '#fff',
-  borderRadius: 10,
-  border: 'none',
-  fontWeight: 700,
-} as const
-
-const cancelBtn = {
-  marginTop: 6,
-  width: '100%',
-  padding: 10,
-  background: '#e5e7eb',
-  borderRadius: 10,
-  border: 'none',
-} as const
-
-const modalErrorBox = {
-  marginBottom: 12,
-  padding: '10px 12px',
-  borderRadius: 10,
-  background: '#fef2f2',
-  border: '1px solid #fecaca',
-  color: '#b91c1c',
-  fontSize: 13,
-  lineHeight: 1.5,
-} as const
-
-const requiredMark = {
-  color: '#dc2626',
-  fontWeight: 800,
-} as const
-
-const groupMetaText = {
-  fontSize: 12,
-  color: '#64748b',
-  marginBottom: 8,
-} as const
