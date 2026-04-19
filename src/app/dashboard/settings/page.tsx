@@ -208,6 +208,7 @@ export default function SettingsPage() {
   const [storeName, setStoreName] = useState('')
   const [savedShopSlug, setSavedShopSlug] = useState('')
   const [slugLocked, setSlugLocked] = useState(false)
+  const [shopDescription, setShopDescription] = useState('')
 
   const [email, setEmail] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
@@ -436,6 +437,7 @@ export default function SettingsPage() {
 
       setSellerId(profile.id)
       setSavedShopSlug(existingSlug)
+      setShopDescription(profile.shop_description || '')
       setEmail(profile.email || '')
       setWhatsapp(profile.whatsapp || '')
       setCompanyName(profile.company_name || '')
@@ -712,6 +714,7 @@ export default function SettingsPage() {
         .from('seller_profiles')
         .update({
           store_name: trimmedStoreName,
+          shop_description: shopDescription.trim() || null,
           email: email.trim() || null,
           whatsapp: whatsapp.trim() || null,
           company_name: companyName.trim() || null,
@@ -872,6 +875,23 @@ export default function SettingsPage() {
                   <p className="mb-3 text-sm font-extrabold text-slate-900">
                     Nama Biz
                   </p>
+
+               <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Shop Description
+                </label>
+              <textarea
+                placeholder="Contoh: Kek batik homemade, kurang manis, sesuai untuk gift & event."
+                value={shopDescription}
+                onChange={(e) => setShopDescription(e.target.value)}
+                maxLength={160}
+                rows={3}
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-400"
+              />
+                <p className="mt-2 text-xs text-slate-500">
+                  Penerangan ringkas kedai (max 160 aksara)
+                </p>
+              </div>
 
                   <div className="grid gap-3">
                     <div>
