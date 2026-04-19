@@ -43,8 +43,8 @@ export type OrderRow = {
   eligible_payout_at: string | null
 
   payout_status: string | null
-  payout_reference: string | null
   payout_at: string | null
+  payout_reference: string | null
   created_at: string | null
 
   seller_profiles?: {
@@ -56,8 +56,8 @@ export type OrderRow = {
   } | null
 }
 
-async function getOrders(): Promise<OrderRow[]> {
-  const { data: orders, error: ordersError } = await supabase
+async function getOrders(selectedSellerId?: string): Promise<OrderRow[]> {
+  let query = supabase
     .from("orders")
     .select(`
       id,
@@ -85,6 +85,12 @@ async function getOrders(): Promise<OrderRow[]> {
     `)
     .eq("payment_status", "paid")
     .order("paid_at", { ascending: false })
+
+  if (selectedSellerId) {
+    query = query.eq("seller_profile_id", selectedSellerId)
+  }
+
+  const { data: orders, error: ordersError } = await query
 
   if (ordersError) {
     console.error("Payout orders query failed:", ordersError.message)
@@ -140,8 +146,26 @@ async function getOrders(): Promise<OrderRow[]> {
   })
 }
 
-export default async function AdminPayoutPage() {
-  const orders = await getOrders()
+async function getSelectedSeller(selectedSellerId?: string) {
+  if (!selectedSellerId) return null
+
+  const { data } = await supabase
+    .from("seller_profiles")
+    .select("id, store_name, email")
+    .eq("id", selectedSellerId)
+    .maybeSingle()
+
+  return data
+}
+
+export default async function AdminPayoutPage({
+  searchParams,
+}: {
+  searchParams?: { seller?: string }
+}) {
+  const selectedSellerId = searchParams?.seller || undefined
+  const orders = await getOrders(selectedSellerId)
+  const selectedSeller = await getSelectedSeller(selectedSellerId)
 
   return (
     <div className="space-y-6">
@@ -154,14 +178,34 @@ export default async function AdminPayoutPage() {
             <p className="mt-3 text-xl text-slate-500">
               Settlement-aware payout grouped by seller
             </p>
+
+            {selectedSeller ? (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
+                Viewing seller:
+                <span className="font-bold">
+                  {selectedSeller.store_name || selectedSeller.email || selectedSeller.id}
+                </span>
+              </div>
+            ) : null}
           </div>
 
-          <Link
-            href="/admin/dashboard"
-            className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Back
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {selectedSellerId ? (
+              <Link
+                href="/admin/payout"
+                className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Clear Seller Filter
+              </Link>
+            ) : null}
+
+            <Link
+              href="/admin/dashboard"
+              className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Back
+            </Link>
+          </div>
         </div>
       </div>
 
