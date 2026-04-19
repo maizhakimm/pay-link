@@ -10,7 +10,6 @@ type SellerProfile = {
   id: string
   store_name: string | null
   email: string | null
-  contact_phone: string | null
   bank_name: string | null
   account_number: string | null
   account_holder_name: string | null
@@ -32,90 +31,63 @@ function toNumber(value: number | string | null | undefined) {
   return Number.isFinite(num) ? num : 0
 }
 
-function getSellerHealth(seller: SellerProfile, productCount: number, paidOrders: number) {
-  const checks = {
-    bank:
-      Boolean(
-        seller.bank_name &&
-          seller.account_number &&
-          seller.account_holder_name
-      ),
-    delivery:
-      Boolean(
-        seller.delivery_mode &&
-          (toNumber(seller.delivery_radius_km) > 0 ||
-            toNumber(seller.delivery_min_fee) > 0 ||
-            toNumber(seller.delivery_rate_per_km) > 0)
-      ),
-    share:
-      Boolean(
-        seller.share_image_mode ||
-          seller.share_poster_url
-      ),
-    hours:
-      Boolean(
-        seller.accept_orders_anytime ||
-          (seller.opening_time && seller.closing_time)
-      ),
-    slug: Boolean(seller.shop_slug),
-    products: productCount > 0,
+function getOnboardingStatus(
+  seller: SellerProfile,
+  productCount: number,
+  paidOrders: number
+) {
+  const bankOk = Boolean(
+    seller.bank_name && seller.account_number && seller.account_holder_name
+  )
+
+  const deliveryOk = Boolean(
+    seller.delivery_mode &&
+      (toNumber(seller.delivery_radius_km) > 0 ||
+        toNumber(seller.delivery_min_fee) > 0 ||
+        toNumber(seller.delivery_rate_per_km) > 0 ||
+        seller.delivery_mode === "free_delivery" ||
+        seller.delivery_mode === "included_in_price" ||
+        seller.delivery_mode === "pay_rider_separately")
+  )
+
+  const hoursOk = Boolean(
+    seller.accept_orders_anytime || (seller.opening_time && seller.closing_time)
+  )
+
+  const shareOk = Boolean(seller.share_image_mode || seller.share_poster_url)
+  const slugOk = Boolean(seller.shop_slug)
+
+  const setupCount = [bankOk, deliveryOk, hoursOk, shareOk, slugOk].filter(Boolean).length
+
+  if (productCount > 0 && paidOrders > 0) {
+    return {
+      label: "Active Seller",
+      tone: "bg-emerald-50 text-emerald-700",
+      note: "Seller already receiving paid orders",
+    }
   }
 
-  const score = Object.values(checks).filter(Boolean).length
-  const maxScore = Object.keys(checks).length
-  const percent = Math.round((score / maxScore) * 100)
-
-  let label = "Needs Setup"
-  let color =
-    "bg-red-50 text-red-700 ring-red-200"
-
-  if (percent >= 100) {
-    label = "Ready"
-    color = "bg-emerald-50 text-emerald-700 ring-emerald-200"
-  } else if (percent >= 70) {
-    label = "Almost Ready"
-    color = "bg-amber-50 text-amber-700 ring-amber-200"
-  } else if (percent >= 40) {
-    label = "In Progress"
-    color = "bg-blue-50 text-blue-700 ring-blue-200"
+  if (productCount > 0 && setupCount >= 4) {
+    return {
+      label: "Setup Done",
+      tone: "bg-blue-50 text-blue-700",
+      note: "Store setup looks ready",
+    }
   }
 
-  const onboardingStatus =
-    productCount > 0 && paidOrders > 0
-      ? "Active Seller"
-      : productCount > 0
-      ? "Setup Done"
-      : "Onboarding"
+  if (setupCount >= 2) {
+    return {
+      label: "In Progress",
+      tone: "bg-amber-50 text-amber-700",
+      note: "Some setup still incomplete",
+    }
+  }
 
   return {
-    checks,
-    score,
-    maxScore,
-    percent,
-    label,
-    color,
-    onboardingStatus,
+    label: "Onboarding",
+    tone: "bg-slate-100 text-slate-700",
+    note: "Needs admin assistance",
   }
-}
-
-function CheckPill({
-  ok,
-  label,
-}: {
-  ok: boolean
-  label: string
-}) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${
-        ok
-          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-          : "bg-slate-100 text-slate-500 ring-slate-200"
-      }`}
-    >
-      {label}
-    </span>
-  )
 }
 
 export default async function AdminSellersPage() {
@@ -125,7 +97,6 @@ export default async function AdminSellersPage() {
       id,
       store_name,
       email,
-      contact_phone,
       bank_name,
       account_number,
       account_holder_name,
@@ -182,7 +153,7 @@ export default async function AdminSellersPage() {
           Sellers
         </h2>
         <p className="mt-2 text-sm text-slate-500">
-          Monitor seller onboarding, setup readiness, dan health status.
+          Monitor seller onboarding dan akses quick links untuk support lebih cepat.
         </p>
       </section>
 
@@ -193,8 +164,6 @@ export default async function AdminSellersPage() {
               <tr>
                 <th className="px-4 py-3 font-semibold">Seller</th>
                 <th className="px-4 py-3 font-semibold">Onboarding</th>
-                <th className="px-4 py-3 font-semibold">Health</th>
-                <th className="px-4 py-3 font-semibold">Checklist</th>
                 <th className="px-4 py-3 font-semibold">Products</th>
                 <th className="px-4 py-3 font-semibold">Paid Orders</th>
                 <th className="px-4 py-3 font-semibold text-right">Actions</th>
@@ -204,7 +173,7 @@ export default async function AdminSellersPage() {
             <tbody>
               {!sellers || sellers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
                     No sellers found.
                   </td>
                 </tr>
@@ -212,8 +181,7 @@ export default async function AdminSellersPage() {
                 sellers.map((seller) => {
                   const productCount = productCountsMap.get(seller.id) || 0
                   const paidOrders = paidOrdersMap.get(seller.id) || 0
-
-                  const health = getSellerHealth(
+                  const onboarding = getOnboardingStatus(
                     seller as SellerProfile,
                     productCount,
                     paidOrders
@@ -232,40 +200,19 @@ export default async function AdminSellersPage() {
                           <p className="mt-1 text-xs text-slate-500">
                             {seller.email || "-"}
                           </p>
-                          <p className="mt-1 text-xs text-slate-400">
-                            {seller.contact_phone || "-"}
-                          </p>
                         </div>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                          {health.onboardingStatus}
-                        </span>
                       </td>
 
                       <td className="px-4 py-4">
                         <div className="space-y-2">
                           <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${health.color}`}
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${onboarding.tone}`}
                           >
-                            {health.label}
+                            {onboarding.label}
                           </span>
                           <p className="text-xs text-slate-500">
-                            {health.score}/{health.maxScore} complete •{" "}
-                            {health.percent}%
+                            {onboarding.note}
                           </p>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex max-w-md flex-wrap gap-2">
-                          <CheckPill ok={health.checks.bank} label="Bank" />
-                          <CheckPill ok={health.checks.delivery} label="Delivery" />
-                          <CheckPill ok={health.checks.share} label="Share" />
-                          <CheckPill ok={health.checks.hours} label="Hours" />
-                          <CheckPill ok={health.checks.slug} label="Slug" />
-                          <CheckPill ok={health.checks.products} label="Products" />
                         </div>
                       </td>
 
@@ -278,7 +225,7 @@ export default async function AdminSellersPage() {
                       </td>
 
                       <td className="px-4 py-4">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex flex-wrap justify-end gap-2">
                           <Link
                             href={`/admin/sellers/${seller.id}`}
                             className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
@@ -286,13 +233,36 @@ export default async function AdminSellersPage() {
                             Edit
                           </Link>
 
-                          <a
-                            href={`/s/${seller.shop_slug || ""}`}
-                            target="_blank"
+                          <Link
+                            href={`/admin/orders?seller=${seller.id}`}
                             className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            Open Store
-                          </a>
+                            Orders
+                          </Link>
+
+                          <Link
+                            href={`/admin/payout?seller=${seller.id}`}
+                            className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Payout
+                          </Link>
+
+                          <Link
+                            href={`/admin/products?seller=${seller.id}`}
+                            className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Products
+                          </Link>
+
+                          {seller.shop_slug ? (
+                            <a
+                              href={`/s/${seller.shop_slug}`}
+                              target="_blank"
+                              className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                              Open Store
+                            </a>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
