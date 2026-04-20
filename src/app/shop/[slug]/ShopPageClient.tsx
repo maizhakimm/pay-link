@@ -963,54 +963,59 @@ export default function ShopPageClient({
         </div>
 
         <div style={heroCard}>
-          <div style={sellerRow}>
-            {seller.profile_image ? (
-              <img
-                src={getImageUrl(seller.profile_image)}
-                alt={sellerName}
-                style={sellerImg}
-              />
-            ) : (
-              <div style={sellerFallback}>
-                {sellerName.charAt(0).toUpperCase()}
-              </div>
-            )}
+  <div style={heroCard}>
+  <div style={sellerRow}>
+    {seller.profile_image ? (
+      <img
+        src={getImageUrl(seller.profile_image)}
+        alt={sellerName}
+        style={sellerImg}
+      />
+    ) : (
+      <div style={sellerFallback}>
+        {sellerName.charAt(0).toUpperCase()}
+      </div>
+    )}
 
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <h1 style={shopTitle}>{sellerName}</h1>
+    <div style={heroContent}>
+      <h1 style={shopTitle}>{sellerName}</h1>
 
-              <div style={statusInlineWrap}>
-                <div
-                  style={{
-                    ...statusBadge,
-                    background:
-                      availability.label === 'Pre-order'
-                        ? '#ede9fe'
-                        : isShopOpen
-                        ? '#dcfce7'
-                        : '#fee2e2',
-                    color:
-                      availability.label === 'Pre-order'
-                        ? '#6d28d9'
-                        : isShopOpen
-                        ? '#166534'
-                        : '#b91c1c',
-                  }}
-                >
-                  {availability.label}
-                </div>
-
-                {availability.inlineInfo ? (
-                  <div style={statusInfoBadge}>{availability.inlineInfo}</div>
-                ) : null}
-              </div>
-
-              {seller.shop_description?.trim() ? (
-                <p style={shopDescription}>{seller.shop_description}</p>
-              ) : null}
-            </div>
-          </div>
+      <div style={statusInlineWrap}>
+        <div
+          style={{
+            ...statusBadge,
+            background:
+              availability.label === 'Pre-order'
+                ? '#ede9fe'
+                : isShopOpen
+                ? '#dcfce7'
+                : '#fee2e2',
+            color:
+              availability.label === 'Pre-order'
+                ? '#6d28d9'
+                : isShopOpen
+                ? '#166534'
+                : '#b91c1c',
+          }}
+        >
+          {availability.label}
         </div>
+
+        {availability.inlineInfo ? (
+          <div style={statusInfoBadge}>{availability.inlineInfo}</div>
+        ) : null}
+      </div>
+
+      {seller.shop_description?.trim() ? (
+        <p style={shopDescription}>{seller.shop_description}</p>
+      ) : null}
+
+      {seller.business_address?.trim() ? (
+        <p style={shopMeta}>{seller.business_address}</p>
+      ) : null}
+    </div>
+  </div>
+</div>
 
         {hasCategoryFeature ? (
           <div style={stickyTabWrap}>
@@ -1569,7 +1574,7 @@ const logoWrap: React.CSSProperties = {
 }
 
 const logo: React.CSSProperties = {
-  height: 22,
+  height: 20,
   width: 'auto',
 }
 
@@ -1577,9 +1582,16 @@ const heroCard: React.CSSProperties = {
   background: '#ffffff',
   border: '1px solid #e2e8f0',
   borderRadius: 24,
-  padding: 20,
+  padding: 18,
   boxShadow: '0 8px 30px rgba(15, 23, 42, 0.06)',
   marginBottom: 16,
+}
+
+const heroContent: React.CSSProperties = {
+  minWidth: 0,
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
 }
 
 const sellerRow: React.CSSProperties = {
@@ -1589,8 +1601,8 @@ const sellerRow: React.CSSProperties = {
 }
 
 const sellerImg: React.CSSProperties = {
-  width: 58,
-  height: 58,
+  width: 56,
+  height: 56,
   borderRadius: '9999px',
   objectFit: 'cover',
   border: '1px solid #e2e8f0',
@@ -1598,23 +1610,23 @@ const sellerImg: React.CSSProperties = {
 }
 
 const sellerFallback: React.CSSProperties = {
-  width: 58,
-  height: 58,
+  width: 56,
+  height: 56,
   borderRadius: '9999px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   background: '#e2e8f0',
   color: '#0f172a',
-  fontSize: 22,
+  fontSize: 20,
   fontWeight: 800,
   flexShrink: 0,
 }
 
 const shopTitle: React.CSSProperties = {
   margin: 0,
-  fontSize: 18,
-  lineHeight: 1.25,
+  fontSize: 17,
+  lineHeight: 1.3,
   fontWeight: 800,
   color: '#0f172a',
 }
@@ -1630,7 +1642,16 @@ const shopDescription: React.CSSProperties = {
   margin: '10px 0 0',
   color: '#475569',
   fontSize: 14,
-  lineHeight: 1.55,
+  lineHeight: 1.65,
+  maxWidth: 720,
+}
+
+const shopMeta: React.CSSProperties = {
+  margin: '8px 0 0',
+  color: '#64748b',
+  fontSize: 13,
+  lineHeight: 1.5,
+  maxWidth: 720,
 }
 
 const statusInlineWrap: React.CSSProperties = {
@@ -1643,17 +1664,17 @@ const statusInlineWrap: React.CSSProperties = {
 
 const statusBadge: React.CSSProperties = {
   borderRadius: 999,
-  padding: '7px 11px',
+  padding: '8px 12px',
   fontSize: 12,
   fontWeight: 800,
 }
 
 const statusInfoBadge: React.CSSProperties = {
   borderRadius: 999,
-  padding: '7px 11px',
+  padding: '8px 12px',
   fontSize: 12,
   fontWeight: 700,
-  background: '#f1f5f9',
+  background: '#f8fafc',
   color: '#475569',
   border: '1px solid #e2e8f0',
 }
