@@ -874,66 +874,61 @@ export default function SettingsPage() {
               <div className="space-y-5">
                 <div>
                   <p className="mb-3 text-sm font-extrabold text-slate-900">
-                    Nama Biz
-                  </p>
+  Nama Biz
+</p>
 
-               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
-                  Shop Description
-                </label>
-              <textarea
-                placeholder="Contoh: Kek batik homemade, kurang manis, sesuai untuk gift & event."
-                value={shopDescription}
-                onChange={(e) => setShopDescription(e.target.value)}
-                maxLength={160}
-                rows={3}
-                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-400"
-              />
-                <p className="mt-2 text-xs text-slate-500">
-                  Penerangan ringkas kedai (max 160 aksara)
-                </p>
-              </div>
+<div className="grid gap-3">
+  <input
+    placeholder="Store Name"
+    value={storeName}
+    onChange={(e) => setStoreName(e.target.value)}
+    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+  />
 
-                  <div className="grid gap-3">
-                    <div>
-                      <input
-                        placeholder="Store Name"
-                        value={storeName}
-                        onChange={(e) => setStoreName(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                      />
+  <div>
+    <label className="mb-2 block text-sm font-bold text-slate-700">
+      Short Description (Max 160)
+    </label>
+    <textarea
+      placeholder="Contoh: Kek batik homemade, kurang manis, sesuai untuk gift & event."
+      value={shopDescription}
+      onChange={(e) => setShopDescription(e.target.value)}
+      maxLength={160}
+      rows={3}
+      className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-400"
+    />
+  </div>
 
-                      <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                          Shop URL {slugLocked ? 'Locked' : 'Preview'}
-                        </p>
+  <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+      Shop URL {slugLocked ? 'Locked' : 'Preview'}
+    </p>
 
-                        <p className="mt-1 break-all text-sm font-bold text-slate-900">
-                          {previewBaseUrl}/s/{livePreviewSlug}
-                        </p>
+    <p className="mt-1 break-all text-sm font-bold text-slate-900">
+      {previewBaseUrl}/s/{livePreviewSlug}
+    </p>
 
-                        <p className="mt-1 text-xs text-slate-500">
-                          {slugLocked
-                            ? 'Your shop URL is locked after first successful save.'
-                            : 'Preview only. Type your store name to preview your future shop URL.'}
-                        </p>
-                      </div>
-                    </div>
+    <p className="mt-1 text-xs text-slate-500">
+      {slugLocked
+        ? 'Your shop URL is locked after first successful save.'
+        : 'Preview only. Type your store name to preview your future shop URL.'}
+    </p>
+  </div>
 
-                    <input
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
+  <input
+    placeholder="Email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+  />
 
-                    <input
-                      placeholder="WhatsApp Number"
-                      value={whatsapp}
-                      onChange={(e) => setWhatsapp(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
-                  </div>
+  <input
+    placeholder="WhatsApp Number"
+    value={whatsapp}
+    onChange={(e) => setWhatsapp(e.target.value)}
+    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+  />
+</div>
                 </div>
 
                 <div>
