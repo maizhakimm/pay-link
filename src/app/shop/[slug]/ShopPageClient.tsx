@@ -1240,17 +1240,7 @@ useEffect(() => {
             </div>
           ) : (
             <>
-              <div style={deliveryInfoCard}>
-                <div style={deliveryInfoTitle}>Delivery Info</div>
-                <div style={deliveryInfoText}>{deliverySummary}</div>
-
-                {seller.delivery_area?.trim() ? (
-                  <div style={deliveryInfoMeta}>
-                    Kawasan: {seller.delivery_area.trim()}
-                  </div>
-                ) : null}
-              </div>
-
+              
               <div style={summaryList}>
                 {cartItems.map((item) => (
                   <div key={item.id} style={summaryCard}>
