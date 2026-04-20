@@ -1615,10 +1615,10 @@ const shopSub: React.CSSProperties = {
 }
 
 const shopDescription: React.CSSProperties = {
-  margin: '8px 0 0',
+  margin: '10px 0 0',
   color: '#475569',
   fontSize: 14,
-  lineHeight: 1.5,
+  lineHeight: 1.55,
 }
 
 const statusInlineWrap: React.CSSProperties = {
@@ -1699,7 +1699,7 @@ const emptyCard: React.CSSProperties = {
 
 const productGrid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gridTemplateColumns: '1fr',
   gap: 16,
 }
 
@@ -1748,6 +1748,8 @@ const productDesc: React.CSSProperties = {
   color: '#64748b',
   fontSize: 14,
   lineHeight: 1.5,
+  whiteSpace: 'normal',
+  wordBreak: 'break-word',
 }
 
 const qtyWrap: React.CSSProperties = {
