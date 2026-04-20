@@ -1453,7 +1453,7 @@ useEffect(() => {
                         <div style={addonGroupTitle}>{group.name}</div>
                         <div style={addonGroupMeta}>
                           {group.selection_type === 'single'
-                            ? 'Pilih satu'
+                            ? 'Pilih Satu Sahaja'
                             : 'Boleh pilih banyak'}
                           {group.is_required ? ' • Required' : ''}
                         </div>
@@ -1635,7 +1635,7 @@ const sellerFallbackMobile: React.CSSProperties = {
 
 const shopTitleMobile: React.CSSProperties = {
   margin: 0,
-  fontSize: 18,
+  fontSize: 16,
   fontWeight: 800,
   color: '#0f172a',
 }
@@ -1752,9 +1752,9 @@ const sellerFallback: React.CSSProperties = {
 
 const shopTitle: React.CSSProperties = {
   margin: 0,
-  fontSize: 17,
-  lineHeight: 1.3,
-  fontWeight: 800,
+  fontSize: 16,
+  lineHeight: 1.2,
+  fontWeight: 600,
   color: '#0f172a',
 }
 
@@ -1762,14 +1762,14 @@ const shopSub: React.CSSProperties = {
   margin: '8px 0 0',
   color: '#64748b',
   fontSize: 14,
-  lineHeight: 1.5,
+  lineHeight: 1.3,
 }
 
 const shopDescription: React.CSSProperties = {
   margin: '10px 0 0',
   color: '#475569',
   fontSize: 14,
-  lineHeight: 1.65,
+  lineHeight: 1.3,
   maxWidth: 720,
 }
 
@@ -1792,7 +1792,7 @@ const statusInfoBadge: React.CSSProperties = {
   borderRadius: 999,
   padding: '8px 12px',
   fontSize: 12,
-  fontWeight: 700,
+  fontWeight: 600,
   background: '#f8fafc',
   color: '#475569',
   border: '1px solid #e2e8f0',
@@ -1825,7 +1825,7 @@ const tabButton: React.CSSProperties = {
   background: '#fff',
   color: '#334155',
   fontSize: 14,
-  fontWeight: 700,
+  fontWeight: 600,
   whiteSpace: 'nowrap',
   cursor: 'pointer',
 }
@@ -1875,16 +1875,16 @@ const productInfo: React.CSSProperties = {
 }
 
 const productName: React.CSSProperties = {
-  fontSize: 18,
-  fontWeight: 800,
+  fontSize: 16,
+  fontWeight: 600,
   color: '#0f172a',
-  lineHeight: 1.3,
+  lineHeight: 1.2,
 }
 
 const productPrice: React.CSSProperties = {
   marginTop: 6,
-  fontSize: 16,
-  fontWeight: 800,
+  fontSize: 14,
+  fontWeight: 600,
   color: '#0f172a',
 }
 
@@ -1899,7 +1899,7 @@ const productDesc: React.CSSProperties = {
   marginTop: 8,
   color: '#64748b',
   fontSize: 14,
-  lineHeight: 1.5,
+  lineHeight: 1.3,
   whiteSpace: 'normal',
   wordBreak: 'break-word',
 }
@@ -2040,7 +2040,7 @@ const deliveryInfoCard: React.CSSProperties = {
 
 const deliveryInfoTitle: React.CSSProperties = {
   fontSize: 14,
-  fontWeight: 800,
+  fontWeight: 600,
   color: '#1d4ed8',
   marginBottom: 8,
 }
@@ -2048,7 +2048,7 @@ const deliveryInfoTitle: React.CSSProperties = {
 const deliveryInfoText: React.CSSProperties = {
   fontSize: 14,
   color: '#475569',
-  lineHeight: 1.6,
+  lineHeight: 1.3,
 }
 
 const deliveryInfoMeta: React.CSSProperties = {
@@ -2375,14 +2375,14 @@ const addonOptionRow: React.CSSProperties = {
 }
 
 const addonOptionName: React.CSSProperties = {
-  fontSize: 14,
-  fontWeight: 700,
+  fontSize: 13,
+  fontWeight: 600,
   color: '#0f172a',
 }
 
 const addonOptionPrice: React.CSSProperties = {
   fontSize: 13,
-  fontWeight: 800,
+  fontWeight: 600,
   color: '#334155',
 }
 
@@ -2392,14 +2392,14 @@ const noteWrap: React.CSSProperties = {
 }
 
 const noteLabel: React.CSSProperties = {
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: 800,
   color: '#0f172a',
 }
 
 const noteTextarea: React.CSSProperties = {
   width: '100%',
-  borderRadius: 14,
+  borderRadius: 13,
   border: '1px solid #cbd5e1',
   padding: 12,
   fontSize: 14,
