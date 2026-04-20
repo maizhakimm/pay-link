@@ -518,19 +518,21 @@ export default function ShopPageClient({
     currentIndex: 0,
   })
   
- const [isDesktop, setIsDesktop] = useState(false)
+ const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
 
- useEffect(() => {
-    function handleResize() {
-      setIsDesktop(window.innerWidth >= 1024)
-    }
+useEffect(() => {
+  function handleResize() {
+    setIsDesktop(window.innerWidth >= 1024)
+  }
 
-    handleResize()
-    window.addEventListener('resize', handleResize)
+  handleResize()
+  window.addEventListener('resize', handleResize)
 
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-  
+  return () => window.removeEventListener('resize', handleResize)
+}, [])
+
+  if (isDesktop === null) return null
+
   const [addonModal, setAddonModal] = useState<{
     product: ProductRow | null
     groups: ProductAddonGroup[]
@@ -963,28 +965,24 @@ export default function ShopPageClient({
         </div>
 
   <div style={heroCard}>
-  <div style={sellerRow}>
-    {seller.profile_image ? (
-      <img
-        src={getImageUrl(seller.profile_image)}
-        alt={sellerName}
-        style={sellerImg}
-      />
-    ) : (
-      <div style={sellerFallback}>
-        {sellerName.charAt(0).toUpperCase()}
-      </div>
-    )}
+  {/** MOBILE LAYOUT */}
+  {!isDesktop && (
+    <div style={heroMobile}>
+      {seller.profile_image ? (
+        <img
+          src={getImageUrl(seller.profile_image)}
+          alt={sellerName}
+          style={sellerImgMobile}
+        />
+      ) : (
+        <div style={sellerFallbackMobile}>
+          {sellerName.charAt(0).toUpperCase()}
+        </div>
+      )}
 
-    <div style={heroContent}>
-      <h1 style={shopTitle}>{sellerName}</h1>
+      <h1 style={shopTitleMobile}>{sellerName}</h1>
 
-      <div
-        style={{
-          ...statusInlineWrap,
-        justifyContent: isDesktop ? 'flex-start' : 'center',
-        }}
-      >
+      <div style={badgeCenter}>
         <div
           style={{
             ...statusBadge,
@@ -1005,34 +1003,67 @@ export default function ShopPageClient({
           {availability.label}
         </div>
 
-        {availability.inlineInfo ? (
+        {availability.inlineInfo && (
           <div style={statusInfoBadge}>{availability.inlineInfo}</div>
-        ) : null}
+        )}
       </div>
 
-      {seller.shop_description?.trim() ? (
-        <p
-          style={{
-          ...shopDescription,
-          textAlign: isDesktop ? 'left' : 'center',
-          }}
-        >
-          {seller.shop_description}
-        </p>
-      ) : null}
-
-      {seller.business_address?.trim() ? (
-        <p
-          style={{
-          ...shopMeta,
-          textAlign: isDesktop ? 'left' : 'center',
-          }}
-        >
-          {seller.business_address}
-        </p>
-      ) : null}
+      {seller.shop_description?.trim() && (
+        <p style={shopDescriptionMobile}>{seller.shop_description}</p>
+      )}
     </div>
-  </div>
+  )}
+
+  {/** DESKTOP LAYOUT */}
+  {isDesktop && (
+    <div style={sellerRow}>
+      {seller.profile_image ? (
+        <img
+          src={getImageUrl(seller.profile_image)}
+          alt={sellerName}
+          style={sellerImgDesktop}
+        />
+      ) : (
+        <div style={sellerFallbackDesktop}>
+          {sellerName.charAt(0).toUpperCase()}
+        </div>
+      )}
+
+      <div style={heroContent}>
+        <h1 style={shopTitle}>{sellerName}</h1>
+
+        <div style={statusInlineWrap}>
+          <div
+            style={{
+              ...statusBadge,
+              background:
+                availability.label === 'Pre-order'
+                  ? '#ede9fe'
+                  : isShopOpen
+                  ? '#dcfce7'
+                  : '#fee2e2',
+              color:
+                availability.label === 'Pre-order'
+                  ? '#6d28d9'
+                  : isShopOpen
+                  ? '#166534'
+                  : '#b91c1c',
+            }}
+          >
+            {availability.label}
+          </div>
+
+          {availability.inlineInfo && (
+            <div style={statusInfoBadge}>{availability.inlineInfo}</div>
+          )}
+        </div>
+
+        {seller.shop_description?.trim() && (
+          <p style={shopDescription}>{seller.shop_description}</p>
+        )}
+      </div>
+    </div>
+  )}
 </div>
 
         {hasCategoryFeature ? (
@@ -1573,6 +1604,56 @@ export default function ShopPageClient({
   )
 }
 
+const heroMobile: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  textAlign: 'center',
+  gap: 10,
+  width: '100%', // 🔥 ADD THIS
+}
+
+const sellerImgMobile: React.CSSProperties = {
+  width: 72,
+  height: 72,
+  borderRadius: '9999px',
+  objectFit: 'cover',
+  border: '1px solid #e2e8f0',
+}
+
+const sellerFallbackMobile: React.CSSProperties = {
+  width: 72,
+  height: 72,
+  borderRadius: '9999px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#e2e8f0',
+  fontWeight: 800,
+  fontSize: 24,
+}
+
+const shopTitleMobile: React.CSSProperties = {
+  margin: 0,
+  fontSize: 18,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const badgeCenter: React.CSSProperties = {
+  display: 'flex',
+  gap: 8,
+  justifyContent: 'center',
+  flexWrap: 'wrap',
+}
+
+const shopDescriptionMobile: React.CSSProperties = {
+  fontSize: 14,
+  color: '#475569',
+  lineHeight: 1.6,
+  marginTop: 6,
+}
+
 const main: React.CSSProperties = {
   minHeight: '100vh',
   background: '#f8fafc',
@@ -1603,6 +1684,26 @@ const heroCard: React.CSSProperties = {
   padding: 18,
   boxShadow: '0 8px 30px rgba(15, 23, 42, 0.06)',
   marginBottom: 16,
+}
+
+const sellerImgDesktop: React.CSSProperties = {
+  width: 96,
+  height: 96,
+  borderRadius: '9999px',
+  objectFit: 'cover',
+  border: '1px solid #e2e8f0',
+}
+
+const sellerFallbackDesktop: React.CSSProperties = {
+  width: 96,
+  height: 96,
+  borderRadius: '9999px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#e2e8f0',
+  fontWeight: 800,
+  fontSize: 26,
 }
 
 const heroContent: React.CSSProperties = {
