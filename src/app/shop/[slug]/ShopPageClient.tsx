@@ -921,18 +921,18 @@ export default function ShopPageClient({
   }
 
   function showNextImage() {
-    setGallery((prev) => {
-      if (!prev.images.length) return prev
+  setGallery((prev) => {
+    if (!prev.images.length) return prev
 
-      return {
-        ...prev,
-        currentIndex:
-          prev.currentIndex === prev.images.length - 1
-            ? 0
-            : prev.currentIndex + 1,
-      }
-    })
-  }
+    return {
+      ...prev,
+      currentIndex:
+        prev.currentIndex === prev.images.length - 1
+          ? 0
+          : prev.currentIndex + 1,
+    }
+  })
+}
 
   const visibleProducts = useMemo(() => {
     if (!hasCategoryFeature) return products
@@ -962,7 +962,6 @@ export default function ShopPageClient({
           />
         </div>
 
-        <div style={heroCard}>
   <div style={heroCard}>
   <div style={sellerRow}>
     {seller.profile_image ? (
@@ -1594,6 +1593,14 @@ const heroContent: React.CSSProperties = {
   flexDirection: 'column',
 }
 
+const shopMeta: React.CSSProperties = {
+  margin: '8px 0 0',
+  color: '#64748b',
+  fontSize: 13,
+  lineHeight: 1.5,
+  maxWidth: 720,
+}
+
 const sellerRow: React.CSSProperties = {
   display: 'flex',
   alignItems: 'flex-start',
@@ -1643,14 +1650,6 @@ const shopDescription: React.CSSProperties = {
   color: '#475569',
   fontSize: 14,
   lineHeight: 1.65,
-  maxWidth: 720,
-}
-
-const shopMeta: React.CSSProperties = {
-  margin: '8px 0 0',
-  color: '#64748b',
-  fontSize: 13,
-  lineHeight: 1.5,
   maxWidth: 720,
 }
 
