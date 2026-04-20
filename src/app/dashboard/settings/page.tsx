@@ -96,6 +96,7 @@ type SellerProfileRow = {
   shop_slug?: string | null
   email?: string | null
   whatsapp?: string | null
+  shop_description?: string | null
   company_name?: string | null
   company_registration?: string | null
   business_address?: string | null
