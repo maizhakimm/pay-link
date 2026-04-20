@@ -517,7 +517,20 @@ export default function ShopPageClient({
     productName: '',
     currentIndex: 0,
   })
+  
+ const [isDesktop, setIsDesktop] = useState(false)
 
+ useEffect(() => {
+    function handleResize() {
+      setIsDesktop(window.innerWidth >= 1024)
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  
   const [addonModal, setAddonModal] = useState<{
     product: ProductRow | null
     groups: ProductAddonGroup[]
@@ -992,10 +1005,8 @@ export default function ShopPageClient({
                 ) : null}
               </div>
 
-              {seller.shop_description ? (
+              {seller.shop_description?.trim() ? (
                 <p style={shopDescription}>{seller.shop_description}</p>
-              ) : seller.business_address ? (
-                <p style={shopSub}>{seller.business_address}</p>
               ) : null}
             </div>
           </div>
@@ -1041,117 +1052,118 @@ export default function ShopPageClient({
         ) : null}
 
         <div ref={productListRef}>
-          {visibleProducts.length === 0 ? (
-            <div style={emptyCard}>
-              <p style={{ margin: 0, color: '#64748b' }}>
-                Tiada menu aktif buat masa ini.
-              </p>
-            </div>
-          ) : (
-            <div style={productGrid}>
-              {visibleProducts.map((product) => {
-                const image = getFirstImage(product)
-                const qty = cart.reduce(
-                  (sum, item) =>
-                    item.product_id === product.id ? sum + item.quantity : sum,
-                  0
-                )
-                const disableAddButton = !isShopOpen || Boolean(product.sold_out)
-                const allImages = getProductImages(product)
+  {visibleProducts.length === 0 ? (
+    <div style={emptyCard}>
+      <p style={{ margin: 0, color: '#64748b' }}>
+        Tiada menu aktif buat masa ini.
+      </p>
+    </div>
+  ) : (
+    <div
+      style={{
+        ...productGrid,
+        gridTemplateColumns: isDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+      }}
+    >
+      {visibleProducts.map((product) => {
+        const image = getFirstImage(product)
+        const qty = cart.reduce(
+          (sum, item) =>
+            item.product_id === product.id ? sum + item.quantity : sum,
+          0
+        )
+        const disableAddButton = !isShopOpen || Boolean(product.sold_out)
+        const allImages = getProductImages(product)
 
-                return (
-                  <div key={product.id} style={productCard}>
-                    <div style={productContent}>
-                      <div style={productInfo}>
-                        <div style={productName}>{product.name}</div>
+        return (
+          <div key={product.id} style={productCard}>
+            <div style={productContent}>
+              <div style={productInfo}>
+                <div style={productName}>{product.name}</div>
 
-                        <div style={productPrice}>
-                          RM {product.price.toFixed(2)}
-                        </div>
+                <div style={productPrice}>RM {product.price.toFixed(2)}</div>
 
-                        {product.track_stock ? (
-                          <div style={stockText}>
-                            Stock: {product.stock_quantity ?? 0}
-                          </div>
-                        ) : null}
-
-                        <div style={productDesc}>
-                          {product.description || 'Tiada deskripsi.'}
-                        </div>
-
-                        <div style={qtyWrap}>
-                          <div style={qtyRow}>
-                            <button
-                              type="button"
-                              onClick={() => decrease(product.id)}
-                              style={qtyBtn}
-                            >
-                              -
-                            </button>
-
-                            <span style={qtyValue}>{qty}</span>
-
-                            <button
-                              type="button"
-                              onClick={() => increase(product)}
-                              style={{
-                                ...qtyBtn,
-                                opacity: disableAddButton ? 0.4 : 1,
-                                cursor: disableAddButton
-                                  ? 'not-allowed'
-                                  : 'pointer',
-                              }}
-                              disabled={disableAddButton}
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          {!isShopOpen ? (
-                            <div style={qtyHintClosed}>Ordering unavailable</div>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => openGallery(product, 0)}
-                        style={{
-                          ...productImageButton,
-                          cursor: image ? 'pointer' : 'default',
-                        }}
-                        disabled={!image}
-                        aria-label={`View images for ${product.name}`}
-                      >
-                        <div style={productImageWrap}>
-                          {image ? (
-                            <img
-                              src={getImageUrl(image)}
-                              alt={product.name}
-                              style={productImage}
-                            />
-                          ) : (
-                            <div style={productImagePlaceholder}>No image</div>
-                          )}
-
-                          {product.sold_out ? (
-                            <div style={soldOutBadge}>Sold Out</div>
-                          ) : null}
-
-                          {allImages.length > 1 ? (
-                            <div style={multiImageBadge}>
-                              {allImages.length} photos
-                            </div>
-                          ) : null}
-                        </div>
-                      </button>
-                    </div>
+                {product.track_stock ? (
+                  <div style={stockText}>
+                    Stock: {product.stock_quantity ?? 0}
                   </div>
-                )
-              })}
+                ) : null}
+
+                <div style={productDesc}>
+                  {product.description || 'Tiada deskripsi.'}
+                </div>
+
+                <div style={qtyWrap}>
+                  <div style={qtyRow}>
+                    <button
+                      type="button"
+                      onClick={() => decrease(product.id)}
+                      style={qtyBtn}
+                    >
+                      -
+                    </button>
+
+                    <span style={qtyValue}>{qty}</span>
+
+                    <button
+                      type="button"
+                      onClick={() => increase(product)}
+                      style={{
+                        ...qtyBtn,
+                        opacity: disableAddButton ? 0.4 : 1,
+                        cursor: disableAddButton ? 'not-allowed' : 'pointer',
+                      }}
+                      disabled={disableAddButton}
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {!isShopOpen ? (
+                    <div style={qtyHintClosed}>Ordering unavailable</div>
+                  ) : null}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => openGallery(product, 0)}
+                style={{
+                  ...productImageButton,
+                  cursor: image ? 'pointer' : 'default',
+                }}
+                disabled={!image}
+                aria-label={`View images for ${product.name}`}
+              >
+                <div style={productImageWrap}>
+                  {image ? (
+                    <img
+                      src={getImageUrl(image)}
+                      alt={product.name}
+                      style={productImage}
+                    />
+                  ) : (
+                    <div style={productImagePlaceholder}>No image</div>
+                  )}
+
+                  {product.sold_out ? (
+                    <div style={soldOutBadge}>Sold Out</div>
+                  ) : null}
+
+                  {allImages.length > 1 ? (
+                    <div style={multiImageBadge}>
+                      {allImages.length} photos
+                    </div>
+                  ) : null}
+                </div>
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )
+      })}
+    </div>
+  )}
+</div>
 
         <div style={checkoutCard}>
           <div style={checkoutHeader}>
@@ -1557,7 +1569,7 @@ const logoWrap: React.CSSProperties = {
 }
 
 const logo: React.CSSProperties = {
-  height: 28,
+  height: 22,
   width: 'auto',
 }
 
