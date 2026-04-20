@@ -13,6 +13,8 @@ type SellerProfile = {
   whatsapp?: string | null
   business_address?: string | null
   shop_description?: string | null
+  slug?: string | null
+  store_slug?: string | null
   accept_orders_anytime?: boolean | null
   opening_time?: string | null
   closing_time?: string | null
@@ -101,11 +103,9 @@ export default async function Page({ params }: PageProps) {
 
   let seller: SellerProfile | null = null
 
-  // 🔹 GET SELLER
-  const { data: sellers } = await supabase
-    .from('seller_profiles')
-    .select(
-  `
+const { data: directSeller } = await supabase
+  .from('seller_profiles')
+  .select(`
     id,
     store_name,
     shop_slug,
@@ -134,17 +134,14 @@ export default async function Page({ params }: PageProps) {
     share_image_mode,
     share_poster_url,
     order_mode,
-    preorder_days
-  `
-    )
+    preorder_days,
+    slug,
+    store_slug
+  `)
+  .or(`shop_slug.eq.${requestedSlug},slug.eq.${requestedSlug},store_slug.eq.${requestedSlug}`)
+  .maybeSingle()
 
-  if (sellers && sellers.length > 0) {
-    seller =
-      (sellers as SellerProfile[]).find((item) => {
-        if (!item.store_name) return false
-        return item.shop_slug === requestedSlug
-      }) || null
-  }
+seller = (directSeller as SellerProfile | null) || null
 
   // 🔹 FALLBACK SELLER FROM PRODUCT
 if (!seller) {
