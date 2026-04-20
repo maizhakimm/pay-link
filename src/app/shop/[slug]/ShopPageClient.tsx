@@ -531,8 +531,6 @@ useEffect(() => {
   return () => window.removeEventListener('resize', handleResize)
 }, [])
 
-  if (isDesktop === null) return null
-
   const [addonModal, setAddonModal] = useState<{
     product: ProductRow | null
     groups: ProductAddonGroup[]
@@ -950,6 +948,8 @@ useEffect(() => {
   const grandTotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.line_total, 0)
   }, [cart])
+
+  if (isDesktop === null) return null
 
   const sellerName = seller.store_name || 'Shop'
 
