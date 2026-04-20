@@ -12,6 +12,9 @@ type SellerProfile = {
   profile_image?: string | null
   email?: string | null
   whatsapp?: string | null
+  shop_description?: string | null
+  order_mode?: 'anytime' | 'scheduled' | 'preorder' | null
+  preorder_days?: number | null
   business_address?: string | null
   accept_orders_anytime?: boolean | null
   opening_time?: string | null
@@ -197,6 +200,9 @@ async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> 
         profile_image,
         email,
         whatsapp,
+        shop_description,
+        order_mode,
+        preorder_days,
         business_address,
         accept_orders_anytime,
         opening_time,
@@ -238,6 +244,9 @@ async function getFirstActiveProductImage(
         id,
         name,
         slug,
+        shop_description,
+        order_mode,
+        preorder_days,
         description,
         price,
         product_image_url,
@@ -368,6 +377,9 @@ export default async function Page({ params }: PageProps) {
         profile_image,
         email,
         whatsapp,
+        shop_description,
+        order_mode,
+        preorder_days,
         business_address,
         accept_orders_anytime,
         opening_time,
@@ -450,6 +462,9 @@ export default async function Page({ params }: PageProps) {
               profile_image,
               email,
               whatsapp,
+              shop_description,
+              order_mode,
+              preorder_days,
               business_address,
               accept_orders_anytime,
               opening_time,

@@ -35,6 +35,12 @@ const DELIVERY_MODES = [
   { value: 'distance_based', label: 'Distance Based' },
 ]
 
+const ORDER_MODE_OPTIONS = [
+  { value: 'anytime', label: 'Open 24 Jam' },
+  { value: 'scheduled', label: 'Ikut Waktu Operasi' },
+  { value: 'preorder', label: 'Pre-order' },
+] as const
+
 const DAY_ORDER = [
   'monday',
   'tuesday',
@@ -45,6 +51,9 @@ const DAY_ORDER = [
   'sunday',
 ] as const
 
+type DayKey = (typeof DAY_ORDER)[number]
+type OrderMode = 'anytime' | 'scheduled' | 'preorder'
+
 const DAY_LABELS: Record<DayKey, string> = {
   monday: 'Monday',
   tuesday: 'Tuesday',
@@ -54,8 +63,6 @@ const DAY_LABELS: Record<DayKey, string> = {
   saturday: 'Saturday',
   sunday: 'Sunday',
 }
-
-type DayKey = (typeof DAY_ORDER)[number]
 
 type OperatingDayItem = {
   enabled: boolean
@@ -75,82 +82,6 @@ const DEFAULT_OPERATING_DAYS: OperatingDays = {
   sunday: { enabled: false, opening_time: '09:00', closing_time: '18:00' },
 }
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-}
-
-async function generateUniqueShopSlug(base: string, currentSellerId?: string | null) {
-  const cleanBase = slugify(base || 'shop')
-  let candidate = cleanBase || 'shop'
-  let counter = 1
-
-  while (true) {
-    const { data, error } = await supabase
-      .from('seller_profiles')
-      .select('id')
-      .eq('shop_slug', candidate)
-      .maybeSingle()
-
-    if (error) {
-      throw new Error(error.message)
-    }
-
-    if (!data) {
-      return candidate
-    }
-
-    if (currentSellerId && data.id === currentSellerId) {
-      return candidate
-    }
-
-    counter += 1
-    candidate = `${cleanBase}-${counter}`
-  }
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('ms-MY', {
-    style: 'currency',
-    currency: 'MYR',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
-
-function normalizeOperatingDays(value: any): OperatingDays {
-  const safe: OperatingDays = { ...DEFAULT_OPERATING_DAYS }
-
-  if (!value || typeof value !== 'object') {
-    return safe
-  }
-
-  for (const day of DAY_ORDER) {
-    const item = value?.[day]
-    if (!item || typeof item !== 'object') continue
-
-    safe[day] = {
-      enabled:
-        typeof item.enabled === 'boolean'
-          ? item.enabled
-          : DEFAULT_OPERATING_DAYS[day].enabled,
-      opening_time:
-        typeof item.opening_time === 'string' && item.opening_time
-          ? item.opening_time
-          : DEFAULT_OPERATING_DAYS[day].opening_time,
-      closing_time:
-        typeof item.closing_time === 'string' && item.closing_time
-          ? item.closing_time
-          : DEFAULT_OPERATING_DAYS[day].closing_time,
-    }
-  }
-
-  return safe
-}
-
 type DeliveryMode =
   | 'free_delivery'
   | 'fixed_fee'
@@ -165,6 +96,7 @@ type SellerProfileRow = {
   shop_slug?: string | null
   email?: string | null
   whatsapp?: string | null
+  shop_description?: string | null
   company_name?: string | null
   company_registration?: string | null
   business_address?: string | null
@@ -188,6 +120,81 @@ type SellerProfileRow = {
   latitude?: number | null
   longitude?: number | null
   operating_days?: OperatingDays | null
+  order_mode?: OrderMode | null
+  preorder_days?: number | null
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
+async function generateUniqueShopSlug(
+  base: string,
+  currentSellerId?: string | null
+) {
+  const cleanBase = slugify(base || 'shop')
+  let candidate = cleanBase || 'shop'
+  let counter = 1
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('seller_profiles')
+      .select('id')
+      .eq('shop_slug', candidate)
+      .maybeSingle()
+
+    if (error) throw new Error(error.message)
+    if (!data) return candidate
+    if (currentSellerId && data.id === currentSellerId) return candidate
+
+    counter += 1
+    candidate = `${cleanBase}-${counter}`
+  }
+}
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('ms-MY', {
+    style: 'currency',
+    currency: 'MYR',
+    minimumFractionDigits: 2,
+  }).format(amount)
+}
+
+function normalizeOperatingDays(value: unknown): OperatingDays {
+  const safe: OperatingDays = JSON.parse(JSON.stringify(DEFAULT_OPERATING_DAYS))
+
+  if (!value || typeof value !== 'object') {
+    return safe
+  }
+
+  const obj = value as Partial<Record<DayKey, Partial<OperatingDayItem>>>
+
+  for (const day of DAY_ORDER) {
+    const item = obj?.[day]
+    if (!item || typeof item !== 'object') continue
+
+    safe[day] = {
+      enabled:
+        typeof item.enabled === 'boolean'
+          ? item.enabled
+          : DEFAULT_OPERATING_DAYS[day].enabled,
+      opening_time:
+        typeof item.opening_time === 'string' && item.opening_time
+          ? item.opening_time
+          : DEFAULT_OPERATING_DAYS[day].opening_time,
+      closing_time:
+        typeof item.closing_time === 'string' && item.closing_time
+          ? item.closing_time
+          : DEFAULT_OPERATING_DAYS[day].closing_time,
+    }
+  }
+
+  return safe
 }
 
 export default function SettingsPage() {
@@ -202,6 +209,7 @@ export default function SettingsPage() {
   const [storeName, setStoreName] = useState('')
   const [savedShopSlug, setSavedShopSlug] = useState('')
   const [slugLocked, setSlugLocked] = useState(false)
+  const [shopDescription, setShopDescription] = useState('')
 
   const [email, setEmail] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
@@ -217,7 +225,9 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  const [acceptOrdersAnytime, setAcceptOrdersAnytime] = useState(false)
+  const [orderMode, setOrderMode] = useState<OrderMode>('scheduled')
+  const [preorderDays, setPreorderDays] = useState('1')
+
   const [openingTime, setOpeningTime] = useState('09:00')
   const [closingTime, setClosingTime] = useState('22:00')
   const [temporarilyClosed, setTemporarilyClosed] = useState(false)
@@ -241,14 +251,12 @@ export default function SettingsPage() {
   const [longitude, setLongitude] = useState('')
   const [resolvedPickupAddress, setResolvedPickupAddress] = useState('')
 
-  const previewBaseUrl =
-    (process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my').replace(/\/$/, '')
+  const previewBaseUrl = (
+    process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my'
+  ).replace(/\/$/, '')
 
   const livePreviewSlug = useMemo(() => {
-    if (slugLocked && savedShopSlug) {
-      return savedShopSlug
-    }
-
+    if (slugLocked && savedShopSlug) return savedShopSlug
     return slugify(storeName || 'your-shop')
   }, [slugLocked, savedShopSlug, storeName])
 
@@ -257,8 +265,13 @@ export default function SettingsPage() {
       return 'Temporarily Closed'
     }
 
-    if (acceptOrdersAnytime) {
-      return 'Accepting orders anytime'
+    if (orderMode === 'anytime') {
+      return 'Order dibuka 24 jam'
+    }
+
+    if (orderMode === 'preorder') {
+      const days = Number(preorderDays || 1)
+      return `Pre-order • customer perlu order sekurang-kurangnya ${days} hari awal`
     }
 
     const enabledDays = DAY_ORDER.filter((day) => operatingDays[day].enabled)
@@ -282,14 +295,16 @@ export default function SettingsPage() {
     }
 
     return `${enabledDays.length} operating day(s) configured`
-  }, [acceptOrdersAnytime, operatingDays, temporarilyClosed])
+  }, [temporarilyClosed, orderMode, preorderDays, operatingDays])
 
   const enabledDayChips = useMemo(() => {
+    if (orderMode !== 'scheduled') return []
+
     return DAY_ORDER.filter((day) => operatingDays[day].enabled).map((day) => {
       const item = operatingDays[day]
       return `${DAY_LABELS[day]} (${item.opening_time} - ${item.closing_time})`
     })
-  }, [operatingDays])
+  }, [operatingDays, orderMode])
 
   const deliverySummaryText = useMemo(() => {
     const fee = Number(deliveryFee || 0)
@@ -314,7 +329,13 @@ export default function SettingsPage() {
       default:
         return 'Caj delivery tidak termasuk dalam harga. Bayaran delivery harus dibuat terus kepada rider semasa penghantaran.'
     }
-  }, [deliveryMode, deliveryFee, deliveryRatePerKm, deliveryMinFee, deliveryRadiusKm])
+  }, [
+    deliveryMode,
+    deliveryFee,
+    deliveryRatePerKm,
+    deliveryMinFee,
+    deliveryRadiusKm,
+  ])
 
   useEffect(() => {
     loadProfile()
@@ -330,7 +351,10 @@ export default function SettingsPage() {
     }))
   }
 
-  async function ensureSellerProfile(currentUserId: string, currentUserEmail: string) {
+  async function ensureSellerProfile(
+    currentUserId: string,
+    currentUserEmail: string
+  ) {
     const { data: existing, error: existingError } = await supabase
       .from('seller_profiles')
       .select('*')
@@ -355,6 +379,8 @@ export default function SettingsPage() {
         store_name: fallbackStoreName,
         shop_slug: null,
         accept_orders_anytime: false,
+        order_mode: 'scheduled',
+        preorder_days: 1,
         opening_time: null,
         closing_time: null,
         temporarily_closed: false,
@@ -395,9 +421,7 @@ export default function SettingsPage() {
         throw new Error(authError.message)
       }
 
-      if (!user) {
-        return
-      }
+      if (!user) return
 
       setUserId(user.id)
       setAccountEmail(user.email || '')
@@ -408,8 +432,13 @@ export default function SettingsPage() {
       const existingStoreName = profile.store_name || ''
       const isDefaultName = existingStoreName === 'My Store'
 
+      const derivedOrderMode: OrderMode =
+        profile.order_mode ||
+        (profile.accept_orders_anytime ? 'anytime' : 'scheduled')
+
       setSellerId(profile.id)
       setSavedShopSlug(existingSlug)
+      setShopDescription(profile.shop_description || '')
       setEmail(profile.email || '')
       setWhatsapp(profile.whatsapp || '')
       setCompanyName(profile.company_name || '')
@@ -420,7 +449,9 @@ export default function SettingsPage() {
       setAccountHolderName(profile.account_holder_name || '')
       setProfileImage(profile.profile_image || '')
 
-      setAcceptOrdersAnytime(profile.accept_orders_anytime ?? false)
+      setOrderMode(derivedOrderMode)
+      setPreorderDays(String(profile.preorder_days ?? 1))
+
       setOpeningTime(profile.opening_time || '09:00')
       setClosingTime(profile.closing_time || '22:00')
       setTemporarilyClosed(profile.temporarily_closed ?? false)
@@ -453,7 +484,8 @@ export default function SettingsPage() {
       setStoreName(!existingSlug && isDefaultName ? '' : existingStoreName)
       setSlugLocked(Boolean(existingSlug))
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load profile'
+      const message =
+        err instanceof Error ? err.message : 'Failed to load profile'
       alert(message)
     } finally {
       setLoading(false)
@@ -510,7 +542,8 @@ export default function SettingsPage() {
 
       if (!response.ok || !data.ok) {
         throw new Error(
-          data.error || 'Alamat tidak dapat dikenal pasti. Sila semak semula alamat pickup.'
+          data.error ||
+            'Alamat tidak dapat dikenal pasti. Sila semak semula alamat pickup.'
         )
       }
 
@@ -555,6 +588,7 @@ export default function SettingsPage() {
     const parsedDeliveryRadiusKm = Number(deliveryRadiusKm || 0)
     const parsedDeliveryRatePerKm = Number(deliveryRatePerKm || 0)
     const parsedDeliveryMinFee = Number(deliveryMinFee || 0)
+    const parsedPreorderDays = Number(preorderDays || 1)
 
     let parsedLatitude = latitude.trim() === '' ? null : Number(latitude)
     let parsedLongitude = longitude.trim() === '' ? null : Number(longitude)
@@ -564,7 +598,12 @@ export default function SettingsPage() {
       return
     }
 
-    if (!acceptOrdersAnytime) {
+    if (!['anytime', 'scheduled', 'preorder'].includes(orderMode)) {
+      alert('Please select a valid order mode.')
+      return
+    }
+
+    if (orderMode === 'scheduled') {
       const enabledDays = DAY_ORDER.filter((day) => operatingDays[day].enabled)
 
       if (enabledDays.length === 0) {
@@ -574,15 +613,25 @@ export default function SettingsPage() {
 
       for (const day of enabledDays) {
         const item = operatingDays[day]
+
         if (!item.opening_time || !item.closing_time) {
           alert(`Please set opening and closing time for ${DAY_LABELS[day]}.`)
           return
         }
 
         if (item.opening_time === item.closing_time) {
-          alert(`${DAY_LABELS[day]} opening time and closing time cannot be the same.`)
+          alert(
+            `${DAY_LABELS[day]} opening time and closing time cannot be the same.`
+          )
           return
         }
+      }
+    }
+
+    if (orderMode === 'preorder') {
+      if (!Number.isInteger(parsedPreorderDays) || parsedPreorderDays < 1) {
+        alert('Please enter preorder days of at least 1.')
+        return
       }
     }
 
@@ -597,12 +646,18 @@ export default function SettingsPage() {
     }
 
     if (deliveryMode === 'distance_based') {
-      if (!Number.isFinite(parsedDeliveryRadiusKm) || parsedDeliveryRadiusKm <= 0) {
+      if (
+        !Number.isFinite(parsedDeliveryRadiusKm) ||
+        parsedDeliveryRadiusKm <= 0
+      ) {
         alert('Please enter max delivery radius more than 0.')
         return
       }
 
-      if (!Number.isFinite(parsedDeliveryRatePerKm) || parsedDeliveryRatePerKm <= 0) {
+      if (
+        !Number.isFinite(parsedDeliveryRatePerKm) ||
+        parsedDeliveryRatePerKm <= 0
+      ) {
         alert('Please enter rate per km more than 0.')
         return
       }
@@ -619,9 +674,7 @@ export default function SettingsPage() {
 
       const geocoded = await detectPickupLocation()
 
-      if (!geocoded) {
-        return
-      }
+      if (!geocoded) return
 
       parsedLatitude = geocoded.latitude
       parsedLongitude = geocoded.longitude
@@ -642,17 +695,27 @@ export default function SettingsPage() {
       let finalShopSlug = savedShopSlug
 
       if (!finalShopSlug) {
-        finalShopSlug = await generateUniqueShopSlug(trimmedStoreName, currentSellerId)
+        finalShopSlug = await generateUniqueShopSlug(
+          trimmedStoreName,
+          currentSellerId
+        )
       }
 
       const firstEnabledDay = DAY_ORDER.find((day) => operatingDays[day].enabled)
-      const fallbackOpening = firstEnabledDay ? operatingDays[firstEnabledDay].opening_time : null
-      const fallbackClosing = firstEnabledDay ? operatingDays[firstEnabledDay].closing_time : null
+
+      const fallbackOpening = firstEnabledDay
+        ? operatingDays[firstEnabledDay].opening_time
+        : openingTime || null
+
+      const fallbackClosing = firstEnabledDay
+        ? operatingDays[firstEnabledDay].closing_time
+        : closingTime || null
 
       const { error } = await supabase
         .from('seller_profiles')
         .update({
           store_name: trimmedStoreName,
+          shop_description: shopDescription.trim() || null,
           email: email.trim() || null,
           whatsapp: whatsapp.trim() || null,
           company_name: companyName.trim() || null,
@@ -663,14 +726,21 @@ export default function SettingsPage() {
           account_holder_name: accountHolderName.trim() || null,
           profile_image: profileImage || null,
           shop_slug: finalShopSlug,
-          accept_orders_anytime: acceptOrdersAnytime,
-          opening_time: acceptOrdersAnytime ? null : fallbackOpening,
-          closing_time: acceptOrdersAnytime ? null : fallbackClosing,
+
+          order_mode: orderMode,
+          preorder_days: orderMode === 'preorder' ? parsedPreorderDays : 1,
+
+          // legacy compatibility
+          accept_orders_anytime: orderMode === 'anytime',
+
+          opening_time: orderMode === 'scheduled' ? fallbackOpening : null,
+          closing_time: orderMode === 'scheduled' ? fallbackClosing : null,
           temporarily_closed: temporarilyClosed,
           closed_message:
             trimmedClosedMessage ||
             'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
-          operating_days: acceptOrdersAnytime ? null : operatingDays,
+          operating_days: orderMode === 'scheduled' ? operatingDays : null,
+
           delivery_mode: deliveryMode,
           delivery_fee: deliveryMode === 'fixed_fee' ? parsedDeliveryFee : 0,
           delivery_area: trimmedDeliveryArea || null,
@@ -695,12 +765,15 @@ export default function SettingsPage() {
       setStoreName(trimmedStoreName)
       setSavedShopSlug(finalShopSlug)
       setSlugLocked(true)
+      setOpeningTime(fallbackOpening || '09:00')
+      setClosingTime(fallbackClosing || '22:00')
       setPickupAddress(trimmedPickupAddress)
       setResolvedPickupAddress(trimmedPickupAddress)
 
       alert('Settings updated successfully!')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save settings'
+      const message =
+        err instanceof Error ? err.message : 'Failed to save settings'
       alert(message)
     } finally {
       setSaving(false)
@@ -758,7 +831,8 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
-          Manage your store, payout details, account settings, and order availability.
+          Manage your store, payout details, account settings, and order
+          availability.
         </p>
       </div>
 
@@ -770,7 +844,9 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_0.85fr]">
           <div className="space-y-5">
             <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Seller Profile</h2>
+              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
+                Seller Profile
+              </h2>
 
               <div className="mb-5">
                 <p className="mb-2 text-sm font-bold text-slate-700">Logo Biz</p>
@@ -797,53 +873,69 @@ export default function SettingsPage() {
 
               <div className="space-y-5">
                 <div>
-                  <p className="mb-3 text-sm font-extrabold text-slate-900">Nama Biz</p>
+                  <p className="mb-3 text-sm font-extrabold text-slate-900">
+  Nama Biz
+</p>
 
-                  <div className="grid gap-3">
-                    <div>
-                      <input
-                        placeholder="Store Name"
-                        value={storeName}
-                        onChange={(e) => setStoreName(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                      />
+<div className="grid gap-3">
+  <input
+    placeholder="Store Name"
+    value={storeName}
+    onChange={(e) => setStoreName(e.target.value)}
+    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+  />
 
-                      <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                          Shop URL {slugLocked ? 'Locked' : 'Preview'}
-                        </p>
+  <div>
+    <label className="mb-2 block text-sm font-bold text-slate-700">
+      Short Description (Max 160)
+    </label>
+    <textarea
+      placeholder="Contoh: Kek batik homemade, kurang manis, sesuai untuk gift & event."
+      value={shopDescription}
+      onChange={(e) => setShopDescription(e.target.value)}
+      maxLength={160}
+      rows={3}
+      className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-400"
+    />
+  </div>
 
-                        <p className="mt-1 break-all text-sm font-bold text-slate-900">
-                          {previewBaseUrl}/s/{livePreviewSlug}
-                        </p>
+  <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+      Shop URL {slugLocked ? 'Locked' : 'Preview'}
+    </p>
 
-                        <p className="mt-1 text-xs text-slate-500">
-                          {slugLocked
-                            ? 'Your shop URL is locked after first successful save.'
-                            : 'Preview only. Type your store name to preview your future shop URL.'}
-                        </p>
-                      </div>
-                    </div>
+    <p className="mt-1 break-all text-sm font-bold text-slate-900">
+      {previewBaseUrl}/s/{livePreviewSlug}
+    </p>
 
-                    <input
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
+    <p className="mt-1 text-xs text-slate-500">
+      {slugLocked
+        ? 'Your shop URL is locked after first successful save.'
+        : 'Preview only. Type your store name to preview your future shop URL.'}
+    </p>
+  </div>
 
-                    <input
-                      placeholder="WhatsApp Number"
-                      value={whatsapp}
-                      onChange={(e) => setWhatsapp(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                    />
-                  </div>
+  <input
+    placeholder="Email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+  />
+
+  <input
+    placeholder="WhatsApp Number"
+    value={whatsapp}
+    onChange={(e) => setWhatsapp(e.target.value)}
+    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+  />
+</div>
                 </div>
 
                 <div>
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-extrabold text-slate-900">Company Info</p>
+                    <p className="text-sm font-extrabold text-slate-900">
+                      Company Info
+                    </p>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
                       Optional
                     </span>
@@ -875,7 +967,9 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <p className="mb-3 text-sm font-extrabold text-slate-900">Payout Details</p>
+                  <p className="mb-3 text-sm font-extrabold text-slate-900">
+                    Payout Details
+                  </p>
 
                   <div className="grid gap-3">
                     <select
@@ -909,7 +1003,9 @@ export default function SettingsPage() {
 
                 <div>
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-extrabold text-slate-900">Delivery Settings</p>
+                    <p className="text-sm font-extrabold text-slate-900">
+                      Delivery Settings
+                    </p>
                     <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
                       Customer-facing
                     </span>
@@ -917,7 +1013,9 @@ export default function SettingsPage() {
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-sm font-bold text-slate-700">Preview</p>
-                    <p className="mt-1 text-sm text-slate-600">{deliverySummaryText}</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {deliverySummaryText}
+                    </p>
 
                     {deliveryArea.trim() ? (
                       <p className="mt-2 text-xs text-slate-500">
@@ -926,7 +1024,9 @@ export default function SettingsPage() {
                     ) : null}
 
                     {deliveryNote.trim() ? (
-                      <p className="mt-1 text-xs text-slate-500">{deliveryNote.trim()}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {deliveryNote.trim()}
+                      </p>
                     ) : null}
                   </div>
 
@@ -937,7 +1037,9 @@ export default function SettingsPage() {
                       </label>
                       <select
                         value={deliveryMode}
-                        onChange={(e) => setDeliveryMode(e.target.value as DeliveryMode)}
+                        onChange={(e) =>
+                          setDeliveryMode(e.target.value as DeliveryMode)
+                        }
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
                       >
                         {DELIVERY_MODES.map((mode) => (
@@ -1024,7 +1126,8 @@ export default function SettingsPage() {
                             className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                           />
                           <p className="mt-2 text-xs text-slate-500">
-                            Seller hanya isi alamat. Sistem akan auto detect latitude dan longitude.
+                            Seller hanya isi alamat. Sistem akan auto detect
+                            latitude dan longitude.
                           </p>
                         </div>
 
@@ -1035,13 +1138,15 @@ export default function SettingsPage() {
                             disabled={detectingLocation}
                             className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
                           >
-                            {detectingLocation ? 'Detecting...' : 'Detect Pickup Location'}
+                            {detectingLocation
+                              ? 'Detecting...'
+                              : 'Detect Pickup Location'}
                           </button>
 
                           {latitude && longitude ? (
                             <div className="text-xs text-slate-600">
-                              Latitude: <strong>{latitude}</strong> &nbsp;•&nbsp; Longitude:{' '}
-                              <strong>{longitude}</strong>
+                              Latitude: <strong>{latitude}</strong> &nbsp;•&nbsp;
+                              Longitude: <strong>{longitude}</strong>
                             </div>
                           ) : (
                             <div className="text-xs text-slate-500">
@@ -1065,8 +1170,8 @@ export default function SettingsPage() {
                         <input type="hidden" value={longitude} readOnly />
 
                         <p className="text-xs leading-5 text-slate-500">
-                          Sistem akan simpan latitude dan longitude secara automatik bila alamat
-                          berjaya dikenal pasti.
+                          Sistem akan simpan latitude dan longitude secara
+                          automatik bila alamat berjaya dikenal pasti.
                         </p>
                       </div>
                     ) : null}
@@ -1098,8 +1203,8 @@ export default function SettingsPage() {
                         className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                       />
                       <p className="mt-2 text-xs text-slate-500">
-                        Nota tambahan ini boleh dipaparkan kepada customer semasa checkout /
-                        shop page.
+                        Nota tambahan ini boleh dipaparkan kepada customer
+                        semasa checkout / shop page.
                       </p>
                     </div>
                   </div>
@@ -1107,32 +1212,44 @@ export default function SettingsPage() {
 
                 <div>
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-extrabold text-slate-900">Order Availability</p>
+                    <p className="text-sm font-extrabold text-slate-900">
+                      Order Availability
+                    </p>
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-bold ${
                         temporarilyClosed
                           ? 'bg-rose-100 text-rose-700'
-                          : 'bg-emerald-100 text-emerald-700'
+                          : orderMode === 'preorder'
+                          ? 'bg-violet-100 text-violet-700'
+                          : orderMode === 'anytime'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-100 text-amber-700'
                       }`}
                     >
                       {temporarilyClosed
                         ? 'Temporarily Closed'
-                        : acceptOrdersAnytime
+                        : orderMode === 'anytime'
                         ? 'Open Anytime'
+                        : orderMode === 'preorder'
+                        ? 'Pre-order'
                         : 'By Day Schedule'}
                     </span>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-sm font-bold text-slate-700">Current Status</p>
-                    <p className="mt-1 text-sm text-slate-600">{availabilityStatusText}</p>
+                    <p className="text-sm font-bold text-slate-700">
+                      Current Status
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {availabilityStatusText}
+                    </p>
 
-                    {!acceptOrdersAnytime && enabledDayChips.length > 0 ? (
+                    {orderMode === 'scheduled' && enabledDayChips.length > 0 ? (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {enabledDayChips.map((item) => (
                           <span
                             key={item}
-                            className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200"
+                            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
                           >
                             {item}
                           </span>
@@ -1142,27 +1259,58 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="mt-4 grid gap-4">
-                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                      <input
-                        type="checkbox"
-                        checked={acceptOrdersAnytime}
-                        onChange={(e) => setAcceptOrdersAnytime(e.target.checked)}
-                        className="mt-1 h-4 w-4"
-                      />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">Accept orders anytime</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          Untick jika seller nak set waktu operasi ikut hari.
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Cara Kedai Menerima Order
+                      </label>
+                      <select
+                        value={orderMode}
+                        onChange={(e) =>
+                          setOrderMode(e.target.value as OrderMode)
+                        }
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                      >
+                        {ORDER_MODE_OPTIONS.map((mode) => (
+                          <option key={mode.value} value={mode.value}>
+                            {mode.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-2 text-xs text-slate-500">
+                        Pilih sama ada kedai dibuka 24 jam, ikut waktu operasi,
+                        atau pre-order.
+                      </p>
+                    </div>
+
+                    {orderMode === 'preorder' ? (
+                      <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-4">
+                        <label className="mb-2 block text-sm font-bold text-slate-700">
+                          Order Awal (Hari)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={preorderDays}
+                          onChange={(e) => setPreorderDays(e.target.value)}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                        />
+                        <p className="mt-2 text-xs text-slate-500">
+                          Contoh: 1 bermaksud customer perlu order
+                          sekurang-kurangnya 1 hari awal.
                         </p>
                       </div>
-                    </label>
+                    ) : null}
 
-                    {!acceptOrdersAnytime ? (
+                    {orderMode === 'scheduled' ? (
                       <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="mb-3">
-                          <p className="text-sm font-bold text-slate-900">Set by day</p>
+                          <p className="text-sm font-bold text-slate-900">
+                            Set by day
+                          </p>
                           <p className="mt-1 text-xs text-slate-500">
-                            Seller boleh pilih hari buka dan waktu operasi untuk setiap hari.
+                            Seller boleh pilih hari buka dan waktu operasi untuk
+                            setiap hari.
                           </p>
                         </div>
 
@@ -1181,7 +1329,9 @@ export default function SettingsPage() {
                                       type="checkbox"
                                       checked={item.enabled}
                                       onChange={(e) =>
-                                        updateOperatingDay(day, { enabled: e.target.checked })
+                                        updateOperatingDay(day, {
+                                          enabled: e.target.checked,
+                                        })
                                       }
                                       className="h-4 w-4"
                                     />
@@ -1235,16 +1385,19 @@ export default function SettingsPage() {
                         className="mt-1 h-4 w-4"
                       />
                       <div>
-                        <p className="text-sm font-bold text-slate-900">Temporarily closed</p>
+                        <p className="text-sm font-bold text-slate-900">
+                          Tutup Sementara
+                        </p>
                         <p className="mt-1 text-xs leading-5 text-slate-500">
-                          Tutup sementara walaupun waktu operasi masih aktif.
+                          Override semua setting order dan paparkan kedai
+                          sebagai ditutup sementara.
                         </p>
                       </div>
                     </label>
 
                     <div>
                       <label className="mb-2 block text-sm font-bold text-slate-700">
-                        Closed Message
+                        Mesej Bila Kedai Tutup
                       </label>
                       <textarea
                         placeholder="Contoh: Kedai kini ditutup. Tempahan dibuka semula esok."
@@ -1254,8 +1407,8 @@ export default function SettingsPage() {
                         className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                       />
                       <p className="mt-2 text-xs text-slate-500">
-                        Mesej ini boleh dipaparkan kepada customer bila kedai tidak menerima
-                        order.
+                        Mesej ini dipaparkan kepada customer apabila kedai tidak
+                        menerima order.
                       </p>
                     </div>
                   </div>
@@ -1267,7 +1420,11 @@ export default function SettingsPage() {
                   disabled={saving || detectingLocation}
                   className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {saving ? 'Saving...' : detectingLocation ? 'Detecting location...' : 'Save Settings'}
+                  {saving
+                    ? 'Saving...'
+                    : detectingLocation
+                    ? 'Detecting location...'
+                    : 'Save Settings'}
                 </button>
               </div>
             </section>
@@ -1275,7 +1432,9 @@ export default function SettingsPage() {
 
           <div className="space-y-5">
             <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Account</h2>
+              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
+                Account
+              </h2>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm font-bold text-slate-700">Login Email</p>
@@ -1285,7 +1444,9 @@ export default function SettingsPage() {
               </div>
 
               <div className="mt-4 space-y-3">
-                <p className="text-sm font-extrabold text-slate-900">Change Password</p>
+                <p className="text-sm font-extrabold text-slate-900">
+                  Change Password
+                </p>
 
                 <input
                   type="password"
@@ -1318,7 +1479,9 @@ export default function SettingsPage() {
             </section>
 
             <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">Session</h2>
+              <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
+                Session
+              </h2>
 
               <p className="mb-4 text-sm leading-6 text-slate-500">
                 Log out jika anda ingin keluar dari akaun seller ini.

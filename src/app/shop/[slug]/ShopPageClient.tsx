@@ -27,6 +27,8 @@ type OperatingDayItem = {
 
 type OperatingDays = Record<DayKey, OperatingDayItem>
 
+type OrderMode = 'anytime' | 'scheduled' | 'preorder'
+
 type ProductAddonOption = {
   id: string
   addon_group_id: string
@@ -65,6 +67,7 @@ type SellerProfile = {
   email?: string | null
   whatsapp?: string | null
   business_address?: string | null
+  shop_description?: string | null
   accept_orders_anytime?: boolean | null
   opening_time?: string | null
   closing_time?: string | null
@@ -81,6 +84,8 @@ type SellerProfile = {
   pickup_address?: string | null
   latitude?: number | null
   longitude?: number | null
+  order_mode?: OrderMode | null
+  preorder_days?: number | null
 }
 
 type MenuCategory = {
@@ -134,6 +139,26 @@ type CartLine = {
   note?: string
   unit_price: number
   line_total: number
+}
+
+const DAY_KEYS_SUNDAY_FIRST: DayKey[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+]
+
+const DAY_LABELS_MY: Record<DayKey, string> = {
+  sunday: 'Ahad',
+  monday: 'Isnin',
+  tuesday: 'Selasa',
+  wednesday: 'Rabu',
+  thursday: 'Khamis',
+  friday: 'Jumaat',
+  saturday: 'Sabtu',
 }
 
 function getImageUrl(path?: string | null) {
@@ -199,17 +224,7 @@ function formatTime(value?: string | null) {
 }
 
 function getTodayKey(date = new Date()): DayKey {
-  const map: DayKey[] = [
-    'sunday',
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-  ]
-
-  return map[date.getDay()]
+  return DAY_KEYS_SUNDAY_FIRST[date.getDay()]
 }
 
 function getMinutesFromTime(value?: string | null) {
@@ -243,8 +258,8 @@ function getDeliverySummary(seller: SellerProfile) {
       return 'Free delivery tersedia untuk kawasan terpilih.'
     case 'fixed_fee':
       return fee > 0
-        ? `Delivery fee sebanyak ${formatCurrency(fee)} akan dikenakan jika customer pilih delivery.`
-        : 'Delivery fee akan dikenakan jika customer pilih delivery.'
+        ? `Delivery fee: ${formatCurrency(fee)}`
+        : 'Delivery fee akan dikenakan.'
     case 'included_in_price':
       return 'Harga produk telah termasuk delivery.'
     case 'distance_based':
@@ -253,8 +268,70 @@ function getDeliverySummary(seller: SellerProfile) {
       )}/km, minimum ${formatCurrency(minFee)}, radius maksimum ${radius}km.`
     case 'pay_rider_separately':
     default:
-      return 'Bayaran delivery dibuat berasingan terus kepada rider.'
+      return (
+        seller.delivery_note?.trim() ||
+        'Bayaran delivery dibuat terus kepada rider semasa order sampai.'
+      )
   }
+}
+
+function getEffectiveOrderMode(seller: SellerProfile): OrderMode {
+  if (seller.order_mode === 'anytime') return 'anytime'
+  if (seller.order_mode === 'preorder') return 'preorder'
+  if (seller.order_mode === 'scheduled') return 'scheduled'
+
+  if (seller.accept_orders_anytime === true) {
+    return 'anytime'
+  }
+
+  return 'scheduled'
+}
+
+function getNextOpeningText(seller: SellerProfile) {
+  if (!seller.operating_days) {
+    return seller.closed_message || 'Kedai kini ditutup.'
+  }
+
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const todayIndex = now.getDay()
+
+  for (let offset = 0; offset < 7; offset += 1) {
+    const dayIndex = (todayIndex + offset) % 7
+    const dayKey = DAY_KEYS_SUNDAY_FIRST[dayIndex]
+    const config = seller.operating_days[dayKey]
+
+    if (!config?.enabled) continue
+
+    const openMinutes = getMinutesFromTime(config.opening_time)
+    const closeMinutes = getMinutesFromTime(config.closing_time)
+
+    if (openMinutes === null || closeMinutes === null) continue
+
+    if (offset === 0) {
+      if (openMinutes < closeMinutes && currentMinutes < openMinutes) {
+        return `Buka semula hari ini, ${formatTime(config.opening_time)}`
+      }
+
+      if (
+        openMinutes > closeMinutes &&
+        currentMinutes < openMinutes &&
+        currentMinutes > closeMinutes
+      ) {
+        return `Buka semula hari ini, ${formatTime(config.opening_time)}`
+      }
+
+      continue
+    }
+
+    if (offset === 1) {
+      return `Buka semula esok, ${formatTime(config.opening_time)}`
+    }
+
+    return `Buka semula ${DAY_LABELS_MY[dayKey]}, ${formatTime(config.opening_time)}`
+  }
+
+  return seller.closed_message || 'Kedai kini ditutup.'
 }
 
 function getShopAvailability(seller: SellerProfile) {
@@ -264,16 +341,32 @@ function getShopAvailability(seller: SellerProfile) {
       label: 'Temporarily Closed',
       detail:
         seller.closed_message ||
-        'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+        'Kedai ditutup sementara. Sila cuba lagi kemudian.',
+      inlineInfo: '',
       timeRange: '',
     }
   }
 
-  if (seller.accept_orders_anytime === true) {
+  const orderMode = getEffectiveOrderMode(seller)
+
+  if (orderMode === 'preorder') {
+    const days = Number(seller.preorder_days || 1)
+
+    return {
+      isOpen: true,
+      label: 'Pre-order',
+      detail: '',
+      inlineInfo: `${days} hari awal`,
+      timeRange: '',
+    }
+  }
+
+  if (orderMode === 'anytime') {
     return {
       isOpen: true,
       label: 'Open Now',
-      detail: 'Kedai ini menerima tempahan pada bila-bila masa.',
+      detail: '',
+      inlineInfo: '24 jam',
       timeRange: '',
     }
   }
@@ -286,11 +379,13 @@ function getShopAvailability(seller: SellerProfile) {
     const todayConfig = seller.operating_days[todayKey]
 
     if (!todayConfig || !todayConfig.enabled) {
+      const nextOpening = getNextOpeningText(seller)
+
       return {
         isOpen: false,
         label: 'Closed',
-        detail:
-          seller.closed_message || 'Kedai tidak menerima tempahan pada hari ini.',
+        detail: nextOpening,
+        inlineInfo: nextOpening,
         timeRange: '',
       }
     }
@@ -303,6 +398,9 @@ function getShopAvailability(seller: SellerProfile) {
         isOpen: false,
         label: 'Closed',
         detail:
+          seller.closed_message ||
+          'Waktu operasi tidak lengkap. Sila cuba lagi kemudian.',
+        inlineInfo:
           seller.closed_message ||
           'Waktu operasi tidak lengkap. Sila cuba lagi kemudian.',
         timeRange: '',
@@ -324,10 +422,8 @@ function getShopAvailability(seller: SellerProfile) {
     return {
       isOpen,
       label: isOpen ? 'Open Now' : 'Closed',
-      detail: isOpen
-        ? ''
-        : seller.closed_message ||
-          'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
+      detail: isOpen ? '' : getNextOpeningText(seller),
+      inlineInfo: isOpen ? timeRange : getNextOpeningText(seller),
       timeRange,
     }
   }
@@ -340,6 +436,7 @@ function getShopAvailability(seller: SellerProfile) {
       isOpen: true,
       label: 'Open Now',
       detail: '',
+      inlineInfo: '',
       timeRange: '',
     }
   }
@@ -361,6 +458,10 @@ function getShopAvailability(seller: SellerProfile) {
     label: isOpen ? 'Open Now' : 'Closed',
     detail: isOpen
       ? ''
+      : seller.closed_message ||
+        'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
+    inlineInfo: isOpen
+      ? timeRange
       : seller.closed_message ||
         'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
     timeRange,
@@ -416,6 +517,19 @@ export default function ShopPageClient({
     productName: '',
     currentIndex: 0,
   })
+  
+ const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
+
+useEffect(() => {
+  function handleResize() {
+    setIsDesktop(window.innerWidth >= 1024)
+  }
+
+  handleResize()
+  window.addEventListener('resize', handleResize)
+
+  return () => window.removeEventListener('resize', handleResize)
+}, [])
 
   const [addonModal, setAddonModal] = useState<{
     product: ProductRow | null
@@ -807,18 +921,18 @@ export default function ShopPageClient({
   }
 
   function showNextImage() {
-    setGallery((prev) => {
-      if (!prev.images.length) return prev
+  setGallery((prev) => {
+    if (!prev.images.length) return prev
 
-      return {
-        ...prev,
-        currentIndex:
-          prev.currentIndex === prev.images.length - 1
-            ? 0
-            : prev.currentIndex + 1,
-      }
-    })
-  }
+    return {
+      ...prev,
+      currentIndex:
+        prev.currentIndex === prev.images.length - 1
+          ? 0
+          : prev.currentIndex + 1,
+    }
+  })
+}
 
   const visibleProducts = useMemo(() => {
     if (!hasCategoryFeature) return products
@@ -835,6 +949,8 @@ export default function ShopPageClient({
     return cart.reduce((sum, item) => sum + item.line_total, 0)
   }, [cart])
 
+  if (isDesktop === null) return null
+
   const sellerName = seller.store_name || 'Shop'
 
   return (
@@ -848,57 +964,107 @@ export default function ShopPageClient({
           />
         </div>
 
-        <div style={heroCard}>
-          <div style={sellerRow}>
-            {seller.profile_image ? (
-              <img
-                src={getImageUrl(seller.profile_image)}
-                alt={sellerName}
-                style={sellerImg}
-              />
-            ) : (
-              <div style={sellerFallback}>
-                {sellerName.charAt(0).toUpperCase()}
-              </div>
-            )}
+  <div style={heroCard}>
+  {/** MOBILE LAYOUT */}
+  {!isDesktop && (
+    <div style={heroMobile}>
+      {seller.profile_image ? (
+        <img
+          src={getImageUrl(seller.profile_image)}
+          alt={sellerName}
+          style={sellerImgMobile}
+        />
+      ) : (
+        <div style={sellerFallbackMobile}>
+          {sellerName.charAt(0).toUpperCase()}
+        </div>
+      )}
 
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <h1 style={shopTitle}>{sellerName}</h1>
-              {seller.business_address && (
-                <p style={shopSub}>{seller.business_address}</p>
-              )}
-            </div>
+      <h1 style={shopTitleMobile}>{sellerName}</h1>
+
+      <div style={badgeCenter}>
+        <div
+          style={{
+            ...statusBadge,
+            background:
+              availability.label === 'Pre-order'
+                ? '#ede9fe'
+                : isShopOpen
+                ? '#dcfce7'
+                : '#fee2e2',
+            color:
+              availability.label === 'Pre-order'
+                ? '#6d28d9'
+                : isShopOpen
+                ? '#166534'
+                : '#b91c1c',
+          }}
+        >
+          {availability.label}
+        </div>
+
+        {availability.inlineInfo && (
+          <div style={statusInfoBadge}>{availability.inlineInfo}</div>
+        )}
+      </div>
+
+      {seller.shop_description?.trim() && (
+        <p style={shopDescriptionMobile}>{seller.shop_description}</p>
+      )}
+    </div>
+  )}
+
+  {/** DESKTOP LAYOUT */}
+  {isDesktop && (
+    <div style={sellerRow}>
+      {seller.profile_image ? (
+        <img
+          src={getImageUrl(seller.profile_image)}
+          alt={sellerName}
+          style={sellerImgDesktop}
+        />
+      ) : (
+        <div style={sellerFallbackDesktop}>
+          {sellerName.charAt(0).toUpperCase()}
+        </div>
+      )}
+
+      <div style={heroContent}>
+        <h1 style={shopTitle}>{sellerName}</h1>
+
+        <div style={statusInlineWrap}>
+          <div
+            style={{
+              ...statusBadge,
+              background:
+                availability.label === 'Pre-order'
+                  ? '#ede9fe'
+                  : isShopOpen
+                  ? '#dcfce7'
+                  : '#fee2e2',
+              color:
+                availability.label === 'Pre-order'
+                  ? '#6d28d9'
+                  : isShopOpen
+                  ? '#166534'
+                  : '#b91c1c',
+            }}
+          >
+            {availability.label}
           </div>
 
-          <div style={statusWrap}>
-            <div
-              style={{
-                ...statusBadge,
-                background: isShopOpen ? '#dcfce7' : '#fee2e2',
-                color: isShopOpen ? '#166534' : '#b91c1c',
-              }}
-            >
-              {availability.label}
-            </div>
-
-            {seller.accept_orders_anytime === false && availability.timeRange ? (
-              <div style={hoursText}>{availability.timeRange}</div>
-            ) : null}
-          </div>
-
-          {availability.detail && (
-            <div
-              style={{
-                ...noticeBox,
-                background: isShopOpen ? '#eff6ff' : '#fff7ed',
-                borderColor: isShopOpen ? '#bfdbfe' : '#fed7aa',
-                color: isShopOpen ? '#1e3a8a' : '#9a3412',
-              }}
-            >
-              {availability.detail}
-            </div>
+          {availability.inlineInfo && (
+            <div style={statusInfoBadge}>{availability.inlineInfo}</div>
           )}
         </div>
+
+        {seller.shop_description?.trim() && (
+          <p style={shopDescription}>{seller.shop_description}</p>
+        )}
+      </div>
+    </div>
+  )}
+</div>
 
         {hasCategoryFeature ? (
           <div style={stickyTabWrap}>
@@ -940,132 +1106,118 @@ export default function ShopPageClient({
         ) : null}
 
         <div ref={productListRef}>
-          {visibleProducts.length === 0 ? (
-            <div style={emptyCard}>
-              <p style={{ margin: 0, color: '#64748b' }}>
-                Tiada menu aktif buat masa ini.
-              </p>
-            </div>
-          ) : (
-            <div style={productGrid}>
-              {visibleProducts.map((product) => {
-                const image = getFirstImage(product)
-                const qty = cart.reduce(
-                  (sum, item) =>
-                    item.product_id === product.id ? sum + item.quantity : sum,
-                  0
-                )
-                const disableAddButton = !isShopOpen || Boolean(product.sold_out)
-                const allImages = getProductImages(product)
-                const addonGroups = getProductAddonGroups(product.id)
-                const hasAddons = addonGroups.length > 0
+  {visibleProducts.length === 0 ? (
+    <div style={emptyCard}>
+      <p style={{ margin: 0, color: '#64748b' }}>
+        Tiada menu aktif buat masa ini.
+      </p>
+    </div>
+  ) : (
+    <div
+      style={{
+        ...productGrid,
+        gridTemplateColumns: isDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+      }}
+    >
+      {visibleProducts.map((product) => {
+        const image = getFirstImage(product)
+        const qty = cart.reduce(
+          (sum, item) =>
+            item.product_id === product.id ? sum + item.quantity : sum,
+          0
+        )
+        const disableAddButton = !isShopOpen || Boolean(product.sold_out)
+        const allImages = getProductImages(product)
 
-                return (
-                  <div key={product.id} style={productCard}>
-                    <div style={productContent}>
-                      <div style={productInfo}>
-                        <div style={productName}>{product.name}</div>
+        return (
+          <div key={product.id} style={productCard}>
+            <div style={productContent}>
+              <div style={productInfo}>
+                <div style={productName}>{product.name}</div>
 
-                        <div style={productPrice}>
-                          RM {product.price.toFixed(2)}
-                        </div>
+                <div style={productPrice}>RM {product.price.toFixed(2)}</div>
 
-                        {product.track_stock ? (
-                          <div style={stockText}>
-                            Stock: {product.stock_quantity ?? 0}
-                          </div>
-                        ) : null}
-
-                        <div style={productDesc}>
-                          {product.description || 'Tiada deskripsi.'}
-                        </div>
-
-                        {hasAddons ? (
-                          <div
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: '#7c3aed',
-                              marginBottom: 8,
-                            }}
-                          >
-                            Add-on available
-                          </div>
-                        ) : null}
-
-                        <div style={qtyWrap}>
-                          <div style={qtyRow}>
-                            <button
-                              type="button"
-                              onClick={() => decrease(product.id)}
-                              style={qtyBtn}
-                            >
-                              -
-                            </button>
-
-                            <span style={qtyValue}>{qty}</span>
-
-                            <button
-                              type="button"
-                              onClick={() => increase(product)}
-                              style={{
-                                ...qtyBtn,
-                                opacity: disableAddButton ? 0.4 : 1,
-                                cursor: disableAddButton
-                                  ? 'not-allowed'
-                                  : 'pointer',
-                              }}
-                              disabled={disableAddButton}
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          {!isShopOpen ? (
-                            <div style={qtyHintClosed}>Ordering unavailable</div>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => openGallery(product, 0)}
-                        style={{
-                          ...productImageButton,
-                          cursor: image ? 'pointer' : 'default',
-                        }}
-                        disabled={!image}
-                        aria-label={`View images for ${product.name}`}
-                      >
-                        <div style={productImageWrap}>
-                          {image ? (
-                            <img
-                              src={getImageUrl(image)}
-                              alt={product.name}
-                              style={productImage}
-                            />
-                          ) : (
-                            <div style={productImagePlaceholder}>No image</div>
-                          )}
-
-                          {product.sold_out ? (
-                            <div style={soldOutBadge}>Sold Out</div>
-                          ) : null}
-
-                          {allImages.length > 1 ? (
-                            <div style={multiImageBadge}>
-                              {allImages.length} photos
-                            </div>
-                          ) : null}
-                        </div>
-                      </button>
-                    </div>
+                {product.track_stock ? (
+                  <div style={stockText}>
+                    Stock: {product.stock_quantity ?? 0}
                   </div>
-                )
-              })}
+                ) : null}
+
+                <div style={productDesc}>
+                  {product.description || 'Tiada deskripsi.'}
+                </div>
+
+                <div style={qtyWrap}>
+                  <div style={qtyRow}>
+                    <button
+                      type="button"
+                      onClick={() => decrease(product.id)}
+                      style={qtyBtn}
+                    >
+                      -
+                    </button>
+
+                    <span style={qtyValue}>{qty}</span>
+
+                    <button
+                      type="button"
+                      onClick={() => increase(product)}
+                      style={{
+                        ...qtyBtn,
+                        opacity: disableAddButton ? 0.4 : 1,
+                        cursor: disableAddButton ? 'not-allowed' : 'pointer',
+                      }}
+                      disabled={disableAddButton}
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {!isShopOpen ? (
+                    <div style={qtyHintClosed}>Ordering unavailable</div>
+                  ) : null}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => openGallery(product, 0)}
+                style={{
+                  ...productImageButton,
+                  cursor: image ? 'pointer' : 'default',
+                }}
+                disabled={!image}
+                aria-label={`View images for ${product.name}`}
+              >
+                <div style={productImageWrap}>
+                  {image ? (
+                    <img
+                      src={getImageUrl(image)}
+                      alt={product.name}
+                      style={productImage}
+                    />
+                  ) : (
+                    <div style={productImagePlaceholder}>No image</div>
+                  )}
+
+                  {product.sold_out ? (
+                    <div style={soldOutBadge}>Sold Out</div>
+                  ) : null}
+
+                  {allImages.length > 1 ? (
+                    <div style={multiImageBadge}>
+                      {allImages.length} photos
+                    </div>
+                  ) : null}
+                </div>
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )
+      })}
+    </div>
+  )}
+</div>
 
         <div style={checkoutCard}>
           <div style={checkoutHeader}>
@@ -1088,6 +1240,7 @@ export default function ShopPageClient({
             </div>
           ) : (
             <>
+              
               <div style={summaryList}>
                 {cartItems.map((item) => (
                   <div key={item.id} style={summaryCard}>
@@ -1194,71 +1347,59 @@ export default function ShopPageClient({
             style={galleryDialog}
             onClick={(event) => event.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={closeGallery}
-              style={galleryCloseButton}
-              aria-label="Close image gallery"
-            >
+            <button type="button" onClick={closeGallery} style={galleryCloseBtn}>
               ✕
             </button>
 
-            <div style={galleryTopBar}>
+            <div style={galleryHeader}>
               <div style={galleryTitle}>{gallery.productName}</div>
               <div style={galleryCounter}>
                 {gallery.currentIndex + 1} / {gallery.images.length}
               </div>
             </div>
 
-            <div style={galleryImageArea}>
-              {gallery.images.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={showPrevImage}
-                  style={{ ...galleryNavButton, ...galleryNavLeft }}
-                  aria-label="Previous image"
-                >
-                  ‹
-                </button>
-              ) : null}
+            <div style={galleryBody}>
+              <button type="button" onClick={showPrevImage} style={galleryNavBtn}>
+                ‹
+              </button>
 
-              <img
-                src={gallery.images[gallery.currentIndex]}
-                alt={gallery.productName}
-                style={galleryImage}
-              />
+              <div style={galleryImageWrap}>
+                <img
+                  src={gallery.images[gallery.currentIndex]}
+                  alt={gallery.productName}
+                  style={galleryImage}
+                />
+              </div>
 
-              {gallery.images.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={showNextImage}
-                  style={{ ...galleryNavButton, ...galleryNavRight }}
-                  aria-label="Next image"
-                >
-                  ›
-                </button>
-              ) : null}
+              <button type="button" onClick={showNextImage} style={galleryNavBtn}>
+                ›
+              </button>
             </div>
 
             {gallery.images.length > 1 ? (
-              <div style={galleryDots}>
-                {gallery.images.map((_, index) => (
+              <div style={galleryThumbRow}>
+                {gallery.images.map((img, index) => (
                   <button
-                    key={index}
+                    key={`${img}-${index}`}
                     type="button"
                     onClick={() =>
-                      setGallery((prev) => ({ ...prev, currentIndex: index }))
+                      setGallery((prev) => ({
+                        ...prev,
+                        currentIndex: index,
+                      }))
                     }
                     style={{
-                      ...galleryDot,
-                      opacity: gallery.currentIndex === index ? 1 : 0.35,
-                      transform:
-                        gallery.currentIndex === index
-                          ? 'scale(1.15)'
-                          : 'scale(1)',
+                      ...galleryThumbBtn,
+                      borderColor:
+                        gallery.currentIndex === index ? '#0f172a' : '#e2e8f0',
                     }}
-                    aria-label={`Go to image ${index + 1}`}
-                  />
+                  >
+                    <img
+                      src={img}
+                      alt={`${gallery.productName} ${index + 1}`}
+                      style={galleryThumbImg}
+                    />
+                  </button>
                 ))}
               </div>
             ) : null}
@@ -1267,171 +1408,185 @@ export default function ShopPageClient({
       ) : null}
 
       {addonModal.isOpen && addonModal.product ? (
-        <div style={modalOverlay}>
-          <div style={modalBox}>
-            <h3 style={{ marginBottom: 10 }}>{addonModal.product.name}</h3>
-
-            {addonModal.error ? (
-              <div style={modalErrorBox}>{addonModal.error}</div>
-            ) : null}
-
-            {addonModal.groups.map((group) => {
-              const selectedCount = (addonModal.selections[group.id] || []).length
-
-              return (
-                <div key={group.id} style={{ marginBottom: 12 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                    {group.name}
-                    {group.is_required ? (
-                      <span style={requiredMark}> *</span>
-                    ) : null}
-                  </div>
-
-                  <div style={groupMetaText}>
-                    {group.selection_type === 'single'
-                      ? 'Choose 1'
-                      : `Choose ${Number(group.min_select || 0)} or more`}
-                    {group.max_select !== null && group.max_select !== undefined
-                      ? ` • Max ${group.max_select}`
-                      : ''}
-                    {selectedCount > 0 ? ` • Selected ${selectedCount}` : ''}
-                  </div>
-
-                  {group.options.map((opt) => {
-                    const selected =
-                      addonModal.selections[group.id]?.includes(opt.id) || false
-
-                    return (
-                      <label key={opt.id} style={optionRow}>
-                        <input
-                          type={
-                            group.selection_type === 'single'
-                              ? 'radio'
-                              : 'checkbox'
-                          }
-                          checked={selected}
-                          onChange={() => {
-                            setAddonModal((prev) => {
-                              const current = prev.selections[group.id] || []
-
-                              let updated: string[] = []
-
-                              if (group.selection_type === 'single') {
-                                updated = [opt.id]
-                              } else {
-                                if (current.includes(opt.id)) {
-                                  updated = current.filter((id) => id !== opt.id)
-                                } else {
-                                  const maxSelect =
-                                    group.max_select === null ||
-                                    group.max_select === undefined
-                                      ? null
-                                      : Number(group.max_select)
-
-                                  if (
-                                    maxSelect !== null &&
-                                    current.length >= maxSelect
-                                  ) {
-                                    return {
-                                      ...prev,
-                                      error: `You can only select up to ${maxSelect} option${
-                                        maxSelect > 1 ? 's' : ''
-                                      } for "${group.name}".`,
-                                    }
-                                  }
-
-                                  updated = [...current, opt.id]
-                                }
-                              }
-
-                              return {
-                                ...prev,
-                                error: '',
-                                selections: {
-                                  ...prev.selections,
-                                  [group.id]: updated,
-                                },
-                              }
-                            })
-                          }}
-                        />
-                        {opt.name} (+RM {opt.price_delta})
-                      </label>
-                    )
-                  })}
+        <div style={modalOverlay} onClick={closeAddonModal}>
+          <div
+            style={modalDialog}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={modalHeader}>
+              <div>
+                <div style={modalTitle}>{addonModal.product.name}</div>
+                <div style={modalSubtitle}>
+                  Base price: RM {addonModal.product.price.toFixed(2)}
                 </div>
-              )
-            })}
+              </div>
 
-            <textarea
-              placeholder="Note (optional)"
-              value={addonModal.note}
-              onChange={(e) =>
-                setAddonModal((prev) => ({
-                  ...prev,
-                  note: e.target.value,
-                  error: '',
-                }))
-              }
-              style={noteBox}
-            />
+              <button
+                type="button"
+                onClick={closeAddonModal}
+                style={modalCloseBtn}
+              >
+                ✕
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (!addonModal.product) return
+            <div style={modalContent}>
+              {addonModal.groups.length === 0 ? (
+                <div style={emptyCartBox}>Tiada add-on untuk produk ini.</div>
+              ) : (
+                addonModal.groups.map((group) => {
+                  const selectedIds = addonModal.selections[group.id] || []
 
-                const validationError = validateAddonSelections(
-                  addonModal.groups,
-                  addonModal.selections
-                )
+                  return (
+                    <div key={group.id} style={addonGroupCard}>
+                      <div style={addonGroupHeader}>
+                        <div style={addonGroupTitle}>{group.name}</div>
+                        <div style={addonGroupMeta}>
+                          {group.selection_type === 'single'
+                            ? 'Pilih Satu Sahaja'
+                            : 'Boleh pilih banyak'}
+                          {group.is_required ? ' • Required' : ''}
+                        </div>
+                      </div>
 
-                if (validationError) {
-                  setAddonModal((prev) => ({
-                    ...prev,
-                    error: validationError,
-                  }))
-                  return
-                }
+                      <div style={addonOptionsWrap}>
+                        {group.options
+                          .filter((option) => option.is_active !== false)
+                          .sort(
+                            (a, b) =>
+                              Number(a.sort_order || 0) - Number(b.sort_order || 0)
+                          )
+                          .map((option) => {
+                            const checked = selectedIds.includes(option.id)
 
-                if (addonModal.editingCartLineId) {
-                  const existingLine = cart.find(
-                    (item) => item.id === addonModal.editingCartLineId
+                            return (
+                              <label key={option.id} style={addonOptionRow}>
+                                <input
+                                  type={
+                                    group.selection_type === 'single'
+                                      ? 'radio'
+                                      : 'checkbox'
+                                  }
+                                  name={`group-${group.id}`}
+                                  checked={checked}
+                                  onChange={(event) => {
+                                    setAddonModal((prev) => {
+                                      const current = prev.selections[group.id] || []
+                                      let nextSelections = [...current]
+
+                                      if (group.selection_type === 'single') {
+                                        nextSelections = event.target.checked
+                                          ? [option.id]
+                                          : []
+                                      } else if (event.target.checked) {
+                                        if (!nextSelections.includes(option.id)) {
+                                          nextSelections.push(option.id)
+                                        }
+                                      } else {
+                                        nextSelections = nextSelections.filter(
+                                          (id) => id !== option.id
+                                        )
+                                      }
+
+                                      return {
+                                        ...prev,
+                                        selections: {
+                                          ...prev.selections,
+                                          [group.id]: nextSelections,
+                                        },
+                                        error: '',
+                                      }
+                                    })
+                                  }}
+                                />
+
+                                <div style={{ flex: 1 }}>
+                                  <div style={addonOptionName}>{option.name}</div>
+                                </div>
+
+                                <div style={addonOptionPrice}>
+                                  {Number(option.price_delta || 0) > 0
+                                    ? `+ RM ${Number(option.price_delta).toFixed(2)}`
+                                    : 'Free'}
+                                </div>
+                              </label>
+                            )
+                          })}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+
+              <div style={noteWrap}>
+                <label style={noteLabel}>Customer Note</label>
+                <textarea
+                  value={addonModal.note}
+                  onChange={(event) =>
+                    setAddonModal((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                      error: '',
+                    }))
+                  }
+                  rows={3}
+                  placeholder="Contoh: kurang pedas, asingkan sambal"
+                  style={noteTextarea}
+                />
+              </div>
+
+              {addonModal.error ? (
+                <div style={modalError}>{addonModal.error}</div>
+              ) : null}
+            </div>
+
+            <div style={modalFooter}>
+              <button
+                type="button"
+                onClick={closeAddonModal}
+                style={secondaryBtn}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!addonModal.product) return
+
+                  const validationMessage = validateAddonSelections(
+                    addonModal.groups,
+                    addonModal.selections
                   )
 
-                  if (!existingLine) {
-                    closeAddonModal()
+                  if (validationMessage) {
+                    setAddonModal((prev) => ({
+                      ...prev,
+                      error: validationMessage,
+                    }))
                     return
                   }
 
-                  const updatedLine = buildCartLine(
-                    addonModal.product,
-                    addonModal.selections,
-                    addonModal.groups,
-                    addonModal.note,
-                    existingLine.quantity
-                  )
-
-                  updateCartLine(updatedLine, existingLine.id)
-                } else {
-                  addToCartWithAddons(
+                  const cartLine = buildCartLine(
                     addonModal.product,
                     addonModal.selections,
                     addonModal.groups,
                     addonModal.note
                   )
-                }
 
-                closeAddonModal()
-              }}
-              style={confirmBtn}
-            >
-              {addonModal.editingCartLineId ? 'Update Order' : 'Add to Order'}
-            </button>
+                  if (addonModal.editingCartLineId) {
+                    updateCartLine(cartLine, addonModal.editingCartLineId)
+                  } else {
+                    addOrMergeCartLine(cartLine)
+                  }
 
-            <button type="button" onClick={closeAddonModal} style={cancelBtn}>
-              Cancel
-            </button>
+                  closeAddonModal()
+                }}
+                style={primaryBtn}
+              >
+                {addonModal.editingCartLineId ? 'Update Item' : 'Add to Cart'}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
@@ -1439,680 +1594,844 @@ export default function ShopPageClient({
   )
 }
 
-const soldOutBadge = {
-  position: 'absolute' as const,
-  top: 6,
-  right: 6,
-  background: '#ef4444',
-  color: '#fff',
-  fontSize: 10,
-  fontWeight: 800,
-  padding: '4px 7px',
-  borderRadius: 8,
-} as const
-
-const multiImageBadge = {
-  position: 'absolute' as const,
-  left: 6,
-  bottom: 6,
-  background: 'rgba(15,23,42,0.82)',
-  color: '#fff',
-  fontSize: 10,
-  fontWeight: 800,
-  padding: '4px 7px',
-  borderRadius: 999,
-} as const
-
-const stockText = {
-  fontSize: 11,
-  color: '#64748b',
-  marginBottom: 4,
-  lineHeight: 1.35,
-} as const
-
-const main = {
-  minHeight: '100vh',
-  background: '#f8fafc',
-  padding: 16,
-} as const
-
-const container = {
-  maxWidth: 760,
-  margin: '0 auto',
-} as const
-
-const logoWrap = {
-  textAlign: 'center' as const,
-  marginBottom: 12,
-} as const
-
-const logo = {
-  height: 16,
-  margin: '0 auto',
-  display: 'block',
-} as const
-
-const heroCard = {
-  background: '#fff',
-  borderRadius: 22,
-  padding: 18,
-  border: '1px solid #e2e8f0',
-  boxShadow: '0 10px 30px rgba(15,23,42,0.05)',
-  marginBottom: 16,
-} as const
-
-const sellerRow = {
+const heroMobile: React.CSSProperties = {
   display: 'flex',
-  gap: 12,
+  flexDirection: 'column',
   alignItems: 'center',
-  marginBottom: 14,
-} as const
+  textAlign: 'center',
+  gap: 10,
+  width: '100%', // 🔥 ADD THIS
+}
 
-const sellerImg = {
-  width: 56,
-  height: 56,
-  borderRadius: '999px',
-  objectFit: 'cover' as const,
-} as const
+const sellerImgMobile: React.CSSProperties = {
+  width: 72,
+  height: 72,
+  borderRadius: '9999px',
+  objectFit: 'cover',
+  border: '1px solid #e2e8f0',
+}
 
-const sellerFallback = {
-  width: 56,
-  height: 56,
-  borderRadius: '999px',
-  background: '#0f172a',
-  color: '#fff',
+const sellerFallbackMobile: React.CSSProperties = {
+  width: 72,
+  height: 72,
+  borderRadius: '9999px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  background: '#e2e8f0',
   fontWeight: 800,
-  fontSize: 20,
-  flexShrink: 0,
-} as const
+  fontSize: 24,
+}
 
-const shopTitle = {
-  margin: '0 0 4px 0',
-  fontSize: 28,
+const shopTitleMobile: React.CSSProperties = {
+  margin: 0,
+  fontSize: 16,
   fontWeight: 800,
   color: '#0f172a',
-  lineHeight: 1.2,
-} as const
+}
 
-const shopSub = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: 14,
-  lineHeight: 1.5,
-} as const
-
-const statusWrap = {
+const badgeCenter: React.CSSProperties = {
   display: 'flex',
-  flexWrap: 'wrap' as const,
-  gap: 10,
-  alignItems: 'center',
-  marginBottom: 12,
-} as const
+  gap: 8,
+  justifyContent: 'center',
+  flexWrap: 'wrap',
+}
 
-const statusBadge = {
-  display: 'inline-flex',
+const shopDescriptionMobile: React.CSSProperties = {
+  fontSize: 14,
+  color: '#475569',
+  lineHeight: 1.6,
+  marginTop: 6,
+}
+
+const main: React.CSSProperties = {
+  minHeight: '100vh',
+  background: '#f8fafc',
+  padding: '20px 16px 80px',
+}
+
+const container: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 1180,
+  margin: '0 auto',
+}
+
+const logoWrap: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  marginBottom: 12,
+}
+
+const logo: React.CSSProperties = {
+  height: 20,
+  width: 'auto',
+}
+
+const heroCard: React.CSSProperties = {
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 24,
+  padding: 18,
+  boxShadow: '0 8px 30px rgba(15, 23, 42, 0.06)',
+  marginBottom: 16,
+}
+
+const sellerImgDesktop: React.CSSProperties = {
+  width: 96,
+  height: 96,
+  borderRadius: '9999px',
+  objectFit: 'cover',
+  border: '1px solid #e2e8f0',
+}
+
+const sellerFallbackDesktop: React.CSSProperties = {
+  width: 96,
+  height: 96,
+  borderRadius: '9999px',
+  display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  background: '#e2e8f0',
+  fontWeight: 800,
+  fontSize: 26,
+}
+
+const heroContent: React.CSSProperties = {
+  minWidth: 0,
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+}
+
+const shopMeta: React.CSSProperties = {
+  margin: '8px 0 0',
+  color: '#64748b',
+  fontSize: 13,
+  lineHeight: 1.5,
+  maxWidth: 720,
+}
+
+const sellerRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 14,
+}
+
+const sellerImg: React.CSSProperties = {
+  width: 56,
+  height: 56,
+  borderRadius: '9999px',
+  objectFit: 'cover',
+  border: '1px solid #e2e8f0',
+  flexShrink: 0,
+}
+
+const sellerFallback: React.CSSProperties = {
+  width: 56,
+  height: 56,
+  borderRadius: '9999px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#e2e8f0',
+  color: '#0f172a',
+  fontSize: 20,
+  fontWeight: 800,
+  flexShrink: 0,
+}
+
+const shopTitle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 16,
+  lineHeight: 1.2,
+  fontWeight: 600,
+  color: '#0f172a',
+}
+
+const shopSub: React.CSSProperties = {
+  margin: '8px 0 0',
+  color: '#64748b',
+  fontSize: 14,
+  lineHeight: 1.3,
+}
+
+const shopDescription: React.CSSProperties = {
+  margin: '10px 0 0',
+  color: '#475569',
+  fontSize: 14,
+  lineHeight: 1.3,
+  maxWidth: 720,
+}
+
+const statusInlineWrap: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  flexWrap: 'wrap',
+  marginTop: 10,
+}
+
+const statusBadge: React.CSSProperties = {
   borderRadius: 999,
   padding: '8px 12px',
   fontSize: 12,
   fontWeight: 800,
-} as const
+}
 
-const hoursText = {
-  fontSize: 13,
-  color: '#475569',
+const statusInfoBadge: React.CSSProperties = {
+  borderRadius: 999,
+  padding: '8px 12px',
+  fontSize: 12,
   fontWeight: 600,
-} as const
-
-const noticeBox = {
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderRadius: 14,
-  padding: '12px 14px',
-  fontSize: 14,
-  lineHeight: 1.6,
-} as const
-
-const stickyTabWrap = {
-  position: 'sticky' as const,
-  top: 0,
-  zIndex: 50,
-  marginBottom: 10,
-} as const
-
-const tabShell = {
-  padding: '6px 0',
-  borderRadius: 0,
   background: '#f8fafc',
-  boxShadow: '0 6px 12px rgba(15,23,42,0.06)',
-  borderBottom: '1px solid #e2e8f0',
-} as const
+  color: '#475569',
+  border: '1px solid #e2e8f0',
+}
 
-const tabScroller = {
+const stickyTabWrap: React.CSSProperties = {
+  position: 'sticky',
+  top: 0,
+  zIndex: 10,
+  marginBottom: 16,
+}
+
+const tabShell: React.CSSProperties = {
+  background: 'rgba(248, 250, 252, 0.92)',
+  backdropFilter: 'blur(8px)',
+  padding: '8px 0',
+}
+
+const tabScroller: React.CSSProperties = {
   display: 'flex',
   gap: 10,
-  overflowX: 'auto' as const,
-  WebkitOverflowScrolling: 'touch' as const,
-  scrollbarWidth: 'none' as const,
-} as const
+  overflowX: 'auto',
+  paddingBottom: 4,
+}
 
-const tabButton = {
-  flexShrink: 0,
+const tabButton: React.CSSProperties = {
   borderRadius: 999,
-  border: '1px solid #e2e8f0',
-  padding: '8px 12px',
-  fontSize: 12,
-  fontWeight: 800,
-  whiteSpace: 'nowrap' as const,
+  padding: '10px 14px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#334155',
+  fontSize: 14,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
-  transition: 'all 0.2s ease',
-} as const
+}
 
-const activeTabButton = {
+const activeTabButton: React.CSSProperties = {
   background: '#0f172a',
   color: '#fff',
   borderColor: '#0f172a',
-  boxShadow: '0 10px 20px rgba(15,23,42,0.18)',
-} as const
+}
 
-const inactiveTabButton = {
+const inactiveTabButton: React.CSSProperties = {
   background: '#fff',
-  color: '#0f172a',
-  borderColor: '#e2e8f0',
-} as const
+  color: '#334155',
+  borderColor: '#cbd5e1',
+}
 
-const emptyCard = {
+const emptyCard: React.CSSProperties = {
   background: '#fff',
+  border: '1px solid #e2e8f0',
   borderRadius: 20,
   padding: 18,
-  border: '1px solid #e2e8f0',
-  marginBottom: 16,
-} as const
+}
 
-const productGrid = {
+const productGrid: React.CSSProperties = {
   display: 'grid',
-  gap: 10,
-  marginBottom: 16,
-} as const
+  gridTemplateColumns: '1fr',
+  gap: 16,
+}
 
-const productCard = {
+const productCard: React.CSSProperties = {
   background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 24,
+  padding: 16,
+  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
+}
+
+const productContent: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 120px',
+  gap: 14,
+  alignItems: 'start',
+}
+
+const productInfo: React.CSSProperties = {
+  minWidth: 0,
+}
+
+const productName: React.CSSProperties = {
+  fontSize: 16,
+  fontWeight: 600,
+  color: '#0f172a',
+  lineHeight: 1.2,
+}
+
+const productPrice: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 14,
+  fontWeight: 600,
+  color: '#0f172a',
+}
+
+const stockText: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 12,
+  color: '#64748b',
+  fontWeight: 700,
+}
+
+const productDesc: React.CSSProperties = {
+  marginTop: 8,
+  color: '#64748b',
+  fontSize: 14,
+  lineHeight: 1.3,
+  whiteSpace: 'normal',
+  wordBreak: 'break-word',
+}
+
+const qtyWrap: React.CSSProperties = {
+  marginTop: 14,
+}
+
+const qtyRow: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 10,
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: 999,
+  padding: 6,
+}
+
+const qtyBtn: React.CSSProperties = {
+  width: 34,
+  height: 34,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  fontSize: 18,
+  fontWeight: 800,
+  cursor: 'pointer',
+}
+
+const qtyValue: React.CSSProperties = {
+  minWidth: 18,
+  textAlign: 'center',
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const qtyHintClosed: React.CSSProperties = {
+  marginTop: 8,
+  fontSize: 12,
+  color: '#b91c1c',
+  fontWeight: 700,
+}
+
+const productImageButton: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  padding: 0,
+}
+
+const productImageWrap: React.CSSProperties = {
+  position: 'relative',
+  width: 120,
+  height: 120,
+  borderRadius: 20,
+  overflow: 'hidden',
+  background: '#f1f5f9',
+  border: '1px solid #e2e8f0',
+}
+
+const productImage: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+}
+
+const productImagePlaceholder: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#94a3b8',
+  fontSize: 13,
+  fontWeight: 700,
+}
+
+const soldOutBadge: React.CSSProperties = {
+  position: 'absolute',
+  top: 8,
+  left: 8,
+  background: '#fee2e2',
+  color: '#b91c1c',
+  fontSize: 11,
+  fontWeight: 800,
+  borderRadius: 999,
+  padding: '6px 8px',
+}
+
+const multiImageBadge: React.CSSProperties = {
+  position: 'absolute',
+  right: 8,
+  bottom: 8,
+  background: 'rgba(15, 23, 42, 0.8)',
+  color: '#fff',
+  fontSize: 11,
+  fontWeight: 800,
+  borderRadius: 999,
+  padding: '6px 8px',
+}
+
+const checkoutCard: React.CSSProperties = {
+  marginTop: 18,
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 24,
+  padding: 18,
+  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
+}
+
+const checkoutHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  marginBottom: 14,
+}
+
+const checkoutTitle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 20,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const checkoutSub: React.CSSProperties = {
+  margin: '4px 0 0',
+  fontSize: 14,
+  color: '#64748b',
+}
+
+const deliveryInfoCard: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px solid #cbd5e1',
+  background: '#f8fafc',
+  padding: 14,
+  marginBottom: 16,
+}
+
+const deliveryInfoTitle: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 600,
+  color: '#1d4ed8',
+  marginBottom: 8,
+}
+
+const deliveryInfoText: React.CSSProperties = {
+  fontSize: 14,
+  color: '#475569',
+  lineHeight: 1.3,
+}
+
+const deliveryInfoMeta: React.CSSProperties = {
+  marginTop: 8,
+  fontSize: 12,
+  color: '#64748b',
+}
+
+const closedCheckoutBox: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px solid #fed7aa',
+  background: '#fff7ed',
+  padding: 14,
+}
+
+const closedCheckoutTitle: React.CSSProperties = {
+  fontWeight: 800,
+  color: '#9a3412',
+}
+
+const closedCheckoutText: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 14,
+  color: '#9a3412',
+}
+
+const emptyCartBox: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px dashed #cbd5e1',
+  background: '#f8fafc',
+  padding: 16,
+  color: '#64748b',
+  fontSize: 14,
+}
+
+const summaryList: React.CSSProperties = {
+  display: 'grid',
+  gap: 12,
+  marginBottom: 16,
+}
+
+const summaryCard: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
   borderRadius: 18,
   padding: 12,
-  border: '1px solid #e2e8f0',
-  overflow: 'hidden',
-} as const
+  background: '#fff',
+}
 
-const productContent = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1fr) 84px',
-  alignItems: 'start',
-  columnGap: 12,
-  minWidth: 0,
+const summaryRowButton: React.CSSProperties = {
   width: '100%',
-} as const
-
-const productInfo = {
-  minWidth: 0,
-  width: '100%',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'flex-start',
-} as const
-
-const productImageButton = {
-  padding: 0,
-  margin: 0,
   border: 'none',
   background: 'transparent',
-  width: 84,
-  minWidth: 84,
-  justifySelf: 'end' as const,
-  alignSelf: 'start' as const,
-} as const
+  padding: 0,
+  textAlign: 'left',
+  cursor: 'pointer',
+}
 
-const productImageWrap = {
-  width: 84,
-  height: 84,
-  borderRadius: 14,
-  overflow: 'hidden',
-  background: '#e2e8f0',
-  position: 'relative' as const,
-} as const
-
-const productImage = {
-  width: '100%',
-  height: '100%',
-  objectFit: 'cover' as const,
-  display: 'block',
-} as const
-
-const productImagePlaceholder = {
-  width: '100%',
-  height: '100%',
+const summaryRow: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#64748b',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 12,
+}
+
+const summaryEditHint: React.CSSProperties = {
+  marginTop: 8,
   fontSize: 12,
-} as const
-
-const productName = {
+  color: '#2563eb',
   fontWeight: 700,
-  color: '#0f172a',
-  marginBottom: 4,
-  fontSize: 13,
-  lineHeight: 1.3,
-  display: '-webkit-box',
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: 'vertical' as const,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis' as const,
-  wordBreak: 'break-word' as const,
-  maxWidth: '100%',
-} as const
+}
 
-const productPrice = {
-  color: '#1d4ed8',
-  fontWeight: 700,
-  marginBottom: 4,
-  fontSize: 14,
-  lineHeight: 1.35,
-} as const
-
-const productDesc = {
-  color: '#64748b',
-  fontSize: 11,
-  lineHeight: 1.35,
-  marginBottom: 8,
-  width: '100%',
-  display: '-webkit-box',
-  WebkitLineClamp: 1,
-  WebkitBoxOrient: 'vertical' as const,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis' as const,
-} as const
-
-const qtyWrap = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'flex-start',
-  gap: 6,
-  marginTop: 2,
-} as const
-
-const qtyRow = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-} as const
-
-const qtyBtn = {
-  width: 28,
-  height: 28,
-  borderRadius: '999px',
-  border: '1px solid #cbd5e1',
-  background: '#fff',
-  cursor: 'pointer',
-  fontWeight: 700,
-  fontSize: 15,
-  color: '#0f172a',
-  lineHeight: 1,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 0,
-} as const
-
-const qtyValue = {
-  minWidth: 16,
-  fontWeight: 700,
-  color: '#0f172a',
-  fontSize: 13,
-  textAlign: 'center' as const,
-} as const
-
-const qtyHintClosed = {
-  fontSize: 11,
-  lineHeight: 1.35,
-  color: '#b45309',
-  fontWeight: 700,
-} as const
-
-const checkoutCard = {
-  background: '#fff',
-  borderRadius: 22,
-  padding: 18,
-  border: '1px solid #e2e8f0',
-  boxShadow: '0 10px 30px rgba(15,23,42,0.05)',
-} as const
-
-const checkoutHeader = {
-  marginBottom: 14,
-} as const
-
-const checkoutTitle = {
-  margin: '0 0 4px 0',
-  fontSize: 22,
-  fontWeight: 800,
-  color: '#0f172a',
-} as const
-
-const checkoutSub = {
-  margin: 0,
-  color: '#64748b',
-  fontSize: 14,
-} as const
-
-const emptyCartBox = {
-  padding: 14,
-  borderRadius: 14,
-  background: '#f8fafc',
-  color: '#64748b',
-  fontSize: 14,
-  border: '1px solid #e2e8f0',
-} as const
-
-const closedCheckoutBox = {
-  padding: 16,
-  borderRadius: 14,
-  background: '#fff7ed',
-  color: '#9a3412',
-  fontSize: 14,
-  border: '1px solid #fed7aa',
-} as const
-
-const closedCheckoutTitle = {
-  fontSize: 15,
-  fontWeight: 800,
-  marginBottom: 6,
-} as const
-
-const closedCheckoutText = {
-  lineHeight: 1.6,
-} as const
-
-const summaryList = {
-  display: 'grid',
-  gap: 10,
-  marginBottom: 14,
-} as const
-
-const summaryCard = {
-  borderRadius: 12,
-  background: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  overflow: 'hidden',
-} as const
-
-const summaryRowButton = {
-  width: '100%',
-  padding: 0,
-  margin: 0,
-  border: 'none',
-  background: 'transparent',
-  textAlign: 'left' as const,
-  cursor: 'pointer',
-} as const
-
-const summaryRow = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 12,
-  padding: '10px 12px',
-  color: '#0f172a',
-} as const
-
-const summaryActions = {
+const summaryActions: React.CSSProperties = {
+  marginTop: 10,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 12,
-  padding: '10px 12px',
-  borderTop: '1px solid #e2e8f0',
-  background: '#fff',
-} as const
+}
 
-const lineQtyControls = {
-  display: 'flex',
+const lineQtyControls: React.CSSProperties = {
+  display: 'inline-flex',
   alignItems: 'center',
   gap: 8,
-} as const
+}
 
-const lineQtyBtn = {
+const lineQtyBtn: React.CSSProperties = {
   width: 30,
   height: 30,
-  borderRadius: '999px',
+  borderRadius: '9999px',
   border: '1px solid #cbd5e1',
   background: '#fff',
-  cursor: 'pointer',
-  fontWeight: 700,
   fontSize: 16,
-  color: '#0f172a',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 0,
-} as const
+  fontWeight: 800,
+  cursor: 'pointer',
+}
 
-const lineQtyValue = {
-  minWidth: 18,
-  textAlign: 'center' as const,
-  fontSize: 13,
-  fontWeight: 700,
-  color: '#0f172a',
-} as const
+const lineQtyValue: React.CSSProperties = {
+  minWidth: 16,
+  textAlign: 'center',
+  fontWeight: 800,
+}
 
-const deleteLineBtn = {
+const deleteLineBtn: React.CSSProperties = {
   border: '1px solid #fecaca',
   background: '#fef2f2',
   color: '#b91c1c',
-  borderRadius: 10,
+  borderRadius: 999,
   padding: '8px 12px',
   fontSize: 12,
-  fontWeight: 700,
+  fontWeight: 800,
   cursor: 'pointer',
-} as const
+}
 
-const summaryEditHint = {
-  marginTop: 6,
-  fontSize: 11,
-  color: '#7c3aed',
-  fontWeight: 700,
-} as const
-
-const galleryOverlay = {
-  position: 'fixed' as const,
+const galleryOverlay: React.CSSProperties = {
+  position: 'fixed',
   inset: 0,
-  zIndex: 999,
-  background: 'rgba(2, 6, 23, 0.82)',
+  background: 'rgba(15, 23, 42, 0.78)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   padding: 16,
-} as const
+  zIndex: 1000,
+}
 
-const galleryDialog = {
+const galleryDialog: React.CSSProperties = {
   width: '100%',
-  maxWidth: 920,
-  position: 'relative' as const,
-} as const
+  maxWidth: 980,
+  background: '#fff',
+  borderRadius: 24,
+  padding: 16,
+  position: 'relative',
+}
 
-const galleryCloseButton = {
-  position: 'absolute' as const,
-  top: -8,
-  right: -4,
-  width: 42,
-  height: 42,
-  borderRadius: '999px',
-  border: '1px solid rgba(255,255,255,0.18)',
-  background: 'rgba(15,23,42,0.82)',
-  color: '#fff',
-  fontSize: 18,
-  fontWeight: 700,
+const galleryCloseBtn: React.CSSProperties = {
+  position: 'absolute',
+  top: 12,
+  right: 12,
+  width: 36,
+  height: 36,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
   cursor: 'pointer',
-  zIndex: 2,
-} as const
+  fontWeight: 800,
+}
 
-const galleryTopBar = {
+const galleryHeader: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 12,
-  color: '#fff',
   marginBottom: 12,
-  paddingRight: 44,
-} as const
+  paddingRight: 42,
+}
 
-const galleryTitle = {
+const galleryTitle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const galleryCounter: React.CSSProperties = {
+  fontSize: 13,
+  color: '#64748b',
+  fontWeight: 700,
+}
+
+const galleryBody: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '48px 1fr 48px',
+  gap: 12,
+  alignItems: 'center',
+}
+
+const galleryNavBtn: React.CSSProperties = {
+  width: 48,
+  height: 48,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  fontSize: 26,
+  cursor: 'pointer',
+}
+
+const galleryImageWrap: React.CSSProperties = {
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: 20,
+  overflow: 'hidden',
+  minHeight: 320,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const galleryImage: React.CSSProperties = {
+  width: '100%',
+  maxHeight: '70vh',
+  objectFit: 'contain',
+  display: 'block',
+}
+
+const galleryThumbRow: React.CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  overflowX: 'auto',
+  marginTop: 14,
+}
+
+const galleryThumbBtn: React.CSSProperties = {
+  border: '2px solid #e2e8f0',
+  borderRadius: 14,
+  padding: 0,
+  background: '#fff',
+  overflow: 'hidden',
+  width: 72,
+  height: 72,
+  cursor: 'pointer',
+  flex: '0 0 auto',
+}
+
+const galleryThumbImg: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+}
+
+const modalOverlay: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(15, 23, 42, 0.62)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 16,
+  zIndex: 1100,
+}
+
+const modalDialog: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 680,
+  background: '#fff',
+  borderRadius: 24,
+  overflow: 'hidden',
+  boxShadow: '0 16px 50px rgba(15, 23, 42, 0.18)',
+}
+
+const modalHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 12,
+  padding: 18,
+  borderBottom: '1px solid #e2e8f0',
+}
+
+const modalTitle: React.CSSProperties = {
+  fontSize: 20,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const modalSubtitle: React.CSSProperties = {
+  marginTop: 4,
+  color: '#64748b',
+  fontSize: 14,
+}
+
+const modalCloseBtn: React.CSSProperties = {
+  width: 36,
+  height: 36,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  cursor: 'pointer',
+  fontWeight: 800,
+}
+
+const modalContent: React.CSSProperties = {
+  padding: 18,
+  display: 'grid',
+  gap: 14,
+  maxHeight: '70vh',
+  overflowY: 'auto',
+}
+
+const addonGroupCard: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
+  borderRadius: 18,
+  padding: 14,
+  background: '#fff',
+}
+
+const addonGroupHeader: React.CSSProperties = {
+  marginBottom: 10,
+}
+
+const addonGroupTitle: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 800,
-  lineHeight: 1.4,
-} as const
+  color: '#0f172a',
+}
 
-const galleryCounter = {
-  fontSize: 13,
-  fontWeight: 700,
-  color: 'rgba(255,255,255,0.78)',
-  flexShrink: 0,
-} as const
-
-const galleryImageArea = {
-  position: 'relative' as const,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 320,
-} as const
-
-const galleryImage = {
-  width: '100%',
-  maxHeight: '78vh',
-  objectFit: 'contain' as const,
-  borderRadius: 18,
-  background: '#fff',
-} as const
-
-const galleryNavButton = {
-  position: 'absolute' as const,
-  top: '50%',
-  transform: 'translateY(-50%)',
-  width: 42,
-  height: 42,
-  borderRadius: '999px',
-  border: '1px solid rgba(255,255,255,0.2)',
-  background: 'rgba(15,23,42,0.72)',
-  color: '#fff',
-  fontSize: 28,
-  lineHeight: 1,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-} as const
-
-const galleryNavLeft = {
-  left: 12,
-} as const
-
-const galleryNavRight = {
-  right: 12,
-} as const
-
-const galleryDots = {
-  marginTop: 14,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 8,
-  flexWrap: 'wrap' as const,
-} as const
-
-const galleryDot = {
-  width: 10,
-  height: 10,
-  borderRadius: '999px',
-  border: 'none',
-  background: '#fff',
-  cursor: 'pointer',
-  transition: 'all 0.2s ease',
-} as const
-
-const modalOverlay = {
-  position: 'fixed' as const,
-  inset: 0,
-  background: 'rgba(0,0,0,0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 999,
-} as const
-
-const modalBox = {
-  background: '#fff',
-  padding: 16,
-  borderRadius: 16,
-  width: '90%',
-  maxWidth: 400,
-} as const
-
-const optionRow = {
-  display: 'flex',
-  gap: 8,
-  marginBottom: 6,
-  fontSize: 14,
-} as const
-
-const noteBox = {
-  width: '100%',
-  marginTop: 10,
-  padding: 8,
-  borderRadius: 8,
-  border: '1px solid #ccc',
-} as const
-
-const confirmBtn = {
-  marginTop: 12,
-  width: '100%',
-  padding: 10,
-  background: '#0f172a',
-  color: '#fff',
-  borderRadius: 10,
-  border: 'none',
-  fontWeight: 700,
-} as const
-
-const cancelBtn = {
-  marginTop: 6,
-  width: '100%',
-  padding: 10,
-  background: '#e5e7eb',
-  borderRadius: 10,
-  border: 'none',
-} as const
-
-const modalErrorBox = {
-  marginBottom: 12,
-  padding: '10px 12px',
-  borderRadius: 10,
-  background: '#fef2f2',
-  border: '1px solid #fecaca',
-  color: '#b91c1c',
-  fontSize: 13,
-  lineHeight: 1.5,
-} as const
-
-const requiredMark = {
-  color: '#dc2626',
-  fontWeight: 800,
-} as const
-
-const groupMetaText = {
+const addonGroupMeta: React.CSSProperties = {
+  marginTop: 4,
   fontSize: 12,
   color: '#64748b',
-  marginBottom: 8,
-} as const
+  fontWeight: 600,
+}
+
+const addonOptionsWrap: React.CSSProperties = {
+  display: 'grid',
+  gap: 10,
+}
+
+const addonOptionRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  border: '1px solid #e2e8f0',
+  borderRadius: 14,
+  padding: '10px 12px',
+  background: '#f8fafc',
+}
+
+const addonOptionName: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: '#0f172a',
+}
+
+const addonOptionPrice: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: '#334155',
+}
+
+const noteWrap: React.CSSProperties = {
+  display: 'grid',
+  gap: 8,
+}
+
+const noteLabel: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const noteTextarea: React.CSSProperties = {
+  width: '100%',
+  borderRadius: 13,
+  border: '1px solid #cbd5e1',
+  padding: 12,
+  fontSize: 14,
+  fontFamily: 'inherit',
+  resize: 'vertical',
+}
+
+const modalError: React.CSSProperties = {
+  borderRadius: 14,
+  border: '1px solid #fecaca',
+  background: '#fef2f2',
+  padding: 12,
+  color: '#b91c1c',
+  fontSize: 14,
+  fontWeight: 700,
+}
+
+const modalFooter: React.CSSProperties = {
+  padding: 18,
+  borderTop: '1px solid #e2e8f0',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  gap: 10,
+}
+
+const secondaryBtn: React.CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#0f172a',
+  padding: '10px 16px',
+  fontWeight: 800,
+  cursor: 'pointer',
+}
+
+const primaryBtn: React.CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid #0f172a',
+  background: '#0f172a',
+  color: '#fff',
+  padding: '10px 16px',
+  fontWeight: 800,
+  cursor: 'pointer',
+}

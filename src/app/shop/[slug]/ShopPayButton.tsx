@@ -201,7 +201,16 @@ export default function ShopPayButton({
     setCalculatedDistanceKm(null)
     setResolvedCustomerAddress('')
     setDeliveryError('')
-  }, [address1, address2, postcode, city, district, state, needsDelivery, deliveryMode])
+  }, [
+    address1,
+    address2,
+    postcode,
+    city,
+    district,
+    state,
+    needsDelivery,
+    deliveryMode,
+  ])
 
   const normalizedItems = useMemo(() => {
     return items.map((item) => {
@@ -217,7 +226,10 @@ export default function ShopPayButton({
         : []
 
       const basePrice = Number(item.base_price || 0)
-      const addonTotal = addons.reduce((sum, addon) => sum + Number(addon.price || 0), 0)
+      const addonTotal = addons.reduce(
+        (sum, addon) => sum + Number(addon.price || 0),
+        0
+      )
       const fallbackUnitPrice = basePrice + addonTotal
       const unitPrice =
         Number.isFinite(Number(item.unit_price)) && Number(item.unit_price) > 0
@@ -264,7 +276,13 @@ export default function ShopPayButton({
       default:
         return 'Bayaran delivery dibuat berasingan terus kepada rider / seller.'
     }
-  }, [deliveryMode, deliveryFee, deliveryRatePerKm, deliveryMinFee, deliveryRadiusKm])
+  }, [
+    deliveryMode,
+    deliveryFee,
+    deliveryRatePerKm,
+    deliveryMinFee,
+    deliveryRadiusKm,
+  ])
 
   const appliedDeliveryFee = useMemo(() => {
     if (!needsDelivery) return 0
@@ -286,6 +304,44 @@ export default function ShopPayButton({
   const payableTotal = useMemo(() => {
     return Number(total || 0) + appliedDeliveryFee
   }, [total, appliedDeliveryFee])
+
+  function getDeliveryLabel() {
+    switch (deliveryMode) {
+      case 'free_delivery':
+        return '(FREE)'
+      case 'fixed_fee':
+        return '(Fixed)'
+      case 'included_in_price':
+        return '(Included)'
+      case 'pay_rider_separately':
+        return '(Pay rider)'
+      case 'distance_based':
+        return needsDelivery ? '(Calculated)' : '(Off)'
+      default:
+        return ''
+    }
+  }
+
+  function getDeliveryAmountDisplay() {
+    if (!needsDelivery) return 'RM 0.00'
+
+    switch (deliveryMode) {
+      case 'free_delivery':
+        return 'RM 0.00'
+      case 'included_in_price':
+        return 'RM 0.00'
+      case 'pay_rider_separately':
+        return '-'
+      case 'fixed_fee':
+        return formatCurrency(deliveryFee)
+      case 'distance_based':
+        return Number.isFinite(Number(calculatedDeliveryFee))
+          ? formatCurrency(calculatedDeliveryFee)
+          : 'RM 0.00'
+      default:
+        return 'RM 0.00'
+    }
+  }
 
   function handlePhoneChange(value: string) {
     let cleaned = value.replace(/[^\d+]/g, '')
@@ -490,29 +546,6 @@ export default function ShopPayButton({
 
   return (
     <div style={wrapper}>
-      <div style={deliveryNoticeBox}>
-        <div style={deliveryNoticeTitle}>Delivery Info</div>
-        <div style={deliveryNoticeText}>{deliverySummary}</div>
-
-        {deliveryArea ? (
-          <div style={deliveryNoticeMeta}>
-            Kawasan: {deliveryArea}
-          </div>
-        ) : null}
-
-        {pickupAddress ? (
-          <div style={deliveryNoticeMeta}>
-            Pickup address: {pickupAddress}
-          </div>
-        ) : null}
-
-        {deliveryNote ? (
-          <div style={deliveryNoticeMeta}>
-            Note: {deliveryNote}
-          </div>
-        ) : null}
-      </div>
-
       <div style={formGrid}>
         <div>
           <label style={labelStyle}>Full Name</label>
@@ -647,6 +680,10 @@ export default function ShopPayButton({
 
             {deliveryMode === 'distance_based' ? (
               <div style={distanceBox}>
+                {deliveryArea ? (
+                  <div style={deliveryAreaText}>Delivery area: {deliveryArea}</div>
+                ) : null}
+
                 <button
                   type="button"
                   onClick={handleCalculateDelivery}
@@ -685,9 +722,7 @@ export default function ShopPayButton({
                   </div>
                 ) : null}
 
-                {deliveryError ? (
-                  <div style={errorBox}>{deliveryError}</div>
-                ) : null}
+                {deliveryError ? <div style={errorBox}>{deliveryError}</div> : null}
               </div>
             ) : null}
           </>
@@ -701,8 +736,11 @@ export default function ShopPayButton({
         </div>
 
         <div style={totalLine}>
-          <span>Delivery</span>
-          <strong>{formatCurrency(appliedDeliveryFee)}</strong>
+          <span>
+            Delivery{' '}
+            <span style={deliveryLabelText}>{getDeliveryLabel()}</span>
+          </span>
+          <strong>{getDeliveryAmountDisplay()}</strong>
         </div>
 
         <div style={grandTotalLine}>
@@ -729,34 +767,6 @@ export default function ShopPayButton({
 
 const wrapper = {
   width: '100%',
-} as const
-
-const deliveryNoticeBox = {
-  padding: '12px',
-  border: '1px solid #dbeafe',
-  borderRadius: '12px',
-  background: '#f8fbff',
-  marginBottom: '14px',
-} as const
-
-const deliveryNoticeTitle = {
-  fontSize: '13px',
-  fontWeight: 800,
-  color: '#1d4ed8',
-  marginBottom: '6px',
-} as const
-
-const deliveryNoticeText = {
-  fontSize: '14px',
-  color: '#0f172a',
-  lineHeight: 1.6,
-} as const
-
-const deliveryNoticeMeta = {
-  fontSize: '12px',
-  color: '#64748b',
-  lineHeight: 1.6,
-  marginTop: '6px',
 } as const
 
 const formGrid = {
@@ -837,6 +847,12 @@ const distanceBox = {
   gap: '10px',
 } as const
 
+const deliveryAreaText = {
+  fontSize: '12px',
+  color: '#64748b',
+  lineHeight: 1.5,
+} as const
+
 const secondaryButton = {
   border: '1px solid #cbd5e1',
   background: '#fff',
@@ -905,6 +921,12 @@ const totalLine = {
   gap: '12px',
   fontSize: '14px',
   color: '#334155',
+} as const
+
+const deliveryLabelText = {
+  fontSize: '12px',
+  color: '#64748b',
+  fontWeight: 600,
 } as const
 
 const grandTotalLine = {

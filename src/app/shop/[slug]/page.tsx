@@ -12,6 +12,43 @@ type SellerProfile = {
   email?: string | null
   whatsapp?: string | null
   business_address?: string | null
+  shop_description?: string | null
+  slug?: string | null
+  store_slug?: string | null
+  accept_orders_anytime?: boolean | null
+  opening_time?: string | null
+  closing_time?: string | null
+  temporarily_closed?: boolean | null
+  closed_message?: string | null
+  operating_days?: Record<
+    'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday',
+    {
+      enabled: boolean
+      opening_time: string
+      closing_time: string
+    }
+  > | null
+  delivery_mode?:
+    | 'free_delivery'
+    | 'fixed_fee'
+    | 'included_in_price'
+    | 'pay_rider_separately'
+    | 'distance_based'
+    | null
+  delivery_fee?: number | null
+  delivery_area?: string | null
+  delivery_note?: string | null
+  delivery_radius_km?: number | null
+  delivery_rate_per_km?: number | null
+  delivery_min_fee?: number | null
+  pickup_address?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  daily_note?: string | null
+  share_image_mode?: 'product' | 'logo' | 'poster' | null
+  share_poster_url?: string | null
+  order_mode?: 'anytime' | 'scheduled' | 'preorder' | null
+  preorder_days?: number | null
 }
 
 type MenuCategory = {
@@ -66,49 +103,104 @@ export default async function Page({ params }: PageProps) {
 
   let seller: SellerProfile | null = null
 
-  // 🔹 GET SELLER
-  const { data: sellers } = await supabase
-    .from('seller_profiles')
-    .select(
-      'id, store_name, shop_slug, profile_image, email, whatsapp, business_address'
-    )
+const { data: directSeller } = await supabase
+  .from('seller_profiles')
+  .select(`
+    id,
+    store_name,
+    shop_slug,
+    profile_image,
+    email,
+    whatsapp,
+    business_address,
+    shop_description,
+    accept_orders_anytime,
+    opening_time,
+    closing_time,
+    temporarily_closed,
+    closed_message,
+    operating_days,
+    delivery_mode,
+    delivery_fee,
+    delivery_area,
+    delivery_note,
+    delivery_radius_km,
+    delivery_rate_per_km,
+    delivery_min_fee,
+    pickup_address,
+    latitude,
+    longitude,
+    daily_note,
+    share_image_mode,
+    share_poster_url,
+    order_mode,
+    preorder_days,
+    slug,
+    store_slug
+  `)
+  .or(`shop_slug.eq.${requestedSlug},slug.eq.${requestedSlug},store_slug.eq.${requestedSlug}`)
+  .maybeSingle()
 
-  if (sellers && sellers.length > 0) {
-    seller =
-      (sellers as SellerProfile[]).find((item) => {
-        if (!item.store_name) return false
-        return item.shop_slug === requestedSlug
-      }) || null
-  }
+seller = (directSeller as SellerProfile | null) || null
 
   // 🔹 FALLBACK SELLER FROM PRODUCT
-  if (!seller) {
-    const { data: fallbackProducts } = await supabase
-      .from('products')
-      .select(
-        'seller_profile_id, store_name, is_active, name, slug, description, price'
-      )
-      .eq('is_active', true)
+if (!seller) {
+  const { data: fallbackProducts } = await supabase
+    .from('products')
+    .select(
+      'seller_profile_id, store_name, is_active, name, slug, description, price'
+    )
+    .eq('is_active', true)
 
-    if (fallbackProducts && fallbackProducts.length > 0) {
-      const matchedProduct = (fallbackProducts as any[]).find((item) => {
-        if (!item.store_name) return false
-        return slugify(item.store_name) === requestedSlug
-      })
+  if (fallbackProducts && fallbackProducts.length > 0) {
+    const matchedProduct = (fallbackProducts as any[]).find((item) => {
+      if (!item.store_name) return false
+      return slugify(item.store_name) === requestedSlug
+    })
 
-      if (matchedProduct) {
-        seller = {
-          id: matchedProduct.seller_profile_id || '',
-          store_name: matchedProduct.store_name || 'Shop',
-          shop_slug: requestedSlug,
-          profile_image: null,
-          email: null,
-          whatsapp: null,
-          business_address: null,
-        }
-      }
+    if (matchedProduct?.seller_profile_id) {
+      const { data: fallbackSeller } = await supabase
+        .from('seller_profiles')
+        .select(
+          `
+            id,
+            store_name,
+            shop_slug,
+            profile_image,
+            email,
+            whatsapp,
+            business_address,
+            shop_description,
+            accept_orders_anytime,
+            opening_time,
+            closing_time,
+            temporarily_closed,
+            closed_message,
+            operating_days,
+            delivery_mode,
+            delivery_fee,
+            delivery_area,
+            delivery_note,
+            delivery_radius_km,
+            delivery_rate_per_km,
+            delivery_min_fee,
+            pickup_address,
+            latitude,
+            longitude,
+            daily_note,
+            share_image_mode,
+            share_poster_url,
+            order_mode,
+            preorder_days
+          `
+        )
+        .eq('id', matchedProduct.seller_profile_id)
+        .maybeSingle()
+
+      seller = (fallbackSeller as SellerProfile | null) || null
     }
   }
+}
 
   // ❌ NO SELLER
   if (!seller) {
