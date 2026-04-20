@@ -979,7 +979,12 @@ export default function ShopPageClient({
     <div style={heroContent}>
       <h1 style={shopTitle}>{sellerName}</h1>
 
-      <div style={statusInlineWrap}>
+      <div
+        style={{
+          ...statusInlineWrap,
+        justifyContent: isDesktop ? 'flex-start' : 'center',
+        }}
+      >
         <div
           style={{
             ...statusBadge,
@@ -1006,11 +1011,25 @@ export default function ShopPageClient({
       </div>
 
       {seller.shop_description?.trim() ? (
-        <p style={shopDescription}>{seller.shop_description}</p>
+        <p
+          style={{
+          ...shopDescription,
+          textAlign: isDesktop ? 'left' : 'center',
+          }}
+        >
+          {seller.shop_description}
+        </p>
       ) : null}
 
       {seller.business_address?.trim() ? (
-        <p style={shopMeta}>{seller.business_address}</p>
+        <p
+          style={{
+          ...shopMeta,
+          textAlign: isDesktop ? 'left' : 'center',
+          }}
+        >
+          {seller.business_address}
+        </p>
       ) : null}
     </div>
   </div>
