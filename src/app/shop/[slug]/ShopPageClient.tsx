@@ -67,6 +67,7 @@ type SellerProfile = {
   email?: string | null
   whatsapp?: string | null
   business_address?: string | null
+  shop_description?: string | null
   accept_orders_anytime?: boolean | null
   opening_time?: string | null
   closing_time?: string | null
@@ -257,8 +258,8 @@ function getDeliverySummary(seller: SellerProfile) {
       return 'Free delivery tersedia untuk kawasan terpilih.'
     case 'fixed_fee':
       return fee > 0
-        ? `Delivery fee sebanyak ${formatCurrency(fee)} akan dikenakan jika customer pilih delivery.`
-        : 'Delivery fee akan dikenakan jika customer pilih delivery.'
+        ? `Delivery fee: ${formatCurrency(fee)}`
+        : 'Delivery fee akan dikenakan.'
     case 'included_in_price':
       return 'Harga produk telah termasuk delivery.'
     case 'distance_based':
@@ -267,7 +268,10 @@ function getDeliverySummary(seller: SellerProfile) {
       )}/km, minimum ${formatCurrency(minFee)}, radius maksimum ${radius}km.`
     case 'pay_rider_separately':
     default:
-      return 'Bayaran delivery dibuat berasingan terus kepada rider.'
+      return (
+        seller.delivery_note?.trim() ||
+        'Bayaran delivery dibuat terus kepada rider semasa order sampai.'
+      )
   }
 }
 
@@ -338,6 +342,7 @@ function getShopAvailability(seller: SellerProfile) {
       detail:
         seller.closed_message ||
         'Kedai ditutup sementara. Sila cuba lagi kemudian.',
+      inlineInfo: '',
       timeRange: '',
     }
   }
@@ -350,7 +355,8 @@ function getShopAvailability(seller: SellerProfile) {
     return {
       isOpen: true,
       label: 'Pre-order',
-      detail: `Perlu order sekurang-kurangnya ${days} hari awal.`,
+      detail: '',
+      inlineInfo: `${days} hari awal`,
       timeRange: '',
     }
   }
@@ -359,7 +365,8 @@ function getShopAvailability(seller: SellerProfile) {
     return {
       isOpen: true,
       label: 'Open Now',
-      detail: 'Order dibuka 24 jam.',
+      detail: '',
+      inlineInfo: '24 jam',
       timeRange: '',
     }
   }
@@ -372,10 +379,13 @@ function getShopAvailability(seller: SellerProfile) {
     const todayConfig = seller.operating_days[todayKey]
 
     if (!todayConfig || !todayConfig.enabled) {
+      const nextOpening = getNextOpeningText(seller)
+
       return {
         isOpen: false,
         label: 'Closed',
-        detail: getNextOpeningText(seller),
+        detail: nextOpening,
+        inlineInfo: nextOpening,
         timeRange: '',
       }
     }
@@ -388,6 +398,9 @@ function getShopAvailability(seller: SellerProfile) {
         isOpen: false,
         label: 'Closed',
         detail:
+          seller.closed_message ||
+          'Waktu operasi tidak lengkap. Sila cuba lagi kemudian.',
+        inlineInfo:
           seller.closed_message ||
           'Waktu operasi tidak lengkap. Sila cuba lagi kemudian.',
         timeRange: '',
@@ -410,6 +423,7 @@ function getShopAvailability(seller: SellerProfile) {
       isOpen,
       label: isOpen ? 'Open Now' : 'Closed',
       detail: isOpen ? '' : getNextOpeningText(seller),
+      inlineInfo: isOpen ? timeRange : getNextOpeningText(seller),
       timeRange,
     }
   }
@@ -422,6 +436,7 @@ function getShopAvailability(seller: SellerProfile) {
       isOpen: true,
       label: 'Open Now',
       detail: '',
+      inlineInfo: '',
       timeRange: '',
     }
   }
@@ -443,6 +458,10 @@ function getShopAvailability(seller: SellerProfile) {
     label: isOpen ? 'Open Now' : 'Closed',
     detail: isOpen
       ? ''
+      : seller.closed_message ||
+        'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
+    inlineInfo: isOpen
+      ? timeRange
       : seller.closed_message ||
         'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
     timeRange,
@@ -946,69 +965,40 @@ export default function ShopPageClient({
 
             <div style={{ minWidth: 0, flex: 1 }}>
               <h1 style={shopTitle}>{sellerName}</h1>
-              {seller.business_address && (
+
+              <div style={statusInlineWrap}>
+                <div
+                  style={{
+                    ...statusBadge,
+                    background:
+                      availability.label === 'Pre-order'
+                        ? '#ede9fe'
+                        : isShopOpen
+                        ? '#dcfce7'
+                        : '#fee2e2',
+                    color:
+                      availability.label === 'Pre-order'
+                        ? '#6d28d9'
+                        : isShopOpen
+                        ? '#166534'
+                        : '#b91c1c',
+                  }}
+                >
+                  {availability.label}
+                </div>
+
+                {availability.inlineInfo ? (
+                  <div style={statusInfoBadge}>{availability.inlineInfo}</div>
+                ) : null}
+              </div>
+
+              {seller.shop_description ? (
+                <p style={shopDescription}>{seller.shop_description}</p>
+              ) : seller.business_address ? (
                 <p style={shopSub}>{seller.business_address}</p>
-              )}
+              ) : null}
             </div>
           </div>
-
-          <div style={statusWrap}>
-            <div
-              style={{
-                ...statusBadge,
-                background:
-                  availability.label === 'Pre-order'
-                    ? '#ede9fe'
-                    : isShopOpen
-                    ? '#dcfce7'
-                    : '#fee2e2',
-                color:
-                  availability.label === 'Pre-order'
-                    ? '#6d28d9'
-                    : isShopOpen
-                    ? '#166534'
-                    : '#b91c1c',
-              }}
-            >
-              {availability.label}
-            </div>
-
-            {availability.timeRange ? (
-              <div style={hoursText}>{availability.timeRange}</div>
-            ) : null}
-          </div>
-
-          {availability.detail && (
-            <div
-              style={{
-                ...noticeBox,
-                background:
-                  availability.label === 'Pre-order'
-                    ? '#f5f3ff'
-                    : isShopOpen
-                    ? '#eff6ff'
-                    : '#fff7ed',
-                borderColor:
-                  availability.label === 'Pre-order'
-                    ? '#ddd6fe'
-                    : isShopOpen
-                    ? '#bfdbfe'
-                    : '#fed7aa',
-                color:
-                  availability.label === 'Pre-order'
-                    ? '#5b21b6'
-                    : isShopOpen
-                    ? '#1e3a8a'
-                    : '#9a3412',
-              }}
-            >
-              {availability.detail}
-            </div>
-          )}
-
-          {deliverySummary ? (
-            <div style={{ ...shopSub, marginTop: 10 }}>{deliverySummary}</div>
-          ) : null}
         </div>
 
         {hasCategoryFeature ? (
@@ -1184,6 +1174,17 @@ export default function ShopPageClient({
             </div>
           ) : (
             <>
+              <div style={deliveryInfoCard}>
+                <div style={deliveryInfoTitle}>Delivery Info</div>
+                <div style={deliveryInfoText}>{deliverySummary}</div>
+
+                {seller.delivery_area?.trim() ? (
+                  <div style={deliveryInfoMeta}>
+                    Kawasan: {seller.delivery_area.trim()}
+                  </div>
+                ) : null}
+              </div>
+
               <div style={summaryList}>
                 {cartItems.map((item) => (
                   <div key={item.id} style={summaryCard}>
@@ -1396,7 +1397,8 @@ export default function ShopPageClient({
                         {group.options
                           .filter((option) => option.is_active !== false)
                           .sort(
-                            (a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
+                            (a, b) =>
+                              Number(a.sort_order || 0) - Number(b.sort_order || 0)
                           )
                           .map((option) => {
                             const checked = selectedIds.includes(option.id)
@@ -1539,7 +1541,7 @@ export default function ShopPageClient({
 const main: React.CSSProperties = {
   minHeight: '100vh',
   background: '#f8fafc',
-  padding: '24px 16px 80px',
+  padding: '20px 16px 80px',
 }
 
 const container: React.CSSProperties = {
@@ -1551,11 +1553,11 @@ const container: React.CSSProperties = {
 const logoWrap: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'center',
-  marginBottom: 16,
+  marginBottom: 12,
 }
 
 const logo: React.CSSProperties = {
-  height: 34,
+  height: 28,
   width: 'auto',
 }
 
@@ -1570,74 +1572,78 @@ const heroCard: React.CSSProperties = {
 
 const sellerRow: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
+  alignItems: 'flex-start',
   gap: 14,
 }
 
 const sellerImg: React.CSSProperties = {
-  width: 64,
-  height: 64,
+  width: 58,
+  height: 58,
   borderRadius: '9999px',
   objectFit: 'cover',
   border: '1px solid #e2e8f0',
+  flexShrink: 0,
 }
 
 const sellerFallback: React.CSSProperties = {
-  width: 64,
-  height: 64,
+  width: 58,
+  height: 58,
   borderRadius: '9999px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   background: '#e2e8f0',
   color: '#0f172a',
-  fontSize: 24,
+  fontSize: 22,
   fontWeight: 800,
+  flexShrink: 0,
 }
 
 const shopTitle: React.CSSProperties = {
   margin: 0,
-  fontSize: 24,
-  lineHeight: 1.2,
+  fontSize: 18,
+  lineHeight: 1.25,
   fontWeight: 800,
   color: '#0f172a',
 }
 
 const shopSub: React.CSSProperties = {
-  margin: '6px 0 0',
+  margin: '8px 0 0',
   color: '#64748b',
   fontSize: 14,
   lineHeight: 1.5,
 }
 
-const statusWrap: React.CSSProperties = {
+const shopDescription: React.CSSProperties = {
+  margin: '8px 0 0',
+  color: '#475569',
+  fontSize: 14,
+  lineHeight: 1.5,
+}
+
+const statusInlineWrap: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 10,
+  gap: 8,
   flexWrap: 'wrap',
-  marginTop: 14,
+  marginTop: 10,
 }
 
 const statusBadge: React.CSSProperties = {
   borderRadius: 999,
-  padding: '8px 12px',
+  padding: '7px 11px',
   fontSize: 12,
   fontWeight: 800,
 }
 
-const hoursText: React.CSSProperties = {
-  fontSize: 13,
+const statusInfoBadge: React.CSSProperties = {
+  borderRadius: 999,
+  padding: '7px 11px',
+  fontSize: 12,
+  fontWeight: 700,
+  background: '#f1f5f9',
   color: '#475569',
-  fontWeight: 600,
-}
-
-const noticeBox: React.CSSProperties = {
-  marginTop: 12,
   border: '1px solid #e2e8f0',
-  borderRadius: 16,
-  padding: '10px 12px',
-  fontSize: 14,
-  lineHeight: 1.5,
 }
 
 const stickyTabWrap: React.CSSProperties = {
@@ -1693,7 +1699,7 @@ const emptyCard: React.CSSProperties = {
 
 const productGrid: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
   gap: 16,
 }
 
@@ -1867,6 +1873,33 @@ const checkoutTitle: React.CSSProperties = {
 const checkoutSub: React.CSSProperties = {
   margin: '4px 0 0',
   fontSize: 14,
+  color: '#64748b',
+}
+
+const deliveryInfoCard: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px solid #cbd5e1',
+  background: '#f8fafc',
+  padding: 14,
+  marginBottom: 16,
+}
+
+const deliveryInfoTitle: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: '#1d4ed8',
+  marginBottom: 8,
+}
+
+const deliveryInfoText: React.CSSProperties = {
+  fontSize: 14,
+  color: '#475569',
+  lineHeight: 1.6,
+}
+
+const deliveryInfoMeta: React.CSSProperties = {
+  marginTop: 8,
+  fontSize: 12,
   color: '#64748b',
 }
 
