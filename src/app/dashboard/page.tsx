@@ -83,6 +83,14 @@ function getImageUrl(path?: string | null) {
   return `${baseUrl}/storage/v1/object/public/${cleanPath}`
 }
 
+function limitText(text: string, max = 220) {
+  if (!text) return ''
+
+  if (text.length <= max) return text
+
+  return text.slice(0, max).trim() + '...'
+}
+
 function formatMoney(value?: number) {
   return `RM ${Number(value || 0).toFixed(2)}`
 }
@@ -391,26 +399,28 @@ export default function DashboardPage() {
     if (topCategories.length > 0) {
       return `Antara kategori:\n${topCategories
         .map((category) => `• ${category.name}`)
-        .join('\n')}\n\n...dan banyak lagi menu tersedia.`
+        .join('\n')}`
     }
 
     if (topProducts.length > 0) {
       return `Antara menu:\n${topProducts
         .map((p, i) => `${i + 1}. ${p.name} - ${formatMoney(p.price)}`)
-        .join('\n')}\n\n...dan banyak lagi menu tersedia.`
+        .join('\n')}`
     }
 
     return 'Tiada produk aktif buat masa ini.'
   }, [topCategories, topProducts])
 
   const message = useMemo(() => {
-    const customBlock = dailyNote.trim()
+  const customBlock = dailyNote.trim()
 
-    return `${customBlock ? `${customBlock}\n\n` : ''}${promoLines}
+  const fullText = `${customBlock ? `${customBlock}\n\n` : ''}${promoLines}
 
 Order sini:
 ${shopLink}`.trim()
-  }, [dailyNote, promoLines, shopLink])
+
+  return limitText(fullText, 220)
+}, [dailyNote, promoLines, shopLink])
 
   const previewImage = useMemo(() => {
     if (seller?.profile_image) {
@@ -654,10 +664,13 @@ ${shopLink}`.trim()
         <div className="mb-5">
           <textarea
             value={dailyNote}
-            onChange={(e) => setDailyNote(e.target.value)}
-            placeholder="Contoh: Open order hari ini! Delivery petang 🚚"
+            onChange={(e) => setDailyNote(e.target.value.slice(0, 150))}
+            placeholder="Contoh: Jom order untuk hari ini! Kami deliver terus ke pintu rumah anda. Grab cepat sebelum habis!"
             rows={3}
             className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
+            <p className="mt-1 text-xs text-slate-400">
+              {dailyNote.length}/150 characters
+          </p>
           />
         </div>
 
