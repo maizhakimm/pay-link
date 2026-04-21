@@ -666,7 +666,7 @@ ${shopLink}`.trim()
        <div className="mb-5">
           <textarea
             value={dailyNote}
-            onChange={(e) => setDailyNote(e.target.value.slice(0, 150))}
+            onChange={(e) => setDailyNote(e.target.value.slice(0, 200))}
             placeholder="Contoh: Fresh bake hari ini! Delivery esok! Grab sekarang!"
             rows={3}
             className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
