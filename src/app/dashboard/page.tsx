@@ -84,7 +84,7 @@ function getImageUrl(path?: string | null) {
   return `${baseUrl}/storage/v1/object/public/${cleanPath}`
 }
 
-function limitText(text: string, max = 220) {
+function limitText(text: string, max: number) {
   if (!text) return ''
   if (text.length <= max) return text
   return text.slice(0, max).trim() + '...'
@@ -390,30 +390,33 @@ export default function DashboardPage() {
   const isOpen = storeStatus.isOpen
 
   const promoLines = useMemo(() => {
+    let promo = ''
+
     if (topCategories.length > 0) {
-      return `Antara kategori:\n${topCategories
+      promo = `Antara kategori:\n${topCategories
         .map((category) => `• ${category.name}`)
         .join('\n')}`
-    }
-
-    if (topProducts.length > 0) {
-      return `Antara menu:\n${topProducts
+    } else if (topProducts.length > 0) {
+      promo = `Antara menu:\n${topProducts
         .map((p, i) => `${i + 1}. ${p.name} - ${formatMoney(p.price)}`)
         .join('\n')}`
+    } else {
+      promo = 'Tiada produk aktif buat masa ini.'
     }
 
-    return 'Tiada produk aktif buat masa ini.'
+    return limitText(promo, 80)
   }, [topCategories, topProducts])
 
   const message = useMemo(() => {
-    const customBlock = dailyNote.trim()
+    const limitedDailyNote = limitText(dailyNote.trim(), 150)
 
-    const fullText = `${customBlock ? `${customBlock}\n\n` : ''}${promoLines}
+    const parts = [
+      limitedDailyNote,
+      promoLines,
+      shopLink ? `Order sini:\n${shopLink}` : '',
+    ].filter(Boolean)
 
-Order sini:
-${shopLink}`.trim()
-
-    return limitText(fullText, 220)
+    return parts.join('\n\n').trim()
   }, [dailyNote, promoLines, shopLink])
 
   const previewImage = useMemo(() => {
@@ -660,13 +663,13 @@ ${shopLink}`.trim()
         <div className="mb-5">
           <textarea
             value={dailyNote}
-            onChange={(e) => setDailyNote(e.target.value.slice(0, 250))}
+            onChange={(e) => setDailyNote(e.target.value.slice(0, 150))}
             placeholder="Contoh: Fresh bake hari ini! Delivery esok! Grab sekarang!"
             rows={3}
             className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
           />
           <p className="mt-1 text-xs text-slate-400">
-            {dailyNote.length}/250 characters
+            {dailyNote.length}/150 characters
           </p>
         </div>
 
