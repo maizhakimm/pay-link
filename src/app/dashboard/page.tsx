@@ -66,6 +66,10 @@ type Order = {
   created_at?: string | null
 }
 
+function goToSlots() {
+  window.location.href = '/dashboard/slots'
+}
+
 function getImageUrl(path?: string | null) {
   if (!path) return ''
 
@@ -472,8 +476,8 @@ export default function DashboardPage() {
     window.location.href = '/dashboard/products'
   }
 
-  function goToOrders() {
-    window.location.href = '/dashboard/orders'
+  function goToSlots() {
+    window.location.href = '/dashboard/slots'
   }
 
   function openShop() {
@@ -589,12 +593,12 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={goToOrders}
+            onClick={goToSlots}
             className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:bg-slate-50"
           >
-            <div className="text-sm font-bold text-slate-900">Lihat Order</div>
+            <div className="text-sm font-bold text-slate-900">Slot Delivery</div>
             <div className="mt-1 text-xs text-slate-500">
-              Semak order masuk
+              Urus slot penghantaran
             </div>
           </button>
 
