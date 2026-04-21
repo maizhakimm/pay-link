@@ -32,7 +32,7 @@ type SellerProfile = {
   id: string
   store_name: string | null
   shop_slug?: string | null
-  order_mode?: 'anytime' | 'scheduled' | 'preorder' | null
+  order_mode?: 'anytime' | 'scheduled' | 'order_mode' | null
   profile_image?: string | null
   daily_note?: string | null
   whatsapp?: string | null
