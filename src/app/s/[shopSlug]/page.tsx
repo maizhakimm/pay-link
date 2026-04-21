@@ -309,14 +309,11 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const requestedSlug = decodeURIComponent(params.shopSlug).toLowerCase().trim()
+  
   const seller = await getSellerBySlug(requestedSlug)
 
   const storeName = seller?.store_name?.trim() || 'BayarLink Shop'
-  const description =
-    seller?.daily_note?.trim() ||
-    (seller?.temporarily_closed
-      ? 'Kedai ini ditutup sementara. Sila cuba lagi nanti.'
-      : 'Order online dengan mudah. Senarai menu lengkap tersedia di sini.')
+  const description = 'Order & bayar dengan mudah melalui BayarLink'
 
   const imageUrl = await getShareImageUrl(seller)
 
