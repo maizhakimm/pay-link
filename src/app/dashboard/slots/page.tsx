@@ -186,8 +186,8 @@ export default function DeliverySlotsPage() {
       return
     }
 
-    if (startMinutes >= endMinutes) {
-      alert('End time must be later than start time.')
+    if (startMinutes === endMinutes) {
+      alert('Start time and end time cannot be the same.')
       return
     }
 
