@@ -309,7 +309,7 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const requestedSlug = decodeURIComponent(params.shopSlug).toLowerCase().trim()
-  
+
   const seller = await getSellerBySlug(requestedSlug)
 
   const storeName = seller?.store_name?.trim() || 'BayarLink Shop'
@@ -318,13 +318,15 @@ export async function generateMetadata({
   const imageUrl = await getShareImageUrl(seller)
 
   return {
-    title: storeName,
+    title: {
+      absolute: storeName,
+    },
     description,
     openGraph: {
       title: storeName,
       description,
       url: `https://www.bayarlink.my/s/${requestedSlug}`,
-      siteName: 'BayarLink',
+      siteName: storeName,
       images: [
         {
           url: imageUrl,
