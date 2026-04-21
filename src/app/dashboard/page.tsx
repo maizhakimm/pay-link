@@ -32,6 +32,7 @@ type SellerProfile = {
   id: string
   store_name: string | null
   shop_slug?: string | null
+  order_mode?: 'anytime' | 'scheduled' | 'preorder' | null
   profile_image?: string | null
   daily_note?: string | null
   whatsapp?: string | null
@@ -165,26 +166,25 @@ function isOpenForSchedule(
 
 function getStoreOpenStatus(seller?: SellerProfile | null) {
   if (!seller) {
-    return {
-      isOpen: false,
-      label: 'Closed',
-    }
+    return { isOpen: false, label: 'Closed' }
   }
 
+  // 1. Override - Tutup sementara
   if (seller.temporarily_closed) {
-    return {
-      isOpen: false,
-      label: 'Closed',
-    }
+    return { isOpen: false, label: 'Closed' }
   }
 
-  if (seller.accept_orders_anytime) {
-    return {
-      isOpen: true,
-      label: 'Open',
-    }
+  // 2. PRE-ORDER (INI YANG MISSING SEKARANG)
+  if (seller.order_mode === 'preorder') {
+    return { isOpen: true, label: 'Pre-order' }
   }
 
+  // 3. OPEN 24 JAM
+  if (seller.order_mode === 'anytime') {
+    return { isOpen: true, label: 'Open' }
+  }
+
+  // 4. SCHEDULED (fallback)
   const now = new Date()
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
 
@@ -249,7 +249,7 @@ export default function DashboardPage() {
       const { data: sellerData, error: sellerError } = await supabase
         .from('seller_profiles')
         .select(
-          'id, store_name, shop_slug, profile_image, daily_note, whatsapp, delivery_mode, accept_orders_anytime, temporarily_closed, operating_days'
+          'id, store_name, shop_slug, order_mode, profile_image, daily_note, whatsapp, delivery_mode, accept_orders_anytime, temporarily_closed, operating_days'
         )
         .eq('user_id', user.id)
         .maybeSingle()
@@ -551,9 +551,11 @@ ${shopLink}`.trim()
             <div className="mt-2">
               <span
                 className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${
-                  isOpen
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-rose-100 text-rose-700'
+                  storeStatus.label === 'Pre-order'
+                  ? 'bg-violet-100 text-violet-700'
+                  : isOpen
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-rose-100 text-rose-700'
                 }`}
               >
                 {storeStatus.label}
@@ -661,7 +663,6 @@ ${shopLink}`.trim()
           </p>
         </div>
 
-        <div className="mb-5">
        <div className="mb-5">
           <textarea
             value={dailyNote}
