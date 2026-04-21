@@ -32,7 +32,7 @@ type SellerProfile = {
   id: string
   store_name: string | null
   shop_slug?: string | null
-  order_mode?: 'anytime' | 'scheduled' | 'order_mode' | null
+  order_mode?: 'anytime' | 'scheduled' | 'preorder' | null
   profile_image?: string | null
   daily_note?: string | null
   whatsapp?: string | null
@@ -86,9 +86,7 @@ function getImageUrl(path?: string | null) {
 
 function limitText(text: string, max = 220) {
   if (!text) return ''
-
   if (text.length <= max) return text
-
   return text.slice(0, max).trim() + '...'
 }
 
@@ -169,22 +167,18 @@ function getStoreOpenStatus(seller?: SellerProfile | null) {
     return { isOpen: false, label: 'Closed' }
   }
 
-  // 1. Override - Tutup sementara
   if (seller.temporarily_closed) {
     return { isOpen: false, label: 'Closed' }
   }
 
-  // 2. PRE-ORDER (INI YANG MISSING SEKARANG)
   if (seller.order_mode === 'preorder') {
     return { isOpen: true, label: 'Pre-order' }
   }
 
-  // 3. OPEN 24 JAM
   if (seller.order_mode === 'anytime') {
     return { isOpen: true, label: 'Open' }
   }
 
-  // 4. SCHEDULED (fallback)
   const now = new Date()
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
 
@@ -412,15 +406,15 @@ export default function DashboardPage() {
   }, [topCategories, topProducts])
 
   const message = useMemo(() => {
-  const customBlock = dailyNote.trim()
+    const customBlock = dailyNote.trim()
 
-  const fullText = `${customBlock ? `${customBlock}\n\n` : ''}${promoLines}
+    const fullText = `${customBlock ? `${customBlock}\n\n` : ''}${promoLines}
 
 Order sini:
 ${shopLink}`.trim()
 
-  return limitText(fullText, 220)
-}, [dailyNote, promoLines, shopLink])
+    return limitText(fullText, 220)
+  }, [dailyNote, promoLines, shopLink])
 
   const previewImage = useMemo(() => {
     if (seller?.profile_image) {
@@ -552,10 +546,10 @@ ${shopLink}`.trim()
               <span
                 className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${
                   storeStatus.label === 'Pre-order'
-                  ? 'bg-violet-100 text-violet-700'
-                  : isOpen
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-rose-100 text-rose-700'
+                    ? 'bg-violet-100 text-violet-700'
+                    : isOpen
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-rose-100 text-rose-700'
                 }`}
               >
                 {storeStatus.label}
@@ -663,7 +657,7 @@ ${shopLink}`.trim()
           </p>
         </div>
 
-       <div className="mb-5">
+        <div className="mb-5">
           <textarea
             value={dailyNote}
             onChange={(e) => setDailyNote(e.target.value.slice(0, 200))}
@@ -672,9 +666,8 @@ ${shopLink}`.trim()
             className="w-full rounded-lg border border-slate-200 p-3 text-base text-slate-900 outline-none transition focus:border-black"
           />
           <p className="mt-1 text-xs text-slate-400">
-          {dailyNote.length}/200 characters
-        </p>
-      </div>
+            {dailyNote.length}/200 characters
+          </p>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
