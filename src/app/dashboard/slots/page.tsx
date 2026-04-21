@@ -310,19 +310,16 @@ export default function DeliverySlotsPage() {
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
           Slot Delivery
         </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
-          Biarkan customer pilih slot penghantaran semasa checkout.
-        </p>
       </div>
 
       <section className="mb-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900">
-              Gunakan Slot Delivery
+              Slot Delivery
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Bila aktif, customer perlu pilih satu slot delivery sebelum bayar.
+              Urus slot penghantaran.
             </p>
           </div>
 
@@ -465,9 +462,6 @@ export default function DeliverySlotsPage() {
                     <div className="min-w-0">
                       <div className="text-sm font-extrabold text-slate-900">
                         {slot.label}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">
-                        {slot.start_time} - {slot.end_time}
                       </div>
                     </div>
 
