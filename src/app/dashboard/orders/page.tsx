@@ -37,6 +37,7 @@ type OrderRow = {
   buyer_name?: string | null
   buyer_phone?: string | null
   buyer_email?: string | null
+  buyer_address?: string | null
   created_at?: string | null
   seller_profile_id?: string | null
   items?: unknown
@@ -46,6 +47,9 @@ type OrderRow = {
   metadata?: unknown
   payload?: unknown
   customer_details?: unknown
+  delivery_info?: unknown
+  delivery_slot_id?: string | null
+  delivery_slot_label?: string | null
 }
 
 type SellerProfileRow = {
@@ -64,6 +68,7 @@ type StatProps = {
 type InfoProps = {
   label: string
   value: string | number
+  subValue?: string
 }
 
 const SELLER_STATUS_OPTIONS = [
@@ -168,6 +173,16 @@ function safeParseJson(value: unknown): unknown {
 function toArray(value: unknown): unknown[] {
   const parsed = safeParseJson(value)
   return Array.isArray(parsed) ? parsed : []
+}
+
+function toRecord(value: unknown): JsonRecord | null {
+  const parsed = safeParseJson(value)
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null
+  }
+
+  return parsed as JsonRecord
 }
 
 function toNumber(value: unknown, fallback = 0) {
@@ -349,6 +364,76 @@ function getOrderTotal(order: OrderRow, items: OrderItem[]) {
   return 0
 }
 
+function getOrderSlotLabel(order: OrderRow) {
+  if (order.delivery_slot_label && String(order.delivery_slot_label).trim()) {
+    return String(order.delivery_slot_label).trim()
+  }
+
+  const deliveryInfo = toRecord(order.delivery_info)
+  if (!deliveryInfo) return ''
+
+  const direct =
+    getObjectValue(deliveryInfo, ['slot_label', 'delivery_slot_label'], '') || ''
+
+  return String(direct || '').trim()
+}
+
+function getOrderDeliveryAddress(order: OrderRow) {
+  const deliveryInfo = toRecord(order.delivery_info)
+
+  if (deliveryInfo) {
+    const resolvedAddress = getObjectValue(
+      deliveryInfo,
+      ['resolved_address'],
+      ''
+    )
+
+    if (resolvedAddress && String(resolvedAddress).trim()) {
+      return String(resolvedAddress).trim()
+    }
+
+    const nestedAddress = getObjectValue(deliveryInfo, ['address'], null)
+    const nestedRecord = toRecord(nestedAddress)
+
+    if (nestedRecord) {
+      const parts = [
+        getObjectValue(nestedRecord, ['address1'], ''),
+        getObjectValue(nestedRecord, ['address2'], ''),
+        getObjectValue(nestedRecord, ['postcode'], ''),
+        getObjectValue(nestedRecord, ['city'], ''),
+        getObjectValue(nestedRecord, ['district'], ''),
+        getObjectValue(nestedRecord, ['state'], ''),
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+
+      if (parts.length > 0) {
+        return parts.join(', ')
+      }
+    }
+  }
+
+  if (order.buyer_address && String(order.buyer_address).trim()) {
+    return String(order.buyer_address).trim()
+  }
+
+  return ''
+}
+
+function getOrderDeliveryType(order: OrderRow) {
+  const address = getOrderDeliveryAddress(order)
+  return address ? 'Delivery' : 'Pickup'
+}
+
+function getOrderAddressPreview(order: OrderRow) {
+  const address = getOrderDeliveryAddress(order)
+  if (!address) return ''
+
+  if (address.length <= 60) return address
+  return `${address.slice(0, 60)}...`
+}
+
 function isToday(dateValue?: string | null) {
   if (!dateValue) return false
 
@@ -478,6 +563,9 @@ export default function OrdersPage() {
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const items = extractOrderItems(order)
+      const slotLabel = getOrderSlotLabel(order)
+      const deliveryAddress = getOrderDeliveryAddress(order)
+      const deliveryType = getOrderDeliveryType(order)
 
       const itemText = items
         .map((item) => {
@@ -501,6 +589,9 @@ export default function OrdersPage() {
         order.buyer_name,
         order.buyer_phone,
         order.buyer_email,
+        slotLabel,
+        deliveryAddress,
+        deliveryType,
         itemText,
       ]
         .filter(Boolean)
@@ -646,7 +737,7 @@ export default function OrdersPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search order number, customer, product, add-on, note, phone or status..."
+            placeholder="Search order, customer, phone, slot, address, item or status..."
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
           />
 
@@ -696,6 +787,10 @@ export default function OrdersPage() {
               const isExpanded = expandedOrderId === order.id
               const paymentStatus = normalizePaymentStatus(order.payment_status)
               const sellerStatus = getSellerStatus(order)
+              const deliveryType = getOrderDeliveryType(order)
+              const deliveryAddress = getOrderDeliveryAddress(order)
+              const addressPreview = getOrderAddressPreview(order)
+              const slotLabel = getOrderSlotLabel(order)
 
               return (
                 <div
@@ -739,8 +834,23 @@ export default function OrdersPage() {
                           >
                             Order: {sellerStatus}
                           </div>
+
+                          {slotLabel ? (
+                            <div className="inline-flex w-fit items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
+                              Slot: {slotLabel}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
+
+                      {addressPreview ? (
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                          <span className="font-semibold text-slate-700">
+                            {deliveryType}:
+                          </span>{' '}
+                          {addressPreview}
+                        </div>
+                      ) : null}
 
                       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
                         <InfoCard
@@ -756,12 +866,12 @@ export default function OrdersPage() {
                         <InfoCard
                           label="Order Total"
                           value={formatMoney(orderTotal)}
-                          subValue="Total for this order"
+                          subValue={deliveryType}
                         />
                         <InfoCard
                           label="Payment Status"
                           value={paymentStatus}
-                          subValue="From payment flow"
+                          subValue={slotLabel || 'No slot'}
                         />
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <div className="text-sm font-semibold text-slate-500">
@@ -782,137 +892,150 @@ export default function OrdersPage() {
                   {isExpanded && (
                     <div className="border-t border-slate-200 bg-slate-50/70 p-4">
                       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px]">
-                        <div>
-                          <div className="mb-3">
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
                             <h4 className="text-sm font-bold text-slate-900">
-                              Order Details
+                              Customer & Delivery
                             </h4>
-                            <p className="mt-1 text-xs text-slate-500">
-                              Item details for this order.
-                            </p>
+
+                            <div className="mt-3 space-y-2 text-sm">
+                              <DetailRow label="Customer" value={order.buyer_name || '-'} />
+                              <DetailRow label="Phone" value={order.buyer_phone || '-'} />
+                              <DetailRow label="Email" value={order.buyer_email || '-'} />
+                              <DetailRow label="Type" value={deliveryType} />
+                              <DetailRow
+                                label="Time Slot"
+                                value={slotLabel || '-'}
+                              />
+                              <DetailRow
+                                label="Address"
+                                value={deliveryAddress || '-'}
+                                multiline
+                              />
+                            </div>
                           </div>
 
-                          {items.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
-                              No item details available for this order.
-                            </div>
-                          ) : (
-                            <>
-                              <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
-                                <div className="grid grid-cols-12 gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                  <div className="col-span-5">Item</div>
-                                  <div className="col-span-2 text-center">Qty</div>
-                                  <div className="col-span-2 text-right">Price</div>
-                                  <div className="col-span-3 text-right">Total</div>
+                          <div>
+                            <h4 className="mb-3 text-sm font-bold text-slate-900">
+                              Order Details
+                            </h4>
+
+                            {items.length === 0 ? (
+                              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
+                                No item details available for this order.
+                              </div>
+                            ) : (
+                              <>
+                                <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
+                                  <div className="grid grid-cols-12 gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    <div className="col-span-6">Item</div>
+                                    <div className="col-span-2 text-center">Qty</div>
+                                    <div className="col-span-2 text-right">Price</div>
+                                    <div className="col-span-2 text-right">Total</div>
+                                  </div>
+
+                                  <div>
+                                    {items.map((item, index) => (
+                                      <div
+                                        key={`${order.id}-item-${index}`}
+                                        className="grid grid-cols-12 gap-3 px-4 py-3 text-sm text-slate-700 not-last:border-b not-last:border-slate-100"
+                                      >
+                                        <div className="col-span-6 min-w-0">
+                                          <div className="font-semibold text-slate-900">
+                                            {item.name}
+                                          </div>
+                                          <div className="mt-1 text-xs text-slate-500">
+                                            {item.slug || '—'}
+                                          </div>
+
+                                          {item.addons && item.addons.length > 0 ? (
+                                            <div className="mt-2 space-y-1">
+                                              {item.addons.map((addon, addonIndex) => (
+                                                <div
+                                                  key={`${order.id}-addon-${index}-${addonIndex}`}
+                                                  className="text-xs text-violet-700"
+                                                >
+                                                  + {addon.option_name || 'Add-on'}
+                                                  {typeof addon.price === 'number'
+                                                    ? ` (${formatMoney(addon.price)})`
+                                                    : ''}
+                                                  {addon.group_name
+                                                    ? ` • ${addon.group_name}`
+                                                    : ''}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          ) : null}
+
+                                          {item.note ? (
+                                            <div className="mt-2 text-xs text-slate-500">
+                                              Note: {item.note}
+                                            </div>
+                                          ) : null}
+                                        </div>
+
+                                        <div className="col-span-2 text-center font-medium">
+                                          {item.quantity}
+                                        </div>
+                                        <div className="col-span-2 text-right font-medium">
+                                          {formatMoney(item.price)}
+                                        </div>
+                                        <div className="col-span-2 text-right font-semibold text-slate-900">
+                                          {formatMoney(item.total)}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
 
-                                <div>
+                                <div className="space-y-3 md:hidden">
                                   {items.map((item, index) => (
                                     <div
-                                      key={`${order.id}-item-${index}`}
-                                      className="grid grid-cols-12 gap-3 px-4 py-3 text-sm text-slate-700 not-last:border-b not-last:border-slate-100"
+                                      key={`${order.id}-item-mobile-${index}`}
+                                      className="rounded-2xl border border-slate-200 bg-white p-4"
                                     >
-                                      <div className="col-span-5 min-w-0">
-                                        <div className="font-semibold text-slate-900">
-                                          {item.name}
-                                        </div>
-                                        <div className="mt-1 text-xs text-slate-500">
-                                          {item.slug || '—'}
-                                        </div>
+                                      <div className="text-sm font-bold text-slate-900">
+                                        {item.name}
+                                      </div>
+                                      <div className="mt-1 text-xs text-slate-500">
+                                        {item.slug || '—'}
+                                      </div>
 
-                                        {item.addons && item.addons.length > 0 ? (
-                                          <div className="mt-2 space-y-1">
-                                            {item.addons.map((addon, addonIndex) => (
-                                              <div
-                                                key={`${order.id}-addon-${index}-${addonIndex}`}
-                                                className="text-xs text-violet-700"
-                                              >
-                                                + {addon.option_name || 'Add-on'}
-                                                {typeof addon.price === 'number'
-                                                  ? ` (${formatMoney(addon.price)})`
-                                                  : ''}
-                                                {addon.group_name
-                                                  ? ` • ${addon.group_name}`
-                                                  : ''}
-                                              </div>
-                                            ))}
-                                          </div>
-                                        ) : null}
-
-                                        {item.note ? (
-                                          <div className="mt-2 text-xs text-slate-500">
-                                            Note: {item.note}
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                      <div className="col-span-2 text-center font-medium">
-                                        {item.quantity}
-                                      </div>
-                                      <div className="col-span-2 text-right font-medium">
-                                        {formatMoney(item.price)}
-                                      </div>
-                                      <div className="col-span-3 text-right font-semibold text-slate-900">
+                                      <div className="mt-3 text-sm font-semibold text-slate-800">
+                                        {item.quantity} × {formatMoney(item.price)} ={' '}
                                         {formatMoney(item.total)}
                                       </div>
+
+                                      {item.addons && item.addons.length > 0 ? (
+                                        <div className="mt-3 space-y-1">
+                                          {item.addons.map((addon, addonIndex) => (
+                                            <div
+                                              key={`${order.id}-mobile-addon-${index}-${addonIndex}`}
+                                              className="text-xs text-violet-700"
+                                            >
+                                              + {addon.option_name || 'Add-on'}
+                                              {typeof addon.price === 'number'
+                                                ? ` (${formatMoney(addon.price)})`
+                                                : ''}
+                                              {addon.group_name
+                                                ? ` • ${addon.group_name}`
+                                                : ''}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : null}
+
+                                      {item.note ? (
+                                        <div className="mt-3 text-xs text-slate-500">
+                                          Note: {item.note}
+                                        </div>
+                                      ) : null}
                                     </div>
                                   ))}
                                 </div>
-                              </div>
-
-                              <div className="space-y-3 md:hidden">
-                                {items.map((item, index) => (
-                                  <div
-                                    key={`${order.id}-item-mobile-${index}`}
-                                    className="rounded-2xl border border-slate-200 bg-white p-4"
-                                  >
-                                    <div className="text-sm font-bold text-slate-900">
-                                      {item.name}
-                                    </div>
-                                    <div className="mt-1 text-xs text-slate-500">
-                                      {item.slug || '—'}
-                                    </div>
-
-                                    {item.addons && item.addons.length > 0 ? (
-                                      <div className="mt-3 space-y-1">
-                                        {item.addons.map((addon, addonIndex) => (
-                                          <div
-                                            key={`${order.id}-mobile-addon-${index}-${addonIndex}`}
-                                            className="text-xs text-violet-700"
-                                          >
-                                            + {addon.option_name || 'Add-on'}
-                                            {typeof addon.price === 'number'
-                                              ? ` (${formatMoney(addon.price)})`
-                                              : ''}
-                                            {addon.group_name
-                                              ? ` • ${addon.group_name}`
-                                              : ''}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : null}
-
-                                    {item.note ? (
-                                      <div className="mt-3 text-xs text-slate-500">
-                                        Note: {item.note}
-                                      </div>
-                                    ) : null}
-
-                                    <div className="mt-3 grid grid-cols-3 gap-3">
-                                      <MiniInfo label="Qty" value={String(item.quantity)} />
-                                      <MiniInfo
-                                        label="Price"
-                                        value={formatMoney(item.price)}
-                                      />
-                                      <MiniInfo
-                                        label="Total"
-                                        value={formatMoney(item.total)}
-                                      />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </>
-                          )}
+                              </>
+                            )}
+                          </div>
                         </div>
 
                         <div className="space-y-4">
@@ -920,9 +1043,6 @@ export default function OrdersPage() {
                             <div className="text-sm font-bold text-slate-900">
                               Update Order Status
                             </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                              Seller can update fulfilment progress manually even before live payment testing is ready.
-                            </p>
 
                             <select
                               value={sellerStatus}
@@ -940,9 +1060,7 @@ export default function OrdersPage() {
                             </select>
 
                             <div className="mt-3 text-xs text-slate-500">
-                              {updatingOrderId === order.id
-                                ? 'Updating status...'
-                                : 'This updates seller-side order progress.'}
+                              {updatingOrderId === order.id ? 'Updating status...' : ''}
                             </div>
                           </div>
 
@@ -969,6 +1087,18 @@ export default function OrdersPage() {
                               <span>Order Status</span>
                               <span className="font-semibold capitalize text-slate-900">
                                 {sellerStatus}
+                              </span>
+                            </div>
+                            <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                              <span>Time Slot</span>
+                              <span className="text-right font-semibold text-slate-900">
+                                {slotLabel || '-'}
+                              </span>
+                            </div>
+                            <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                              <span>Type</span>
+                              <span className="font-semibold text-slate-900">
+                                {deliveryType}
                               </span>
                             </div>
                             <div className="mt-3 border-t border-slate-200 pt-3">
@@ -1012,25 +1142,45 @@ function StatCard({ label, value, helper }: StatProps) {
   )
 }
 
-function InfoCard({ label, value, subValue }: InfoProps & { subValue: string }) {
+function InfoCard({ label, value, subValue }: InfoProps) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <div className="text-sm font-semibold text-slate-500">{label}</div>
       <div className="mt-2 break-words text-base font-bold capitalize text-slate-900">
         {value}
       </div>
-      <div className="mt-1 break-words text-xs text-slate-500">{subValue}</div>
+      {subValue ? (
+        <div className="mt-1 break-words text-xs text-slate-500">{subValue}</div>
+      ) : null}
     </div>
   )
 }
 
-function MiniInfo({ label, value }: { label: string; value: string }) {
+function DetailRow({
+  label,
+  value,
+  multiline = false,
+}: {
+  label: string
+  value: string
+  multiline?: boolean
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+    <div
+      className={`flex gap-3 ${
+        multiline ? 'flex-col' : 'items-start justify-between'
+      }`}
+    >
+      <div className="min-w-[88px] text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </div>
-      <div className="mt-1 text-sm font-bold text-slate-900">{value}</div>
+      <div
+        className={`text-sm font-medium text-slate-900 ${
+          multiline ? '' : 'text-right'
+        }`}
+      >
+        {value}
+      </div>
     </div>
   )
 }
