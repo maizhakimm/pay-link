@@ -48,6 +48,7 @@ type SellerProfile = {
   daily_note?: string | null
   share_image_mode?: 'product' | 'logo' | 'poster' | null
   share_poster_url?: string | null
+  enable_delivery_slots?: boolean | null
 }
 
 type MenuCategory = {
@@ -222,7 +223,8 @@ async function getSellerBySlug(shopSlug: string): Promise<SellerProfile | null> 
         longitude,
         daily_note,
         share_image_mode,
-        share_poster_url
+        share_poster_url,
+        enable_delivery_slots
       `
     )
     .eq('shop_slug', requestedSlug)
@@ -398,7 +400,8 @@ export default async function Page({ params }: PageProps) {
         longitude,
         daily_note,
         share_image_mode,
-        share_poster_url
+        share_poster_url,
+        enable_delivery_slots
       `
     )
     .eq('shop_slug', requestedSlug)
@@ -483,9 +486,11 @@ export default async function Page({ params }: PageProps) {
               longitude,
               daily_note,
               share_image_mode,
-              share_poster_url
+              share_poster_url,
+              enable_delivery_slots
             `
           )
+
           .eq('id', matchedProduct.seller_profile_id)
           .maybeSingle()
 
@@ -523,6 +528,25 @@ export default async function Page({ params }: PageProps) {
     )
   }
 
+  const { data: deliverySlotsData, error: deliverySlotsError } = await supabase
+  .from('delivery_slots')
+  .select('id, label')
+  .eq('seller_profile_id', seller.id)
+  .eq('is_active', true)
+  .order('sort_order', { ascending: true })
+  .order('created_at', { ascending: true })
+
+  if (deliverySlotsError) {
+    return (
+      <main style={errorMain}>
+        <div style={errorBox}>
+          <h2 style={errorTitle}>Unable to load delivery slots</h2>
+          <p style={errorText}>{deliverySlotsError.message}</p>
+        </div>
+      </main>
+    )
+  }
+
   const productRows = (products || []) as ProductRow[]
   const productIds = productRows.map((item) => item.id)
 
@@ -544,6 +568,8 @@ export default async function Page({ params }: PageProps) {
       </main>
     )
   }
+
+  const categoryRows = (categories || []) as MenuCategory[]
 
   let productAddons: ProductAddonsMap = {}
 
@@ -666,9 +692,11 @@ export default async function Page({ params }: PageProps) {
     <ShopPageClient
       seller={seller}
       products={productRows}
-      categories={(categories || []) as MenuCategory[]}
-      shopSlug={seller.shop_slug || requestedSlug}
+      shopSlug={requestedSlug}
+      categories={categoryRows}
       productAddons={productAddons}
+      deliverySlots={(deliverySlotsData || []) as { id: string; label: string }[]}
+      enableDeliverySlots={Boolean(seller.enable_delivery_slots)}
     />
   )
 }
