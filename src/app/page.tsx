@@ -41,7 +41,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.14),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.10),_transparent_28%)]" />
         <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 py-16 sm:px-6 md:py-20 lg:grid-cols-2 lg:px-8 lg:py-24">
           <div className="relative text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 mx-auto lg:mx-0">
+            <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 lg:mx-0">
               <span className="inline-block h-2 w-2 rounded-full bg-violet-500" />
               Beta
             </div>
@@ -54,7 +54,7 @@ export default function HomePage() {
               </span>
             </h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg mx-auto lg:mx-0">
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg lg:mx-0">
               Jual dan promote perniagaan anda di mana2 platform dengan
               BayarLink. Lebih mudah nak jual dan lebih mudah customer nak
               bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO
@@ -112,7 +112,7 @@ export default function HomePage() {
                 width={700}
                 height={1400}
                 priority
-                className="mx-auto w-[300px] object-contain drop-shadow-[0_30px_80px_rgba(0,0,0,0.25)] scale-[1.1] sm:w-[340px] md:w-[380px] lg:w-[420px]"
+                className="mx-auto w-[300px] scale-[1.1] object-contain drop-shadow-[0_30px_80px_rgba(0,0,0,0.25)] sm:w-[340px] md:w-[380px] lg:w-[420px]"
               />
             </div>
           </div>
@@ -212,79 +212,115 @@ export default function HomePage() {
         </div>
       </section>
 
-{/* Features */}
-<section className="border-t border-slate-200 bg-white py-16 sm:py-20">
-  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div className="mx-auto max-w-3xl text-center">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-        Features
-      </p>
-      <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-        Semua yang anda perlukan untuk urus order dengan mudah
-      </h2>
-      <p className="mt-4 text-base leading-7 text-slate-600">
-        Direka khas untuk seller WhatsApp, food seller dan bisnes kecil supaya
-        lebih tersusun, cepat dan tak pening.
-      </p>
-    </div>
+      {/* Features */}
+      <section className="border-t border-slate-200 bg-white py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
+              Features
+            </p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+              Semua yang anda perlukan untuk urus order dengan mudah
+            </h2>
+            <p className="mt-4 text-base leading-7 text-slate-600">
+              Direka khas untuk seller WhatsApp, food seller dan bisnes kecil
+              supaya lebih tersusun, cepat dan tak pening.
+            </p>
+          </div>
 
-    <div className="mt-12 grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-      <FeatureIconCard
-        icon={<ShopLinkFeatureIcon />}
-        title="1 Link Shop Sendiri"
-        description="Share satu link sahaja untuk customer tengok semua produk dan buat order dengan mudah."
-      />
+          <div className="group mt-12 space-y-10">
+            {/* SETUP */}
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Setup
+                </p>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
 
-      <FeatureIconCard
-        icon={<AddOnFeatureIcon />}
-        title="Produk & Add-On"
-        description="Tambah produk, variasi dan add-on seperti extra cheese atau pilihan khas dengan mudah."
-      />
+              <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <FeatureIconCard
+                  icon={<ShopLinkFeatureIcon />}
+                  title="1 Link Shop Sendiri"
+                  description="Share satu link sahaja untuk customer tengok semua produk dan buat order dengan mudah."
+                />
 
-      <FeatureIconCard
-        icon={<SlotFeatureIcon />}
-        title="Delivery & Pickup Slot"
-        description="Tetapkan waktu tempahan supaya customer tak order sesuka hati dan elak kekeliruan."
-      />
+                <FeatureIconCard
+                  icon={<AddOnFeatureIcon />}
+                  title="Produk & Add-On"
+                  description="Tambah produk, variasi dan add-on seperti extra cheese atau pilihan khas dengan mudah."
+                />
 
-      <FeatureIconCard
-        icon={<WhatsAppFlowFeatureIcon />}
-        title="WhatsApp Order Flow"
-        description="Order masuk dengan flow yang lebih kemas tanpa perlu layan semuanya secara manual."
-      />
+                <FeatureIconCard
+                  icon={<SlotFeatureIcon />}
+                  title="Delivery & Pickup Slot"
+                  description="Tetapkan waktu tempahan supaya customer tak order sesuka hati dan elak kekeliruan."
+                />
+              </div>
+            </div>
 
-      <FeatureIconCard
-        icon={<OrderStatusFeatureIcon />}
-        title="Status Order Jelas"
-        description="Track setiap order dengan lebih mudah seperti pending, paid atau completed."
-      />
+            {/* ORDER FLOW */}
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Order Flow
+                </p>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
 
-      <FeatureIconCard
-        icon={<AutoPaymentFeatureIcon />}
-        title="Auto Check Payment"
-        description="Bayaran lebih mudah disemak dan kurangkan kerja manual seller untuk semak satu-satu."
-      />
+              <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <FeatureIconCard
+                  icon={<WhatsAppFlowFeatureIcon />}
+                  title="WhatsApp Order Flow"
+                  description="Order masuk dengan flow yang lebih kemas tanpa perlu layan semuanya secara manual."
+                />
 
-      <FeatureIconCard
-        icon={<StockGuardFeatureIcon />}
-        title="Elak Oversell"
-        description="Stok auto update dan bantu kurangkan risiko double order bila permintaan makin banyak."
-      />
+                <FeatureIconCard
+                  icon={<OrderStatusFeatureIcon />}
+                  title="Status Order Jelas"
+                  description="Track setiap order dengan lebih mudah seperti pending, paid atau completed."
+                />
 
-      <FeatureIconCard
-        icon={<MultiPaymentFeatureIcon />}
-        title="Pelbagai Cara Bayar"
-        description="Terima FPX, QR dan Card dalam satu sistem supaya customer lebih mudah nak buat bayaran."
-      />
+                <FeatureIconCard
+                  icon={<AutoPaymentFeatureIcon />}
+                  title="Auto Check Payment"
+                  description="Bayaran lebih mudah disemak dan kurangkan kerja manual seller untuk semak satu-satu."
+                />
+              </div>
+            </div>
 
-      <FeatureIconCard
-        icon={<MobileManageFeatureIcon />}
-        title="Urus Dari Phone"
-        description="Tak perlu laptop atau PC. Semua urusan boleh dibuat terus dari phone anda."
-      />
-    </div>
-  </div>
-</section>
+            {/* CONTROL */}
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Control &amp; Scale
+                </p>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+
+              <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <FeatureIconCard
+                  icon={<StockGuardFeatureIcon />}
+                  title="Elak Oversell"
+                  description="Stok auto update dan bantu kurangkan risiko double order bila permintaan makin banyak."
+                />
+
+                <FeatureIconCard
+                  icon={<MultiPaymentFeatureIcon />}
+                  title="Pelbagai Cara Bayar"
+                  description="Terima FPX, QR dan Card dalam satu sistem supaya customer lebih mudah nak buat bayaran."
+                />
+
+                <FeatureIconCard
+                  icon={<MobileManageFeatureIcon />}
+                  title="Urus Dari Phone"
+                  description="Tak perlu laptop atau PC. Semua urusan boleh dibuat terus dari phone anda."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Who is it for */}
       <section className="bg-slate-50 py-16 sm:py-20">
@@ -372,8 +408,8 @@ export default function HomePage() {
                 <li>• FPX: RM1.50</li>
                 <li>• QR: 2.5%</li>
                 <li>• Boost PayFlex = 2.5%</li>
-                <li>• Card: RM1 + 2.5%</li> 
-                <li>•T+1 payout to merchant account</li>
+                <li>• Card: RM1 + 2.5%</li>
+                <li>• T+1 payout to merchant account</li>
               </ul>
 
               <div className="mt-6 space-y-2 text-sm text-slate-700">
@@ -560,46 +596,49 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-<footer className="border-t border-slate-200 bg-white">
-  <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+            <div className="text-center md:text-left">
+              <h3 className="text-lg font-semibold text-slate-900">
+                BayarLink{" "}
+                <span className="text-xs font-medium text-amber-500">BETA</span>
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Mudah jual. Mudah bayar.
+              </p>
+            </div>
 
-    <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
+              <a href="/terms" className="transition hover:text-slate-900">
+                Terms &amp; Conditions
+              </a>
+              <a href="/privacy" className="transition hover:text-slate-900">
+                Privacy Policy
+              </a>
+              <a href="/login" className="transition hover:text-slate-900">
+                Login
+              </a>
+            </div>
+          </div>
 
-      {/* LEFT: Brand */}
-      <div className="text-center md:text-left">
-        <h3 className="text-lg font-semibold text-slate-900">
-          BayarLink <span className="text-xs text-amber-500 font-medium">BETA</span>
-        </h3>
-        <p className="mt-1 text-sm text-slate-500">
-          Mudah jual. Mudah bayar.
-        </p>
-      </div>
-
-      {/* RIGHT: Links */}
-      <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
-        <a href="/terms" className="hover:text-slate-900 transition">
-          Terms & Conditions
-        </a>
-        <a href="/privacy" className="hover:text-slate-900 transition">
-          Privacy Policy
-        </a>
-        <a href="/login" className="hover:text-slate-900 transition">
-          Login
-        </a>
-      </div>
-
-    </div>
-
-    {/* Bottom */}
-    <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
-  <div>© {new Date().getFullYear()} BayarLink. All rights reserved.</div>
-  <div style={{ marginTop: 4 }}>
-    by <strong>Neugens Solution</strong> (Reg No: 202503301282 (AS0504872))
-  </div>
-</div>
-
-  </div>
-</footer>
+          <div
+            style={{
+              marginTop: 20,
+              textAlign: "center",
+              fontSize: 12,
+              color: "#94a3b8",
+              lineHeight: 1.6,
+            }}
+          >
+            <div>© {new Date().getFullYear()} BayarLink. All rights reserved.</div>
+            <div style={{ marginTop: 4 }}>
+              by <strong>Neugens Solution</strong> (Reg No: 202503301282
+              (AS0504872))
+            </div>
+          </div>
+        </div>
+      </footer>
 
       {/* WhatsApp Floating Button */}
       <a
@@ -665,18 +704,15 @@ function FeatureIconCard({
   description: string;
 }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+    <div className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 group-hover:opacity-60 hover:-translate-y-1 hover:!opacity-100 hover:border-violet-200 hover:shadow-lg">
+      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 transition duration-300 group-hover:bg-violet-100 group-hover:scale-105">
         {icon}
       </div>
 
-      <h3 className="text-lg font-bold text-slate-900">
+      <h3 className="text-lg font-bold text-slate-950 transition-colors duration-300 group-hover:text-violet-700">
         {title}
       </h3>
-
-      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        {description}
-      </p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
     </div>
   );
 }
