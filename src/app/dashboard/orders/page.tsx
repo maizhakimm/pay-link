@@ -71,12 +71,25 @@ type InfoProps = {
   subValue?: string
 }
 
+type DeliveryFilter = 'all' | 'delivery' | 'pickup' | 'with_slot' | 'no_slot'
+
 const SELLER_STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
   { value: 'processing', label: 'Processing' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
 ] as const
+
+const DELIVERY_FILTER_OPTIONS: Array<{
+  value: DeliveryFilter
+  label: string
+}> = [
+  { value: 'all', label: 'All' },
+  { value: 'delivery', label: 'Delivery' },
+  { value: 'pickup', label: 'Pickup' },
+  { value: 'with_slot', label: 'With Slot' },
+  { value: 'no_slot', label: 'No Slot' },
+]
 
 function normalizeStatus(value?: string | null) {
   return (value || '').toString().toLowerCase().trim()
@@ -158,6 +171,12 @@ function sellerStatusBadgeClass(status: string) {
   }
 
   return 'bg-amber-100 text-amber-700'
+}
+
+function filterChipClass(active: boolean) {
+  return active
+    ? 'border-slate-900 bg-slate-900 text-white'
+    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
 }
 
 function safeParseJson(value: unknown): unknown {
@@ -466,6 +485,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>('all')
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [sellerProfile, setSellerProfile] = useState<SellerProfileRow | null>(null)
@@ -619,9 +639,22 @@ export default function OrdersPage() {
           ? true
           : sellerStatus === statusFilter || paymentStatus === statusFilter
 
-      return matchesSearch && matchesStatus
+      const hasSlot = Boolean(slotLabel)
+      const isDelivery = deliveryType === 'Delivery'
+      const matchesDeliveryFilter =
+        deliveryFilter === 'all'
+          ? true
+          : deliveryFilter === 'delivery'
+          ? isDelivery
+          : deliveryFilter === 'pickup'
+          ? !isDelivery
+          : deliveryFilter === 'with_slot'
+          ? hasSlot
+          : !hasSlot
+
+      return matchesSearch && matchesStatus && matchesDeliveryFilter
     })
-  }, [orders, search, statusFilter])
+  }, [orders, search, statusFilter, deliveryFilter])
 
   const groupedOrders = useMemo(() => {
     const groups: Record<string, OrderRow[]> = {}
@@ -787,6 +820,21 @@ export default function OrdersPage() {
             <option value="expired">Expired</option>
             <option value="cancelled">Cancelled</option>
           </select>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {DELIVERY_FILTER_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setDeliveryFilter(option.value)}
+              className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${filterChipClass(
+                deliveryFilter === option.value
+              )}`}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </section>
 
@@ -1173,9 +1221,7 @@ function StatCard({ label, value, helper }: StatProps) {
       <div className="mt-2 break-words text-xl font-extrabold text-slate-900 sm:text-2xl">
         {value}
       </div>
-      {helper ? (
-        <div className="mt-1 text-xs text-slate-500">{helper}</div>
-      ) : null}
+      {helper ? <div className="mt-1 text-xs text-slate-500">{helper}</div> : null}
     </div>
   )
 }
