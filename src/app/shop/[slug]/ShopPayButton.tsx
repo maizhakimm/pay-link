@@ -28,6 +28,11 @@ type DeliveryMode =
   | 'pay_rider_separately'
   | 'distance_based'
 
+type DeliverySlot = {
+  id: string
+  label: string
+}
+
 const STATES = [
   'Perlis',
   'Kedah',
@@ -140,6 +145,8 @@ export default function ShopPayButton({
   pickupAddress = '',
   sellerLatitude = null,
   sellerLongitude = null,
+  deliverySlots = [],
+  enableDeliverySlots = false,
 }: {
   sellerId: string
   shopSlug: string
@@ -155,6 +162,8 @@ export default function ShopPayButton({
   pickupAddress?: string
   sellerLatitude?: number | null
   sellerLongitude?: number | null
+  deliverySlots?: DeliverySlot[]
+  enableDeliverySlots?: boolean
 }) {
   const [loading, setLoading] = useState(false)
   const [calculatingDelivery, setCalculatingDelivery] = useState(false)
@@ -163,6 +172,9 @@ export default function ShopPayButton({
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('+60')
   const [paymentChannel, setPaymentChannel] = useState<string>('1')
+
+  const [selectedSlotId, setSelectedSlotId] = useState('')
+  const [selectedSlotLabel, setSelectedSlotLabel] = useState('')
 
   const [needsDelivery, setNeedsDelivery] = useState(false)
 
@@ -211,6 +223,14 @@ export default function ShopPayButton({
     needsDelivery,
     deliveryMode,
   ])
+
+  useEffect(() => {
+    if (!enableDeliverySlots) {
+      setSelectedSlotId('')
+      setSelectedSlotLabel('')
+    }
+  }, [enableDeliverySlots])
+  
 
   const normalizedItems = useMemo(() => {
     return items.map((item) => {
@@ -447,6 +467,11 @@ export default function ShopPayButton({
       return
     }
 
+    if (enableDeliverySlots && !selectedSlotId) {
+      alert('Sila pilih slot delivery')
+      return
+    }
+
     if (needsDelivery) {
       if (
         !address1.trim() ||
@@ -504,6 +529,8 @@ export default function ShopPayButton({
           deliveryArea: deliveryArea || null,
           deliveryNote: deliveryNote || null,
           deliverySummary,
+          deliverySlotId: selectedSlotId || null,
+          deliverySlotLabel: selectedSlotLabel || null,
           delivery: needsDelivery
             ? {
                 address1: address1.trim(),
@@ -729,6 +756,33 @@ export default function ShopPayButton({
         )}
       </div>
 
+      {enableDeliverySlots && deliverySlots.length > 0 && (
+        <div>
+          <label style={labelStyle}>Delivery Slot</label>
+          <select
+            value={selectedSlotId}
+            onChange={(e) => {
+              const nextId = e.target.value
+              setSelectedSlotId(nextId)
+
+              const selected = deliverySlots.find((slot) => slot.id === nextId)
+              setSelectedSlotLabel(selected?.label || '')
+            }}
+            style={inputStyle}
+          >
+            <option value="">Select slot</option>
+            {deliverySlots.map((slot) => (
+              <option key={slot.id} value={slot.id}>
+                {slot.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      
+
+
+
       <div style={totalsBox}>
         <div style={totalLine}>
           <span>Subtotal</span>
@@ -748,7 +802,7 @@ export default function ShopPayButton({
           <strong>{formatCurrency(payableTotal)}</strong>
         </div>
       </div>
-
+      
       <button
         type="button"
         onClick={handleClick}

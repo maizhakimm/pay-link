@@ -398,6 +398,9 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
+    const deliverySlotId = body.deliverySlotId || null
+    const deliverySlotLabel = body.deliverySlotLabel || null
+
     const sellerId = body.sellerId as string
     const shopSlug = body.shopSlug as string
     const name = body.name as string
@@ -746,6 +749,9 @@ export async function POST(req: NextRequest) {
         buyer_email: email || 'customer@example.com',
         buyer_phone: phone || '',
         buyer_address: buyerAddress,
+
+        delivery_slot_id: deliverySlotId,
+        delivery_slot_label: deliverySlotLabel,
 
         customer_name: name || 'Customer',
         customer_email: email || 'customer@example.com',
