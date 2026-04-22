@@ -60,6 +60,11 @@ type ProductAddonGroup = {
 
 type ProductAddonsMap = Record<string, ProductAddonGroup[]>
 
+type DeliverySlot = {
+  id: string
+  label: string
+}
+
 type SellerProfile = {
   id: string
   store_name: string | null
@@ -503,12 +508,16 @@ export default function ShopPageClient({
   shopSlug,
   categories = [],
   productAddons = {},
+  deliverySlots = [],
+  enableDeliverySlots = false,
 }: {
   seller: SellerProfile
   products: ProductRow[]
   shopSlug: string
   categories?: MenuCategory[]
   productAddons?: ProductAddonsMap
+  deliverySlots?: DeliverySlot[]
+  enableDeliverySlots?: boolean
 }) {
   const [cart, setCart] = useState<CartLine[]>([])
   const [gallery, setGallery] = useState<GalleryState>({
@@ -1335,6 +1344,8 @@ useEffect(() => {
                 pickupAddress={seller.pickup_address || ''}
                 sellerLatitude={seller.latitude || null}
                 sellerLongitude={seller.longitude || null}
+                deliverySlots={deliverySlots}
+                enableDeliverySlots={enableDeliverySlots}
               />
             </>
           )}
