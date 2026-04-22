@@ -487,6 +487,7 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [deliveryFilter, setDeliveryFilter] = useState<DeliveryFilter>('all')
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [sellerProfile, setSellerProfile] = useState<SellerProfileRow | null>(null)
   const [pageError, setPageError] = useState('')
@@ -557,6 +558,13 @@ export default function OrdersPage() {
 
   const toggleOrderExpanded = (orderId: string) => {
     setExpandedOrderId((prev) => (prev === orderId ? null : orderId))
+  }
+
+  const toggleGroupExpanded = (groupKey: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupKey]: !(prev[groupKey] ?? true),
+    }))
   }
 
   const handleSellerStatusUpdate = async (orderId: string, newStatus: string) => {
@@ -673,6 +681,20 @@ export default function OrdersPage() {
       ([slotA], [slotB]) => getSlotSortValue(slotA) - getSlotSortValue(slotB)
     )
   }, [filteredOrders])
+
+  useEffect(() => {
+    setExpandedGroups((prev) => {
+      const next = { ...prev }
+
+      groupedOrders.forEach(([slot]) => {
+        if (!(slot in next)) {
+          next[slot] = true
+        }
+      })
+
+      return next
+    })
+  }, [groupedOrders])
 
   const stats = useMemo(() => {
     const totalOrders = orders.length
@@ -855,356 +877,375 @@ export default function OrdersPage() {
           <p className="text-sm text-slate-500">No orders found</p>
         ) : (
           <div className="space-y-6">
-            {groupedOrders.map(([slot, ordersInGroup]) => (
-              <div key={slot} className="space-y-3">
-                <div className="flex items-center justify-between border-t border-slate-200 pt-3 first:border-0 first:pt-0">
-                  <h3 className="text-sm font-bold text-slate-700">{slot}</h3>
-                  <span className="text-xs text-slate-500">
-                    {ordersInGroup.length} order{ordersInGroup.length > 1 ? 's' : ''}
-                  </span>
-                </div>
+            {groupedOrders.map(([slot, ordersInGroup]) => {
+              const isGroupExpanded = expandedGroups[slot] ?? true
 
-                {ordersInGroup.map((order) => {
-                  const items = extractOrderItems(order)
-                  const totalQuantity = items.reduce(
-                    (sum, item) => sum + Number(item.quantity || 0),
-                    0
-                  )
-                  const orderTotal = getOrderTotal(order, items)
-                  const isExpanded = expandedOrderId === order.id
-                  const paymentStatus = normalizePaymentStatus(order.payment_status)
-                  const sellerStatus = getSellerStatus(order)
-                  const deliveryType = getOrderDeliveryType(order)
-                  const deliveryAddress = getOrderDeliveryAddress(order)
-                  const addressPreview = getOrderAddressPreview(order)
-                  const slotLabel = getOrderSlotLabel(order)
-
-                  return (
-                    <div
-                      key={order.id}
-                      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-                    >
-                      <div className="p-4">
-                        <div className="flex flex-col gap-3">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0">
-                              <h3 className="text-lg font-bold text-slate-900">
-                                {order.order_number || `Order ${order.id.slice(0, 8)}`}
-                              </h3>
-
-                              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 sm:text-sm">
-                                <span>{formatDate(order.created_at)}</span>
-                                <span className="hidden sm:inline">•</span>
-                                <span>
-                                  {items.length} item{items.length === 1 ? '' : 's'}
-                                </span>
-                                <span className="hidden sm:inline">•</span>
-                                <span>
-                                  Qty {totalQuantity > 0 ? totalQuantity : items.length}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-2">
-                              <div
-                                className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeClass(
-                                  paymentStatus
-                                )}`}
-                              >
-                                Payment: {paymentStatus}
-                              </div>
-
-                              <div
-                                className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${sellerStatusBadgeClass(
-                                  sellerStatus
-                                )}`}
-                              >
-                                Order: {sellerStatus}
-                              </div>
-
-                              {slotLabel ? (
-                                <div className="inline-flex w-fit items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
-                                  Slot: {slotLabel}
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          {addressPreview ? (
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                              <span className="font-semibold text-slate-700">
-                                {deliveryType}:
-                              </span>{' '}
-                              {addressPreview}
-                            </div>
-                          ) : null}
-
-                          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                            <InfoCard
-                              label="Customer"
-                              value={order.buyer_name || '-'}
-                              subValue={order.buyer_phone || order.buyer_email || '-'}
-                            />
-                            <InfoCard
-                              label="Items"
-                              value={`${items.length} item${items.length === 1 ? '' : 's'}`}
-                              subValue={`${totalQuantity || items.length} total quantity`}
-                            />
-                            <InfoCard
-                              label="Order Total"
-                              value={formatMoney(orderTotal)}
-                              subValue={deliveryType}
-                            />
-                            <InfoCard
-                              label="Payment Status"
-                              value={paymentStatus}
-                              subValue={slotLabel || 'No slot'}
-                            />
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                              <div className="text-sm font-semibold text-slate-500">
-                                Action
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => toggleOrderExpanded(order.id)}
-                                className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                              >
-                                {isExpanded ? 'Hide Details' : 'View Details'}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
+              return (
+                <div key={slot} className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroupExpanded(slot)}
+                    className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:bg-slate-100"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-slate-700">{slot}</div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {ordersInGroup.length} order
+                        {ordersInGroup.length > 1 ? 's' : ''}
                       </div>
+                    </div>
 
-                      {isExpanded && (
-                        <div className="border-t border-slate-200 bg-slate-50/70 p-4">
-                          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px]">
-                            <div className="space-y-4">
-                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                                <h4 className="text-sm font-bold text-slate-900">
-                                  Customer & Delivery
-                                </h4>
+                    <div className="ml-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-base font-bold text-slate-700">
+                      {isGroupExpanded ? '−' : '+'}
+                    </div>
+                  </button>
 
-                                <div className="mt-3 space-y-2 text-sm">
-                                  <DetailRow label="Customer" value={order.buyer_name || '-'} />
-                                  <DetailRow label="Phone" value={order.buyer_phone || '-'} />
-                                  <DetailRow label="Email" value={order.buyer_email || '-'} />
-                                  <DetailRow label="Type" value={deliveryType} />
-                                  <DetailRow label="Time Slot" value={slotLabel || '-'} />
-                                  <DetailRow
-                                    label="Address"
-                                    value={deliveryAddress || '-'}
-                                    multiline
+                  {isGroupExpanded ? (
+                    <div className="space-y-3">
+                      {ordersInGroup.map((order) => {
+                        const items = extractOrderItems(order)
+                        const totalQuantity = items.reduce(
+                          (sum, item) => sum + Number(item.quantity || 0),
+                          0
+                        )
+                        const orderTotal = getOrderTotal(order, items)
+                        const isExpanded = expandedOrderId === order.id
+                        const paymentStatus = normalizePaymentStatus(order.payment_status)
+                        const sellerStatus = getSellerStatus(order)
+                        const deliveryType = getOrderDeliveryType(order)
+                        const deliveryAddress = getOrderDeliveryAddress(order)
+                        const addressPreview = getOrderAddressPreview(order)
+                        const slotLabel = getOrderSlotLabel(order)
+
+                        return (
+                          <div
+                            key={order.id}
+                            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                          >
+                            <div className="p-4">
+                              <div className="flex flex-col gap-3">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="min-w-0">
+                                    <h3 className="text-lg font-bold text-slate-900">
+                                      {order.order_number || `Order ${order.id.slice(0, 8)}`}
+                                    </h3>
+
+                                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 sm:text-sm">
+                                      <span>{formatDate(order.created_at)}</span>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span>
+                                        {items.length} item{items.length === 1 ? '' : 's'}
+                                      </span>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span>
+                                        Qty {totalQuantity > 0 ? totalQuantity : items.length}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <div
+                                      className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeClass(
+                                        paymentStatus
+                                      )}`}
+                                    >
+                                      Payment: {paymentStatus}
+                                    </div>
+
+                                    <div
+                                      className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${sellerStatusBadgeClass(
+                                        sellerStatus
+                                      )}`}
+                                    >
+                                      Order: {sellerStatus}
+                                    </div>
+
+                                    {slotLabel ? (
+                                      <div className="inline-flex w-fit items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
+                                        Slot: {slotLabel}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </div>
+
+                                {addressPreview ? (
+                                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                                    <span className="font-semibold text-slate-700">
+                                      {deliveryType}:
+                                    </span>{' '}
+                                    {addressPreview}
+                                  </div>
+                                ) : null}
+
+                                <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                                  <InfoCard
+                                    label="Customer"
+                                    value={order.buyer_name || '-'}
+                                    subValue={order.buyer_phone || order.buyer_email || '-'}
                                   />
+                                  <InfoCard
+                                    label="Items"
+                                    value={`${items.length} item${items.length === 1 ? '' : 's'}`}
+                                    subValue={`${totalQuantity || items.length} total quantity`}
+                                  />
+                                  <InfoCard
+                                    label="Order Total"
+                                    value={formatMoney(orderTotal)}
+                                    subValue={deliveryType}
+                                  />
+                                  <InfoCard
+                                    label="Payment Status"
+                                    value={paymentStatus}
+                                    subValue={slotLabel || 'No slot'}
+                                  />
+                                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div className="text-sm font-semibold text-slate-500">
+                                      Action
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleOrderExpanded(order.id)}
+                                      className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                      {isExpanded ? 'Hide Details' : 'View Details'}
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
+                            </div>
 
-                              <div>
-                                <h4 className="mb-3 text-sm font-bold text-slate-900">
-                                  Order Details
-                                </h4>
+                            {isExpanded && (
+                              <div className="border-t border-slate-200 bg-slate-50/70 p-4">
+                                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px]">
+                                  <div className="space-y-4">
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                      <h4 className="text-sm font-bold text-slate-900">
+                                        Customer & Delivery
+                                      </h4>
 
-                                {items.length === 0 ? (
-                                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
-                                    No item details available for this order.
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
-                                      <div className="grid grid-cols-12 gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                        <div className="col-span-6">Item</div>
-                                        <div className="col-span-2 text-center">Qty</div>
-                                        <div className="col-span-2 text-right">Price</div>
-                                        <div className="col-span-2 text-right">Total</div>
-                                      </div>
-
-                                      <div>
-                                        {items.map((item, index) => (
-                                          <div
-                                            key={`${order.id}-item-${index}`}
-                                            className="grid grid-cols-12 gap-3 px-4 py-3 text-sm text-slate-700 not-last:border-b not-last:border-slate-100"
-                                          >
-                                            <div className="col-span-6 min-w-0">
-                                              <div className="font-semibold text-slate-900">
-                                                {item.name}
-                                              </div>
-                                              <div className="mt-1 text-xs text-slate-500">
-                                                {item.slug || '—'}
-                                              </div>
-
-                                              {item.addons && item.addons.length > 0 ? (
-                                                <div className="mt-2 space-y-1">
-                                                  {item.addons.map((addon, addonIndex) => (
-                                                    <div
-                                                      key={`${order.id}-addon-${index}-${addonIndex}`}
-                                                      className="text-xs text-violet-700"
-                                                    >
-                                                      + {addon.option_name || 'Add-on'}
-                                                      {typeof addon.price === 'number'
-                                                        ? ` (${formatMoney(addon.price)})`
-                                                        : ''}
-                                                      {addon.group_name
-                                                        ? ` • ${addon.group_name}`
-                                                        : ''}
-                                                    </div>
-                                                  ))}
-                                                </div>
-                                              ) : null}
-
-                                              {item.note ? (
-                                                <div className="mt-2 text-xs text-slate-500">
-                                                  Note: {item.note}
-                                                </div>
-                                              ) : null}
-                                            </div>
-
-                                            <div className="col-span-2 text-center font-medium">
-                                              {item.quantity}
-                                            </div>
-                                            <div className="col-span-2 text-right font-medium">
-                                              {formatMoney(item.price)}
-                                            </div>
-                                            <div className="col-span-2 text-right font-semibold text-slate-900">
-                                              {formatMoney(item.total)}
-                                            </div>
-                                          </div>
-                                        ))}
+                                      <div className="mt-3 space-y-2 text-sm">
+                                        <DetailRow label="Customer" value={order.buyer_name || '-'} />
+                                        <DetailRow label="Phone" value={order.buyer_phone || '-'} />
+                                        <DetailRow label="Email" value={order.buyer_email || '-'} />
+                                        <DetailRow label="Type" value={deliveryType} />
+                                        <DetailRow label="Time Slot" value={slotLabel || '-'} />
+                                        <DetailRow
+                                          label="Address"
+                                          value={deliveryAddress || '-'}
+                                          multiline
+                                        />
                                       </div>
                                     </div>
 
-                                    <div className="space-y-3 md:hidden">
-                                      {items.map((item, index) => (
-                                        <div
-                                          key={`${order.id}-item-mobile-${index}`}
-                                          className="rounded-2xl border border-slate-200 bg-white p-4"
-                                        >
-                                          <div className="text-sm font-bold text-slate-900">
-                                            {item.name}
-                                          </div>
-                                          <div className="mt-1 text-xs text-slate-500">
-                                            {item.slug || '—'}
-                                          </div>
+                                    <div>
+                                      <h4 className="mb-3 text-sm font-bold text-slate-900">
+                                        Order Details
+                                      </h4>
 
-                                          <div className="mt-3 text-sm font-semibold text-slate-800">
-                                            {item.quantity} × {formatMoney(item.price)} ={' '}
-                                            {formatMoney(item.total)}
-                                          </div>
+                                      {items.length === 0 ? (
+                                        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
+                                          No item details available for this order.
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
+                                            <div className="grid grid-cols-12 gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                              <div className="col-span-6">Item</div>
+                                              <div className="col-span-2 text-center">Qty</div>
+                                              <div className="col-span-2 text-right">Price</div>
+                                              <div className="col-span-2 text-right">Total</div>
+                                            </div>
 
-                                          {item.addons && item.addons.length > 0 ? (
-                                            <div className="mt-3 space-y-1">
-                                              {item.addons.map((addon, addonIndex) => (
+                                            <div>
+                                              {items.map((item, index) => (
                                                 <div
-                                                  key={`${order.id}-mobile-addon-${index}-${addonIndex}`}
-                                                  className="text-xs text-violet-700"
+                                                  key={`${order.id}-item-${index}`}
+                                                  className="grid grid-cols-12 gap-3 px-4 py-3 text-sm text-slate-700 not-last:border-b not-last:border-slate-100"
                                                 >
-                                                  + {addon.option_name || 'Add-on'}
-                                                  {typeof addon.price === 'number'
-                                                    ? ` (${formatMoney(addon.price)})`
-                                                    : ''}
-                                                  {addon.group_name
-                                                    ? ` • ${addon.group_name}`
-                                                    : ''}
+                                                  <div className="col-span-6 min-w-0">
+                                                    <div className="font-semibold text-slate-900">
+                                                      {item.name}
+                                                    </div>
+                                                    <div className="mt-1 text-xs text-slate-500">
+                                                      {item.slug || '—'}
+                                                    </div>
+
+                                                    {item.addons && item.addons.length > 0 ? (
+                                                      <div className="mt-2 space-y-1">
+                                                        {item.addons.map((addon, addonIndex) => (
+                                                          <div
+                                                            key={`${order.id}-addon-${index}-${addonIndex}`}
+                                                            className="text-xs text-violet-700"
+                                                          >
+                                                            + {addon.option_name || 'Add-on'}
+                                                            {typeof addon.price === 'number'
+                                                              ? ` (${formatMoney(addon.price)})`
+                                                              : ''}
+                                                            {addon.group_name
+                                                              ? ` • ${addon.group_name}`
+                                                              : ''}
+                                                          </div>
+                                                        ))}
+                                                      </div>
+                                                    ) : null}
+
+                                                    {item.note ? (
+                                                      <div className="mt-2 text-xs text-slate-500">
+                                                        Note: {item.note}
+                                                      </div>
+                                                    ) : null}
+                                                  </div>
+
+                                                  <div className="col-span-2 text-center font-medium">
+                                                    {item.quantity}
+                                                  </div>
+                                                  <div className="col-span-2 text-right font-medium">
+                                                    {formatMoney(item.price)}
+                                                  </div>
+                                                  <div className="col-span-2 text-right font-semibold text-slate-900">
+                                                    {formatMoney(item.total)}
+                                                  </div>
                                                 </div>
                                               ))}
                                             </div>
-                                          ) : null}
+                                          </div>
 
-                                          {item.note ? (
-                                            <div className="mt-3 text-xs text-slate-500">
-                                              Note: {item.note}
-                                            </div>
-                                          ) : null}
-                                        </div>
-                                      ))}
+                                          <div className="space-y-3 md:hidden">
+                                            {items.map((item, index) => (
+                                              <div
+                                                key={`${order.id}-item-mobile-${index}`}
+                                                className="rounded-2xl border border-slate-200 bg-white p-4"
+                                              >
+                                                <div className="text-sm font-bold text-slate-900">
+                                                  {item.name}
+                                                </div>
+                                                <div className="mt-1 text-xs text-slate-500">
+                                                  {item.slug || '—'}
+                                                </div>
+
+                                                <div className="mt-3 text-sm font-semibold text-slate-800">
+                                                  {item.quantity} × {formatMoney(item.price)} ={' '}
+                                                  {formatMoney(item.total)}
+                                                </div>
+
+                                                {item.addons && item.addons.length > 0 ? (
+                                                  <div className="mt-3 space-y-1">
+                                                    {item.addons.map((addon, addonIndex) => (
+                                                      <div
+                                                        key={`${order.id}-mobile-addon-${index}-${addonIndex}`}
+                                                        className="text-xs text-violet-700"
+                                                      >
+                                                        + {addon.option_name || 'Add-on'}
+                                                        {typeof addon.price === 'number'
+                                                          ? ` (${formatMoney(addon.price)})`
+                                                          : ''}
+                                                        {addon.group_name
+                                                          ? ` • ${addon.group_name}`
+                                                          : ''}
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                ) : null}
+
+                                                {item.note ? (
+                                                  <div className="mt-3 text-xs text-slate-500">
+                                                    Note: {item.note}
+                                                  </div>
+                                                ) : null}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </>
+                                      )}
                                     </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
+                                  </div>
 
-                            <div className="space-y-4">
-                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                                <div className="text-sm font-bold text-slate-900">
-                                  Update Order Status
-                                </div>
+                                  <div className="space-y-4">
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                      <div className="text-sm font-bold text-slate-900">
+                                        Update Order Status
+                                      </div>
 
-                                <select
-                                  value={sellerStatus}
-                                  onChange={(e) =>
-                                    handleSellerStatusUpdate(order.id, e.target.value)
-                                  }
-                                  disabled={updatingOrderId === order.id}
-                                  className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-50"
-                                >
-                                  {SELLER_STATUS_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
+                                      <select
+                                        value={sellerStatus}
+                                        onChange={(e) =>
+                                          handleSellerStatusUpdate(order.id, e.target.value)
+                                        }
+                                        disabled={updatingOrderId === order.id}
+                                        className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                      >
+                                        {SELLER_STATUS_OPTIONS.map((option) => (
+                                          <option key={option.value} value={option.value}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
 
-                                <div className="mt-3 text-xs text-slate-500">
-                                  {updatingOrderId === order.id ? 'Updating status...' : ''}
-                                </div>
-                              </div>
+                                      <div className="mt-3 text-xs text-slate-500">
+                                        {updatingOrderId === order.id ? 'Updating status...' : ''}
+                                      </div>
+                                    </div>
 
-                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                                <div className="flex items-center justify-between text-sm text-slate-500">
-                                  <span>Total Items</span>
-                                  <span className="font-semibold text-slate-900">
-                                    {items.length}
-                                  </span>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
-                                  <span>Total Quantity</span>
-                                  <span className="font-semibold text-slate-900">
-                                    {totalQuantity || items.length}
-                                  </span>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
-                                  <span>Payment Status</span>
-                                  <span className="font-semibold capitalize text-slate-900">
-                                    {paymentStatus}
-                                  </span>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
-                                  <span>Order Status</span>
-                                  <span className="font-semibold capitalize text-slate-900">
-                                    {sellerStatus}
-                                  </span>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
-                                  <span>Time Slot</span>
-                                  <span className="text-right font-semibold text-slate-900">
-                                    {slotLabel || '-'}
-                                  </span>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
-                                  <span>Type</span>
-                                  <span className="font-semibold text-slate-900">
-                                    {deliveryType}
-                                  </span>
-                                </div>
-                                <div className="mt-3 border-t border-slate-200 pt-3">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm font-semibold text-slate-600">
-                                      Order Total
-                                    </span>
-                                    <span className="text-lg font-extrabold text-slate-900">
-                                      {formatMoney(orderTotal)}
-                                    </span>
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                      <div className="flex items-center justify-between text-sm text-slate-500">
+                                        <span>Total Items</span>
+                                        <span className="font-semibold text-slate-900">
+                                          {items.length}
+                                        </span>
+                                      </div>
+                                      <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                                        <span>Total Quantity</span>
+                                        <span className="font-semibold text-slate-900">
+                                          {totalQuantity || items.length}
+                                        </span>
+                                      </div>
+                                      <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                                        <span>Payment Status</span>
+                                        <span className="font-semibold capitalize text-slate-900">
+                                          {paymentStatus}
+                                        </span>
+                                      </div>
+                                      <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                                        <span>Order Status</span>
+                                        <span className="font-semibold capitalize text-slate-900">
+                                          {sellerStatus}
+                                        </span>
+                                      </div>
+                                      <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                                        <span>Time Slot</span>
+                                        <span className="text-right font-semibold text-slate-900">
+                                          {slotLabel || '-'}
+                                        </span>
+                                      </div>
+                                      <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                                        <span>Type</span>
+                                        <span className="font-semibold text-slate-900">
+                                          {deliveryType}
+                                        </span>
+                                      </div>
+                                      <div className="mt-3 border-t border-slate-200 pt-3">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-sm font-semibold text-slate-600">
+                                            Order Total
+                                          </span>
+                                          <span className="text-lg font-extrabold text-slate-900">
+                                            {formatMoney(orderTotal)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
+                            )}
                           </div>
-                        </div>
-                      )}
+                        )
+                      })}
                     </div>
-                  )
-                })}
-              </div>
-            ))}
+                  ) : null}
+                </div>
+              )
+            })}
           </div>
         )}
       </section>
