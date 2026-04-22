@@ -526,19 +526,40 @@ export default function ShopPageClient({
     productName: '',
     currentIndex: 0,
   })
-  
- const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
 
-useEffect(() => {
-  function handleResize() {
-    setIsDesktop(window.innerWidth >= 1024)
-  }
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
 
-  handleResize()
-  window.addEventListener('resize', handleResize)
+  useEffect(() => {
+    function handleResize() {
+      setIsDesktop(window.innerWidth >= 1024)
+    }
 
-  return () => window.removeEventListener('resize', handleResize)
-}, [])
+    handleResize()
+    window.addEventListener('resize', handleResize)
+
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    function setAppViewportHeight() {
+      const height = window.visualViewport?.height || window.innerHeight
+      document.documentElement.style.setProperty('--app-dvh', `${height}px`)
+    }
+
+    setAppViewportHeight()
+
+    window.addEventListener('resize', setAppViewportHeight)
+    window.addEventListener('orientationchange', setAppViewportHeight)
+    window.visualViewport?.addEventListener('resize', setAppViewportHeight)
+    window.visualViewport?.addEventListener('scroll', setAppViewportHeight)
+
+    return () => {
+      window.removeEventListener('resize', setAppViewportHeight)
+      window.removeEventListener('orientationchange', setAppViewportHeight)
+      window.visualViewport?.removeEventListener('resize', setAppViewportHeight)
+      window.visualViewport?.removeEventListener('scroll', setAppViewportHeight)
+    }
+  }, [])
 
   const [addonModal, setAddonModal] = useState<{
     product: ProductRow | null
@@ -563,6 +584,22 @@ useEffect(() => {
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
   const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
+
+  useEffect(() => {
+    const shouldLockScroll = gallery.isOpen || addonModal.isOpen
+    const previousBodyOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+
+    if (shouldLockScroll) {
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+    }
+  }, [gallery.isOpen, addonModal.isOpen])
 
   function getProductAddonGroups(productId: string) {
     return productAddons[productId] || []
@@ -826,16 +863,20 @@ useEffect(() => {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (!gallery.isOpen) return
+      if (gallery.isOpen) {
+        if (event.key === 'Escape') closeGallery()
+        if (event.key === 'ArrowLeft') showPrevImage()
+        if (event.key === 'ArrowRight') showNextImage()
+      }
 
-      if (event.key === 'Escape') closeGallery()
-      if (event.key === 'ArrowLeft') showPrevImage()
-      if (event.key === 'ArrowRight') showNextImage()
+      if (addonModal.isOpen && event.key === 'Escape') {
+        closeAddonModal()
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [gallery.isOpen, gallery.currentIndex, gallery.images.length])
+  }, [gallery.isOpen, gallery.currentIndex, gallery.images.length, addonModal.isOpen])
 
   function scrollToProducts() {
     if (!productListRef.current) return
@@ -930,18 +971,18 @@ useEffect(() => {
   }
 
   function showNextImage() {
-  setGallery((prev) => {
-    if (!prev.images.length) return prev
+    setGallery((prev) => {
+      if (!prev.images.length) return prev
 
-    return {
-      ...prev,
-      currentIndex:
-        prev.currentIndex === prev.images.length - 1
-          ? 0
-          : prev.currentIndex + 1,
-    }
-  })
-}
+      return {
+        ...prev,
+        currentIndex:
+          prev.currentIndex === prev.images.length - 1
+            ? 0
+            : prev.currentIndex + 1,
+      }
+    })
+  }
 
   const visibleProducts = useMemo(() => {
     if (!hasCategoryFeature) return products
@@ -973,107 +1014,105 @@ useEffect(() => {
           />
         </div>
 
-  <div style={heroCard}>
-  {/** MOBILE LAYOUT */}
-  {!isDesktop && (
-    <div style={heroMobile}>
-      {seller.profile_image ? (
-        <img
-          src={getImageUrl(seller.profile_image)}
-          alt={sellerName}
-          style={sellerImgMobile}
-        />
-      ) : (
-        <div style={sellerFallbackMobile}>
-          {sellerName.charAt(0).toUpperCase()}
-        </div>
-      )}
+        <div style={heroCard}>
+          {!isDesktop && (
+            <div style={heroMobile}>
+              {seller.profile_image ? (
+                <img
+                  src={getImageUrl(seller.profile_image)}
+                  alt={sellerName}
+                  style={sellerImgMobile}
+                />
+              ) : (
+                <div style={sellerFallbackMobile}>
+                  {sellerName.charAt(0).toUpperCase()}
+                </div>
+              )}
 
-      <h1 style={shopTitleMobile}>{sellerName}</h1>
+              <h1 style={shopTitleMobile}>{sellerName}</h1>
 
-      <div style={badgeCenter}>
-        <div
-          style={{
-            ...statusBadge,
-            background:
-              availability.label === 'Pre-order'
-                ? '#ede9fe'
-                : isShopOpen
-                ? '#dcfce7'
-                : '#fee2e2',
-            color:
-              availability.label === 'Pre-order'
-                ? '#6d28d9'
-                : isShopOpen
-                ? '#166534'
-                : '#b91c1c',
-          }}
-        >
-          {availability.label}
-        </div>
+              <div style={badgeCenter}>
+                <div
+                  style={{
+                    ...statusBadge,
+                    background:
+                      availability.label === 'Pre-order'
+                        ? '#ede9fe'
+                        : isShopOpen
+                        ? '#dcfce7'
+                        : '#fee2e2',
+                    color:
+                      availability.label === 'Pre-order'
+                        ? '#6d28d9'
+                        : isShopOpen
+                        ? '#166534'
+                        : '#b91c1c',
+                  }}
+                >
+                  {availability.label}
+                </div>
 
-        {availability.inlineInfo && (
-          <div style={statusInfoBadge}>{availability.inlineInfo}</div>
-        )}
-      </div>
+                {availability.inlineInfo && (
+                  <div style={statusInfoBadge}>{availability.inlineInfo}</div>
+                )}
+              </div>
 
-      {seller.shop_description?.trim() && (
-        <p style={shopDescriptionMobile}>{seller.shop_description}</p>
-      )}
-    </div>
-  )}
+              {seller.shop_description?.trim() && (
+                <p style={shopDescriptionMobile}>{seller.shop_description}</p>
+              )}
+            </div>
+          )}
 
-  {/** DESKTOP LAYOUT */}
-  {isDesktop && (
-    <div style={sellerRow}>
-      {seller.profile_image ? (
-        <img
-          src={getImageUrl(seller.profile_image)}
-          alt={sellerName}
-          style={sellerImgDesktop}
-        />
-      ) : (
-        <div style={sellerFallbackDesktop}>
-          {sellerName.charAt(0).toUpperCase()}
-        </div>
-      )}
+          {isDesktop && (
+            <div style={sellerRow}>
+              {seller.profile_image ? (
+                <img
+                  src={getImageUrl(seller.profile_image)}
+                  alt={sellerName}
+                  style={sellerImgDesktop}
+                />
+              ) : (
+                <div style={sellerFallbackDesktop}>
+                  {sellerName.charAt(0).toUpperCase()}
+                </div>
+              )}
 
-      <div style={heroContent}>
-        <h1 style={shopTitle}>{sellerName}</h1>
+              <div style={heroContent}>
+                <h1 style={shopTitle}>{sellerName}</h1>
 
-        <div style={statusInlineWrap}>
-          <div
-            style={{
-              ...statusBadge,
-              background:
-                availability.label === 'Pre-order'
-                  ? '#ede9fe'
-                  : isShopOpen
-                  ? '#dcfce7'
-                  : '#fee2e2',
-              color:
-                availability.label === 'Pre-order'
-                  ? '#6d28d9'
-                  : isShopOpen
-                  ? '#166534'
-                  : '#b91c1c',
-            }}
-          >
-            {availability.label}
-          </div>
+                <div style={statusInlineWrap}>
+                  <div
+                    style={{
+                      ...statusBadge,
+                      background:
+                        availability.label === 'Pre-order'
+                          ? '#ede9fe'
+                          : isShopOpen
+                          ? '#dcfce7'
+                          : '#fee2e2',
+                      color:
+                        availability.label === 'Pre-order'
+                          ? '#6d28d9'
+                          : isShopOpen
+                          ? '#166534'
+                          : '#b91c1c',
+                    }}
+                  >
+                    {availability.label}
+                  </div>
 
-          {availability.inlineInfo && (
-            <div style={statusInfoBadge}>{availability.inlineInfo}</div>
+                  {availability.inlineInfo && (
+                    <div style={statusInfoBadge}>{availability.inlineInfo}</div>
+                  )}
+                </div>
+
+                {seller.shop_description?.trim() && (
+                  <p style={shopDescription}>{seller.shop_description}</p>
+                )}
+              </div>
+            </div>
           )}
         </div>
-
-        {seller.shop_description?.trim() && (
-          <p style={shopDescription}>{seller.shop_description}</p>
-        )}
-      </div>
-    </div>
-  )}
-</div>
 
         {hasCategoryFeature ? (
           <div style={stickyTabWrap}>
@@ -1115,118 +1154,118 @@ useEffect(() => {
         ) : null}
 
         <div ref={productListRef}>
-  {visibleProducts.length === 0 ? (
-    <div style={emptyCard}>
-      <p style={{ margin: 0, color: '#64748b' }}>
-        Tiada menu aktif buat masa ini.
-      </p>
-    </div>
-  ) : (
-    <div
-      style={{
-        ...productGrid,
-        gridTemplateColumns: isDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
-      }}
-    >
-      {visibleProducts.map((product) => {
-        const image = getFirstImage(product)
-        const qty = cart.reduce(
-          (sum, item) =>
-            item.product_id === product.id ? sum + item.quantity : sum,
-          0
-        )
-        const disableAddButton = !isShopOpen || Boolean(product.sold_out)
-        const allImages = getProductImages(product)
-
-        return (
-          <div key={product.id} style={productCard}>
-            <div style={productContent}>
-              <div style={productInfo}>
-                <div style={productName}>{product.name}</div>
-
-                <div style={productPrice}>RM {product.price.toFixed(2)}</div>
-
-                {product.track_stock ? (
-                  <div style={stockText}>
-                    Stock: {product.stock_quantity ?? 0}
-                  </div>
-                ) : null}
-
-                <div style={productDesc}>
-                  {product.description || 'Tiada deskripsi.'}
-                </div>
-
-                <div style={qtyWrap}>
-                  <div style={qtyRow}>
-                    <button
-                      type="button"
-                      onClick={() => decrease(product.id)}
-                      style={qtyBtn}
-                    >
-                      -
-                    </button>
-
-                    <span style={qtyValue}>{qty}</span>
-
-                    <button
-                      type="button"
-                      onClick={() => increase(product)}
-                      style={{
-                        ...qtyBtn,
-                        opacity: disableAddButton ? 0.4 : 1,
-                        cursor: disableAddButton ? 'not-allowed' : 'pointer',
-                      }}
-                      disabled={disableAddButton}
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  {!isShopOpen ? (
-                    <div style={qtyHintClosed}>Ordering unavailable</div>
-                  ) : null}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => openGallery(product, 0)}
-                style={{
-                  ...productImageButton,
-                  cursor: image ? 'pointer' : 'default',
-                }}
-                disabled={!image}
-                aria-label={`View images for ${product.name}`}
-              >
-                <div style={productImageWrap}>
-                  {image ? (
-                    <img
-                      src={getImageUrl(image)}
-                      alt={product.name}
-                      style={productImage}
-                    />
-                  ) : (
-                    <div style={productImagePlaceholder}>No image</div>
-                  )}
-
-                  {product.sold_out ? (
-                    <div style={soldOutBadge}>Sold Out</div>
-                  ) : null}
-
-                  {allImages.length > 1 ? (
-                    <div style={multiImageBadge}>
-                      {allImages.length} photos
-                    </div>
-                  ) : null}
-                </div>
-              </button>
+          {visibleProducts.length === 0 ? (
+            <div style={emptyCard}>
+              <p style={{ margin: 0, color: '#64748b' }}>
+                Tiada menu aktif buat masa ini.
+              </p>
             </div>
-          </div>
-        )
-      })}
-    </div>
-  )}
-</div>
+          ) : (
+            <div
+              style={{
+                ...productGrid,
+                gridTemplateColumns: isDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+              }}
+            >
+              {visibleProducts.map((product) => {
+                const image = getFirstImage(product)
+                const qty = cart.reduce(
+                  (sum, item) =>
+                    item.product_id === product.id ? sum + item.quantity : sum,
+                  0
+                )
+                const disableAddButton = !isShopOpen || Boolean(product.sold_out)
+                const allImages = getProductImages(product)
+
+                return (
+                  <div key={product.id} style={productCard}>
+                    <div style={productContent}>
+                      <div style={productInfo}>
+                        <div style={productName}>{product.name}</div>
+
+                        <div style={productPrice}>RM {product.price.toFixed(2)}</div>
+
+                        {product.track_stock ? (
+                          <div style={stockText}>
+                            Stock: {product.stock_quantity ?? 0}
+                          </div>
+                        ) : null}
+
+                        <div style={productDesc}>
+                          {product.description || 'Tiada deskripsi.'}
+                        </div>
+
+                        <div style={qtyWrap}>
+                          <div style={qtyRow}>
+                            <button
+                              type="button"
+                              onClick={() => decrease(product.id)}
+                              style={qtyBtn}
+                            >
+                              -
+                            </button>
+
+                            <span style={qtyValue}>{qty}</span>
+
+                            <button
+                              type="button"
+                              onClick={() => increase(product)}
+                              style={{
+                                ...qtyBtn,
+                                opacity: disableAddButton ? 0.4 : 1,
+                                cursor: disableAddButton ? 'not-allowed' : 'pointer',
+                              }}
+                              disabled={disableAddButton}
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {!isShopOpen ? (
+                            <div style={qtyHintClosed}>Ordering unavailable</div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => openGallery(product, 0)}
+                        style={{
+                          ...productImageButton,
+                          cursor: image ? 'pointer' : 'default',
+                        }}
+                        disabled={!image}
+                        aria-label={`View images for ${product.name}`}
+                      >
+                        <div style={productImageWrap}>
+                          {image ? (
+                            <img
+                              src={getImageUrl(image)}
+                              alt={product.name}
+                              style={productImage}
+                            />
+                          ) : (
+                            <div style={productImagePlaceholder}>No image</div>
+                          )}
+
+                          {product.sold_out ? (
+                            <div style={soldOutBadge}>Sold Out</div>
+                          ) : null}
+
+                          {allImages.length > 1 ? (
+                            <div style={multiImageBadge}>
+                              {allImages.length} photos
+                            </div>
+                          ) : null}
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         <div style={checkoutCard}>
           <div style={checkoutHeader}>
@@ -1249,7 +1288,6 @@ useEffect(() => {
             </div>
           ) : (
             <>
-              
               <div style={summaryList}>
                 {cartItems.map((item) => (
                   <div key={item.id} style={summaryCard}>
@@ -1421,7 +1459,7 @@ useEffect(() => {
       {addonModal.isOpen && addonModal.product ? (
         <div style={modalOverlay} onClick={closeAddonModal}>
           <div
-            style={modalDialog}
+            style={isDesktop ? modalDialogDesktop : modalDialogMobile}
             onClick={(event) => event.stopPropagation()}
           >
             <div style={modalHeader}>
@@ -1611,7 +1649,7 @@ const heroMobile: React.CSSProperties = {
   alignItems: 'center',
   textAlign: 'center',
   gap: 10,
-  width: '100%', // 🔥 ADD THIS
+  width: '100%',
 }
 
 const sellerImgMobile: React.CSSProperties = {
@@ -1714,41 +1752,10 @@ const heroContent: React.CSSProperties = {
   flexDirection: 'column',
 }
 
-const shopMeta: React.CSSProperties = {
-  margin: '8px 0 0',
-  color: '#64748b',
-  fontSize: 13,
-  lineHeight: 1.5,
-  maxWidth: 720,
-}
-
 const sellerRow: React.CSSProperties = {
   display: 'flex',
   alignItems: 'flex-start',
   gap: 14,
-}
-
-const sellerImg: React.CSSProperties = {
-  width: 56,
-  height: 56,
-  borderRadius: '9999px',
-  objectFit: 'cover',
-  border: '1px solid #e2e8f0',
-  flexShrink: 0,
-}
-
-const sellerFallback: React.CSSProperties = {
-  width: 56,
-  height: 56,
-  borderRadius: '9999px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: '#e2e8f0',
-  color: '#0f172a',
-  fontSize: 20,
-  fontWeight: 800,
-  flexShrink: 0,
 }
 
 const shopTitle: React.CSSProperties = {
@@ -1757,13 +1764,6 @@ const shopTitle: React.CSSProperties = {
   lineHeight: 1.2,
   fontWeight: 600,
   color: '#0f172a',
-}
-
-const shopSub: React.CSSProperties = {
-  margin: '8px 0 0',
-  color: '#64748b',
-  fontSize: 14,
-  lineHeight: 1.3,
 }
 
 const shopDescription: React.CSSProperties = {
@@ -2031,33 +2031,6 @@ const checkoutSub: React.CSSProperties = {
   color: '#64748b',
 }
 
-const deliveryInfoCard: React.CSSProperties = {
-  borderRadius: 18,
-  border: '1px solid #cbd5e1',
-  background: '#f8fafc',
-  padding: 14,
-  marginBottom: 16,
-}
-
-const deliveryInfoTitle: React.CSSProperties = {
-  fontSize: 14,
-  fontWeight: 600,
-  color: '#1d4ed8',
-  marginBottom: 8,
-}
-
-const deliveryInfoText: React.CSSProperties = {
-  fontSize: 14,
-  color: '#475569',
-  lineHeight: 1.3,
-}
-
-const deliveryInfoMeta: React.CSSProperties = {
-  marginTop: 8,
-  fontSize: 12,
-  color: '#64748b',
-}
-
 const closedCheckoutBox: React.CSSProperties = {
   borderRadius: 18,
   border: '1px solid #fed7aa',
@@ -2170,17 +2143,19 @@ const galleryOverlay: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: 16,
+  padding: 'max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))',
   zIndex: 1000,
 }
 
 const galleryDialog: React.CSSProperties = {
   width: '100%',
   maxWidth: 980,
+  maxHeight: 'calc(var(--app-dvh, 100vh) - 32px)',
   background: '#fff',
   borderRadius: 24,
   padding: 16,
   position: 'relative',
+  overflowY: 'auto',
 }
 
 const galleryCloseBtn: React.CSSProperties = {
@@ -2282,19 +2257,38 @@ const modalOverlay: React.CSSProperties = {
   inset: 0,
   background: 'rgba(15, 23, 42, 0.62)',
   display: 'flex',
-  alignItems: 'center',
+  alignItems: 'flex-end',
   justifyContent: 'center',
-  padding: 16,
+  paddingTop: 'max(12px, env(safe-area-inset-top))',
+  paddingRight: 12,
+  paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+  paddingLeft: 12,
   zIndex: 1100,
 }
 
-const modalDialog: React.CSSProperties = {
+const modalDialogBase: React.CSSProperties = {
   width: '100%',
-  maxWidth: 680,
   background: '#fff',
-  borderRadius: 24,
   overflow: 'hidden',
   boxShadow: '0 16px 50px rgba(15, 23, 42, 0.18)',
+  display: 'flex',
+  flexDirection: 'column',
+}
+
+const modalDialogMobile: React.CSSProperties = {
+  ...modalDialogBase,
+  maxWidth: 680,
+  height: 'auto',
+  maxHeight: 'calc(var(--app-dvh, 100vh) - 24px)',
+  borderRadius: '24px 24px 24px 24px',
+}
+
+const modalDialogDesktop: React.CSSProperties = {
+  ...modalDialogBase,
+  maxWidth: 680,
+  maxHeight: 'calc(var(--app-dvh, 100vh) - 32px)',
+  borderRadius: 24,
+  alignSelf: 'center',
 }
 
 const modalHeader: React.CSSProperties = {
@@ -2304,6 +2298,7 @@ const modalHeader: React.CSSProperties = {
   gap: 12,
   padding: 18,
   borderBottom: '1px solid #e2e8f0',
+  flexShrink: 0,
 }
 
 const modalTitle: React.CSSProperties = {
@@ -2326,14 +2321,17 @@ const modalCloseBtn: React.CSSProperties = {
   background: '#fff',
   cursor: 'pointer',
   fontWeight: 800,
+  flexShrink: 0,
 }
 
 const modalContent: React.CSSProperties = {
   padding: 18,
   display: 'grid',
   gap: 14,
-  maxHeight: '70vh',
   overflowY: 'auto',
+  WebkitOverflowScrolling: 'touch',
+  minHeight: 0,
+  flex: 1,
 }
 
 const addonGroupCard: React.CSSProperties = {
@@ -2419,12 +2417,17 @@ const modalError: React.CSSProperties = {
 }
 
 const modalFooter: React.CSSProperties = {
-  padding: 18,
+  paddingTop: 14,
+  paddingRight: 18,
+  paddingBottom: 'calc(18px + env(safe-area-inset-bottom))',
+  paddingLeft: 18,
   borderTop: '1px solid #e2e8f0',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'flex-end',
   gap: 10,
+  background: '#fff',
+  flexShrink: 0,
 }
 
 const secondaryBtn: React.CSSProperties = {
