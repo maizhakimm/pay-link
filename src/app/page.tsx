@@ -220,41 +220,67 @@ export default function HomePage() {
         Features
       </p>
       <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-        Mudah dan memudahkan. Direka khas untuk anda.
+        Semua yang anda perlukan untuk urus order dengan mudah
       </h2>
       <p className="mt-4 text-base leading-7 text-slate-600">
-        Cara setup yang simple untuk tambah produk, semak order, 
-        kawal waktu tempahan hingga template untuk share ke social platform lain.
+        Direka khas untuk seller WhatsApp, food seller dan bisnes kecil supaya
+        lebih tersusun, cepat dan tak pening.
       </p>
     </div>
 
-    <div className="mt-12 grid gap-6 md:grid-cols-2">
-      <FeatureImageCard
-        imageSrc="/Product.svg"
-        imageAlt="BayarLink Product Feature"
-        title="Tambah Produk Dengan Mudah"
-        description="Masukkan produk, harga dan gambar dalam satu dashboard yang ringkas. Customer boleh terus lihat semua produk aktif anda dalam satu link."
+    <div className="mt-12 grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <FeatureIconCard
+        icon={<ShopLinkFeatureIcon />}
+        title="1 Link Shop Sendiri"
+        description="Share satu link sahaja untuk customer tengok semua produk dan buat order dengan mudah."
       />
 
-      <FeatureImageCard
-        imageSrc="/Order.svg"
-        imageAlt="BayarLink Order Feature"
-        title="Semua Order Tersusun"
-        description="Tak perlu lagi scroll WhatsApp dan cari order satu-satu. Semua tempahan direkod dan lebih mudah untuk anda urus."
+      <FeatureIconCard
+        icon={<AddOnFeatureIcon />}
+        title="Produk & Add-On"
+        description="Tambah produk, variasi dan add-on seperti extra cheese atau pilihan khas dengan mudah."
       />
 
-      <FeatureImageCard
-        imageSrc="/Operation-Hour.svg"
-        imageAlt="BayarLink Operating Hours Feature"
-        title="Kawal Waktu Tempahan"
-        description="Tetapkan waktu kedai anda dibuka untuk tempahan. Elak customer order waktu anda tak available dan kurangkan salah faham."
+      <FeatureIconCard
+        icon={<SlotFeatureIcon />}
+        title="Delivery & Pickup Slot"
+        description="Tetapkan waktu tempahan supaya customer tak order sesuka hati dan elak kekeliruan."
       />
 
-      <FeatureImageCard
-        imageSrc="/Dashboard-Daily-Note-Whatsapp-Template.svg"
-        imageAlt="BayarLink Dashboard and WhatsApp Feature"
-        title="Ada template yang memudahkan"
-        description="Hanya pilih dan paparkan produk aktif, automatik akan update di template Daily Note, dan share!"
+      <FeatureIconCard
+        icon={<WhatsAppFlowFeatureIcon />}
+        title="WhatsApp Order Flow"
+        description="Order masuk dengan flow yang lebih kemas tanpa perlu layan semuanya secara manual."
+      />
+
+      <FeatureIconCard
+        icon={<OrderStatusFeatureIcon />}
+        title="Status Order Jelas"
+        description="Track setiap order dengan lebih mudah seperti pending, paid atau completed."
+      />
+
+      <FeatureIconCard
+        icon={<AutoPaymentFeatureIcon />}
+        title="Auto Check Payment"
+        description="Bayaran lebih mudah disemak dan kurangkan kerja manual seller untuk semak satu-satu."
+      />
+
+      <FeatureIconCard
+        icon={<StockGuardFeatureIcon />}
+        title="Elak Oversell"
+        description="Stok auto update dan bantu kurangkan risiko double order bila permintaan makin banyak."
+      />
+
+      <FeatureIconCard
+        icon={<MultiPaymentFeatureIcon />}
+        title="Pelbagai Cara Bayar"
+        description="Terima FPX, QR dan Card dalam satu sistem supaya customer lebih mudah nak buat bayaran."
+      />
+
+      <FeatureIconCard
+        icon={<MobileManageFeatureIcon />}
+        title="Urus Dari Phone"
+        description="Tak perlu laptop atau PC. Semua urusan boleh dibuat terus dari phone anda."
       />
     </div>
   </div>
@@ -629,37 +655,28 @@ function SolutionCard({
   );
 }
 
-function FeatureImageCard({
-  imageSrc,
-  imageAlt,
+function FeatureIconCard({
+  icon,
   title,
   description,
 }: {
-  imageSrc: string;
-  imageAlt: string;
+  icon: React.ReactNode;
   title: string;
   description: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="border-b border-slate-100 bg-slate-50/70 p-4 sm:p-5">
-        <div className="relative overflow-hidden rounded-2xl bg-white">
-          <Image
-            src={imageSrc}
-            alt={imageAlt}
-            width={1200}
-            height={900}
-            className="h-auto w-full object-contain"
-          />
-        </div>
+    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+        {icon}
       </div>
 
-      <div className="p-6">
-        <h3 className="text-lg font-bold text-slate-950 sm:text-xl">{title}</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
-          {description}
-        </p>
-      </div>
+      <h3 className="text-lg font-bold text-slate-900">
+        {title}
+      </h3>
+
+      <p className="mt-2 text-sm leading-relaxed text-slate-600">
+        {description}
+      </p>
     </div>
   );
 }
@@ -865,6 +882,214 @@ function SystemIcon() {
         strokeWidth="1.8"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function ShopLinkFeatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <path
+        d="M10 13a4 4 0 005.66 0l2.12-2.12a4 4 0 10-5.66-5.66L10.5 6.84"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 11a4 4 0 01-5.66 0L6.22 8.88a4 4 0 115.66-5.66L13.5 4.84"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function AddOnFeatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <path
+        d="M12 3l7 4v10l-7 4-7-4V7l7-4z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 8v8M8 12h8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SlotFeatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <path
+        d="M8 2v3M16 2v3M4 7h16"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <rect
+        x="4"
+        y="4"
+        width="16"
+        height="16"
+        rx="3"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M12 10v3l2 1.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function WhatsAppFlowFeatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <path
+        d="M20 11.5A8.5 8.5 0 115.1 17l-1.6 3.5 3.8-1.2A8.5 8.5 0 0020 11.5z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 11h6M9 14h4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function OrderStatusFeatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <path
+        d="M9 6h11M9 12h11M9 18h11"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4 6.5l1.2 1.2L7.5 5.5M4 12.5l1.2 1.2 2.3-2.2M4 18.5l1.2 1.2 2.3-2.2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function AutoPaymentFeatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <rect
+        x="3"
+        y="6"
+        width="18"
+        height="12"
+        rx="2.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M3 10h18"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8 15l2 2 4-4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function StockGuardFeatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <path
+        d="M12 3l7 4v5c0 4.5-2.8 7.5-7 9-4.2-1.5-7-4.5-7-9V7l7-4z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.5 12.5l1.7 1.7 3.3-3.4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MultiPaymentFeatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <rect
+        x="2.5"
+        y="6"
+        width="13"
+        height="9"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M2.5 9h13"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M18 9.5h3M18 13h3M18 16.5h3"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MobileManageFeatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <rect
+        x="7"
+        y="2.5"
+        width="10"
+        height="19"
+        rx="2.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M10 6.5h4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="17.5" r="1" fill="currentColor" />
     </svg>
   );
 }
