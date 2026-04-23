@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 
 type DeliveryMode =
   | 'free_delivery'
-  | 'fixed_fee'authError
+  | 'fixed_fee'
   | 'included_in_price'
   | 'pay_rider_separately'
   | 'distance_based'
