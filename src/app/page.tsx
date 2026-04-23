@@ -36,92 +36,88 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section className="relative min-h-screen overflow-hidden">
-  {/* Background Image */}
-  <div
-    className="absolute inset-0 bg-cover bg-center"
-    style={{ backgroundImage: "url('/seller-hero.png')" }}
-  />
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.14),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.10),_transparent_28%)]" />
+        <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 py-16 sm:px-6 md:py-20 lg:grid-cols-2 lg:px-8 lg:py-24">
+          <div className="relative text-center lg:text-left">
+            <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 lg:mx-0">
+              <span className="inline-block h-2 w-2 rounded-full bg-violet-500" />
+              Beta
+            </div>
 
-  {/* Dark overlay (soft) */}
-  <div className="absolute inset-0 bg-black/10" />
+            <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+              Mudah Jual,
+              <br />
+              <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                Mudah Bayar!
+              </span>
+            </h1>
 
-  {/* Left faded white overlay */}
-  <div className="absolute inset-y-0 left-0 w-full md:w-[65%] bg-gradient-to-r from-white/95 via-white/85 to-white/0" />
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg lg:mx-0">
+              Jual dan promote perniagaan anda di mana2 platform dengan
+              BayarLink. Lebih mudah nak jual dan lebih mudah customer nak
+              bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO
+              kos!
+            </p>
 
-  {/* Content */}
-  <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-center px-6 py-20 md:px-8">
-    <div className="max-w-xl">
-      
-      {/* Badge (remain) */}
-      <div className="mb-5 flex flex-wrap gap-2">
-        <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-          Untuk seller makanan dari rumah
-        </span>
-        <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur-sm">
-          Mudah guna • Mesra mobile
-        </span>
-      </div>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+              <a
+                href={primaryCtaHref}
+                className="inline-flex w-full max-w-[280px] items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 sm:w-auto"
+              >
+                Start Free
+              </a>
+              <a
+                href="/s/dana-store"
+                className="inline-flex w-full max-w-[280px] items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+              >
+                View Demo Shop
+              </a>
+            </div>
 
-      {/* Headline */}
-      <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-6xl">
-        Tak Perlu Buka Kedai, Dari Rumah Pun Boleh Berjaya!
-      </h1>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-sm text-slate-500 lg:justify-start">
+              <div className="inline-flex items-center gap-2">
+                <CheckIcon />
+                WhatsApp
+              </div>
+              <div className="inline-flex items-center gap-2">
+                <CheckIcon />
+                TikTok
+              </div>
+              <div className="inline-flex items-center gap-2">
+                <CheckIcon />
+                Telegram
+              </div>
+              <div className="inline-flex items-center gap-2">
+                <CheckIcon />
+                Facebook
+              </div>
+              <div className="inline-flex items-center gap-2">
+                <CheckIcon />
+                Instagram
+              </div>
+            </div>
+          </div>
 
-      {/* Whisper line */}
-      <p className="mt-2 text-sm italic text-slate-500">
-        bisik Aishah Bakery dalam hati
-      </p>
+          {/* Hero Image */}
+          <div className="relative flex justify-center lg:justify-end">
+            <div className="absolute -top-10 right-10 h-32 w-32 rounded-full bg-violet-300/30 blur-3xl" />
+            <div className="absolute -bottom-10 left-10 h-32 w-32 rounded-full bg-blue-300/30 blur-3xl" />
 
-      {/* Main copy */}
-      <p className="mt-6 text-lg leading-8 text-slate-700 md:text-xl">
-        Bukan anda tak pandai berniaga.
-        <br />
-        Anda cuma perlukan cara yang betul!
-      </p>
-
-      {/* Supporting */}
-      <p className="mt-4 text-base leading-7 text-slate-600">
-        Jual kek, nasi lemak, spaghetti, kuih muih, kopi semua boleh.
-        Customer sekarang dah biasa tekan dan bayar. Masih nak suruh mereka PM dulu baru order?
-      </p>
-
-      {/* CTA */}
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <a
-          href="/register"
-          className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
-        >
-          Setup Kedai Saya
-        </a>
-
-        <a
-          href="https://wa.me/"
-          className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-300 bg-white/80 px-6 font-semibold text-slate-800 backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white"
-        >
-          Saya Nak Bantuan Setup
-        </a>
-      </div>
-
-      {/* Bottom points */}
-      <div className="mt-8 flex flex-wrap gap-4 text-sm text-slate-600">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          Sesuai untuk preorder
+            <div className="relative">
+              <Image
+                src="/Hero.svg"
+                alt="BayarLink Preview"
+                width={700}
+                height={1400}
+                priority
+                className="mx-auto w-[300px] scale-[1.1] object-contain drop-shadow-[0_30px_80px_rgba(0,0,0,0.25)] sm:w-[340px] md:w-[380px] lg:w-[420px]"
+              />
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-blue-500" />
-          Pelbagai pilihan bayaran
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-amber-500" />
-          Boleh urus delivery
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
+      </section>
 
       {/* Problem */}
       <section className="border-t border-slate-200 bg-slate-50/70 py-16 sm:py-20">
