@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 
 type DeliveryMode =
   | 'free_delivery'
-  | 'fixed_fee'
+  | 'fixed_fee'authError
   | 'included_in_price'
   | 'pay_rider_separately'
   | 'distance_based'
@@ -235,12 +235,8 @@ export default function DashboardPage() {
         error: authError,
       } = await supabase.auth.getUser()
 
-      if (authError) {
-        throw new Error(authError.message)
-      }
-
-      if (!user) {
-        window.location.href = '/login'
+      if (authError || !user) {
+        window.location.replace('/login')
         return
       }
 
@@ -257,7 +253,7 @@ export default function DashboardPage() {
       }
 
       if (!sellerData) {
-        window.location.href = '/dashboard/onboarding'
+        window.location.replace('/dashboard/onboarding')
         return
       }
 
