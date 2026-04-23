@@ -231,14 +231,14 @@ export default function DashboardPage() {
 
     try {
       const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser()
+  data: { user },
+  error: authError,
+} = await supabase.auth.getUser()
 
-      if (authError || !user) {
-        window.location.replace('/login')
-        return
-      }
+if (authError || !user) {
+  window.location.replace('/login')
+  return
+}
 
       const { data: sellerData, error: sellerError } = await supabase
         .from('seller_profiles')
