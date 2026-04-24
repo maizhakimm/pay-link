@@ -113,81 +113,102 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
       {/* HERO */}
-      <section className="relative min-h-screen overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/seller-hero.png')" }}
-        />
+      {/* HERO */}
+<section className="relative min-h-screen overflow-hidden bg-white md:bg-transparent">
+  {/* Desktop background image */}
+  <div
+    className="absolute inset-0 hidden bg-cover bg-center md:block"
+    style={{ backgroundImage: "url('/seller-hero.png')" }}
+  />
 
-        <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-white/95 via-white/85 to-white/0 md:w-[65%]" />
+  {/* Mobile background image - positioned bottom */}
+  <div
+    className="absolute inset-x-0 bottom-0 h-[48%] bg-cover bg-center md:hidden"
+    style={{ backgroundImage: "url('/seller-hero.png')" }}
+  />
 
-        <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-center px-6 py-20 md:px-8">
-          <div className="max-w-xl">
-            <div className="mb-5 flex flex-wrap gap-2">
-              <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                Untuk seller makanan dari rumah
-              </span>
-              <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur-sm">
-                Mudah guna • Mesra mobile
-              </span>
-            </div>
+  {/* Desktop overlay */}
+  <div className="absolute inset-0 hidden bg-black/10 md:block" />
+  <div className="absolute inset-y-0 left-0 hidden w-[65%] bg-gradient-to-r from-white/95 via-white/85 to-white/0 md:block" />
 
-            <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-6xl">
-              Tak Perlu Buka Kedai, Dari Rumah Pun Boleh Berjaya!
-            </h1>
+  {/* Mobile fade to image */}
+  <div className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-b from-white via-white/70 to-white/0 md:hidden" />
 
-            <p className="mt-2 text-sm italic text-slate-500">
-              bisik Aishah Bakery dalam hati
-            </p>
+  <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-start px-6 py-20 md:items-center md:px-8">
+    <div className="max-w-xl">
+      <div className="mb-5 flex flex-wrap gap-2">
+        <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+          Untuk seller makanan dari rumah
+        </span>
+        <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 backdrop-blur-sm">
+          Tak Perlu Download App
+        </span>
+      </div>
 
-            <p className="mt-6 text-lg leading-8 text-slate-700 md:text-xl">
-              Bukan anda tak pandai berniaga.
-              <br />
-              Anda cuma perlukan cara yang betul!
-            </p>
+      <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-6xl">
+        Tak Perlu Buka Kedai, Dari Rumah Pun Boleh Berjaya!
+      </h1>
 
-            <p className="mt-4 text-base leading-7 text-slate-600">
-              Jual kek, nasi lemak, spaghetti, kuih muih, kopi semua boleh.
-              Customer sekarang dah biasa tekan dan bayar. Masih nak suruh
-              mereka PM dulu baru order?
-            </p>
+      <p className="mt-2 text-sm italic text-slate-500">
+        bisik Aishah Bakery dalam hati
+      </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="/register"
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
-              >
-                Setup Kedai Saya
-              </a>
+      <p className="mt-6 text-lg leading-8 text-slate-700 md:text-xl">
+        Bukan anda tak pandai berniaga.
+        <br />
+        Anda cuma perlukan cara yang betul!
+      </p>
 
-              <a
-                href="https://wa.me/"
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-300 bg-white/80 px-6 font-semibold text-slate-800 backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white"
-              >
-                Saya Nak Bantuan Setup
-              </a>
-            </div>
+      <p className="mt-4 text-base leading-7 text-slate-600">
+        Jual kek, nasi lemak, spaghetti, kuih muih, kopi semua boleh!
+        <br />
+        Customer sekarang dah pandai tekan dan bayar.
+        <br />
+        Masih nak suruh mereka PM dulu baru order?
+      </p>
 
-            <div className="mt-8 flex flex-wrap gap-4 text-sm text-slate-600">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                Sesuai untuk preorder
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-blue-500" />
-                Pelbagai pilihan bayaran
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
-                Boleh urus delivery
-              </div>
-            </div>
-          </div>
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+        <a
+          href="/register"
+          className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
+        >
+          Daftar Sekarang
+        </a>
+
+        <a
+          href="https://wa.me/"
+          className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-300 bg-white/80 px-6 font-semibold text-slate-800 backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white"
+        >
+          Saya Nak Bantuan Setup
+        </a>
+      </div>
+
+      <div className="mt-8 grid gap-3 text-sm text-slate-600 sm:flex sm:flex-wrap sm:gap-4">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          Boleh preorder
         </div>
-      </section>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-blue-500" />
+          Banyak pilihan bayaran
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-amber-500" />
+          Delivery ikut jarak
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-purple-500" />
+          Boleh buat add-on
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-cyan-500" />
+          Boleh buka time-slot
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      {/* PROBLEM */}
       {/* PROBLEM */}
 <section className="bg-slate-50 py-20">
   <div className="mx-auto max-w-7xl px-6 md:px-8">
