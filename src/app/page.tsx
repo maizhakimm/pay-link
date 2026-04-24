@@ -331,21 +331,58 @@ export default function LandingPage() {
 </section>
 
       {/* SOLUTION */}
-<section className="relative overflow-hidden bg-white py-20">
-  <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 md:grid-cols-2 md:px-8">
-    {/* Text */}
-    <div className="order-1">
+<section className="relative min-h-screen overflow-hidden">
+  {/* Desktop Background */}
+  <div
+    className="absolute inset-0 hidden bg-cover bg-center md:block"
+    style={{
+      backgroundImage: "url('/Solution.png')",
+      backgroundPosition: "center",
+    }}
+  />
+
+  {/* Mobile Background */}
+  <div
+    className="absolute inset-0 bg-cover bg-center md:hidden"
+    style={{
+      backgroundImage: "url('/Solution-Mobile.png')",
+      backgroundPosition: "center bottom",
+    }}
+  />
+
+  {/* Desktop fade white from right to left */}
+  <div className="absolute inset-y-0 right-0 hidden w-[62%] bg-gradient-to-l from-white/95 via-white/88 to-white/0 md:block" />
+
+  {/* Mobile fade white from top to bottom */}
+  <div className="absolute inset-x-0 top-0 h-[68%] bg-gradient-to-b from-white via-white/95 to-white/0 md:hidden" />
+
+  {/* Soft dark layer for image depth */}
+  <div className="absolute inset-0 hidden bg-black/5 md:block" />
+
+  <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl px-6 py-20 md:items-center md:justify-end md:px-8">
+    <div className="max-w-xl">
       <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
         Penyelesaian
       </p>
 
       <h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-5xl">
-        BayarLink bantu susun semua — dari order sampai bayaran
+        BayarLink tolong urus Order sampai Payment!
       </h2>
 
-      <p className="mt-5 text-base leading-7 text-slate-600 md:text-lg">
-        Customer pilih sendiri, bayar sendiri, dan order terus masuk dengan lebih
-        kemas. Anda tak perlu lagi layan semua benda satu-satu dalam chat.
+      <div className="mt-5 flex flex-wrap gap-2">
+        <span className="rounded-full bg-pink-100 px-3 py-1 text-xs font-bold text-pink-700">
+          App PINK
+        </span>
+        <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-700">
+          App OREN
+        </span>
+        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+          App HIJAU
+        </span>
+      </div>
+
+      <p className="mt-4 text-base leading-7 text-slate-700 md:text-lg">
+        Tak payah guna App PINK, App OREN, App HIJAU dah!
       </p>
 
       <div className="mt-8 space-y-4">
@@ -365,7 +402,7 @@ export default function LandingPage() {
         ].map((item, i) => (
           <div
             key={i}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            className="rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
           >
             <div className="flex items-start gap-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-700">
@@ -383,36 +420,6 @@ export default function LandingPage() {
             </div>
           </div>
         ))}
-      </div>
-
-      <p className="mt-8 text-lg font-bold text-slate-900">
-        Kurang chat. Kurang pening. Lebih fokus jual.
-      </p>
-    </div>
-
-    {/* Image */}
-    <div className="order-2">
-      <div className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-slate-50 shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
-        {/* Desktop image */}
-        <div
-          className="hidden aspect-[4/3] bg-cover bg-center md:block"
-          style={{
-            backgroundImage: "url('/Solution.png')",
-            backgroundPosition: "center",
-          }}
-        />
-
-        {/* Mobile image */}
-        <div
-          className="aspect-[3/4] bg-cover bg-center md:hidden"
-          style={{
-            backgroundImage: "url('/Solution-Mobile.png')",
-            backgroundPosition: "center top",
-          }}
-        />
-
-        {/* Soft premium overlay */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-white/5" />
       </div>
     </div>
   </div>
