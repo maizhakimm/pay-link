@@ -497,24 +497,13 @@ export default function LandingPage() {
       </p>
     </div>
 
+    {/* POINTS */}
     <div className="mx-auto mt-14 grid max-w-5xl gap-5 md:grid-cols-4">
       {[
-        {
-          icon: "⚡",
-          text: "Nak proses yang mudah",
-        },
-        {
-          icon: "💳",
-          text: "Suka banyak pilihan bayaran",
-        },
-        {
-          icon: "⏱",
-          text: "Beli tempat lain kalau lambat",
-        },
-        {
-          icon: "🌐",
-          text: "Order online dah jadi norma baru",
-        },
+        { icon: "⚡", text: "Nak proses yang mudah" },
+        { icon: "💳", text: "Suka banyak pilihan bayaran" },
+        { icon: "⏱", text: "Beli tempat lain kalau lambat" },
+        { icon: "🌐", text: "Order online dah jadi norma baru" },
       ].map((item, i) => (
         <div
           key={i}
@@ -524,10 +513,6 @@ export default function LandingPage() {
             {item.icon}
           </div>
 
-          <div className="mx-auto mb-3 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
-            ✓
-          </div>
-
           <p className="text-base font-semibold leading-7 text-slate-800">
             {item.text}
           </p>
@@ -535,8 +520,10 @@ export default function LandingPage() {
       ))}
     </div>
 
-    <div className="mx-auto mt-14 max-w-3xl rounded-[32px] bg-slate-900 px-6 py-8 text-center text-white shadow-[0_20px_60px_rgba(15,23,42,0.12)] md:px-10">
-      <h3 className="text-2xl font-extrabold tracking-tight md:text-3xl">
+    {/* CTA */}
+    <div className="mx-auto mt-16 max-w-3xl rounded-[32px] border border-slate-200 bg-gradient-to-br from-white via-blue-50/40 to-white px-6 py-10 text-center shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:px-10">
+      
+      <h3 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
         Jangan terus ketinggalan lagi.
         <br />
         Nak Maju kena Laju!
@@ -552,7 +539,7 @@ export default function LandingPage() {
 
         <a
           href="https://wa.me/"
-          className="inline-flex h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 font-semibold text-white backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/15"
+          className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-100"
         >
           Saya Nak Bantuan Setup
         </a>
