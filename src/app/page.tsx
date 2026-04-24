@@ -331,89 +331,92 @@ export default function LandingPage() {
 </section>
 
       {/* SOLUTION */}
-      <section className="py-20">
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 md:grid-cols-2 md:px-8">
-          <div className="relative">
-            <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-6">
-              <div className="grid gap-4">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">
-                    1. Customer pilih menu
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Tak perlu tanya satu-satu dalam chat.
-                  </p>
-                </div>
+<section className="relative overflow-hidden bg-white py-20">
+  <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 md:grid-cols-2 md:px-8">
+    {/* Text */}
+    <div className="order-1">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+        Penyelesaian
+      </p>
 
-                <div className="flex justify-center">
-                  <div className="h-10 w-px bg-slate-200" />
-                </div>
+      <h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-5xl">
+        BayarLink bantu susun semua — dari order sampai bayaran
+      </h2>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">
-                    2. Customer terus buat bayaran
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Lebih mudah checkout ikut cara yang dia suka.
-                  </p>
-                </div>
+      <p className="mt-5 text-base leading-7 text-slate-600 md:text-lg">
+        Customer pilih sendiri, bayar sendiri, dan order terus masuk dengan lebih
+        kemas. Anda tak perlu lagi layan semua benda satu-satu dalam chat.
+      </p>
 
-                <div className="flex justify-center">
-                  <div className="h-10 w-px bg-slate-200" />
-                </div>
+      <div className="mt-8 space-y-4">
+        {[
+          {
+            title: "Customer pilih menu sendiri",
+            desc: "Kurang soalan berulang dan kurang chat yang memenatkan.",
+          },
+          {
+            title: "Customer terus bayar ikut cara dia suka",
+            desc: "Lagi mudah checkout bila pilihan bayaran lebih mesra pelanggan.",
+          },
+          {
+            title: "Order masuk tanpa perlu layan satu-satu",
+            desc: "Seller boleh fokus pada produk, delivery, dan jualan.",
+          },
+        ].map((item, i) => (
+          <div
+            key={i}
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-700">
+                ✓
+              </div>
 
-                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                  <p className="text-sm font-semibold text-blue-900">
-                    3. Order masuk dengan lebih kemas
-                  </p>
-                  <p className="mt-1 text-sm text-blue-700">
-                    Seller boleh fokus pada jualan, bukan chat yang bersepah.
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 md:text-lg">
+                  {item.title}
+                </h3>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  {item.desc}
+                </p>
               </div>
             </div>
           </div>
+        ))}
+      </div>
 
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-              Penyelesaian
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-              BayarLink bantu susun semua — dari order sampai bayaran
-            </h2>
-            <p className="mt-4 max-w-xl text-slate-600">
-              Bukan sekadar link. BayarLink bantu jadikan proses jualan lebih
-              mudah difahami, lebih kemas, dan lebih meyakinkan untuk seller dan
-              customer.
-            </p>
+      <p className="mt-8 text-lg font-bold text-slate-900">
+        Kurang chat. Kurang pening. Lebih fokus jual.
+      </p>
+    </div>
 
-            <div className="mt-8 space-y-4">
-              {solutions.map((item, i) => (
-                <div
-                  key={i}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 font-bold text-blue-700">
-                      ✓
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">{item.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-500">
-                        {item.desc}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+    {/* Image */}
+    <div className="order-2">
+      <div className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-slate-50 shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
+        {/* Desktop image */}
+        <div
+          className="hidden aspect-[4/3] bg-cover bg-center md:block"
+          style={{
+            backgroundImage: "url('/Solution.png')",
+            backgroundPosition: "center",
+          }}
+        />
 
-            <p className="mt-8 text-lg font-semibold text-slate-900">
-              Anda fokus jual. BayarLink bantu urus.
-            </p>
-          </div>
-        </div>
-      </section>
+        {/* Mobile image */}
+        <div
+          className="aspect-[3/4] bg-cover bg-center md:hidden"
+          style={{
+            backgroundImage: "url('/Solution-Mobile.png')",
+            backgroundPosition: "center top",
+          }}
+        />
+
+        {/* Soft premium overlay */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-white/5" />
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* AUDIENCE */}
       <section className="py-20">
