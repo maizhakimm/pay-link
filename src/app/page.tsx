@@ -730,7 +730,7 @@ useEffect(() => {
           href="https://wa.me/?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
           className="mt-10 inline-flex h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700"
         >
-          WhatsApp “BANTU SAYA SETUP BAYARLINK”
+          WhatsApp Kami
         </a>
       </div>
 
