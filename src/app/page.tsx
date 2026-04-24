@@ -419,7 +419,7 @@ export default function LandingPage() {
   <div className="mx-auto max-w-7xl px-6 md:px-8">
     <div className="grid items-center gap-12 md:grid-cols-2">
       
-      {/* LEFT */}
+      {/* LEFT CONTENT */}
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
           Untuk siapa
@@ -434,7 +434,7 @@ export default function LandingPage() {
         </p>
 
         {/* CLEAN LIST */}
-        <div className="mt-10 space-y-5">
+        <div className="mt-10 space-y-6">
           {[
             "Peniaga makanan dari rumah",
             "Jual melalui WhatsApp / IG / TikTok / Facebook",
@@ -443,8 +443,7 @@ export default function LandingPage() {
             "Nak elak guna App Food Delivery yang cas komisen tinggi",
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-3">
-              
-              <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+              <div className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white">
                 ✓
               </div>
 
@@ -457,12 +456,22 @@ export default function LandingPage() {
       </div>
 
       {/* RIGHT IMAGE */}
-      <div className="relative">
+      <div className="order-last md:order-none">
+        
+        {/* Desktop Image */}
         <img
           src="/Audience.png"
           alt="BayarLink Audience"
-          className="h-auto w-full object-contain"
+          className="hidden w-full object-contain md:block"
         />
+
+        {/* Mobile Image */}
+        <img
+          src="/Audience-Mobile.png"
+          alt="BayarLink Audience Mobile"
+          className="mt-10 w-full object-contain md:hidden"
+        />
+
       </div>
 
     </div>
