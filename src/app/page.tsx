@@ -686,53 +686,97 @@ useEffect(() => {
 </section>
 
       {/* SETUP HELP */}
-      <section className="py-20">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 md:grid-cols-2 md:px-8">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">
-              Bantuan setup
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-              Tak pandai setup? Roger je team kami.
-            </h2>
-            <p className="mt-4 max-w-xl text-slate-600">
-              Kalau anda tak biasa guna sistem atau rasa susah nak mula, jangan
-              risau. Team kami boleh bantu setup kedai anda dari A sampai Z.
+<section className="bg-white py-24">
+  <div className="mx-auto max-w-7xl px-6 md:px-8">
+    <div className="grid items-center gap-12 md:grid-cols-2">
+      {/* LEFT */}
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">
+          Bantuan setup
+        </p>
+
+        <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+          Tak pandai setup?
+          <br />
+          Roger je team kami.
+        </h2>
+
+        <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
+          Team kami bantu setup kedai anda dari A sampai siap.
+        </p>
+
+        <div className="mt-8 space-y-4">
+          {[
+            "Bantu setup kedai anda",
+            "Bantu masukkan produk",
+            "Tunjuk cara guna",
+            "Bantu sampai anda ready",
+          ].map((item) => (
+            <div key={item} className="flex items-start gap-3">
+              <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+                ✓
+              </div>
+              <p className="text-base font-medium leading-7 text-slate-800">
+                {item}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <a
+          href="https://wa.me/?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
+          className="mt-9 inline-flex h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700"
+        >
+          WhatsApp “BANTU SAYA SETUP BAYARLINK”
+        </a>
+      </div>
+
+      {/* RIGHT PREMIUM CARD */}
+      <div className="relative overflow-hidden rounded-[36px] border border-emerald-100 bg-gradient-to-br from-white via-emerald-50/50 to-blue-50/50 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.08)]">
+        <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-emerald-200/40 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-44 w-44 rounded-full bg-blue-200/40 blur-3xl" />
+
+        <div className="relative">
+          <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur">
+            <p className="text-sm font-bold text-slate-900">
+              Setup checklist
             </p>
 
-            <div className="mt-8 space-y-3">
+            <div className="mt-5 space-y-4">
               {[
-                "Bantu setup kedai anda",
-                "Bantu masukkan produk jika perlu",
-                "Tunjuk cara guna langkah demi langkah",
-                "Bantu sampai anda rasa yakin",
+                "Profile kedai siap",
+                "Produk masuk",
+                "Link kedai ready",
+                "Seller tahu cara guna",
               ].map((item) => (
-                <div key={item} className="flex items-start gap-3">
-                  <span className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  <p className="text-slate-700">{item}</p>
+                <div
+                  key={item}
+                  className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3"
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                    ✓
+                  </span>
+                  <span className="text-sm font-semibold text-slate-700">
+                    {item}
+                  </span>
                 </div>
               ))}
             </div>
-
-            <a
-              href="https://wa.me/?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
-              className="mt-8 inline-flex h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700"
-            >
-              WhatsApp “BANTU SAYA SETUP BAYARLINK”
-            </a>
           </div>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_rgba(15,23,42,0.08)] md:p-6">
-            <div className="overflow-hidden rounded-2xl bg-slate-100">
-              <img
-                src="/support.png"
-                alt="Bantuan setup BayarLink"
-                className="h-[360px] w-full object-cover"
-              />
-            </div>
+          <div className="mt-5 rounded-3xl bg-slate-900 p-6 text-white">
+            <p className="text-sm font-semibold text-emerald-300">
+              Anda fokus berniaga.
+            </p>
+            <p className="mt-2 text-2xl font-extrabold">
+              Kami bantu bahagian setup.
+            </p>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* FEATURES */}
       <section className="bg-slate-50 py-20">
