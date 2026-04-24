@@ -549,39 +549,66 @@ export default function LandingPage() {
 </section>
 
       {/* HOW IT WORKS */}
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-6 md:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-              Cara guna
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-              Macam mana nak guna BayarLink?
-            </h2>
-            <p className="mt-4 text-slate-600">
-              Simple, cepat, dan sesuai untuk seller yang tak mahu pening dengan
-              benda teknikal.
-            </p>
+<section className="bg-white py-24">
+  <div className="mx-auto max-w-7xl px-6 md:px-8">
+    
+    <div className="mx-auto max-w-2xl text-center">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+        Cara guna
+      </p>
+
+      <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+        Macam mana nak guna BayarLink?
+      </h2>
+
+      <p className="mt-5 text-lg text-slate-600">
+        Simple. Tak perlu pening. 10 minit dah boleh mula jual.
+      </p>
+    </div>
+
+    <div className="mt-16 grid gap-8 md:grid-cols-4">
+      {[
+        {
+          step: "01",
+          title: "Daftar",
+          desc: "Buka akaun dan ikut step yang disediakan.",
+        },
+        {
+          step: "02",
+          title: "Setup Produk",
+          desc: "Masukkan menu, harga, dan info kedai.",
+        },
+        {
+          step: "03",
+          title: "Share Link",
+          desc: "Kongsi ke WhatsApp, IG, TikTok atau mana-mana platform.",
+        },
+        {
+          step: "04",
+          title: "Tak Pandai?",
+          desc: "Kami bantu setup sampai siap.",
+        },
+      ].map((item, i) => (
+        <div
+          key={i}
+          className="text-center md:text-left"
+        >
+          <div className="text-4xl font-extrabold text-blue-100">
+            {item.step}
           </div>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {steps.map((step) => (
-              <div
-                key={step.no}
-                className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm"
-              >
-                <p className="text-sm font-semibold tracking-[0.18em] text-blue-600">
-                  {step.no}
-                </p>
-                <h3 className="mt-3 text-xl font-bold">{step.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-slate-500">
-                  {step.desc}
-                </p>
-              </div>
-            ))}
-          </div>
+          <h3 className="mt-2 text-lg font-bold text-slate-900">
+            {item.title}
+          </h3>
+
+          <p className="mt-2 text-sm text-slate-600 leading-6">
+            {item.desc}
+          </p>
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+</section>
 
       {/* FREE CTA */}
       <section className="px-6 py-20 md:px-8">
