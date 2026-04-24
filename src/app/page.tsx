@@ -478,8 +478,8 @@ export default function LandingPage() {
   </div>
 </section>
 
-      {/* MARKET SHIFT */}
-<section className="bg-white py-24">
+     {/* MARKET SHIFT */}
+<section className="bg-slate-50 py-24">
   <div className="mx-auto max-w-7xl px-6 md:px-8">
     <div className="mx-auto max-w-3xl text-center">
       <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
@@ -491,33 +491,73 @@ export default function LandingPage() {
       </h2>
 
       <p className="mt-5 text-lg leading-8 text-slate-600">
-        Customer sekarang dah upgrade cara membeli. Mereka nak yang cepat dan mudah.
-        Pilih-pilih terus bayar!
+        Customer sekarang dah upgrade cara membeli.
+        <br />
+        Mereka nak yang cepat dan mudah. Pilih-pilih terus bayar!
       </p>
     </div>
 
-    <div className="mx-auto mt-14 grid max-w-5xl gap-8 md:grid-cols-4">
+    <div className="mx-auto mt-14 grid max-w-5xl gap-5 md:grid-cols-4">
       {[
-        "Customer nak proses yang mudah",
-        "Customer suka banyak pilihan bayaran",
-        "Customer hilang kalau lambat",
-        "Order online dah jadi norma baru",
+        {
+          icon: "⚡",
+          text: "Nak proses yang mudah",
+        },
+        {
+          icon: "💳",
+          text: "Suka banyak pilihan bayaran",
+        },
+        {
+          icon: "⏱",
+          text: "Beli tempat lain kalau lambat",
+        },
+        {
+          icon: "🌐",
+          text: "Order online dah jadi norma baru",
+        },
       ].map((item, i) => (
-        <div key={i} className="text-center">
-          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-600">
+        <div
+          key={i}
+          className="group rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
+        >
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-2xl transition duration-300 group-hover:scale-110">
+            {item.icon}
+          </div>
+
+          <div className="mx-auto mb-3 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
             ✓
           </div>
 
           <p className="text-base font-semibold leading-7 text-slate-800">
-            {item}
+            {item.text}
           </p>
         </div>
       ))}
     </div>
 
-    <p className="mx-auto mt-14 max-w-2xl text-center text-xl font-bold leading-8 text-slate-900">
-      Cara jual masih lama, tapi cara beli customer dah berubah.
-    </p>
+    <div className="mx-auto mt-14 max-w-3xl rounded-[32px] bg-slate-900 px-6 py-8 text-center text-white shadow-[0_20px_60px_rgba(15,23,42,0.12)] md:px-10">
+      <h3 className="text-2xl font-extrabold tracking-tight md:text-3xl">
+        Jangan terus ketinggalan lagi.
+        <br />
+        Nak Maju kena Laju!
+      </h3>
+
+      <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+        <a
+          href="/register"
+          className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
+        >
+          Daftar Sekarang
+        </a>
+
+        <a
+          href="https://wa.me/"
+          className="inline-flex h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-6 font-semibold text-white backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/15"
+        >
+          Saya Nak Bantuan Setup
+        </a>
+      </div>
+    </div>
   </div>
 </section>
 
