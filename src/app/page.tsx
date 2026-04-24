@@ -479,36 +479,47 @@ export default function LandingPage() {
 </section>
 
       {/* MARKET SHIFT */}
-      <section className="bg-gradient-to-b from-slate-50 to-white py-20">
-        <div className="mx-auto max-w-7xl px-6 md:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-              Kenapa sekarang
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-              Customer sekarang dah berubah cara beli
-            </h2>
-            <p className="mt-4 text-slate-600">
-              Mereka nak proses yang cepat, mudah, dan terus jalan — bukan
-              tunggu reply manual terlalu lama.
-            </p>
+<section className="bg-white py-24">
+  <div className="mx-auto max-w-7xl px-6 md:px-8">
+    <div className="mx-auto max-w-3xl text-center">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+        Kenapa sekarang
+      </p>
+
+      <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+        Cara customer beli dah berubah.
+      </h2>
+
+      <p className="mt-5 text-lg leading-8 text-slate-600">
+        Customer sekarang dah upgrade cara membeli. Mereka nak yang cepat dan mudah.
+        Pilih-pilih terus bayar!
+      </p>
+    </div>
+
+    <div className="mx-auto mt-14 grid max-w-5xl gap-8 md:grid-cols-4">
+      {[
+        "Customer nak proses yang mudah",
+        "Customer suka banyak pilihan bayaran",
+        "Customer hilang kalau lambat",
+        "Order online dah jadi norma baru",
+      ].map((item, i) => (
+        <div key={i} className="text-center">
+          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-blue-600">
+            ✓
           </div>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {shifts.map((item, i) => (
-              <div
-                key={i}
-                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-              >
-                <div className="mb-4 h-10 w-10 rounded-2xl bg-blue-50" />
-                <p className="text-base font-semibold leading-7 text-slate-900">
-                  {item}
-                </p>
-              </div>
-            ))}
-          </div>
+          <p className="text-base font-semibold leading-7 text-slate-800">
+            {item}
+          </p>
         </div>
-      </section>
+      ))}
+    </div>
+
+    <p className="mx-auto mt-14 max-w-2xl text-center text-xl font-bold leading-8 text-slate-900">
+      Cara jual masih lama, tapi cara beli customer dah berubah.
+    </p>
+  </div>
+</section>
 
       {/* HOW IT WORKS */}
       <section className="py-20">
