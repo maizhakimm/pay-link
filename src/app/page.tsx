@@ -113,51 +113,55 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
     
-     {/* HERO */}
+    {/* HERO */}
 <section className="relative min-h-screen overflow-hidden">
-  {/* Background Image */}
+
+  {/* Desktop Image */}
   <div
-    className="absolute inset-0 bg-cover bg-center md:bg-center"
+    className="absolute inset-0 hidden bg-cover bg-center md:block"
     style={{
       backgroundImage: "url('/seller-hero.png')",
       backgroundPosition: "62% center",
     }}
   />
 
-  {/* Desktop left white fade */}
+  {/* Mobile Image */}
+  <div
+    className="absolute inset-0 bg-cover bg-center md:hidden"
+    style={{
+      backgroundImage: "url('/Hero-Mobile.png')",
+      backgroundPosition: "center top",
+    }}
+  />
+
+  {/* Desktop white fade */}
   <div className="absolute inset-y-0 left-0 hidden w-[65%] bg-gradient-to-r from-white/95 via-white/85 to-white/0 md:block" />
 
-  {/* Mobile top white fade for title */}
-  <div className="absolute inset-x-0 top-0 h-[62%] bg-gradient-to-b from-white via-white/95 to-white/0 md:hidden" />
+  {/* Mobile top white fade */}
+  <div className="absolute inset-x-0 top-0 h-[60%] bg-gradient-to-b from-white via-white/95 to-white/0 md:hidden" />
 
-  {/* Mobile bottom dark-blue fade for CTA */}
-  <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-slate-950/90 via-slate-900/55 to-transparent md:hidden" />
+  {/* Mobile bottom blue fade */}
+  <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-slate-950/90 via-slate-900/60 to-transparent md:hidden" />
 
-  {/* Soft dark layer desktop */}
+  {/* Desktop soft dark */}
   <div className="absolute inset-0 hidden bg-black/10 md:block" />
 
   {/* Header */}
   <header className="absolute left-0 right-0 top-0 z-20">
     <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 md:px-8">
-      <a href="/" className="flex items-center gap-2">
-        <img
-          src="/BayarLink-Logo-01.svg"
-          alt="BayarLink"
-          className="h-8 w-auto"
-        />
-      </a>
+      <img src="/logo.svg" className="h-8" />
 
-      <div className="flex items-center gap-2">
+      <div className="flex gap-2">
         <a
           href="/login"
-          className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-sm transition hover:bg-white md:text-sm"
+          className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-700 backdrop-blur-sm"
         >
           Sign in
         </a>
 
         <a
           href="/register"
-          className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 md:text-sm"
+          className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white"
         >
           Sign up
         </a>
@@ -166,33 +170,35 @@ export default function LandingPage() {
   </header>
 
   {/* Content */}
-  <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-6 pb-8 pt-24 md:justify-center md:px-8 md:py-20">
+  <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-6 pt-24 pb-6 md:justify-center md:px-8 md:py-20">
+    
+    {/* TEXT */}
     <div className="max-w-xl">
       <div className="mb-4 flex flex-wrap gap-2">
-        <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700 md:text-xs">
+        <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700">
           Untuk seller makanan dari rumah
         </span>
 
-        <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm md:text-xs">
+        <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700">
           Tak Perlu Download App
         </span>
       </div>
 
-      <h1 className="text-[34px] font-extrabold leading-[1.1] tracking-tight text-slate-950 md:text-6xl">
+      <h1 className="text-[34px] font-extrabold leading-[1.1] text-slate-950 md:text-6xl">
         Tak Perlu Buka Kedai, Dari Rumah Pun Boleh Berjaya!
       </h1>
 
-      <p className="mt-2 text-xs italic text-slate-500 md:text-sm">
+      <p className="mt-2 text-xs italic text-slate-500">
         bisik Aishah Bakery dalam hati
       </p>
 
-      <p className="mt-5 text-[15px] leading-7 text-slate-700 md:text-xl md:leading-8">
+      <p className="mt-5 text-[15px] text-slate-700 md:text-xl">
         Bukan anda tak pandai berniaga.
         <br />
         Anda cuma perlukan cara yang betul!
       </p>
 
-      <p className="mt-3 text-[14px] leading-7 text-slate-600 md:text-base">
+      <p className="mt-3 text-[14px] text-slate-600">
         <span className="hidden md:inline">
           Jual kek, nasi lemak, spaghetti, kuih muih, kopi semua boleh!
           <br />
@@ -203,25 +209,11 @@ export default function LandingPage() {
       </p>
     </div>
 
-    {/* Bottom CTA area */}
-    <div className="mt-auto pt-8 md:mt-8 md:max-w-xl md:pt-0">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <a
-          href="/register"
-          className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
-        >
-          Daftar Sekarang
-        </a>
-
-        <a
-          href="https://wa.me/"
-          className="inline-flex h-12 items-center justify-center rounded-xl border border-white/30 bg-white/90 px-6 font-semibold text-slate-800 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white md:border-slate-300"
-        >
-          Saya Nak Bantuan Setup
-        </a>
-      </div>
-
-      <div className="mt-5 grid gap-2 text-sm text-white md:flex md:flex-wrap md:gap-4 md:text-slate-600">
+    {/* BOTTOM SECTION */}
+    <div className="mt-auto pt-8 md:mt-8 md:max-w-xl">
+      
+      {/* FEATURES */}
+      <div className="grid gap-2 text-sm text-white md:flex md:flex-wrap md:gap-4 md:text-slate-600">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-400 md:bg-emerald-500" />
           Boleh preorder
@@ -247,6 +239,24 @@ export default function LandingPage() {
           Boleh buka time-slot
         </div>
       </div>
+
+      {/* BUTTON BELOW FEATURES */}
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+        <a
+          href="/register"
+          className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg"
+        >
+          Daftar Sekarang
+        </a>
+
+        <a
+          href="https://wa.me/"
+          className="inline-flex h-12 items-center justify-center rounded-xl border border-white/30 bg-white/90 px-6 font-semibold text-slate-800 md:border-slate-300"
+        >
+          Saya Nak Bantuan Setup
+        </a>
+      </div>
+
     </div>
   </div>
 </section>
