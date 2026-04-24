@@ -369,66 +369,47 @@ export default function LandingPage() {
         BayarLink tolong urus Order sampai Payment!
       </h2>
 
-    {/* Comparison badges */}
+  {/* Comparison badges */}
 <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-bold md:text-sm">
-  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1.5 text-white shadow-lg shadow-blue-600/20">
-    <span>✓</span>
-    BayarLink
+  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1 text-white shadow-lg shadow-blue-600/20">
+    ✓ BayarLink
   </span>
 
-  <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1.5 text-pink-700">
-    <span>×</span>
-    App PINK
+  <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1 text-pink-700">
+    × PANDA
   </span>
 
-  <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1.5 text-orange-700">
-    <span>×</span>
-    App OREN
+  <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-orange-700">
+    × SHOPI
   </span>
 
-  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-green-700">
-    <span>×</span>
-    App HIJAU
+  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-green-700">
+    × GEREB
   </span>
 </div>
 
-      <div className="mt-6 space-y-3 md:mt-8 md:space-y-4">
-        {[
-          {
-            title: "Customer pilih menu sendiri",
-            desc: "Kurang soalan berulang dan kurang chat yang memenatkan.",
-          },
-          {
-            title: "Customer terus bayar ikut cara dia suka",
-            desc: "Lagi mudah checkout bila pilihan bayaran lebih mesra pelanggan.",
-          },
-          {
-            title: "Order masuk tanpa perlu layan satu-satu",
-            desc: "Seller boleh fokus pada produk, delivery, dan jualan.",
-          },
-        ].map((item, i) => (
-          <div
-            key={i}
-            className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md md:p-5"
-          >
-            <div className="flex items-start gap-3 md:gap-4">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-bold text-blue-700 md:h-10 md:w-10 md:text-sm">
-                ✓
-              </div>
+     <div className="mt-6 space-y-2 md:mt-8 md:space-y-3">
+  {[
+    "Customer pilih menu sendiri",
+    "Customer terus bayar ikut cara dia suka",
+    "Order masuk tanpa perlu layan satu-satu",
+  ].map((title, i) => (
+    <div
+      key={i}
+      className="rounded-xl border border-slate-200 bg-white/85 px-4 py-3 shadow-sm backdrop-blur-sm md:px-5 md:py-3.5"
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold text-blue-700 md:h-8 md:w-8">
+          ✓
+        </div>
 
-              <div>
-                <h3 className="text-sm font-bold leading-6 text-slate-900 md:text-lg">
-                  {item.title}
-                </h3>
-
-                <p className="mt-1 hidden text-sm leading-6 text-slate-500 md:block">
-                  {item.desc}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
+        <h3 className="text-[13px] font-semibold text-slate-900 md:text-base">
+          {title}
+        </h3>
       </div>
+    </div>
+  ))}
+</div>
     </div>
   </div>
 </section>
