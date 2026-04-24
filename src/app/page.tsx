@@ -414,12 +414,12 @@ export default function LandingPage() {
   </div>
 </section>
 
-    {/* AUDIENCE */}
-<section className="bg-white py-20">
+{/* AUDIENCE */}
+<section className="bg-white py-24">
   <div className="mx-auto max-w-7xl px-6 md:px-8">
     <div className="grid items-center gap-12 md:grid-cols-2">
       
-      {/* LEFT CONTENT */}
+      {/* LEFT */}
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
           Untuk siapa
@@ -433,8 +433,8 @@ export default function LandingPage() {
           Dibina khas untuk usahawan yang nak grow!
         </p>
 
-        {/* List */}
-        <div className="mt-8 space-y-3">
+        {/* CLEAN LIST */}
+        <div className="mt-10 space-y-5">
           {[
             "Peniaga makanan dari rumah",
             "Jual melalui WhatsApp / IG / TikTok / Facebook",
@@ -442,15 +442,13 @@ export default function LandingPage() {
             "Nak nampak lebih tersusun dan yakin",
             "Nak elak guna App Food Delivery yang cas komisen tinggi",
           ].map((item, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold text-blue-700">
+            <div key={i} className="flex items-start gap-3">
+              
+              <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
                 ✓
               </div>
 
-              <p className="text-[14px] font-semibold leading-6 text-slate-800 md:text-base">
+              <p className="text-[15px] font-medium leading-7 text-slate-800 md:text-base">
                 {item}
               </p>
             </div>
@@ -459,18 +457,12 @@ export default function LandingPage() {
       </div>
 
       {/* RIGHT IMAGE */}
-      <div className="order-last md:order-none">
-        <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-          
-          <img
-            src="/Audience.png"
-            alt="BayarLink Audience"
-            className="h-full w-full object-cover"
-          />
-
-          {/* subtle gradient overlay for premium feel */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/10 via-transparent to-white/5" />
-        </div>
+      <div className="relative">
+        <img
+          src="/Audience.png"
+          alt="BayarLink Audience"
+          className="h-auto w-full object-contain"
+        />
       </div>
 
     </div>
