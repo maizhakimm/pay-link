@@ -141,7 +141,7 @@ export default function LandingPage() {
     <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 md:px-8">
       <a href="/" className="flex items-center gap-2">
         <img
-          src="/logo.svg"
+          src="/BayarLink-Logo-01.svg"
           alt="BayarLink"
           className="h-8 w-auto"
         />
