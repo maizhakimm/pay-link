@@ -610,43 +610,60 @@ export default function LandingPage() {
   </div>
 </section>
 
-      {/* FREE CTA */}
-      <section className="px-6 py-20 md:px-8">
-        <div className="mx-auto max-w-6xl overflow-hidden rounded-[32px] border border-blue-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_45%,#ecfeff_100%)] p-8 shadow-[0_20px_60px_rgba(37,99,235,0.08)] md:p-12">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-              Mula sekarang
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-5xl">
-              ZERO Kos untuk mula.
-            </h2>
-            <p className="mt-5 text-base leading-7 text-slate-600 md:text-lg">
-              Tak perlu fikir pakej yang memeningkan. Mulakan dulu dengan cara
-              yang lebih mudah dan lebih mesra seller kecil.
-            </p>
+      {/* FINAL CTA */}
+<section className="bg-white py-28">
+  <div className="mx-auto max-w-5xl px-6 text-center md:px-8">
 
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <a
-                href="/register"
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
-              >
-                Cuba Free Sekarang
-              </a>
-              <a
-                href="https://wa.me/"
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-800 transition hover:bg-slate-50"
-              >
-                WhatsApp Kami
-              </a>
-            </div>
+    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+      Mula sekarang
+    </p>
 
-            <p className="mt-5 text-sm text-slate-500">
-              Tak perlu fikir macam platform besar lain. BayarLink direka untuk
-              seller kecil mula dengan lebih yakin.
-            </p>
-          </div>
-        </div>
-      </section>
+    <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+      ZERO Kos untuk mula.
+    </h2>
+
+    {/* PRICE ANIMATION */}
+    <div className="mt-6 flex items-center justify-center gap-4 text-3xl font-extrabold md:text-5xl">
+      
+      <span className="text-slate-400 line-through">
+        RM100
+      </span>
+
+      <span className="text-blue-600 animate-pulse">
+        RM0.00
+      </span>
+
+    </div>
+
+    <p className="mt-6 text-lg text-slate-600 leading-8">
+      Tak payah bayar! Daftar dan terus pakai.
+    </p>
+
+    <p className="mt-4 text-base text-slate-500">
+      Ini bukan macam app besar yang lain.
+      <br />
+      BayarLink dibina khas untuk Home-base Seller.
+    </p>
+
+    {/* BUTTON */}
+    <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
+      <a
+        href="/register"
+        className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
+      >
+        Cuba Free Sekarang
+      </a>
+
+      <a
+        href="https://wa.me/"
+        className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-100"
+      >
+        WhatsApp Kami
+      </a>
+    </div>
+
+  </div>
+</section>
 
       {/* SETUP HELP */}
       <section className="py-20">
