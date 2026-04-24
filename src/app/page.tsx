@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 export default function LandingPage() {
   const problems = [
     "Ramai PM… tapi order tak jadi",
@@ -5,6 +9,7 @@ export default function LandingPage() {
     "Setiap order kena layan satu-satu",
     "Order masuk… tapi susah nak track",
   ];
+
 
   const solutions = [
     {
@@ -65,6 +70,23 @@ export default function LandingPage() {
       desc: "Mereka pilih, isi maklumat, dan buat bayaran.",
     },
   ];
+
+  const [price, setPrice] = useState(100)
+
+useEffect(() => {
+  let current = 100
+
+  const interval = setInterval(() => {
+    current -= Math.floor(Math.random() * 5) + 1 // turun laju sikit random
+    if (current <= 0) {
+      current = 0
+      clearInterval(interval)
+    }
+    setPrice(current)
+  }, 40)
+
+  return () => clearInterval(interval)
+}, [])
 
   const features = [
     "Secure Payment",
@@ -612,54 +634,60 @@ export default function LandingPage() {
 
       {/* FINAL CTA */}
 <section className="bg-white py-28">
-  <div className="mx-auto max-w-5xl px-6 text-center md:px-8">
+  <div className="mx-auto max-w-5xl px-6 md:px-8">
 
-    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-      Mula sekarang
-    </p>
-
-    <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
-      ZERO Kos untuk mula.
-    </h2>
-
-    {/* PRICE ANIMATION */}
-    <div className="mt-6 flex items-center justify-center gap-4 text-3xl font-extrabold md:text-5xl">
+    <div className="rounded-[36px] border border-slate-200 bg-gradient-to-br from-white via-blue-50/40 to-white px-8 py-14 text-center shadow-[0_30px_80px_rgba(15,23,42,0.08)]">
       
-      <span className="text-slate-400 line-through">
-        RM100
-      </span>
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+        Mula sekarang
+      </p>
 
-      <span className="text-blue-600 animate-pulse">
-        RM0.00
-      </span>
+            {/* PRICE ANIMATION */}
+      <div className="mt-8 flex items-center justify-center gap-4 text-3xl font-extrabold md:text-5xl">
+        
+        <span className="text-slate-400 line-through">
+          RM100
+        </span>
 
-    </div>
+        <span className="text-blue-600 tabular-nums">
+          RM{price}.00
+        </span>
 
-    <p className="mt-6 text-lg text-slate-600 leading-8">
-      Tak payah bayar! Daftar dan terus pakai.
-    </p>
+      <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+        ZERO Kos!
+      </h2>
 
-    <p className="mt-4 text-base text-slate-500">
-      Ini bukan macam app besar yang lain.
-      <br />
-      BayarLink dibina khas untuk Home-base Seller.
-    </p>
 
-    {/* BUTTON */}
-    <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-      <a
-        href="/register"
-        className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
-      >
-        Cuba Free Sekarang
-      </a>
 
-      <a
-        href="https://wa.me/"
-        className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-100"
-      >
-        WhatsApp Kami
-      </a>
+      </div>
+
+      <p className="mt-6 text-lg text-slate-600 leading-8">
+        Tak payah bayar! Daftar dan terus pakai.
+      </p>
+
+      <p className="mt-4 text-base text-slate-500">
+        Ini bukan macam app besar yang lain.
+        <br />
+        BayarLink dibina khas untuk Home-base Seller.
+      </p>
+
+      {/* BUTTON */}
+      <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
+        <a
+          href="/register"
+          className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
+        >
+          Cuba Free Sekarang
+        </a>
+
+        <a
+          href="https://wa.me/"
+          className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-100"
+        >
+          WhatsApp Kami
+        </a>
+      </div>
+
     </div>
 
   </div>
