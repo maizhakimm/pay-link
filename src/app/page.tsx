@@ -19,14 +19,14 @@ export default function LandingPage() {
       title: "Order masuk tanpa perlu layan satu-satu",
       desc: "Seller boleh fokus pada produk, delivery, dan jualan.",
     },
-  ]
+  ];
 
   const audience = [
     "Peniaga makanan dari rumah",
     "Jual melalui WhatsApp / IG / TikTok / Facebook",
     "Masih ambil order secara manual",
     "Nak nampak lebih tersusun dan yakin",
-  ]
+  ];
 
   const suitability = [
     "Delivery ikut jarak",
@@ -34,14 +34,14 @@ export default function LandingPage() {
     "Boleh pre-order",
     "Pelbagai pilihan bayaran",
     "Sesuai untuk seller kecil & home-based",
-  ]
+  ];
 
   const shifts = [
     "Customer lebih suka proses order yang cepat dan terus jalan",
     "Customer lebih yakin bila ada banyak pilihan bayaran",
     "Customer kurang sabar tunggu reply manual terlalu lama",
     "Order online sekarang dah jadi kebiasaan, bukan lagi luar biasa",
-  ]
+  ];
 
   const steps = [
     {
@@ -64,7 +64,7 @@ export default function LandingPage() {
       title: "Customer Order",
       desc: "Mereka pilih, isi maklumat, dan buat bayaran.",
     },
-  ]
+  ];
 
   const features = [
     "Secure Payment",
@@ -87,7 +87,7 @@ export default function LandingPage() {
     "Simple Product Setup",
     "Pre-order Support",
     "Delivery / Pickup Flow",
-  ]
+  ];
 
   const testimonials = [
     {
@@ -108,7 +108,7 @@ export default function LandingPage() {
       quote:
         "Saya suka sebab nampak lebih tersusun dan lebih professional walaupun saya jual dari rumah saja.",
     },
-  ]
+  ];
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
