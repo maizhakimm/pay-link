@@ -414,11 +414,12 @@ export default function LandingPage() {
   </div>
 </section>
 
-     {/* AUDIENCE */}
+    {/* AUDIENCE */}
 <section className="bg-white py-20">
   <div className="mx-auto max-w-7xl px-6 md:px-8">
-    <div className="grid items-center gap-10 md:grid-cols-2">
-      {/* Left Content */}
+    <div className="grid items-center gap-12 md:grid-cols-2">
+      
+      {/* LEFT CONTENT */}
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
           Untuk siapa
@@ -432,7 +433,8 @@ export default function LandingPage() {
           Dibina khas untuk usahawan yang nak grow!
         </p>
 
-        <div className="mt-8 grid gap-3">
+        {/* List */}
+        <div className="mt-8 space-y-3">
           {[
             "Peniaga makanan dari rumah",
             "Jual melalui WhatsApp / IG / TikTok / Facebook",
@@ -442,13 +444,13 @@ export default function LandingPage() {
           ].map((item, i) => (
             <div
               key={i}
-              className="group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+              className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-700">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold text-blue-700">
                 ✓
               </div>
 
-              <p className="pt-1 text-base font-semibold leading-6 text-slate-800">
+              <p className="text-[14px] font-semibold leading-6 text-slate-800 md:text-base">
                 {item}
               </p>
             </div>
@@ -456,21 +458,21 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Right Graphic Placeholder */}
-      <div className="relative min-h-[420px] overflow-hidden rounded-[32px] border border-slate-200 bg-slate-50 shadow-sm">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.14),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.12),transparent_30%)]" />
+      {/* RIGHT IMAGE */}
+      <div className="order-last md:order-none">
+        <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+          
+          <img
+            src="/Audience.png"
+            alt="BayarLink Audience"
+            className="h-full w-full object-cover"
+          />
 
-        <div className="relative flex h-full min-h-[420px] items-center justify-center p-8 text-center">
-          <div>
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
-              🧑‍🍳
-            </div>
-            <p className="mt-4 text-sm font-semibold text-slate-500">
-              Graphic akan diletakkan di sini
-            </p>
-          </div>
+          {/* subtle gradient overlay for premium feel */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/10 via-transparent to-white/5" />
         </div>
       </div>
+
     </div>
   </div>
 </section>
