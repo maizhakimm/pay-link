@@ -689,7 +689,8 @@ useEffect(() => {
 <section className="bg-white py-24">
   <div className="mx-auto max-w-7xl px-6 md:px-8">
     <div className="grid items-center gap-12 md:grid-cols-2">
-      {/* LEFT */}
+
+      {/* LEFT CONTENT */}
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">
           Bantuan setup
@@ -705,6 +706,7 @@ useEffect(() => {
           Team kami bantu setup kedai anda dari A sampai siap.
         </p>
 
+        {/* LIST */}
         <div className="mt-8 space-y-4">
           {[
             "Bantu setup kedai anda",
@@ -723,57 +725,29 @@ useEffect(() => {
           ))}
         </div>
 
+        {/* CTA */}
         <a
           href="https://wa.me/?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
-          className="mt-9 inline-flex h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700"
+          className="mt-10 inline-flex h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700"
         >
           WhatsApp “BANTU SAYA SETUP BAYARLINK”
         </a>
       </div>
 
-      {/* RIGHT PREMIUM CARD */}
-      <div className="relative overflow-hidden rounded-[36px] border border-emerald-100 bg-gradient-to-br from-white via-emerald-50/50 to-blue-50/50 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.08)]">
-        <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-emerald-200/40 blur-3xl" />
-        <div className="absolute -bottom-16 -left-16 h-44 w-44 rounded-full bg-blue-200/40 blur-3xl" />
-
+      {/* RIGHT IMAGE */}
+      <div className="order-last md:order-none">
         <div className="relative">
-          <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur">
-            <p className="text-sm font-bold text-slate-900">
-              Setup checklist
-            </p>
+          <img
+            src="/Bantuan.png"
+            alt="Bantuan setup BayarLink"
+            className="mx-auto w-full max-w-[520px] object-contain transition duration-500 hover:scale-105"
+          />
 
-            <div className="mt-5 space-y-4">
-              {[
-                "Profile kedai siap",
-                "Produk masuk",
-                "Link kedai ready",
-                "Seller tahu cara guna",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3"
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
-                    ✓
-                  </span>
-                  <span className="text-sm font-semibold text-slate-700">
-                    {item}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5 rounded-3xl bg-slate-900 p-6 text-white">
-            <p className="text-sm font-semibold text-emerald-300">
-              Anda fokus berniaga.
-            </p>
-            <p className="mt-2 text-2xl font-extrabold">
-              Kami bantu bahagian setup.
-            </p>
-          </div>
+          {/* subtle glow */}
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(16,185,129,0.08),transparent_60%)]" />
         </div>
       </div>
+
     </div>
   </div>
 </section>
