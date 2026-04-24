@@ -188,45 +188,74 @@ export default function LandingPage() {
       </section>
 
       {/* PROBLEM */}
-      <section className="bg-slate-50 py-20">
-        <div className="mx-auto max-w-7xl px-6 md:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-              Masalah utama
-            </p>
+      {/* PROBLEM */}
+<section className="bg-slate-50 py-20">
+  <div className="mx-auto max-w-7xl px-6 md:px-8">
+    <div className="mx-auto max-w-2xl text-center">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+        Masalah utama
+      </p>
 
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
-              Order banyak, Tapi Untung Tak Nampak?
-            </h2>
+      <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+        Order banyak, Tapi Untung Tak Nampak?
+      </h2>
 
-            <p className="mt-4 text-lg leading-8 text-slate-600">
-              Penat tak hadap hari-hari? Sampai bila nak layan?
-            </p>
+      <p className="mt-4 text-lg leading-8 text-slate-600">
+        Penat tak hadap hari-hari? Sampai bila nak layan?
+      </p>
+    </div>
+
+    <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      {[
+        {
+          image: "/problem-1.png",
+          title: "Ramai PM… tapi order tak jadi",
+          desc: "Customer tanya macam-macam, tapi akhirnya senyap dan tak proceed.",
+        },
+        {
+          image: "/problem-2.png",
+          title: "Customer nak order… tapi tak bayar-bayar",
+          desc: "Order nampak macam jadi, tapi bayaran masih pending dan susah nak follow up.",
+        },
+        {
+          image: "/problem-3.png",
+          title: "Setiap order kena layan satu-satu",
+          desc: "Penat ulang benda sama dalam chat, lagi-lagi bila order mula banyak.",
+        },
+        {
+          image: "/problem-4.png",
+          title: "Order masuk… tapi susah nak track",
+          desc: "Semua bercampur dalam WhatsApp sampai susah nak semak semula.",
+        },
+      ].map((item, i) => (
+        <div
+          key={i}
+          className="group rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+        >
+          <div className="relative mb-5 overflow-hidden rounded-2xl bg-blue-50/60">
+            <img
+              src={item.image}
+              alt={item.title}
+              className="h-44 w-full object-contain p-4 transition duration-300 group-hover:scale-105"
+            />
+
+            <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-md shadow-blue-600/20">
+              {i + 1}
+            </div>
           </div>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {problems.map((item, i) => (
-              <div
-                key={i}
-                className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-              >
-                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-lg font-bold text-slate-700">
-                  {i + 1}
-                </div>
+          <h3 className="text-lg font-bold leading-7 text-slate-900">
+            {item.title}
+          </h3>
 
-                <h3 className="text-lg font-semibold leading-7 text-slate-900">
-                  {item}
-                </h3>
-
-                <p className="mt-3 text-sm leading-6 text-slate-500">
-                  Ini yang selalu buat seller penat, lambat respon, dan susah
-                  nak nampak untung sebenar.
-                </p>
-              </div>
-            ))}
-          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            {item.desc}
+          </p>
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+</section>
 
       {/* SOLUTION */}
       <section className="py-20">
