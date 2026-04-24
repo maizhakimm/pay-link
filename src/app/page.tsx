@@ -753,33 +753,55 @@ useEffect(() => {
 </section>
 
       {/* FEATURES */}
-      <section className="bg-slate-50 py-20">
-        <div className="mx-auto max-w-7xl px-6 md:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-              Features
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-              Semua yang anda perlukan untuk mula dengan lebih kemas
-            </h2>
-            <p className="mt-4 text-slate-600">
-              Direka untuk seller kecil yang mahu urus jualan dengan lebih
-              mudah.
-            </p>
-          </div>
+<section className="bg-slate-50 py-24">
+  <div className="mx-auto max-w-7xl px-6 md:px-8">
+    <div className="mx-auto max-w-3xl text-center">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+        Features
+      </p>
 
-          <div className="mt-12 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-            {features.map((feature) => (
-              <div
-                key={feature}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-center text-sm font-medium text-slate-700 shadow-sm"
-              >
-                {feature}
-              </div>
-            ))}
-          </div>
+      <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+        Simple tapi Lengkap
+      </h2>
+
+      <p className="mt-5 text-lg leading-8 text-slate-600">
+        Dibina khas untuk seller home-based yang menjual di group WhatsApp / Facebook.
+      </p>
+    </div>
+
+    <div className="mt-14 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {[
+        "Secure Payment",
+        "Dashboard Seller",
+        "Order Tracking",
+        "Time Slot",
+        "Add-On Product",
+        "Delivery by Distance",
+        "Fixed Delivery Rate",
+        "Free Delivery",
+        "Pay Rider Separately",
+        "Opening Hours",
+        "Temporary Close Notice",
+        "Customer Notes",
+        "Promo Note",
+        "Product Images",
+        "Share Store Link",
+        "Mobile Friendly",
+        "Multi Payment Options",
+        "Simple Product Setup",
+        "Pre-order Support",
+        "Delivery / Pickup Flow",
+      ].map((feature) => (
+        <div
+          key={feature}
+          className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-center text-sm font-semibold text-slate-700 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/40 hover:text-blue-700 hover:shadow-md"
+        >
+          {feature}
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+</section>
 
       {/* TESTIMONIALS */}
       <section className="py-20">
