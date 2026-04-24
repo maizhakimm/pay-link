@@ -112,29 +112,22 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
+    
       {/* HERO */}
-      {/* HERO */}
-<section className="relative min-h-screen overflow-hidden bg-white md:bg-transparent">
+{/* HERO */}
+<section className="relative overflow-hidden bg-white md:min-h-screen">
   {/* Desktop background image */}
   <div
     className="absolute inset-0 hidden bg-cover bg-center md:block"
     style={{ backgroundImage: "url('/seller-hero.png')" }}
   />
 
-  {/* Mobile background image - positioned bottom */}
-  <div
-    className="absolute inset-x-0 bottom-0 h-[48%] bg-cover bg-center md:hidden"
-    style={{ backgroundImage: "url('/seller-hero.png')" }}
-  />
-
-  {/* Desktop overlay */}
+  {/* Desktop overlays */}
   <div className="absolute inset-0 hidden bg-black/10 md:block" />
   <div className="absolute inset-y-0 left-0 hidden w-[65%] bg-gradient-to-r from-white/95 via-white/85 to-white/0 md:block" />
 
-  {/* Mobile fade to image */}
-  <div className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-b from-white via-white/70 to-white/0 md:hidden" />
-
-  <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-start px-6 py-20 md:items-center md:px-8">
+  {/* Content */}
+  <div className="relative z-10 mx-auto max-w-7xl px-6 pt-20 md:flex md:min-h-screen md:items-center md:px-8 md:py-20">
     <div className="max-w-xl">
       <div className="mb-5 flex flex-wrap gap-2">
         <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
@@ -177,7 +170,7 @@ export default function LandingPage() {
 
         <a
           href="https://wa.me/"
-          className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-300 bg-white/80 px-6 font-semibold text-slate-800 backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white"
+          className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-6 font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
         >
           Saya Nak Bantuan Setup
         </a>
@@ -206,6 +199,15 @@ export default function LandingPage() {
         </div>
       </div>
     </div>
+  </div>
+
+  {/* Mobile image block */}
+  <div className="relative mt-10 block md:hidden">
+    <img
+      src="/seller-hero.png"
+      alt="Seller BayarLink"
+      className="h-auto w-full object-cover"
+    />
   </div>
 </section>
 
