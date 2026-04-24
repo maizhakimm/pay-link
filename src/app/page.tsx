@@ -354,14 +354,14 @@ export default function LandingPage() {
   <div className="absolute inset-y-0 right-0 hidden w-[62%] bg-gradient-to-l from-white/95 via-white/88 to-white/0 md:block" />
 
   {/* Mobile fade white from top to bottom */}
-  <div className="absolute inset-x-0 top-0 h-[68%] bg-gradient-to-b from-white via-white/95 to-white/0 md:hidden" />
+  <div className="absolute inset-x-0 top-0 h-[58%] bg-gradient-to-b from-white via-white/95 to-white/0 md:hidden" />
 
   {/* Soft dark layer for image depth */}
   <div className="absolute inset-0 hidden bg-black/5 md:block" />
 
-  <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl px-6 py-20 md:items-center md:justify-end md:px-8">
+  <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl px-6 pb-10 pt-16 md:items-center md:justify-end md:px-8 md:py-20">
     <div className="max-w-xl">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 md:text-sm">
         Penyelesaian
       </p>
 
@@ -369,23 +369,30 @@ export default function LandingPage() {
         BayarLink tolong urus Order sampai Payment!
       </h2>
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        <span className="rounded-full bg-pink-100 px-3 py-1 text-xs font-bold text-pink-700">
+      {/* Comparison badges */}
+      <div className="mt-5 grid gap-2 text-sm font-bold md:flex md:flex-wrap">
+        <span className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-white shadow-lg shadow-blue-600/20">
+          <span>✓</span>
+          BayarLink
+        </span>
+
+        <span className="inline-flex items-center gap-2 rounded-full bg-pink-100 px-4 py-2 text-pink-700">
+          <span>×</span>
           App PINK
         </span>
-        <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-700">
+
+        <span className="inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-2 text-orange-700">
+          <span>×</span>
           App OREN
         </span>
-        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+
+        <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-green-700">
+          <span>×</span>
           App HIJAU
         </span>
       </div>
 
-      <p className="mt-4 text-base leading-7 text-slate-700 md:text-lg">
-        Tak payah guna App PINK, App OREN, App HIJAU dah!
-      </p>
-
-      <div className="mt-8 space-y-4">
+      <div className="mt-6 space-y-3 md:mt-8 md:space-y-4">
         {[
           {
             title: "Customer pilih menu sendiri",
@@ -402,18 +409,19 @@ export default function LandingPage() {
         ].map((item, i) => (
           <div
             key={i}
-            className="rounded-2xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+            className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md md:p-5"
           >
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-700">
+            <div className="flex items-start gap-3 md:gap-4">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-bold text-blue-700 md:h-10 md:w-10 md:text-sm">
                 ✓
               </div>
 
               <div>
-                <h3 className="text-base font-bold text-slate-900 md:text-lg">
+                <h3 className="text-sm font-bold leading-6 text-slate-900 md:text-lg">
                   {item.title}
                 </h3>
-                <p className="mt-1 text-sm leading-6 text-slate-500">
+
+                <p className="mt-1 hidden text-sm leading-6 text-slate-500 md:block">
                   {item.desc}
                 </p>
               </div>
