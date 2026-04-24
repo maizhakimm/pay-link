@@ -330,108 +330,28 @@ export default function LandingPage() {
   </div>
 </section>
 
-      {/* SOLUTION */}
-<section className="relative min-h-screen overflow-hidden">
-  {/* Desktop Background */}
-  <div
-    className="absolute inset-0 hidden bg-cover bg-center md:block"
-    style={{
-      backgroundImage: "url('/Solution.png')",
-      backgroundPosition: "center",
-    }}
-  />
+ {/* Comparison badges */}
+<div className="mt-5 flex flex-wrap gap-2 text-[11px] font-bold md:text-sm">
+  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1.5 text-white shadow-lg shadow-blue-600/20">
+    <span>✓</span>
+    BayarLink
+  </span>
 
-  {/* Mobile Background */}
-  <div
-    className="absolute inset-0 bg-cover bg-center md:hidden"
-    style={{
-      backgroundImage: "url('/Solution-Mobile.png')",
-      backgroundPosition: "center bottom",
-    }}
-  />
+  <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1.5 text-pink-700">
+    <span>×</span>
+    App PINK
+  </span>
 
-  {/* Desktop fade white from right to left */}
-  <div className="absolute inset-y-0 right-0 hidden w-[62%] bg-gradient-to-l from-white/95 via-white/88 to-white/0 md:block" />
+  <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1.5 text-orange-700">
+    <span>×</span>
+    App OREN
+  </span>
 
-  {/* Mobile fade white from top to bottom */}
-  <div className="absolute inset-x-0 top-0 h-[58%] bg-gradient-to-b from-white via-white/95 to-white/0 md:hidden" />
-
-  {/* Soft dark layer for image depth */}
-  <div className="absolute inset-0 hidden bg-black/5 md:block" />
-
-  <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl px-6 pb-10 pt-16 md:items-center md:justify-end md:px-8 md:py-20">
-    <div className="max-w-xl">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 md:text-sm">
-        Penyelesaian
-      </p>
-
-      <h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-5xl">
-        BayarLink tolong urus Order sampai Payment!
-      </h2>
-
-      {/* Comparison badges */}
-      <div className="mt-5 grid gap-2 text-sm font-bold md:flex md:flex-wrap">
-        <span className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-white shadow-lg shadow-blue-600/20">
-          <span>✓</span>
-          BayarLink
-        </span>
-
-        <span className="inline-flex items-center gap-2 rounded-full bg-pink-100 px-4 py-2 text-pink-700">
-          <span>×</span>
-          App PINK
-        </span>
-
-        <span className="inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-2 text-orange-700">
-          <span>×</span>
-          App OREN
-        </span>
-
-        <span className="inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-green-700">
-          <span>×</span>
-          App HIJAU
-        </span>
-      </div>
-
-      <div className="mt-6 space-y-3 md:mt-8 md:space-y-4">
-        {[
-          {
-            title: "Customer pilih menu sendiri",
-            desc: "Kurang soalan berulang dan kurang chat yang memenatkan.",
-          },
-          {
-            title: "Customer terus bayar ikut cara dia suka",
-            desc: "Lagi mudah checkout bila pilihan bayaran lebih mesra pelanggan.",
-          },
-          {
-            title: "Order masuk tanpa perlu layan satu-satu",
-            desc: "Seller boleh fokus pada produk, delivery, dan jualan.",
-          },
-        ].map((item, i) => (
-          <div
-            key={i}
-            className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md md:p-5"
-          >
-            <div className="flex items-start gap-3 md:gap-4">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-bold text-blue-700 md:h-10 md:w-10 md:text-sm">
-                ✓
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold leading-6 text-slate-900 md:text-lg">
-                  {item.title}
-                </h3>
-
-                <p className="mt-1 hidden text-sm leading-6 text-slate-500 md:block">
-                  {item.desc}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-</section>
+  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-green-700">
+    <span>×</span>
+    App HIJAU
+  </span>
+</div>
 
       {/* AUDIENCE */}
       <section className="py-20">
