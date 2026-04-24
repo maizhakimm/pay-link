@@ -414,80 +414,66 @@ export default function LandingPage() {
   </div>
 </section>
 
-      {/* AUDIENCE */}
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-6 md:px-8">
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-                Siapa sesuai
-              </p>
-              <h2 className="mt-3 text-2xl font-bold md:text-3xl">
-                Siapa sesuai guna BayarLink?
-              </h2>
-              <p className="mt-4 text-slate-600">
-                Untuk peniaga makanan dari rumah yang mahu urus tempahan dengan
-                lebih kemas dan lebih yakin.
-              </p>
+     {/* AUDIENCE */}
+<section className="bg-white py-20">
+  <div className="mx-auto max-w-7xl px-6 md:px-8">
+    <div className="grid items-center gap-10 md:grid-cols-2">
+      {/* Left Content */}
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+          Untuk siapa
+        </p>
 
-              <div className="mt-6 space-y-3">
-                {audience.map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-3"
-                  >
-                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" />
-                    <p className="text-sm text-slate-700">{item}</p>
-                  </div>
-                ))}
+        <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+          BayarLink untuk siapa?
+        </h2>
+
+        <p className="mt-5 text-lg leading-8 text-slate-600">
+          Dibina khas untuk usahawan yang nak grow!
+        </p>
+
+        <div className="mt-8 grid gap-3">
+          {[
+            "Peniaga makanan dari rumah",
+            "Jual melalui WhatsApp / IG / TikTok / Facebook",
+            "Masih ambil order secara manual",
+            "Nak nampak lebih tersusun dan yakin",
+            "Nak elak guna App Food Delivery yang cas komisen tinggi",
+          ].map((item, i) => (
+            <div
+              key={i}
+              className="group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-bold text-blue-700">
+                ✓
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                {[
-                  "Nasi Lemak",
-                  "Kek",
-                  "Kuih",
-                  "Dessert",
-                  "Kopi",
-                  "Preorder",
-                ].map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              <p className="pt-1 text-base font-semibold leading-6 text-slate-800">
+                {item}
+              </p>
             </div>
+          ))}
+        </div>
+      </div>
 
-            <div className="rounded-[28px] border border-slate-200 bg-slate-900 p-8 text-white shadow-sm">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300">
-                Practical fit
-              </p>
-              <h2 className="mt-3 text-2xl font-bold md:text-3xl">
-                Sesuai ke dengan bisnes saya?
-              </h2>
-              <p className="mt-4 text-slate-300">
-                Direka supaya seller kecil pun boleh mula dengan cara yang lebih
-                praktikal.
-              </p>
+      {/* Right Graphic Placeholder */}
+      <div className="relative min-h-[420px] overflow-hidden rounded-[32px] border border-slate-200 bg-slate-50 shadow-sm">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.14),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.12),transparent_30%)]" />
 
-              <div className="mt-6 space-y-3">
-                {suitability.map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
-                  >
-                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                    <p className="text-sm text-slate-200">{item}</p>
-                  </div>
-                ))}
-              </div>
+        <div className="relative flex h-full min-h-[420px] items-center justify-center p-8 text-center">
+          <div>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm">
+              🧑‍🍳
             </div>
+            <p className="mt-4 text-sm font-semibold text-slate-500">
+              Graphic akan diletakkan di sini
+            </p>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* MARKET SHIFT */}
       <section className="bg-gradient-to-b from-slate-50 to-white py-20">
