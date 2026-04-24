@@ -113,22 +113,24 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
       {/* HERO */}
-      <section className="relative min-h-screen overflow-hidden">
+<section className="relative min-h-screen overflow-hidden">
   {/* Background Image */}
   <div
     className="absolute inset-0 bg-cover bg-center"
     style={{ backgroundImage: "url('/seller-hero.png')" }}
   />
 
-  {/* Global dark/soft layer supaya text lebih sedap dibaca */}
+  {/* Dark overlay (soft) */}
   <div className="absolute inset-0 bg-black/10" />
 
-  {/* Left faded white horizontal overlay */}
-  <div className="absolute inset-y-0 left-0 w-full md:w-[62%] bg-gradient-to-r from-white/95 via-white/82 to-white/0" />
+  {/* Left faded white overlay */}
+  <div className="absolute inset-y-0 left-0 w-full md:w-[65%] bg-gradient-to-r from-white/95 via-white/85 to-white/0" />
 
   {/* Content */}
   <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-center px-6 py-20 md:px-8">
     <div className="max-w-xl">
+      
+      {/* Badge (remain) */}
       <div className="mb-5 flex flex-wrap gap-2">
         <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
           Untuk seller makanan dari rumah
@@ -138,21 +140,30 @@ export default function LandingPage() {
         </span>
       </div>
 
+      {/* Headline */}
       <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-6xl">
-        Tak Perlu Ada Kedai Pun — Dah Boleh Jual Dengan Lebih Tersusun dari Rumah
+        Tak Perlu Buka Kedai, Dari Rumah Pun Boleh Berjaya!
       </h1>
 
-      <p className="mt-5 text-lg leading-8 text-slate-700 md:text-xl">
-        Customer memang dah ready nak beli. Masalahnya… cara kita ambil order
-        masih buat mereka susah nak checkout.
+      {/* Whisper line */}
+      <p className="mt-2 text-sm italic text-slate-500">
+        bisik Aishah Bakery dalam hati
       </p>
 
+      {/* Main copy */}
+      <p className="mt-6 text-lg leading-8 text-slate-700 md:text-xl">
+        Bukan anda tak pandai berniaga.
+        <br />
+        Anda cuma perlukan cara yang betul!
+      </p>
+
+      {/* Supporting */}
       <p className="mt-4 text-base leading-7 text-slate-600">
-        Jual kek, nasi lemak, spaghetti, kuih, kopi — semua boleh. Zaman
-        sekarang, customer dah biasa tekan dan bayar. Masih nak suruh mereka PM
-        dulu baru order?
+        Jual kek, nasi lemak, spaghetti, kuih muih, kopi semua boleh.
+        Customer sekarang dah biasa tekan dan bayar. Masih nak suruh mereka PM dulu baru order?
       </p>
 
+      {/* CTA */}
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <a
           href="/register"
@@ -169,6 +180,7 @@ export default function LandingPage() {
         </a>
       </div>
 
+      {/* Bottom points */}
       <div className="mt-8 flex flex-wrap gap-4 text-sm text-slate-600">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -183,6 +195,7 @@ export default function LandingPage() {
           Boleh urus delivery
         </div>
       </div>
+
     </div>
   </div>
 </section>
