@@ -635,61 +635,53 @@ useEffect(() => {
       {/* FINAL CTA */}
 <section className="bg-white py-28">
   <div className="mx-auto max-w-5xl px-6 md:px-8">
+    <div className="relative overflow-hidden rounded-[36px] border border-blue-100 bg-white px-8 py-14 text-center shadow-[0_30px_90px_rgba(37,99,235,0.10)]">
+      {/* Stripe-like gradient background */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.16),transparent_30%),radial-gradient(circle_at_80%_10%,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(168,85,247,0.10),transparent_35%)]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/65 to-blue-50/70" />
 
-    <div className="rounded-[36px] border border-slate-200 bg-gradient-to-br from-white via-blue-50/40 to-white px-8 py-14 text-center shadow-[0_30px_80px_rgba(15,23,42,0.08)]">
-      
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-        Mula sekarang
-      </p>
+      <div className="relative z-10">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+          Mula sekarang
+        </p>
 
-            {/* PRICE ANIMATION */}
-      <div className="mt-8 flex items-center justify-center gap-4 text-3xl font-extrabold md:text-5xl">
-        
-        <span className="text-slate-400 line-through">
-          RM100
-        </span>
+        <div className="mt-8">
+          <div className="text-5xl font-extrabold tracking-tight text-blue-600 md:text-7xl">
+            RM{price}.00
+          </div>
 
-        <span className="text-blue-600 tabular-nums">
-          RM{price}.00
-        </span>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+            ZERO Kos!
+          </h2>
+        </div>
 
-      <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
-        ZERO Kos!
-      </h2>
+        <p className="mt-6 text-lg leading-8 text-slate-700">
+          Tak payah bayar! Daftar dan terus pakai.
+        </p>
 
+        <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
+          <a
+            href="/register"
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
+          >
+            Cuba Free Sekarang
+          </a>
 
+          <a
+            href="https://wa.me/"
+            className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-6 font-semibold text-slate-700 backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white"
+          >
+            WhatsApp Kami
+          </a>
+        </div>
 
+        <p className="mt-8 text-base leading-7 text-slate-600">
+          Ini bukan macam app besar yang lain.
+          <br />
+          BayarLink dibina khas untuk Home-base Seller.
+        </p>
       </div>
-
-      <p className="mt-6 text-lg text-slate-600 leading-8">
-        Tak payah bayar! Daftar dan terus pakai.
-      </p>
-
-      <p className="mt-4 text-base text-slate-500">
-        Ini bukan macam app besar yang lain.
-        <br />
-        BayarLink dibina khas untuk Home-base Seller.
-      </p>
-
-      {/* BUTTON */}
-      <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-        <a
-          href="/register"
-          className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
-        >
-          Cuba Free Sekarang
-        </a>
-
-        <a
-          href="https://wa.me/"
-          className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-100"
-        >
-          WhatsApp Kami
-        </a>
-      </div>
-
     </div>
-
   </div>
 </section>
 
