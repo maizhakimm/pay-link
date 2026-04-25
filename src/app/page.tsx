@@ -823,43 +823,71 @@ useEffect(() => {
 </section>
 
       {/* TESTIMONIALS */}
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-6 md:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-              Testimoni
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-              Apa kata seller yang guna BayarLink
-            </h2>
+<section className="bg-white py-24">
+  <div className="mx-auto max-w-7xl px-6 md:px-8">
+    <div className="mx-auto max-w-3xl text-center">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+        Testimoni
+      </p>
+
+      <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+        Seller mula rasa beza bila order lebih tersusun
+      </h2>
+
+      <p className="mt-5 text-lg leading-8 text-slate-600">
+        BayarLink bantu seller home-based nampak lebih kemas, yakin, dan mudah urus order.
+      </p>
+    </div>
+
+    <div className="mt-14 grid gap-6 md:grid-cols-3">
+      {[
+        {
+          image: "/seller-1.png",
+          name: "Aishah",
+          business: "Aishah Bakery",
+          quote:
+            "Dulu pening layan PM satu-satu. Sekarang customer terus pilih dan order sendiri.",
+        },
+        {
+          image: "/seller-2.png",
+          name: "Farah",
+          business: "Farah Lunch Box",
+          quote:
+            "Order jadi lebih tersusun. Saya senang nak semak siapa dah bayar dan apa customer order.",
+        },
+        {
+          image: "/seller-3.png",
+          name: "Lina",
+          business: "Lina Homemade",
+          quote:
+            "Saya suka sebab nampak lebih professional walaupun saya jual dari rumah saja.",
+        },
+      ].map((item) => (
+        <div
+          key={item.name}
+          className="rounded-[28px] border border-slate-200 bg-white p-7 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+        >
+          <div className="flex items-center gap-4">
+            <img
+              src={item.image}
+              alt={item.name}
+              className="h-16 w-16 rounded-full object-cover ring-2 ring-white shadow-md"
+            />
+
+            <div>
+              <p className="font-bold text-slate-900">{item.name}</p>
+              <p className="text-sm text-slate-500">{item.business}</p>
+            </div>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {testimonials.map((item) => (
-              <div
-                key={item.name}
-                className="rounded-[28px] border border-slate-200 bg-white p-7 shadow-sm"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-700">
-                    {item.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-900">
-                      {item.name}
-                    </p>
-                    <p className="text-sm text-slate-500">{item.role}</p>
-                  </div>
-                </div>
-
-                <p className="mt-6 text-base leading-7 text-slate-600">
-                  “{item.quote}”
-                </p>
-              </div>
-            ))}
-          </div>
+          <p className="mt-6 text-base leading-7 text-slate-600">
+            “{item.quote}”
+          </p>
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+</section>
 
       {/* EMOTIONAL CTA */}
       <section className="px-6 py-20 md:px-8">
