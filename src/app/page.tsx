@@ -800,12 +800,19 @@ useEffect(() => {
       "bg-pink-50 text-pink-700 border-pink-100",
     ]
 
-    const color = colors[i % colors.length]
+    const colorPattern = [
+      0, 3, 1, 4, 2,
+      2, 0, 4, 1, 3,
+      4, 2, 3, 0, 1,
+      1, 4, 0, 3, 2,
+    ]
+
+    const color = colors[colorPattern[i % colorPattern.length]]
 
     return (
       <div
         key={feature}
-        className={`group rounded-2xl border px-4 py-4 text-center text-sm font-semibold shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md ${color}`}
+        className={`group rounded-2xl border px-4 py-4 text-center text-sm font-semibold shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-slate-900 hover:shadow-md ${color}`}
       >
         {feature}
       </div>
