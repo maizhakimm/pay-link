@@ -170,7 +170,7 @@ useEffect(() => {
 
   {/* Header */}
   <header className="absolute left-0 right-0 top-0 z-20">
-    <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 md:px-8">
+    <div className="mx-auto flex max-w-8xl items-center justify-between px-6 py-5 md:px-8">
       <img src="/logo.svg" className="h-8" />
 
       <div className="flex gap-2">
@@ -770,36 +770,48 @@ useEffect(() => {
     </div>
 
     <div className="mt-14 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {[
-        "Secure Payment",
-        "Dashboard Seller",
-        "Order Tracking",
-        "Time Slot",
-        "Add-On Product",
-        "Delivery by Distance",
-        "Fixed Delivery Rate",
-        "Free Delivery",
-        "Pay Rider Separately",
-        "Opening Hours",
-        "Temporary Close Notice",
-        "Customer Notes",
-        "Promo Note",
-        "Product Images",
-        "Share Store Link",
-        "Mobile Friendly",
-        "Multi Payment Options",
-        "Simple Product Setup",
-        "Pre-order Support",
-        "Delivery / Pickup Flow",
-      ].map((feature) => (
-        <div
-          key={feature}
-          className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-center text-sm font-semibold text-slate-700 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/40 hover:text-blue-700 hover:shadow-md"
-        >
-          {feature}
-        </div>
-      ))}
-    </div>
+  {[
+    "Secure Payment",
+    "Dashboard Seller",
+    "Order Tracking",
+    "Time Slot",
+    "Add-On Product",
+    "Delivery by Distance",
+    "Fixed Delivery Rate",
+    "Free Delivery",
+    "Pay Rider Separately",
+    "Opening Hours",
+    "Temporary Close Notice",
+    "Customer Notes",
+    "Promo Note",
+    "Product Images",
+    "Share Store Link",
+    "Mobile Friendly",
+    "Multi Payment Options",
+    "Simple Product Setup",
+    "Pre-order Support",
+    "Delivery / Pickup Flow",
+  ].map((feature, i) => {
+    const colors = [
+      "bg-blue-50 text-blue-700 border-blue-100",
+      "bg-emerald-50 text-emerald-700 border-emerald-100",
+      "bg-purple-50 text-purple-700 border-purple-100",
+      "bg-orange-50 text-orange-700 border-orange-100",
+      "bg-pink-50 text-pink-700 border-pink-100",
+    ]
+
+    const color = colors[i % colors.length]
+
+    return (
+      <div
+        key={feature}
+        className={`group rounded-2xl border px-4 py-4 text-center text-sm font-semibold shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md ${color}`}
+      >
+        {feature}
+      </div>
+    )
+  })}
+</div>
   </div>
 </section>
 
