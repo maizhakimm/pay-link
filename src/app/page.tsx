@@ -677,127 +677,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* SETUP HELP */}
-      <section className="bg-white py-24">
-        <div className="mx-auto max-w-7xl px-6 md:px-8">
-          <div className="grid items-center gap-12 md:grid-cols-2">
-            {/* LEFT CONTENT */}
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">
-                Bantuan setup
-              </p>
-
-              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
-                Tak pandai setup?
-                <br />
-                Roger je team kami.
-              </h2>
-
-              <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
-                Team kami bantu setup kedai anda dari A sampai siap.
-              </p>
-
-              {/* LIST */}
-              <div className="mt-8 space-y-4">
-                {[
-                  "Bantu setup kedai anda",
-                  "Bantu masukkan produk",
-                  "Tunjuk cara guna",
-                  "Bantu sampai anda ready",
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-3">
-                    <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
-                      ✓
-                    </div>
-                    <p className="text-base font-medium leading-7 text-slate-800">
-                      {item}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* CTA DESKTOP */}
-              <a
-                href="https://wa.me/60163352087?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
-                className="mt-10 hidden h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 md:inline-flex"
-              >
-                WhatsApp Kami
-              </a>
-            </div>
-
-            {/* RIGHT IMAGE */}
-            <div className="order-last md:order-none">
-              <div className="relative">
-                <img
-                  src="/Bantuan.png"
-                  alt="Bantuan setup BayarLink"
-                  className="mx-auto w-full max-w-[520px] object-contain transition duration-500 hover:scale-105"
-                />
-
-                {/* subtle glow */}
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(16,185,129,0.08),transparent_60%)]" />
-              </div>
-
-              {/* CTA MOBILE */}
-              <a
-                href="https://wa.me/60163352087?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
-                className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 md:hidden"
-              >
-                WhatsApp Kami
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section className="bg-slate-50 py-24">
-        <div className="mx-auto max-w-7xl px-6 md:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-              Features
-            </p>
-
-            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
-              Simple tapi Lengkap
-            </h2>
-
-            <p className="mt-5 text-lg leading-8 text-slate-600">
-              Dibina khas untuk seller home-based yang menjual di group WhatsApp
-              / Facebook.
-            </p>
-          </div>
-
-          <div className="mt-14 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {features.map((feature, i) => {
-              const colors = [
-                "bg-blue-50 text-blue-700 border-blue-100",
-                "bg-emerald-50 text-emerald-700 border-emerald-100",
-                "bg-purple-50 text-purple-700 border-purple-100",
-                "bg-orange-50 text-orange-700 border-orange-100",
-                "bg-pink-50 text-pink-700 border-pink-100",
-              ];
-
-              const colorPattern = [
-                0, 3, 1, 4, 2, 2, 0, 4, 1, 3, 4, 2, 3, 0, 1, 1, 4, 0, 3,
-                2,
-              ];
-
-              const color = colors[colorPattern[i % colorPattern.length]];
-
-              return (
-                <div
-                  key={feature}
-                  className={`group rounded-2xl border px-4 py-4 text-center text-sm font-semibold shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-slate-900 hover:shadow-md ${color}`}
-                >
-                  {feature}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* PRICING */}
       <section className="bg-white py-24">
         <div className="mx-auto max-w-7xl px-6 md:px-8">
@@ -955,6 +834,130 @@ export default function LandingPage() {
         </div>
       </section>
 
+      
+      {/* SETUP HELP */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
+          <div className="grid items-center gap-12 md:grid-cols-2">
+            {/* LEFT CONTENT */}
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">
+                Bantuan setup
+              </p>
+
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+                Tak pandai setup?
+                <br />
+                Roger je team kami.
+              </h2>
+
+              <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
+                Team kami bantu setup kedai anda dari A sampai siap.
+              </p>
+
+              {/* LIST */}
+              <div className="mt-8 space-y-4">
+                {[
+                  "Bantu setup kedai anda",
+                  "Bantu masukkan produk",
+                  "Tunjuk cara guna",
+                  "Bantu sampai anda ready",
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-3">
+                    <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+                      ✓
+                    </div>
+                    <p className="text-base font-medium leading-7 text-slate-800">
+                      {item}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA DESKTOP */}
+              <a
+                href="https://wa.me/60163352087?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
+                className="mt-10 hidden h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 md:inline-flex"
+              >
+                WhatsApp Kami
+              </a>
+            </div>
+
+            {/* RIGHT IMAGE */}
+            <div className="order-last md:order-none">
+              <div className="relative">
+                <img
+                  src="/Bantuan.png"
+                  alt="Bantuan setup BayarLink"
+                  className="mx-auto w-full max-w-[520px] object-contain transition duration-500 hover:scale-105"
+                />
+
+                {/* subtle glow */}
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(16,185,129,0.08),transparent_60%)]" />
+              </div>
+
+              {/* CTA MOBILE */}
+              <a
+                href="https://wa.me/60163352087?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
+                className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 md:hidden"
+              >
+                WhatsApp Kami
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section className="bg-slate-50 py-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+              Features
+            </p>
+
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+              Simple tapi Lengkap
+            </h2>
+
+            <p className="mt-5 text-lg leading-8 text-slate-600">
+              Dibina khas untuk seller home-based yang menjual di group WhatsApp
+              / Facebook.
+            </p>
+          </div>
+
+          <div className="mt-14 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {features.map((feature, i) => {
+              const colors = [
+                "bg-blue-50 text-blue-700 border-blue-100",
+                "bg-emerald-50 text-emerald-700 border-emerald-100",
+                "bg-purple-50 text-purple-700 border-purple-100",
+                "bg-orange-50 text-orange-700 border-orange-100",
+                "bg-pink-50 text-pink-700 border-pink-100",
+              ];
+
+              const colorPattern = [
+                0, 3, 1, 4, 2, 2, 0, 4, 1, 3, 4, 2, 3, 0, 1, 1, 4, 0, 3,
+                2,
+              ];
+
+              const color = colors[colorPattern[i % colorPattern.length]];
+
+              return (
+                <div
+                  key={feature}
+                  className={`group rounded-2xl border px-4 py-4 text-center text-sm font-semibold shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-slate-900 hover:shadow-md ${color}`}
+                >
+                  {feature}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+
+
       {/* TESTIMONIALS */}
       <section className="bg-white py-24">
         <div className="mx-auto max-w-7xl px-6 md:px-8">
@@ -1000,6 +1003,45 @@ export default function LandingPage() {
         </div>
       </section>
 
+{/* FINAL CTA – NO NEED BIG BUSINESS */}
+<section className="bg-slate-50 py-28">
+  <div className="mx-auto max-w-3xl px-6 text-center md:px-8">
+
+    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+      Mula sekarang
+    </p>
+
+    <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+      Tak Perlu Business Dah Besar
+      <br />
+      Baru Nak Guna Sistem
+    </h2>
+
+    <p className="mt-6 text-lg leading-8 text-slate-600">
+      BayarLink sesuai untuk semua saiz business.
+      <br />
+      Lagi awal guna, lagi mudah urus bila order makin banyak nanti.
+    </p>
+
+    <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+      <a
+        href="/login"
+        className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
+      >
+        Daftar Sekarang
+      </a>
+
+      <a
+        href="https://wa.me/60163352087"
+        className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-100"
+      >
+        WhatsApp Kami
+      </a>
+    </div>
+
+  </div>
+</section>
+      
       {/* FOOTER */}
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 md:flex-row md:items-center md:justify-between md:px-8">
