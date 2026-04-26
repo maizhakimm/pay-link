@@ -168,28 +168,29 @@ useEffect(() => {
   {/* Desktop soft dark */}
   <div className="absolute inset-0 hidden bg-black/10 md:block" />
 
-  {/* Header */}
-  <header className="absolute left-0 right-0 top-0 z-20">
-    <div className="mx-auto flex max-w-8xl items-center justify-between px-6 py-5 md:px-8">
-      <img src="/logo.svg" className="h-8" />
+  <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/20 bg-white/70 backdrop-blur-xl">
+  <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-8">
+    <a href="/" className="flex items-center">
+      <img src="/logo.svg" alt="BayarLink" className="h-10 w-auto" />
+    </a>
 
-      <div className="flex gap-2">
-        <a
-          href="/login"
-          className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-700 backdrop-blur-sm"
-        >
-          Sign in
-        </a>
+    <div className="flex gap-2">
+      <a
+        href="/login"
+        className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-sm md:text-sm"
+      >
+        Sign in
+      </a>
 
-        <a
-          href="/register"
-          className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white"
-        >
-          Sign up
-        </a>
-      </div>
+      <a
+        href="/register"
+        className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/20 md:text-sm"
+      >
+        Sign up
+      </a>
     </div>
-  </header>
+  </div>
+</header>
 
   {/* Content */}
   <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-6 pt-24 pb-6 md:justify-center md:px-8 md:py-20">
@@ -912,76 +913,29 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="py-20">
-        <div className="mx-auto grid max-w-7xl gap-8 px-6 md:grid-cols-2 md:px-8">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
-              Ready nak mula?
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-              Daftar akaun anda dan mula urus tempahan dengan lebih tersusun
-            </h2>
-            <p className="mt-4 max-w-xl text-slate-600">
-              Kalau perlukan bantuan, team kami sedia bantu. Pilih sahaja cara
-              yang paling mudah untuk anda mula.
-            </p>
-          </div>
-
-          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-            <div className="grid gap-3">
-              <a
-                href="/register"
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white transition hover:bg-blue-700"
-              >
-                Daftar Sekarang
-              </a>
-              <a
-                href="https://wa.me/"
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-800 transition hover:bg-slate-50"
-              >
-                WhatsApp Kami
-              </a>
-            </div>
-
-            <p className="mt-4 text-sm text-slate-500">
-              Mesra mobile. Mudah digunakan. Sesuai untuk seller kecil dan
-              bisnes dari rumah.
-            </p>
-          </div>
-        </div>
-      </section>
+      
 
       {/* FOOTER */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10 md:flex-row md:items-start md:justify-between md:px-8">
-          <div className="max-w-sm">
-            <div className="text-lg font-bold">BayarLink</div>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              BayarLink membantu seller kecil urus tempahan dan bayaran dengan
-              lebih mudah.
-            </p>
-          </div>
+<footer className="border-t border-slate-200 bg-white">
+  <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 md:flex-row md:items-center md:justify-between md:px-8">
+    <a href="/" className="flex items-center">
+      <img src="/logo.svg" alt="BayarLink" className="h-9 w-auto" />
+    </a>
 
-          <div className="grid grid-cols-2 gap-4 text-sm text-slate-500 md:grid-cols-5">
-            <a href="#" className="hover:text-slate-900">
-              Tentang
-            </a>
-            <a href="#" className="hover:text-slate-900">
-              Cara Guna
-            </a>
-            <a href="#" className="hover:text-slate-900">
-              Features
-            </a>
-            <a href="#" className="hover:text-slate-900">
-              Hubungi Kami
-            </a>
-            <a href="/register" className="hover:text-slate-900">
-              Daftar
-            </a>
-          </div>
-        </div>
-      </footer>
+    <p className="text-sm text-slate-500">
+      © {new Date().getFullYear()} BayarLink. All rights reserved.
+    </p>
+
+    <div className="flex gap-4 text-sm font-medium text-slate-500">
+      <a href="/login" className="hover:text-slate-900">
+        Sign in
+      </a>
+      <a href="/register" className="hover:text-slate-900">
+        Register
+      </a>
+    </div>
+  </div>
+</footer>
     </main>
   );
 }
