@@ -894,21 +894,20 @@ useEffect(() => {
       <section className="px-6 py-20 md:px-8">
         <div className="mx-auto max-w-6xl rounded-[32px] bg-slate-900 px-8 py-14 text-center text-white md:px-12">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-300">
-            Mindset shift
+            Ready Nak Mula?
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-5xl">
             Tak perlu tunggu bisnes besar baru nak guna sistem
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
-            Berniaga dari rumah pun boleh berjaya. Yang penting, cara urus order
-            dan bayaran kena lebih kemas dari awal.
+            Berniaga dari rumah pun boleh berjaya. Yang penting, guna cara yang betul.
           </p>
 
           <a
             href="/register"
             className="mt-8 inline-flex h-12 items-center justify-center rounded-xl bg-white px-6 font-semibold text-slate-900 transition hover:-translate-y-0.5 hover:bg-slate-100"
           >
-            Mulakan Dengan BayarLink Hari Ini
+            Daftar Sekarang
           </a>
         </div>
       </section>
@@ -923,7 +922,7 @@ useEffect(() => {
     </a>
 
     <p className="text-sm text-slate-500">
-      © {new Date().getFullYear()} BayarLink. All rights reserved.
+      © {new Date().getFullYear()} BayarLink. All rights reserved. By Neugens Solution 
     </p>
 
     <div className="flex gap-4 text-sm font-medium text-slate-500">
