@@ -831,11 +831,11 @@ useEffect(() => {
       </p>
 
       <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
-        Seller mula rasa beza bila order lebih tersusun
+        Ramai yang Dah Cuba BayarLink
       </h2>
 
       <p className="mt-5 text-lg leading-8 text-slate-600">
-        BayarLink bantu seller home-based nampak lebih kemas, yakin, dan mudah urus order.
+        Anda bila lagi?
       </p>
     </div>
 
