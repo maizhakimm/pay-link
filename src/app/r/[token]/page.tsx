@@ -1,50 +1,46 @@
-import { notFound } from "next/navigation"
+import { createClient } from '@supabase/supabase-js'
+import { notFound } from 'next/navigation'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 type Props = {
   params: { token: string }
 }
 
-async function getOrder(token: string) {
-  // 🔥 Replace dengan API / Supabase
-  return {
-    orderNo: "BL-1023",
-    storeName: "Dana Kitchen",
-    total: 25.0,
-    status: "Preparing",
-    paymentStatus: "Paid",
-    items: [
-      {
-        name: "Nasi Lemak Ayam",
-        qty: 2,
-        addons: ["Sambal Extra"],
-      },
-      {
-        name: "Teh Ais",
-        qty: 1,
-        addons: [],
-      },
-    ],
-    note: "Kurang pedas",
-    delivery: {
-      type: "Delivery",
-      address: "Jalan ABC, Shah Alam",
-      slot: "5:00 PM – 6:00 PM",
-    },
-    customer: {
-      name: "Ali",
-      phone: "0123456789",
-    },
-    sellerWhatsapp: "60123456789",
-  }
-}
-
 export default async function ReceiptPage({ params }: Props) {
-  const order = await getOrder(params.token)
+  const token = params.token
+
+  // 🔥 get order
+  const { data: order } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('receipt_token', token)
+    .single()
 
   if (!order) return notFound()
 
+  // 🔥 get seller
+  const { data: seller } = await supabase
+    .from('seller_profiles')
+    .select('store_name, whatsapp')
+    .eq('id', order.seller_profile_id)
+    .single()
+
+  // 🔥 get items
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', order.id)
+
   const waText = encodeURIComponent(
-    `Hi ${order.storeName},\n\nSaya dah buat order:\n\nOrder No: ${order.orderNo}\nTotal: RM${order.total}\n\nReceipt:\nhttps://www.bayarlink.my/r/${params.token}`
+    `Hi ${seller?.store_name || ''},\n\nSaya dah buat bayaran:\n\nOrder No: ${
+      order.order_number
+    }\nTotal: RM${Number(order.total_amount || 0).toFixed(
+      2
+    )}\n\nReceipt:\nhttps://www.bayarlink.my/r/${token}`
   )
 
   return (
@@ -53,105 +49,73 @@ export default async function ReceiptPage({ params }: Props) {
 
         {/* HEADER */}
         <div className="text-center">
-          <h1 className="text-xl font-semibold">Order Confirmed ✅</h1>
+          <h1 className="text-xl font-semibold">Payment Successful ✅</h1>
           <p className="text-sm text-gray-500">
-            Terima kasih atas pesanan anda
+            Sila hantar resit kepada seller
           </p>
         </div>
 
         {/* SUMMARY */}
-        <div className="border rounded-xl p-4 space-y-2">
-          <div className="flex justify-between text-sm">
+        <div className="border rounded-xl p-4 space-y-2 text-sm">
+          <div className="flex justify-between">
             <span>Order No</span>
-            <span className="font-medium">{order.orderNo}</span>
+            <span className="font-medium">{order.order_number}</span>
           </div>
-          <div className="flex justify-between text-sm">
+
+          <div className="flex justify-between">
             <span>Store</span>
-            <span className="font-medium">{order.storeName}</span>
+            <span className="font-medium">{seller?.store_name}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span>Total Paid</span>
-            <span className="font-semibold">RM{order.total.toFixed(2)}</span>
+
+          <div className="flex justify-between">
+            <span>Total</span>
+            <span className="font-semibold">
+              RM {Number(order.total_amount || 0).toFixed(2)}
+            </span>
           </div>
-          <div className="flex justify-between text-sm">
+
+          <div className="flex justify-between">
             <span>Payment</span>
             <span className="text-green-600 font-medium">
-              {order.paymentStatus} ✅
+              {order.payment_status}
             </span>
           </div>
         </div>
 
         {/* ITEMS */}
-        <div className="border rounded-xl p-4">
-          <h2 className="font-medium mb-2">Order Details</h2>
-          <div className="space-y-2 text-sm">
-            {order.items.map((item, i) => (
-              <div key={i}>
-                <div className="flex justify-between">
-                  <span>
-                    {item.name} (x{item.qty})
-                  </span>
-                </div>
-                {item.addons.length > 0 && (
-                  <div className="text-xs text-gray-500 ml-2">
-                    + {item.addons.join(", ")}
-                  </div>
-                )}
+        <div className="border rounded-xl p-4 text-sm">
+          <h2 className="font-medium mb-2">Items</h2>
+
+          <div className="space-y-2">
+            {items?.map((item, i) => (
+              <div key={i} className="flex justify-between">
+                <span>
+                  {item.product_name} x{item.quantity}
+                </span>
+                <span>
+                  RM {Number(item.line_total).toFixed(2)}
+                </span>
               </div>
             ))}
-            {order.note && (
-              <div className="text-xs text-gray-500 mt-2">
-                Note: {order.note}
-              </div>
-            )}
           </div>
-        </div>
-
-        {/* DELIVERY */}
-        <div className="border rounded-xl p-4 text-sm">
-          <h2 className="font-medium mb-2">Delivery Info</h2>
-          <p>{order.delivery.type}</p>
-          <p className="text-gray-600">{order.delivery.address}</p>
-          <p className="text-gray-600">{order.delivery.slot}</p>
-        </div>
-
-        {/* CUSTOMER */}
-        <div className="border rounded-xl p-4 text-sm">
-          <h2 className="font-medium mb-2">Customer</h2>
-          <p>{order.customer.name}</p>
-          <p className="text-gray-600">{order.customer.phone}</p>
         </div>
 
         {/* STATUS */}
         <div className="border rounded-xl p-4 text-center">
-          <p className="text-sm text-gray-500">Status</p>
+          <p className="text-sm text-gray-500">Order Status</p>
           <p className="font-semibold text-yellow-600">
-            {order.status}
+            {order.fulfillment_status}
           </p>
         </div>
 
-        {/* BUTTONS */}
-        <div className="space-y-3">
-
-          {/* SEND TO SELLER */}
-          <a
-            href={`https://wa.me/${order.sellerWhatsapp}?text=${waText}`}
-            target="_blank"
-            className="block w-full text-center bg-green-500 text-white py-3 rounded-xl font-medium"
-          >
-            Send to Seller (WhatsApp)
-          </a>
-
-          {/* CONTACT SELLER */}
-          <a
-            href={`https://wa.me/${order.sellerWhatsapp}`}
-            target="_blank"
-            className="block w-full text-center border py-3 rounded-xl font-medium"
-          >
-            Contact Seller
-          </a>
-
-        </div>
+        {/* BUTTON */}
+        <a
+          href={`https://wa.me/${seller?.whatsapp}?text=${waText}`}
+          target="_blank"
+          className="block w-full text-center bg-green-500 text-white py-3 rounded-xl font-medium"
+        >
+          Hantar Resit ke Seller
+        </a>
 
       </div>
     </div>
