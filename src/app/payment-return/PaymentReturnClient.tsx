@@ -216,9 +216,22 @@ export default function PaymentReturnClient() {
 
         // 🔥 redirect bila order dah load
         if (Number(status) === 3 && foundOrder?.receipt_token) {
+
+        // 🔥 trigger telegram dulu
+        await fetch('/api/notifications/telegram-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            order_number: foundOrder.order_number || cleanOrderNumber,
+          }),
+        })
+
+        // 🔥 baru redirect
         window.location.replace(`/r/${foundOrder.receipt_token}`)
         return
-        }
+      }
 
         if (foundOrder?.seller_profile_id) {
           const { data: seller } = await supabase
@@ -245,7 +258,7 @@ export default function PaymentReturnClient() {
     }
 
     loadOrder()
-  }, [cleanOrderNumber, cleanPaymentIntentId])
+  }, [cleanOrderNumber, cleanPaymentIntentId, status])
 
   useEffect(() => {
     async function autoConfirmPayment() {
@@ -267,17 +280,7 @@ export default function PaymentReturnClient() {
             payment_intent_id: cleanPaymentIntentId || null,
           }),
         })
-
-        await fetch('/api/notifications/telegram-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          order_number: cleanOrderNumber,
-        }),
-      })
-        
+                
       } catch (error) {
         console.error('Manual confirm payment failed:', error)
       }
