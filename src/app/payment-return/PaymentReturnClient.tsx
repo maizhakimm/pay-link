@@ -268,6 +268,15 @@ export default function PaymentReturnClient() {
           }),
         })
 
+        await fetch('/api/notifications/telegram-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          order_number: cleanOrderNumber,
+        }),
+      })
         
       } catch (error) {
         console.error('Manual confirm payment failed:', error)
