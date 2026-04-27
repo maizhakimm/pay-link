@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       .eq("seller_profile_id", sellerProfileId)
       .eq("payment_status", "paid")
       .neq("payout_status", "paid")
-      .lte("eligible_payout_at", nowIso)
+      .or(`eligible_payout_at.lte.${nowIso},eligible_payout_at.is.null`)
 
     if (range.start) {
       query = query.gte("paid_at", range.start.toISOString())
