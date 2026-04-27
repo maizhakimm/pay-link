@@ -1,508 +1,830 @@
-import Image from "next/image";
+"use client";
 
-export default function HomePage() {
-  const primaryCtaHref = "/login";
+import { useEffect, useState } from "react";
+
+export default function LandingPage() {
+  const problems = [
+    "Ramai PM… tapi order tak jadi",
+    "Customer nak order… tapi tak bayar-bayar",
+    "Setiap order kena layan satu-satu",
+    "Order masuk… tapi susah nak track",
+  ];
+
+  const solutions = [
+    {
+      title: "Customer pilih menu sendiri",
+      desc: "Kurang soalan berulang dan kurang chat yang memenatkan.",
+    },
+    {
+      title: "Customer terus bayar ikut cara dia suka",
+      desc: "Lagi mudah checkout bila pilihan bayaran lebih mesra pelanggan.",
+    },
+    {
+      title: "Order masuk tanpa perlu layan satu-satu",
+      desc: "Seller boleh fokus pada produk, delivery, dan jualan.",
+    },
+  ];
+
+  const audience = [
+    "Peniaga makanan dari rumah",
+    "Jual melalui WhatsApp / IG / TikTok / Facebook",
+    "Masih ambil order secara manual",
+    "Nak nampak lebih tersusun dan yakin",
+  ];
+
+  const suitability = [
+    "Delivery ikut jarak",
+    "Time slot delivery / pickup",
+    "Boleh pre-order",
+    "Pelbagai pilihan bayaran",
+    "Sesuai untuk seller kecil & home-based",
+  ];
+
+  const shifts = [
+    "Customer lebih suka proses order yang cepat dan terus jalan",
+    "Customer lebih yakin bila ada banyak pilihan bayaran",
+    "Customer kurang sabar tunggu reply manual terlalu lama",
+    "Order online sekarang dah jadi kebiasaan, bukan lagi luar biasa",
+  ];
+
+  const steps = [
+    {
+      no: "01",
+      title: "Daftar",
+      desc: "Buka akaun anda dengan cepat dan mudah.",
+    },
+    {
+      no: "02",
+      title: "Setup Produk",
+      desc: "Masukkan menu, gambar, harga, dan info asas kedai.",
+    },
+    {
+      no: "03",
+      title: "Share Link",
+      desc: "WhatsApp, Telegram, IG, FB, atau TikTok.",
+    },
+    {
+      no: "04",
+      title: "Customer Order",
+      desc: "Mereka pilih, isi maklumat, dan buat bayaran.",
+    },
+  ];
+
+  const [price, setPrice] = useState(100);
+
+  useEffect(() => {
+    let current = 100;
+
+    const interval = setInterval(() => {
+      current -= Math.floor(Math.random() * 5) + 1;
+
+      if (current <= 0) {
+        current = 0;
+        clearInterval(interval);
+      }
+
+      setPrice(current);
+    }, 40);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const features = [
+    "Secure Payment",
+    "Dashboard Seller",
+    "Order Tracking",
+    "Time Slot",
+    "Add-On Product",
+    "Delivery by Distance",
+    "Fixed Delivery Rate",
+    "Free Delivery",
+    "Pay Rider Separately",
+    "Opening Hours",
+    "Temporary Close Notice",
+    "Customer Notes",
+    "Promo Note",
+    "Product Images",
+    "Share Store Link",
+    "Mobile Friendly",
+    "Multi Payment Options",
+    "Simple Product Setup",
+    "Pre-order Support",
+    "Delivery / Pickup Flow",
+  ];
+
+  const testimonials = [
+    {
+      image: "/seller-1.png",
+      name: "Aishah",
+      business: "Aishah Bakery",
+      quote:
+        "Dulu pening layan PM satu-satu. Sekarang customer terus pilih dan order sendiri.",
+    },
+    {
+      image: "/seller-2.png",
+      name: "Farah",
+      business: "Farah Lunch Box",
+      quote:
+        "Order jadi lebih tersusun. Saya senang nak semak siapa dah bayar dan apa customer order.",
+    },
+    {
+      image: "/seller-3.png",
+      name: "Lina",
+      business: "Lina Homemade",
+      quote:
+        "Saya suka sebab nampak lebih professional walaupun saya jual dari rumah saja.",
+    },
+  ];
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <a href="/" className="flex items-center gap-3">
-            <Image
-              src="/BayarLink-Logo-01.svg"
-              alt="BayarLink Logo"
-              width={160}
-              height={40}
-              priority
-              className="h-9 w-auto"
-            />
-          </a>
+      {/* HERO */}
+      <section className="relative min-h-screen overflow-hidden">
+        {/* Desktop Image */}
+        <div
+          className="absolute inset-0 hidden bg-cover bg-center md:block"
+          style={{
+            backgroundImage: "url('/seller-hero.png')",
+            backgroundPosition: "62% center",
+          }}
+        />
 
-          <div className="flex items-center gap-3">
-            <a
-              href="/login"
-              className="hidden rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
-            >
-              Login
+        {/* Mobile Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center md:hidden"
+          style={{
+            backgroundImage: "url('/Hero-Mobile.png')",
+            backgroundPosition: "center top",
+          }}
+        />
+
+        {/* Desktop white fade */}
+        <div className="absolute inset-y-0 left-0 hidden w-[65%] bg-gradient-to-r from-white/95 via-white/85 to-white/0 md:block" />
+
+        {/* Mobile top white fade */}
+        <div className="absolute inset-x-0 top-0 h-[60%] bg-gradient-to-b from-white via-white/95 to-white/0 md:hidden" />
+
+        {/* Mobile bottom blue fade */}
+        <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-slate-950/90 via-slate-900/60 to-transparent md:hidden" />
+
+        {/* Desktop soft dark */}
+        <div className="absolute inset-0 hidden bg-black/10 md:block" />
+
+        {/* Header */}
+        <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/20 bg-white/70 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-8">
+            <a href="/" className="flex items-center">
+              <img src="/logo.svg" alt="BayarLink" className="h-10 w-auto" />
             </a>
-            <a
-              href={primaryCtaHref}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Sign Up
-            </a>
+
+            <div className="flex gap-2">
+              <a
+                href="/login"
+                className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-sm md:text-sm"
+              >
+                Login
+              </a>
+
+              <a
+                href="/login"
+                className="rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/20 md:text-sm"
+              >
+                Sign Up
+              </a>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.14),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.10),_transparent_28%)]" />
-        <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 py-16 sm:px-6 md:py-20 lg:grid-cols-2 lg:px-8 lg:py-24">
-          <div className="relative text-center lg:text-left">
-            <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 lg:mx-0">
-              <span className="inline-block h-2 w-2 rounded-full bg-violet-500" />
-              Beta
+        {/* Content */}
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col px-6 pb-6 pt-24 md:justify-center md:px-8 md:py-20">
+          {/* TEXT */}
+          <div className="max-w-xl">
+            <div className="mb-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700">
+                Untuk seller makanan dari rumah
+              </span>
+
+              <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700">
+                Tak Perlu Download App
+              </span>
             </div>
 
-            <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              Mudah Jual,
-              <br />
-              <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                Mudah Bayar!
-              </span>
+            <h1 className="text-[34px] font-extrabold leading-[1.1] text-slate-950 md:text-6xl">
+              Tak Perlu Buka Kedai, Dari Rumah Pun Boleh Berjaya!
             </h1>
 
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg lg:mx-0">
-              Jual dan promote perniagaan anda di mana2 platform dengan
-              BayarLink. Lebih mudah nak jual dan lebih mudah customer nak
-              bayar. Terima pelbagai jenis cara bayaran. Mulakan dengan ZERO
-              kos!
+            <p className="mt-2 text-xs italic text-slate-500">
+              bisik Aishah Bakery dalam hati
             </p>
 
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
-              <a
-                href={primaryCtaHref}
-                className="inline-flex w-full max-w-[280px] items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 sm:w-auto"
-              >
-                Start Free
-              </a>
-              <a
-                href="/s/dana-store"
-                className="inline-flex w-full max-w-[280px] items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
-              >
-                View Demo Shop
-              </a>
-            </div>
+            <p className="mt-5 text-[15px] text-slate-700 md:text-xl">
+              Bukan anda tak pandai berniaga.
+              <br />
+              Anda cuma perlukan cara yang betul!
+            </p>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-sm text-slate-500 lg:justify-start">
-              <div className="inline-flex items-center gap-2">
-                <CheckIcon />
-                WhatsApp
-              </div>
-              <div className="inline-flex items-center gap-2">
-                <CheckIcon />
-                TikTok
-              </div>
-              <div className="inline-flex items-center gap-2">
-                <CheckIcon />
-                Telegram
-              </div>
-              <div className="inline-flex items-center gap-2">
-                <CheckIcon />
-                Facebook
-              </div>
-              <div className="inline-flex items-center gap-2">
-                <CheckIcon />
-                Instagram
-              </div>
-            </div>
+            <p className="mt-3 text-[14px] text-slate-600">
+              <span className="hidden md:inline">
+                Jual kek, nasi lemak, spaghetti, kuih muih, kopi semua boleh!
+                <br />
+              </span>
+              Customer sekarang dah pandai tekan dan bayar.
+              <br />
+              Masih nak suruh mereka PM dulu baru order?
+            </p>
           </div>
 
-          {/* Hero Image */}
-          <div className="relative flex justify-center lg:justify-end">
-            <div className="absolute -top-10 right-10 h-32 w-32 rounded-full bg-violet-300/30 blur-3xl" />
-            <div className="absolute -bottom-10 left-10 h-32 w-32 rounded-full bg-blue-300/30 blur-3xl" />
+          {/* BOTTOM SECTION */}
+          <div className="mt-auto pt-8 md:mt-8 md:max-w-xl">
+            {/* FEATURES */}
+            <div className="grid gap-2 text-sm text-white md:flex md:flex-wrap md:gap-4 md:text-slate-600">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 md:bg-emerald-500" />
+                Boleh preorder
+              </div>
 
-            <div className="relative">
-              <Image
-                src="/Hero.svg"
-                alt="BayarLink Preview"
-                width={700}
-                height={1400}
-                priority
-                className="mx-auto w-[300px] scale-[1.1] object-contain drop-shadow-[0_30px_80px_rgba(0,0,0,0.25)] sm:w-[340px] md:w-[380px] lg:w-[420px]"
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-blue-400 md:bg-blue-500" />
+                Banyak pilihan bayaran
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-amber-400 md:bg-amber-500" />
+                Delivery ikut jarak
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-purple-400 md:bg-purple-500" />
+                Boleh buat add-on
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-cyan-400 md:bg-cyan-500" />
+                Boleh buka time-slot
+              </div>
+            </div>
+
+            {/* BUTTON BELOW FEATURES */}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <a
+                href="/login"
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg"
+              >
+                Daftar Sekarang
+              </a>
+
+              <a
+                href="https://wa.me/60163352087"
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-white/30 bg-white/90 px-6 font-semibold text-slate-800 md:border-slate-300"
+              >
+                Saya Nak Bantuan Setup
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PROBLEM */}
+      <section className="bg-slate-50 py-20">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+              Masalah utama
+            </p>
+
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+              Order banyak, Tapi Untung Tak Nampak?
+            </h2>
+
+            <p className="mt-4 text-lg leading-8 text-slate-600">
+              Penat tak hadap hari-hari? Sampai bila nak layan?
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                image: "/problem-1.png",
+                title: "Ramai PM… tapi order tak jadi",
+                desc: "Customer tanya macam-macam, tapi akhirnya senyap dan tak proceed.",
+              },
+              {
+                image: "/problem-2.png",
+                title: "Customer nak order… tapi tak bayar-bayar",
+                desc: "Order nampak macam jadi, tapi bayaran masih pending dan susah nak follow up.",
+              },
+              {
+                image: "/problem-3.png",
+                title: "Setiap order kena layan satu-satu",
+                desc: "Penat ulang benda sama dalam chat, lagi-lagi bila order mula banyak.",
+              },
+              {
+                image: "/problem-4.png",
+                title: "Order masuk… tapi susah nak track",
+                desc: "Semua bercampur dalam WhatsApp sampai susah nak semak semula.",
+              },
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="group rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="relative mb-5 overflow-hidden rounded-2xl bg-blue-50/60">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="h-44 w-full object-contain p-4 transition duration-300 group-hover:scale-105"
+                  />
+
+                  <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-md shadow-blue-600/20">
+                    {i + 1}
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-bold leading-7 text-slate-900">
+                  {item.title}
+                </h3>
+
+                <p className="mt-3 text-sm leading-6 text-slate-500">
+                  {item.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SOLUTION */}
+      <section className="relative min-h-screen overflow-hidden">
+        {/* Desktop Background */}
+        <div
+          className="absolute inset-0 hidden bg-cover bg-center md:block"
+          style={{
+            backgroundImage: "url('/Solution.png')",
+            backgroundPosition: "center",
+          }}
+        />
+
+        {/* Mobile Background */}
+        <div
+          className="absolute inset-0 bg-cover bg-center md:hidden"
+          style={{
+            backgroundImage: "url('/Solution-Mobile.png')",
+            backgroundPosition: "center bottom",
+          }}
+        />
+
+        {/* Desktop fade white from right to left */}
+        <div className="absolute inset-y-0 right-0 hidden w-[62%] bg-gradient-to-l from-white/95 via-white/88 to-white/0 md:block" />
+
+        {/* Mobile fade white from top to bottom */}
+        <div className="absolute inset-x-0 top-0 h-[58%] bg-gradient-to-b from-white via-white/95 to-white/0 md:hidden" />
+
+        {/* Soft dark layer for image depth */}
+        <div className="absolute inset-0 hidden bg-black/5 md:block" />
+
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl px-6 pb-10 pt-16 md:items-center md:justify-end md:px-8 md:py-20">
+          <div className="max-w-xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 md:text-sm">
+              Penyelesaian
+            </p>
+
+            <h2 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-5xl">
+              BayarLink tolong urus Order sampai Payment!
+            </h2>
+
+            {/* Comparison badges */}
+            <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-bold md:text-sm">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1 text-white shadow-lg shadow-blue-600/20">
+                ✓ BayarLink
+              </span>
+
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1 text-pink-700">
+                × PANDA
+              </span>
+
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-orange-700">
+                × SHOPI
+              </span>
+
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-green-700">
+                × GEREB
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-2 md:mt-8 md:space-y-3">
+              {[
+                "Customer pilih menu sendiri",
+                "Customer terus bayar ikut cara dia suka",
+                "Order masuk tanpa perlu layan satu-satu",
+              ].map((title, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border border-slate-200 bg-white/85 px-4 py-3 shadow-sm backdrop-blur-sm md:px-5 md:py-3.5"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold text-blue-700 md:h-8 md:w-8">
+                      ✓
+                    </div>
+
+                    <h3 className="text-[13px] font-semibold text-slate-900 md:text-base">
+                      {title}
+                    </h3>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AUDIENCE */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
+          <div className="grid items-center gap-12 md:grid-cols-2">
+            {/* LEFT CONTENT */}
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+                Untuk siapa
+              </p>
+
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+                BayarLink untuk siapa?
+              </h2>
+
+              <p className="mt-5 text-lg leading-8 text-slate-600">
+                Dibina khas untuk usahawan yang nak grow!
+              </p>
+
+              {/* CLEAN LIST */}
+              <div className="mt-10 space-y-6">
+                {[
+                  "Peniaga makanan dari rumah",
+                  "Jual melalui WhatsApp / IG / TikTok / Facebook",
+                  "Masih ambil order secara manual",
+                  "Nak nampak lebih tersusun dan yakin",
+                  "Nak elak guna App Food Delivery yang cas komisen tinggi",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white">
+                      ✓
+                    </div>
+
+                    <p className="text-[15px] font-medium leading-7 text-slate-800 md:text-base">
+                      {item}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT IMAGE */}
+            <div className="order-last md:order-none">
+              {/* Desktop Image */}
+              <img
+                src="/Audience.png"
+                alt="BayarLink Audience"
+                className="hidden w-full object-contain md:block"
+              />
+
+              {/* Mobile Image */}
+              <img
+                src="/Audience-Mobile.png"
+                alt="BayarLink Audience Mobile"
+                className="mt-10 w-full object-contain md:hidden"
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Problem */}
-      <section className="border-t border-slate-200 bg-slate-50/70 py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* MARKET SHIFT */}
+      <section className="bg-slate-50 py-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-              Masalah
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+              Kenapa sekarang
             </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Makin banyak order makin pening?
+
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+              Cara customer beli dah berubah.
             </h2>
-            <p className="mt-4 text-base leading-7 text-slate-600">
-              Bila dah banyak order memang akan pening kalau masih lagi guna
-              cara manual..
-            </p>
-          </div>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            <FeatureCard
-              icon={<ChatIcon />}
-              title="Customer PM satu-satu"
-              description="Order bercampur dengan chat. Susah nak urus customer, item, dan confirmation dengan kemas."
-            />
-            <FeatureCard
-              icon={<WalletIcon />}
-              title="Susah check payment"
-              description="Setiap kali customer bayar, kena semak bank satu-satu. Lambat dan mudah terlepas pandang."
-            />
-            <FeatureCard
-              icon={<BoxIcon />}
-              title="Track order serabut"
-              description="Bila order dah banyak, susah nak tahu siapa dah order, siapa belum bayar, dan siapa dah confirm."
-            />
-            <FeatureCard
-              icon={<AlertIcon />}
-              title="Risau double order"
-              description="Bila stok tak update dengan betul, seller boleh terjual lebih tanpa sedar."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Solution */}
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-              Penyelesaian
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Share BayarLink!
-            </h2>
-            <p className="mt-4 text-base leading-7 text-slate-600">
-              Satu tempat untuk susun produk/menu, kumpul order, dan bagi
-              customer order dengan lebih mudah, serta banyak pilihan cara
-              bayaran.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            <SolutionCard
-              icon={<LinkIcon />}
-              title="1 link semua produk"
-              description="Share satu link sahaja untuk customer tengok semua produk aktif anda."
-            />
-            <SolutionCard
-              icon={<FormIcon />}
-              title="Auto collect order"
-              description="Order masuk dengan flow lebih kemas tanpa perlu check PM satu-satu."
-            />
-            <SolutionCard
-              icon={<PaymentIcon />}
-              title="Payment lebih jelas"
-              description="Mudahkan seller urus langkah pembayaran dan kurangkan kerja manual."
-            />
-            <SolutionCard
-              icon={<StockIcon />}
-              title="Stock auto update"
-              description="Bantu elak oversell dan bagi seller lebih yakin urus produk yang aktif."
-            />
-            <SolutionCard
-              icon={<PhoneIcon />}
-              title="Tak perlu laptop atau PC"
-              description="Sesuai untuk seller yang urus bisnes sepenuhnya dari phone."
-            />
-            <SolutionCard
-              icon={<SystemIcon />}
-              title="Semua dalam 1 sistem"
-              description="Produk, order, dan aliran jualan disusun dalam satu tempat yang lebih kemas."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="border-t border-slate-200 bg-white py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-              Features
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Semua yang anda perlukan untuk urus order dengan mudah
-            </h2>
-            <p className="mt-4 text-base leading-7 text-slate-600">
-              Direka khas untuk seller WhatsApp, food seller dan bisnes kecil
-              supaya lebih tersusun, cepat dan tak pening.
-            </p>
-          </div>
-
-          <div className="group mt-12 space-y-10">
-            {/* SETUP */}
-            <div>
-              <div className="mb-4 flex items-center gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Setup
-                </p>
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                <FeatureIconCard
-                  icon={<ShopLinkFeatureIcon />}
-                  title="1 Link Shop Sendiri"
-                  description="Share satu link sahaja untuk customer tengok semua produk dan buat order dengan mudah."
-                />
-
-                <FeatureIconCard
-                  icon={<AddOnFeatureIcon />}
-                  title="Produk & Add-On"
-                  description="Tambah produk, variasi dan add-on seperti extra cheese atau pilihan khas dengan mudah."
-                />
-
-                <FeatureIconCard
-                  icon={<SlotFeatureIcon />}
-                  title="Delivery & Pickup Slot"
-                  description="Tetapkan waktu tempahan supaya customer tak order sesuka hati dan elak kekeliruan."
-                />
-              </div>
-            </div>
-
-            {/* ORDER FLOW */}
-            <div>
-              <div className="mb-4 flex items-center gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Order Flow
-                </p>
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                <FeatureIconCard
-                  icon={<WhatsAppFlowFeatureIcon />}
-                  title="WhatsApp Order Flow"
-                  description="Order masuk dengan flow yang lebih kemas tanpa perlu layan semuanya secara manual."
-                />
-
-                <FeatureIconCard
-                  icon={<OrderStatusFeatureIcon />}
-                  title="Status Order Jelas"
-                  description="Track setiap order dengan lebih mudah seperti pending, paid atau completed."
-                />
-
-                <FeatureIconCard
-                  icon={<AutoPaymentFeatureIcon />}
-                  title="Auto Check Payment"
-                  description="Bayaran lebih mudah disemak dan kurangkan kerja manual seller untuk semak satu-satu."
-                />
-              </div>
-            </div>
-
-            {/* CONTROL */}
-            <div>
-              <div className="mb-4 flex items-center gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Control &amp; Scale
-                </p>
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                <FeatureIconCard
-                  icon={<StockGuardFeatureIcon />}
-                  title="Elak Oversell"
-                  description="Stok auto update dan bantu kurangkan risiko double order bila permintaan makin banyak."
-                />
-
-                <FeatureIconCard
-                  icon={<MultiPaymentFeatureIcon />}
-                  title="Pelbagai Cara Bayar"
-                  description="Terima FPX, QR dan Card dalam satu sistem supaya customer lebih mudah nak buat bayaran."
-                />
-
-                <FeatureIconCard
-                  icon={<MobileManageFeatureIcon />}
-                  title="Urus Dari Phone"
-                  description="Tak perlu laptop atau PC. Semua urusan boleh dibuat terus dari phone anda."
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Who is it for */}
-      <section className="bg-slate-50 py-16 sm:py-20">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-              Sesuai untuk
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
-              BayarLink ni untuk siapa?
-            </h2>
-            <p className="mt-4 text-base leading-7 text-slate-600">
-              Sangat sesuai untuk peniaga online kecil dan sederhana yang nak
-              urus order dengan lebih mudah, jimat masa, nampak lebih gempak,
-              dan mudahkan urusan customer.
-            </p>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <MiniPill text="Home-based seller" />
-              <MiniPill text="Penjual makanan" />
-              <MiniPill text="Agent / dropshipper" />
-              <MiniPill text="Jual servis dan perkhidmatan" />
-              <MiniPill text="Online seller" />
-              <MiniPill text="Seller part-time" />
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 to-slate-800 p-8 text-white shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-300">
-              Perlu ke?
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight">
-              Bila dapat urus order dengan baik,
+            <p className="mt-5 text-lg leading-8 text-slate-600">
+              Customer sekarang dah upgrade cara membeli.
               <br />
-              customer lebih yakin.
-            </h2>
-            <p className="mt-4 max-w-xl text-base leading-7 text-white/75">
-              Dengan 1 link shop yang lebih tersusun, customer lebih senang nak
-              pilih dan order, dan lebih mudah nak bayar dengan pelbagai pilihan
-              bayaran.
-            </p>
-
-            <div className="mt-8 grid grid-cols-2 gap-4">
-              <DarkStat title="Lebih terurus" subtitle="berbanding PM manual" />
-              <DarkStat title="Lebih mudah" subtitle="untuk customer order" />
-              <DarkStat title="Lebih cepat" subtitle="untuk seller urus order" />
-              <DarkStat title="Lebih yakin" subtitle="untuk scale bisnes" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section className="border-t border-slate-200 bg-white py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-violet-600">
-              Pricing
-            </p>
-            <h2 className="mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">
-              Tiada bayaran. Mula dengan ZERO Kos!
-            </h2>
-            <p className="mt-4 text-slate-600">
-              Pilih plan yang sesuai dengan tahap bisnes anda.
-              (Buat masa ini hanya ada pakej Basic)
+              Mereka nak yang cepat dan mudah. Pilih-pilih terus bayar!
             </p>
           </div>
 
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-900">Basic (Beta)</h3>
-              <p className="mt-2 text-sm text-slate-500">
-                Sesuai untuk peniaga baru, kecil dan sederhana
-              </p>
+          {/* POINTS */}
+          <div className="mx-auto mt-14 grid max-w-5xl gap-5 md:grid-cols-4">
+            {[
+              { icon: "⚡", text: "Nak proses yang mudah" },
+              { icon: "💳", text: "Suka banyak pilihan bayaran" },
+              { icon: "⏱", text: "Beli tempat lain kalau lambat" },
+              { icon: "🌐", text: "Order online dah jadi norma baru" },
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="group rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
+              >
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-2xl transition duration-300 group-hover:scale-110">
+                  {item.icon}
+                </div>
 
-              <div className="mt-6">
-                <span className="text-4xl font-extrabold">RM0</span>
-                <span className="text-slate-500">/month</span>
+                <p className="text-base font-semibold leading-7 text-slate-800">
+                  {item.text}
+                </p>
               </div>
+            ))}
+          </div>
 
-              <p className="mt-4 text-sm text-slate-600">
-                Transaction fee standard:
-              </p>
-              <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                <li>• FPX: RM1.50</li>
-                <li>• QR: 2.5%</li>
-                <li>• Boost PayFlex = 2.5%</li>
-                <li>• Card: RM1 + 2.5%</li>
-                <li>• T+1 payout to merchant account</li>
-              </ul>
+          {/* CTA */}
+          <div className="mx-auto mt-16 max-w-3xl rounded-[32px] border border-slate-200 bg-gradient-to-br from-white via-blue-50/40 to-white px-6 py-10 text-center shadow-[0_20px_60px_rgba(15,23,42,0.06)] md:px-10">
+            <h3 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
+              Jangan terus ketinggalan lagi.
+              <br />
+              Nak Maju kena Laju!
+            </h3>
 
-              <div className="mt-6 space-y-2 text-sm text-slate-700">
-                <p>✔ Shop link sendiri</p>
-                <p>✔ Unlimited produk</p>
-                <p>✔ WhatsApp order flow</p>
-              </div>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <a
+                href="/login"
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
+              >
+                Daftar Sekarang
+              </a>
 
               <a
-                href={primaryCtaHref}
-                className="mt-8 block rounded-xl bg-slate-900 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
+                href="https://wa.me/60163352087"
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-100"
               >
-                Get Started
+                Saya Nak Bantuan Setup
               </a>
             </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="relative scale-[1.03] rounded-3xl border-2 border-violet-600 bg-white p-6 shadow-xl">
-              <div className="absolute right-0 top-0 rounded-bl-xl rounded-tr-3xl bg-violet-600 px-3 py-1 text-xs text-white">
-                Popular
+      {/* HOW IT WORKS */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+              Cara guna
+            </p>
+
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+              Macam mana nak guna BayarLink?
+            </h2>
+
+            <p className="mt-5 text-lg text-slate-600">
+              Simple. Tak perlu pening. 10 minit dah boleh mula jual.
+            </p>
+          </div>
+
+          <div className="mt-16 grid gap-8 md:grid-cols-4">
+            {[
+              {
+                step: "01",
+                title: "Daftar",
+                desc: "Buka akaun dan ikut step yang disediakan.",
+              },
+              {
+                step: "02",
+                title: "Setup Produk",
+                desc: "Masukkan menu, harga, dan info kedai.",
+              },
+              {
+                step: "03",
+                title: "Share Link",
+                desc: "Kongsi ke WhatsApp, Telegram, Facebook atau mana-mana platform.",
+              },
+              {
+                step: "04",
+                title: "Tak Pandai?",
+                desc: "Kami bantu setup sampai siap.",
+              },
+            ].map((item, i) => (
+              <div key={i} className="text-center md:text-left">
+                <div className="text-4xl font-extrabold text-blue-100">
+                  {item.step}
+                </div>
+
+                <h3 className="mt-2 text-lg font-bold text-slate-900">
+                  {item.title}
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {item.desc}
+                </p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              <h3 className="text-xl font-bold text-slate-900">Pro</h3>
-              <p className="mt-2 text-sm text-slate-500">
-                Sesuai untuk peniaga aktif dan nak scale up
+      {/* FINAL CTA */}
+      <section className="bg-white py-28">
+        <div className="mx-auto max-w-5xl px-6 md:px-8">
+          <div className="relative overflow-hidden rounded-[36px] border border-blue-100 bg-white px-8 py-14 text-center shadow-[0_30px_90px_rgba(37,99,235,0.10)]">
+            {/* Stripe-like gradient background */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.16),transparent_30%),radial-gradient(circle_at_80%_10%,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_50%_100%,rgba(168,85,247,0.10),transparent_35%)]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/65 to-blue-50/70" />
+
+            <div className="relative z-10">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+                Mula sekarang
               </p>
 
-              <div className="mt-6">
-                <span className="text-4xl font-extrabold">RM19</span>
-                <span className="text-slate-500">/month</span>
+              <div className="mt-8">
+                <div className="text-5xl font-extrabold tracking-tight text-blue-600 md:text-7xl">
+                  RM{price}.00
+                </div>
+
+                <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+                  ZERO Kos!
+                </h2>
               </div>
 
-              <p className="mt-4 text-sm text-slate-600">
-                Lower transaction fee:
+              <p className="mt-6 text-lg leading-8 text-slate-700">
+                Tak payah bayar! Daftar dan terus pakai.
               </p>
-              <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                <li>• FPX: RM1.30</li>
-                <li>• QR: 2.2%</li>
-                <li>• Boost PayFlex = 2.2%</li>
-                <li>• Card: RM1 + 2.2%</li>
-              </ul>
 
-              <div className="mt-6 space-y-2 text-sm text-slate-700">
-                <p>✔ Semua dalam Free</p>
-                <p>✔ Remove watermark</p>
-                <p>✔ Analytics asas</p>
-                <p>✔ Auto WhatsApp summary</p>
+              <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
+                <a
+                  href="/login"
+                  className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
+                >
+                  Cuba Free Sekarang
+                </a>
+
+                <a
+                  href="https://wa.me/60163352087"
+                  className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-6 font-semibold text-slate-700 backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white"
+                >
+                  WhatsApp Kami
+                </a>
               </div>
 
-              <button
-                type="button"
-                disabled
-                className="mt-8 block w-full cursor-not-allowed rounded-xl bg-violet-200 py-3 text-center font-semibold text-violet-700 opacity-80"
-              >
-                Coming Soon
-              </button>
+              <p className="mt-8 text-base leading-7 text-slate-600">
+                Ini bukan macam app besar yang lain.
+                <br />
+                BayarLink dibina khas untuk Home-base Seller.
+              </p>
             </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-900">Growth</h3>
-              <p className="mt-2 text-sm text-slate-500">
-                Sesuai untuk nak scale up bisnes
-              </p>
+      {/* PRICING */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+              Harga & Caj
+            </p>
 
-              <div className="mt-6">
-                <span className="text-4xl font-extrabold">RM49</span>
-                <span className="text-slate-500">/month</span>
-              </div>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+              Pricing yang jelas untuk seller
+            </h2>
 
-              <p className="mt-4 text-sm text-slate-600">
-                Lowest transaction fee:
-              </p>
-              <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                <li>• FPX: RM1.10</li>
-                <li>• QR: 2.0%</li>
-                <li>• Boost PayFlex = 2.0%</li>
-                <li>• Card: RM1 + 1.9%</li>
-              </ul>
+            <p className="mt-5 text-lg leading-8 text-slate-600">
+              Tiada caj setup. Tiada kontrak. Hanya bayar bila anda berjaya
+              menjual.
+            </p>
+          </div>
 
-              <div className="mt-6 space-y-2 text-sm text-slate-700">
-                <p>✔ Semua dalam Pro</p>
-                <p>✔ Multi staff</p>
-                <p>✔ Advanced automation</p>
-                <p>✔ Inventory tracking</p>
-              </div>
-
-              <button
-                type="button"
-                disabled
-                className="mt-8 block w-full cursor-not-allowed rounded-xl bg-slate-200 py-3 text-center font-semibold text-slate-600 opacity-80"
+          <div className="mt-14 grid gap-6 lg:grid-cols-3">
+            {[
+              {
+                name: "Basic (Beta)",
+                desc: "Sesuai untuk peniaga baru, kecil dan sederhana",
+                price: "RM0",
+                feeTitle: "Transaction fee standard:",
+                fees: [
+                  "FPX: RM1.50",
+                  "QR: 2.5%",
+                  "Boost PayFlex: 2.5%",
+                  "Card: RM1 + 2.5%",
+                  "T+1 payout to merchant account",
+                ],
+                features: [
+                  "Shop link sendiri",
+                  "Unlimited produk",
+                  "WhatsApp order flow",
+                ],
+                button: "Get Started",
+                active: true,
+              },
+              {
+                name: "Pro",
+                desc: "Sesuai untuk peniaga aktif dan nak scale up",
+                price: "RM19",
+                feeTitle: "Lower transaction fee:",
+                fees: [
+                  "FPX: RM1.30",
+                  "QR: 2.2%",
+                  "Boost PayFlex: 2.2%",
+                  "Card: RM1 + 2.2%",
+                ],
+                features: [
+                  "Semua dalam Free",
+                  "Remove watermark",
+                  "Analytics asas",
+                  "Auto WhatsApp summary",
+                ],
+                button: "Coming Soon",
+                active: false,
+                popular: true,
+              },
+              {
+                name: "Growth",
+                desc: "Sesuai untuk nak scale up bisnes",
+                price: "RM49",
+                feeTitle: "Lowest transaction fee:",
+                fees: [
+                  "FPX: RM1.10",
+                  "QR: 2.0%",
+                  "Boost PayFlex: 2.0%",
+                  "Card: RM1 + 1.9%",
+                ],
+                features: [
+                  "Semua dalam Pro",
+                  "Multi staff",
+                  "Advanced automation",
+                  "Inventory tracking",
+                ],
+                button: "Coming Soon",
+                active: false,
+              },
+            ].map((plan) => (
+              <div
+                key={plan.name}
+                className={`relative rounded-[28px] border bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl ${
+                  plan.popular
+                    ? "border-purple-500 ring-1 ring-purple-500"
+                    : "border-slate-200"
+                }`}
               >
-                Coming Soon
-              </button>
-            </div>
+                {plan.popular && (
+                  <div className="absolute right-6 top-0 rounded-b-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white">
+                    Popular
+                  </div>
+                )}
+
+                <h3 className="text-2xl font-extrabold text-slate-900">
+                  {plan.name}
+                </h3>
+
+                <p className="mt-3 min-h-[48px] text-base leading-7 text-slate-500">
+                  {plan.desc}
+                </p>
+
+                <div className="mt-6 flex items-end gap-1">
+                  <span className="text-5xl font-extrabold text-slate-900">
+                    {plan.price}
+                  </span>
+                  <span className="pb-2 text-slate-500">/month</span>
+                </div>
+
+                <div className="mt-7">
+                  <p className="font-semibold text-slate-600">
+                    {plan.feeTitle}
+                  </p>
+                  <ul className="mt-3 space-y-2 text-slate-600">
+                    {plan.fees.map((fee) => (
+                      <li key={fee}>• {fee}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-8 space-y-3">
+                  {plan.features.map((feature) => (
+                    <div key={feature} className="flex items-start gap-3">
+                      <span className="text-slate-900">✔</span>
+                      <p className="text-slate-700">{feature}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {plan.active ? (
+                  <a
+                    href="/login"
+                    className="mt-9 inline-flex h-12 w-full items-center justify-center rounded-xl bg-slate-900 px-6 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+                  >
+                    {plan.button}
+                  </a>
+                ) : (
+                  <button
+                    disabled
+                    className="mt-9 inline-flex h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-slate-100 px-6 font-semibold text-slate-500"
+                  >
+                    {plan.button}
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
 
           <p className="mt-10 text-center text-sm text-slate-500">
@@ -512,620 +834,248 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="border-t border-slate-200 bg-slate-50 py-16 sm:py-20">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-700">
-              FAQ
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-              Soalan yang selalu ditanya
-            </h2>
-            <p className="mt-4 text-base leading-7 text-slate-600">
-              Ini antara soalan paling biasa sebelum orang mula guna BayarLink.
-            </p>
-          </div>
+      
+      {/* SETUP HELP */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
+          <div className="grid items-center gap-12 md:grid-cols-2">
+            {/* LEFT CONTENT */}
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-600">
+                Bantuan setup
+              </p>
 
-          <div className="mt-12 grid gap-4">
-            <FaqCard
-              question="Perlu install app ke?"
-              answer="Tak perlu. BayarLink ialah sistem berasaskan web, jadi anda boleh terus guna dari phone atau laptop."
-            />
-            <FaqCard
-              question="Berapa lama nak setup shop?"
-              answer="Setup asas boleh siap dengan sangat cepat. Seller hanya perlu masukkan produk dan share link shop."
-            />
-            <FaqCard
-              question="Kena bayar apa-apa ke?"
-              answer="Tak perlu bayar apa-apa yuran untuk mula.
-              Daftar sahaja dan terus boleh guna BayarLink.
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+                Tak pandai setup?
+                <br />
+                Roger je team kami.
+              </h2>
 
-              Kami hanya kenakan caj kecil untuk setiap transaksi yang berjaya sahaja.
-              Tiada caj bulanan, tiada caj tersembunyi."
-            />
-            <FaqCard
-              question="Sesuai untuk bisnes kecil ke?"
-              answer="Ya. Memang sesuai untuk home-based seller, agent, dropshipper, peniaga makanan, dan seller WhatsApp."
-            />
-            <FaqCard
-              question="Siapa yang boleh daftar?"
-              answer="Semua orang boleh daftar, sama ada individu atau syarikat."
-            />
-            <FaqCard
-              question="Customer order macam mana?"
-              answer="Customer buka link shop anda, tak perlu download app, pilih menu / produk, isi maklumat ringkas dan buat bayaran."
-            />
-            <FaqCard
-              question="Kalau saya jual servis pun boleh?"
-              answer="Boleh. BayarLink bukan untuk produk sahaja, malah sesuai juga untuk seller yang jual servis atau pakej."
-            />
+              <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
+                Team kami bantu setup kedai anda dari A sampai siap.
+              </p>
+
+              {/* LIST */}
+              <div className="mt-8 space-y-4">
+                {[
+                  "Bantu setup kedai anda",
+                  "Bantu masukkan produk",
+                  "Tunjuk cara guna",
+                  "Bantu sampai anda ready",
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-3">
+                    <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+                      ✓
+                    </div>
+                    <p className="text-base font-medium leading-7 text-slate-800">
+                      {item}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA DESKTOP */}
+              <a
+                href="https://wa.me/60163352087?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
+                className="mt-10 hidden h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 md:inline-flex"
+              >
+                WhatsApp Kami
+              </a>
+            </div>
+
+            {/* RIGHT IMAGE */}
+            <div className="order-last md:order-none">
+              <div className="relative">
+                <img
+                  src="/Bantuan.png"
+                  alt="Bantuan setup BayarLink"
+                  className="mx-auto w-full max-w-[520px] object-contain transition duration-500 hover:scale-105"
+                />
+
+                {/* subtle glow */}
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(16,185,129,0.08),transparent_60%)]" />
+              </div>
+
+              {/* CTA MOBILE */}
+              <a
+                href="https://wa.me/60163352087?text=BANTU%20SAYA%20SETUP%20BAYARLINK"
+                className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 px-6 font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 md:hidden"
+              >
+                WhatsApp Kami
+              </a>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="relative overflow-hidden py-16 sm:py-20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(124,58,237,0.12),_transparent_35%)]" />
-        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
-            Tak payah pening lagi.
-            <br />
-            Start jual cara lebih bijak.
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600">
-            Buat shop link sendiri, share terus di WhatsApp, dan bagi customer
-            order dengan cara yang lebih mudah.
+      {/* FEATURES */}
+      <section className="bg-slate-50 py-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+              Features
+            </p>
+
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+              Simple tapi Lengkap
+            </h2>
+
+            <p className="mt-5 text-lg leading-8 text-slate-600">
+              Dibina khas untuk seller home-based yang menjual di group WhatsApp
+              / Facebook.
+            </p>
+          </div>
+
+          <div className="mt-14 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {features.map((feature, i) => {
+              const colors = [
+                "bg-blue-50 text-blue-700 border-blue-100",
+                "bg-emerald-50 text-emerald-700 border-emerald-100",
+                "bg-purple-50 text-purple-700 border-purple-100",
+                "bg-orange-50 text-orange-700 border-orange-100",
+                "bg-pink-50 text-pink-700 border-pink-100",
+              ];
+
+              const colorPattern = [
+                0, 3, 1, 4, 2, 2, 0, 4, 1, 3, 4, 2, 3, 0, 1, 1, 4, 0, 3,
+                2,
+              ];
+
+              const color = colors[colorPattern[i % colorPattern.length]];
+
+              return (
+                <div
+                  key={feature}
+                  className={`group rounded-2xl border px-4 py-4 text-center text-sm font-semibold shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-slate-900 hover:shadow-md ${color}`}
+                >
+                  {feature}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+
+
+      {/* TESTIMONIALS */}
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+              Testimoni
+            </p>
+
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+              Ramai yang Dah Cuba BayarLink
+            </h2>
+
+            <p className="mt-5 text-lg leading-8 text-slate-600">
+              Anda bila lagi?
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-6 md:grid-cols-3">
+            {testimonials.map((item) => (
+              <div
+                key={item.name}
+                className="rounded-[28px] border border-slate-200 bg-white p-7 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="flex items-center gap-4">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="h-16 w-16 rounded-full object-cover ring-2 ring-white shadow-md"
+                  />
+
+                  <div>
+                    <p className="font-bold text-slate-900">{item.name}</p>
+                    <p className="text-sm text-slate-500">{item.business}</p>
+                  </div>
+                </div>
+
+                <p className="mt-6 text-base leading-7 text-slate-600">
+                  “{item.quote}”
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+{/* FINAL CTA – NO NEED BIG BUSINESS */}
+<section className="bg-slate-50 py-28">
+  <div className="mx-auto max-w-3xl px-6 text-center md:px-8">
+
+    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600">
+      Mula sekarang
+    </p>
+
+    <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+      Tak Perlu Business Dah Besar
+      <br />
+      Baru Nak Guna Sistem
+    </h2>
+
+    <p className="mt-6 text-lg leading-8 text-slate-600">
+      BayarLink sesuai untuk semua saiz business.
+      <br />
+      Lagi awal guna, lagi mudah urus bila order makin banyak nanti.
+    </p>
+
+    <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+      <a
+        href="/login"
+        className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
+      >
+        Daftar Sekarang
+      </a>
+
+      <a
+        href="https://wa.me/60163352087"
+        className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-100"
+      >
+        WhatsApp Kami
+      </a>
+    </div>
+
+  </div>
+</section>
+      
+      
+      {/* FOOTER */}
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 md:flex-row md:items-center md:justify-between md:px-8">
+          <a href="/" className="flex items-center">
+            <img src="/logo.svg" alt="BayarLink" className="h-9 w-auto" />
+          </a>
+
+          <p className="text-sm text-slate-500">
+            © {new Date().getFullYear()} BayarLink. All rights reserved. By
+            Neugens Solution
           </p>
 
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <a
-              href={primaryCtaHref}
-              className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Sign Up Free
-            </a>
-            <a
-              href="/login"
-              className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
+          <div className="flex gap-4 text-sm font-medium text-slate-500">
+            <a href="/login" className="hover:text-slate-900">
               Login
             </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-            <div className="text-center md:text-left">
-              <h3 className="text-lg font-semibold text-slate-900">
-                BayarLink{" "}
-                <span className="text-xs font-medium text-amber-500">BETA</span>
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Mudah jual. Mudah bayar.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
-              <a href="/terms" className="transition hover:text-slate-900">
-                Terms &amp; Conditions
-              </a>
-              <a href="/privacy" className="transition hover:text-slate-900">
-                Privacy Policy
-              </a>
-              <a href="/login" className="transition hover:text-slate-900">
-                Login
-              </a>
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: 20,
-              textAlign: "center",
-              fontSize: 12,
-              color: "#94a3b8",
-              lineHeight: 1.6,
-            }}
-          >
-            <div>© {new Date().getFullYear()} BayarLink. All rights reserved.</div>
-            <div style={{ marginTop: 4 }}>
-              by <strong>Neugens Solution</strong> (Reg No: 202503301282
-              (AS0504872))
-            </div>
+            <a href="/login" className="hover:text-slate-900">
+              Sign Up
+            </a>
           </div>
         </div>
       </footer>
 
-      {/* WhatsApp Floating Button */}
-      <a
-        href="https://wa.me/60163352087"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Chat on WhatsApp"
-        className="fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_10px_30px_rgba(37,211,102,0.35)] transition hover:scale-105"
-      >
-        <WhatsAppIcon />
-      </a>
+{/* FLOATING WHATSAPP */}
+<a
+  href="https://wa.me/60163352087"
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label="WhatsApp BayarLink"
+  className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_12px_30px_rgba(16,185,129,0.35)] transition hover:-translate-y-1 hover:bg-emerald-600"
+>
+  <span className="text-2xl">💬</span>
+</a>
     </main>
-  );
-}
-
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-700">
-        {icon}
-      </div>
-      <h3 className="text-lg font-bold text-slate-950">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
-    </div>
-  );
-}
-
-function SolutionCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-        {icon}
-      </div>
-      <h3 className="text-lg font-bold text-slate-950">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
-    </div>
-  );
-}
-
-function FeatureIconCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 group-hover:opacity-60 hover:-translate-y-1 hover:!opacity-100 hover:border-violet-200 hover:shadow-lg">
-      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 transition duration-300 group-hover:bg-violet-100 group-hover:scale-105">
-        {icon}
-      </div>
-
-      <h3 className="text-lg font-bold text-slate-950 transition-colors duration-300 group-hover:text-violet-700">
-        {title}
-      </h3>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
-    </div>
-  );
-}
-
-function MiniPill({ text }: { text: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
-      {text}
-    </div>
-  );
-}
-
-function DarkStat({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-      <p className="text-lg font-bold">{title}</p>
-      <p className="mt-1 text-xs text-white/65">{subtitle}</p>
-    </div>
-  );
-}
-
-function FaqCard({
-  question,
-  answer,
-}: {
-  question: string;
-  answer: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h3 className="text-base font-bold text-slate-950">{question}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{answer}</p>
-    </div>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="h-4 w-4"
-      aria-hidden="true"
-    >
-      <path
-        fillRule="evenodd"
-        d="M16.704 5.29a1 1 0 010 1.42l-7.2 7.2a1 1 0 01-1.414 0l-3.6-3.6a1 1 0 111.414-1.42l2.893 2.894 6.493-6.494a1 1 0 011.414 0z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
-function WhatsAppIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="h-6 w-6"
-      aria-hidden="true"
-    >
-      <path d="M20.52 3.48A11.86 11.86 0 0012.07 0C5.48 0 .12 5.36.12 11.95c0 2.1.55 4.16 1.6 5.98L0 24l6.24-1.63a11.9 11.9 0 005.83 1.49h.01c6.59 0 11.95-5.36 11.95-11.95 0-3.19-1.24-6.19-3.5-8.43zm-8.45 18.36h-.01a9.9 9.9 0 01-5.04-1.38l-.36-.21-3.7.97.99-3.61-.24-.37a9.86 9.86 0 01-1.52-5.29c0-5.45 4.44-9.89 9.9-9.89 2.64 0 5.11 1.03 6.98 2.9a9.82 9.82 0 012.9 6.99c0 5.45-4.44 9.89-9.9 9.89zm5.43-7.42c-.3-.15-1.77-.88-2.05-.98-.27-.1-.47-.15-.67.15-.2.3-.77.98-.95 1.18-.17.2-.35.22-.64.08-.3-.15-1.25-.46-2.38-1.46-.88-.78-1.48-1.74-1.65-2.04-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.08-.15-.67-1.62-.92-2.23-.24-.58-.48-.5-.67-.51h-.57c-.2 0-.52.08-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.88 1.22 3.08c.15.2 2.1 3.21 5.08 4.5.71.31 1.27.5 1.7.64.71.23 1.35.2 1.86.12.57-.08 1.77-.72 2.03-1.41.25-.69.25-1.28.17-1.41-.08-.12-.27-.2-.57-.35z" />
-    </svg>
-  );
-}
-
-function ChatIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M8 10h8M8 14h5m7-2a8 8 0 11-3.03-6.27A8 8 0 0119 12z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function WalletIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M3 8.5A2.5 2.5 0 015.5 6H18a3 3 0 013 3v7a2 2 0 01-2 2H5.5A2.5 2.5 0 013 15.5v-7zm0 1.5h18M16.5 13h2"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function BoxIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18m8-13.5l-8 4.5-8-4.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function AlertIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M12 9v4m0 4h.01M10.29 3.86L1.82 18A2 2 0 003.53 21h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function LinkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M10 13a5 5 0 007.07 0l2.83-2.83a5 5 0 10-7.07-7.07L11.5 4.43M14 11a5 5 0 01-7.07 0L4.1 8.17A5 5 0 1111.17 1.1L12.5 2.43"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function FormIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M8 6h12M8 12h12M8 18h12M3 6h.01M3 12h.01M3 18h.01"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function PaymentIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 16.5v-9zm0 3.5h18M7 15h4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function StockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M4 19V5m5 14V9m5 10v-6m5 6V7"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M8 3h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V5a2 2 0 012-2zm4 15h.01"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function SystemIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M4 5h16v6H4V5zm0 8h7v6H4v-6zm9 0h7v6h-7v-6z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ShopLinkFeatureIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M10 13a4 4 0 005.66 0l2.12-2.12a4 4 0 10-5.66-5.66L10.5 6.84"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M14 11a4 4 0 01-5.66 0L6.22 8.88a4 4 0 115.66-5.66L13.5 4.84"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function AddOnFeatureIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M12 3l7 4v10l-7 4-7-4V7l7-4z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 8v8M8 12h8"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function SlotFeatureIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M8 2v3M16 2v3M4 7h16"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <rect
-        x="4"
-        y="4"
-        width="16"
-        height="16"
-        rx="3"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M12 10v3l2 1.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function WhatsAppFlowFeatureIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M20 11.5A8.5 8.5 0 115.1 17l-1.6 3.5 3.8-1.2A8.5 8.5 0 0020 11.5z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9 11h6M9 14h4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function OrderStatusFeatureIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M9 6h11M9 12h11M9 18h11"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M4 6.5l1.2 1.2L7.5 5.5M4 12.5l1.2 1.2 2.3-2.2M4 18.5l1.2 1.2 2.3-2.2"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function AutoPaymentFeatureIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <rect
-        x="3"
-        y="6"
-        width="18"
-        height="12"
-        rx="2.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M3 10h18"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M8 15l2 2 4-4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function StockGuardFeatureIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M12 3l7 4v5c0 4.5-2.8 7.5-7 9-4.2-1.5-7-4.5-7-9V7l7-4z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9.5 12.5l1.7 1.7 3.3-3.4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function MultiPaymentFeatureIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <rect
-        x="2.5"
-        y="6"
-        width="13"
-        height="9"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M2.5 9h13"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M18 9.5h3M18 13h3M18 16.5h3"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function MobileManageFeatureIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <rect
-        x="7"
-        y="2.5"
-        width="10"
-        height="19"
-        rx="2.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-      <path
-        d="M10 6.5h4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <circle cx="12" cy="17.5" r="1" fill="currentColor" />
-    </svg>
   );
 }
