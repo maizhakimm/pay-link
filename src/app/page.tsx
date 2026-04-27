@@ -1042,6 +1042,7 @@ export default function LandingPage() {
   </div>
 </section>
       
+      
       {/* FOOTER */}
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 md:flex-row md:items-center md:justify-between md:px-8">
@@ -1064,6 +1065,17 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+{/* FLOATING WHATSAPP */}
+<a
+  href="https://wa.me/60163352087"
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label="WhatsApp BayarLink"
+  className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_12px_30px_rgba(16,185,129,0.35)] transition hover:-translate-y-1 hover:bg-emerald-600"
+>
+  <span className="text-2xl">💬</span>
+</a>
     </main>
   );
 }
