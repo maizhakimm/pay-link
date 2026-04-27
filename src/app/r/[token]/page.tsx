@@ -141,13 +141,28 @@ Terima kasih 🙏`
           </div>
         </div>
 
-        {/* STATUS */}
-        <div className="border rounded-xl p-4 text-center">
-          <p className="text-sm text-gray-500">Order Status</p>
-          <p className="font-semibold text-yellow-600">
-            {order.fulfillment_status}
-          </p>
-        </div>
+{/* STATUS */}
+<div className="border rounded-xl p-4 text-center">
+  <p className="text-sm text-gray-500">Status Order</p>
+
+  <p className="font-semibold">
+    {order.fulfillment_status === 'pending' && (
+      <span className="text-yellow-600">Menunggu pengesahan</span>
+    )}
+
+    {order.fulfillment_status === 'processing' && (
+      <span className="text-blue-600">Sedang disediakan</span>
+    )}
+
+    {order.fulfillment_status === 'completed' && (
+      <span className="text-green-600">Selesai</span>
+    )}
+
+    {order.fulfillment_status === 'cancelled' && (
+      <span className="text-red-600">Dibatalkan</span>
+    )}
+  </p>
+</div>
 
         {/* BUTTON */}
         <a
