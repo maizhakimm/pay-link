@@ -87,6 +87,10 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
+function generateReceiptToken() {
+  return crypto.randomUUID().replace(/-/g, '')
+}
+
 function mapPaymentMethod(channel: number) {
   if (channel === BAYARCASH_CHANNELS.FPX) return 'FPX'
   if (channel === BAYARCASH_CHANNELS.CARD) return 'CARD'
@@ -411,6 +415,7 @@ export async function POST(req: NextRequest) {
 
     const firstProduct = validItems[0].product
     const orderNumber = `ORD-${Date.now()}`
+    const receiptToken = generateReceiptToken()
     const amount = totalAmount.toFixed(2)
     const buyerAddress = buildBuyerAddress(delivery)
 
@@ -478,6 +483,7 @@ export async function POST(req: NextRequest) {
 
         order_number: orderNumber,
         order_no: orderNumber,
+        receipt_token: receiptToken,
 
         payment_provider: 'bayarcash',
         payment_channel: paymentChannel,
