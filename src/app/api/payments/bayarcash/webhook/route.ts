@@ -354,6 +354,9 @@ export async function POST(req: NextRequest) {
         gateway_status_description: statusDescription,
         payment_status: newPaymentStatus,
         payout_status: statusNumber === 3 ? 'eligible' : 'unpaid',
+        paid_at: statusNumber === 3 ? new Date().toISOString() : null,
+        settlement_days: statusNumber === 3 ? 1 : null,
+        eligible_payout_at: statusNumber === 3 ? new Date().toISOString() : null,
 
         // Legacy compatibility
         gateway_fee: feeBreakdown.sellerFeeAmount,
