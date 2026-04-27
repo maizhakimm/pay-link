@@ -216,7 +216,8 @@ export default function PaymentReturnClient() {
 
         // 🔥 redirect bila order dah load
         if (Number(status) === 3 && foundOrder?.receipt_token) {
-        window.location.href = `/r/${foundOrder.receipt_token}`
+        window.location.replace(`/r/${foundOrder.receipt_token}`)
+        return
         }
 
         if (foundOrder?.seller_profile_id) {
@@ -267,10 +268,7 @@ export default function PaymentReturnClient() {
           }),
         })
 
-        // 🔥 redirect to receipt page
-        if (order?.receipt_token) {
-          window.location.href = `/payment-return?order_number=${cleanOrderNumber}`
-        }
+        
       } catch (error) {
         console.error('Manual confirm payment failed:', error)
       }
