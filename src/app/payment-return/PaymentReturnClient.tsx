@@ -18,6 +18,7 @@ type OrderItem = {
 type OrderData = {
   id: string
   order_number?: string | null
+  receipt_token?: string | null
   amount?: string | number | null
   total_amount?: number | null
   customer_name?: string | null
@@ -213,6 +214,25 @@ export default function PaymentReturnClient() {
 
         setOrder(foundOrder)
 
+        // 🔥 redirect bila order dah load
+        if (Number(status) === 3 && foundOrder?.receipt_token) {
+
+        // 🔥 trigger telegram dulu
+        await fetch('/api/notifications/telegram-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            order_number: foundOrder.order_number || cleanOrderNumber,
+          }),
+        })
+
+        // 🔥 baru redirect
+        window.location.replace(`/r/${foundOrder.receipt_token}`)
+        return
+      }
+
         if (foundOrder?.seller_profile_id) {
           const { data: seller } = await supabase
             .from('seller_profiles')
@@ -238,7 +258,7 @@ export default function PaymentReturnClient() {
     }
 
     loadOrder()
-  }, [cleanOrderNumber, cleanPaymentIntentId])
+  }, [cleanOrderNumber, cleanPaymentIntentId, status])
 
   useEffect(() => {
     async function autoConfirmPayment() {
@@ -260,6 +280,7 @@ export default function PaymentReturnClient() {
             payment_intent_id: cleanPaymentIntentId || null,
           }),
         })
+                
       } catch (error) {
         console.error('Manual confirm payment failed:', error)
       }

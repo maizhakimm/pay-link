@@ -132,6 +132,10 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
+function generateReceiptToken() {
+  return crypto.randomUUID().replace(/-/g, '')
+}
+
 function estimateGatewayFee() {
   return 1.0
 }
@@ -702,6 +706,7 @@ export async function POST(req: NextRequest) {
 
     const firstProduct = validItems[0].product
     const orderNumber = `ORD-${Date.now()}`
+    const receiptToken = generateReceiptToken()
     const amount = totalAmount.toFixed(2)
     const buyerAddress =
       distanceDelivery.resolvedAddress || buildBuyerAddress(delivery)
@@ -782,6 +787,7 @@ export async function POST(req: NextRequest) {
 
         order_number: orderNumber,
         order_no: orderNumber,
+        receipt_token: receiptToken,
 
         payment_provider: 'bayarcash',
         payment_channel: paymentChannel,
@@ -916,6 +922,8 @@ export async function POST(req: NextRequest) {
       ok: true,
       payment_url: parsedResponse?.url || null,
       order_number: orderNumber,
+      receipt_token: receiptToken,
+      receipt_url: `${process.env.NEXT_PUBLIC_APP_URL}/r/${receiptToken}`,
     })
   } catch (error) {
     const message =

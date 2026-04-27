@@ -217,6 +217,23 @@ export async function POST(req: NextRequest) {
               })
               .eq('order_number', orderNumber)
 
+              // 🔥 Auto notify seller via Telegram after successful payment
+              if (statusNumber === 3) {
+                try {
+                  await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/telegram-order`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      order_number: orderNumber,
+                    }),
+                  })
+                } catch (notifyError) {
+                  console.error('Telegram notification failed:', notifyError)
+                }
+              }
+            
             return NextResponse.json(
               { ok: false, error: 'Stock conflict' },
               { status: 409 }
