@@ -25,7 +25,7 @@ export default async function ReceiptPage({ params }: Props) {
   // 🔥 get seller
   const { data: seller } = await supabase
     .from('seller_profiles')
-    .select('store_name, whatsapp')
+    .select('store_name, whatsapp, profile_image')
     .eq('id', order.seller_profile_id)
     .single()
 
@@ -35,13 +35,24 @@ export default async function ReceiptPage({ params }: Props) {
     .select('*')
     .eq('order_id', order.id)
 
-  const waText = encodeURIComponent(
-    `Hi ${seller?.store_name || ''},\n\nSaya dah buat bayaran:\n\nOrder No: ${
-      order.order_number
-    }\nTotal: RM${Number(order.total_amount || 0).toFixed(
-      2
-    )}\n\nReceipt:\nhttps://www.bayarlink.my/r/${token}`
-  )
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+
+const waText = encodeURIComponent(
+  `Hi ${seller?.store_name || ''},
+
+Saya telah membuat pembayaran untuk order berikut:
+
+🧾 Order No: ${order.order_number}
+💰 Total: RM${Number(order.total_amount || 0).toFixed(2)}
+
+🔗 Receipt:
+${baseUrl}/r/${token}
+
+📊 Semak Order:
+${baseUrl}/dashboard/orders?order=${order.order_number}
+
+Terima kasih 🙏`
+)
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 flex justify-center">
@@ -49,6 +60,17 @@ export default async function ReceiptPage({ params }: Props) {
 
         {/* HEADER */}
         <div className="text-center">
+          {seller?.profile_image && (
+            <img
+              src={seller.profile_image}
+              alt={seller?.store_name || 'Seller'}
+              className="mx-auto mb-3 h-20 w-20 rounded-full object-cover border shadow-sm"
+            />
+          )}
+
+          <p className="text-lg font-bold text-gray-900">
+            {seller?.store_name}
+          </p>
           <h1 className="text-xl font-semibold">Payment Successful ✅</h1>
           <p className="text-sm text-gray-500">
             Sila hantar resit kepada seller
@@ -116,6 +138,15 @@ export default async function ReceiptPage({ params }: Props) {
         >
           Hantar Resit ke Seller
         </a>
+
+        <div className="border-t pt-4 text-center">
+          <p className="text-xs text-gray-400 mb-2">Powered by</p>
+          <img
+            src="/BayarLink-Logo-Shop-Page.svg"
+            alt="BayarLink"
+            className="h-7 mx-auto"
+          />
+        </div>
 
       </div>
     </div>
