@@ -144,7 +144,7 @@ Terima kasih 🙏`
           <img
             src="/BayarLink-Logo-Shop-Page.svg"
             alt="BayarLink"
-            className="h-7 mx-auto"
+            className="h-4 mx-auto"
           />
         </div>
 
