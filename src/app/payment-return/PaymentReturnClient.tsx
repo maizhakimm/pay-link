@@ -18,6 +18,7 @@ type OrderItem = {
 type OrderData = {
   id: string
   order_number?: string | null
+  receipt_token?: string | null
   amount?: string | number | null
   total_amount?: number | null
   customer_name?: string | null
@@ -213,6 +214,11 @@ export default function PaymentReturnClient() {
 
         setOrder(foundOrder)
 
+        // 🔥 redirect bila order dah load
+        if (Number(status) === 3 && foundOrder?.receipt_token) {
+        window.location.href = `/r/${foundOrder.receipt_token}`
+        }
+
         if (foundOrder?.seller_profile_id) {
           const { data: seller } = await supabase
             .from('seller_profiles')
@@ -260,6 +266,11 @@ export default function PaymentReturnClient() {
             payment_intent_id: cleanPaymentIntentId || null,
           }),
         })
+
+        // 🔥 redirect to receipt page
+        if (order?.receipt_token) {
+          window.location.href = `/payment-return?order_number=${cleanOrderNumber}`
+        }
       } catch (error) {
         console.error('Manual confirm payment failed:', error)
       }
