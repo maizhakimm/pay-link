@@ -21,7 +21,6 @@ export type SellerProfileLite = {
 export type OrderRow = {
   id: string
   order_number: string | null
-  order_no: string | null
   seller_profile_id: string | null
 
   buyer_name: string | null
@@ -62,7 +61,6 @@ async function getOrders(selectedSellerId?: string): Promise<OrderRow[]> {
     .select(`
       id,
       order_number,
-      order_no,
       seller_profile_id,
       buyer_name,
       buyer_email,
