@@ -181,11 +181,20 @@ function getDerivedBucket(
 ): "eligible" | "pending_settlement" | "paid_out" {
   if (order.payout_status === "paid") return "paid_out"
 
+  const payoutStatus = String(order.payout_status || "").toLowerCase()
+
   const eligibleAt = order.eligible_payout_at
     ? new Date(order.eligible_payout_at)
     : null
 
-  if (eligibleAt && eligibleAt <= now) return "eligible"
+  // 🔥 FIX: kalau tak ada eligible date → anggap eligible terus
+  if (payoutStatus === "unpaid" || payoutStatus === "eligible") {
+    if (!eligibleAt) return "eligible"
+    if (!Number.isNaN(eligibleAt.getTime()) && eligibleAt <= now) {
+      return "eligible"
+    }
+  }
+
   return "pending_settlement"
 }
 
@@ -490,7 +499,7 @@ export default function PayoutClient({
               : null
             const net = toNumber(order.net_seller_amount)
 
-            if (eligibleAt && eligibleAt <= new Date() && net > 0) {
+            if ((!eligibleAt || eligibleAt <= new Date()) && net > 0) {
               return {
                 ...order,
                 payout_status: "paid",
