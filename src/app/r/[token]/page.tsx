@@ -10,6 +10,22 @@ type Props = {
   params: { token: string }
 }
 
+function normalizeWhatsappNumber(value?: string | null) {
+  if (!value) return ''
+
+  let cleaned = value.replace(/[^\d]/g, '')
+
+  if (cleaned.startsWith('0')) {
+    cleaned = `6${cleaned}`
+  }
+
+  if (!cleaned.startsWith('60') && cleaned.length >= 9) {
+    cleaned = `60${cleaned}`
+  }
+
+  return cleaned
+}
+
 export default async function ReceiptPage({ params }: Props) {
   const token = params.token
 
@@ -132,7 +148,7 @@ Terima kasih 🙏`
 
         {/* BUTTON */}
         <a
-          href={`https://wa.me/${seller?.whatsapp}?text=${waText}`}
+          href={`https://wa.me/${normalizeWhatsappNumber(seller?.whatsapp)}?text=${waText}`}
           target="_blank"
           className="block w-full text-center bg-green-500 text-white py-3 rounded-xl font-medium"
         >
