@@ -187,7 +187,6 @@ function getDerivedBucket(
     ? new Date(order.eligible_payout_at)
     : null
 
-  // 🔥 FIX: kalau tak ada eligible date → anggap eligible terus
   if (payoutStatus === "unpaid" || payoutStatus === "eligible") {
     if (!eligibleAt) return "eligible"
     if (!Number.isNaN(eligibleAt.getTime()) && eligibleAt <= now) {
