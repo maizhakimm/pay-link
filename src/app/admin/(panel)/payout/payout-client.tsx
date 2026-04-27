@@ -8,7 +8,7 @@ type StatusFilter = "eligible" | "paid" | "all"
 type OrderRow = {
   id: string
   order_number: string | null
-  order_no: string | null
+  order_no?: string | null
   seller_profile_id: string | null
 
   buyer_name: string | null
@@ -901,7 +901,7 @@ export default function PayoutClient({
                           return (
                             <tr key={order.id} className="border-t border-slate-100">
                               <td className="px-4 py-3 font-medium text-slate-900">
-                                {order.order_number || order.order_no || "-"}
+                                {order.order_number || "-"}
                               </td>
                               <td className="px-4 py-3 text-slate-700">
                                 {order.buyer_name ||
