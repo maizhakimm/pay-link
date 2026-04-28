@@ -6,114 +6,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-type OrderRow = {
-  id: string
-  order_number: string | null
-  buyer_name: string | null
-  buyer_phone: string | null
-  buyer_address: string | null
-  customer_name: string | null
-  customer_phone: string | null
-  total_amount: number | null
-  amount: number | null
-  delivery_info: any
-  items: any
-  checkout_items: any
-  seller_profile_id: string | null
-  delivery_slot_label: string | null
-  receipt_token: string | null
-  whatsapp_notified_at: string | null
-}
-
-type SellerRow = {
-  store_name: string | null
-  whatsapp: string | null
-}
-
-function normalizeWhatsAppPhone(phone?: string | null) {
-  const cleaned = String(phone || '').replace(/\D/g, '')
-
-  if (!cleaned) return ''
-
-  if (cleaned.startsWith('0')) return `6${cleaned}`
-  if (cleaned.startsWith('60')) return cleaned
-
-  return cleaned
-}
-
-function formatItems(order: OrderRow) {
-  const sourceItems = Array.isArray(order.items)
-    ? order.items
-    : Array.isArray(order.checkout_items)
-      ? order.checkout_items
-      : []
-
-  if (!sourceItems.length) return '-'
-
-  return sourceItems
-    .map((item: any) => {
-      const name =
-        item.product_name ||
-        item.name ||
-        item.product?.name ||
-        'Item'
-
-      const quantity = Number(item.quantity || 1)
-
-      const addons = Array.isArray(item.addons)
-        ? item.addons
-            .map((addon: any) => addon.option_name || addon.name || '')
-            .filter(Boolean)
-            .join(', ')
-        : ''
-
-      const addonText = addons ? ` + ${addons}` : ''
-      const note = item.note ? ` (${item.note})` : ''
-
-      return `• ${name}${addonText} x${quantity}${note}`
-    })
-    .join('\n')
-}
-
-function formatDelivery(order: OrderRow) {
-  const deliveryInfo = order.delivery_info
-
-  if (!deliveryInfo) {
-    return order.buyer_address || '-'
-  }
-
-  const deliveryRequired = Boolean(deliveryInfo.delivery_required)
-
-  if (!deliveryRequired) {
-    return 'Pickup / No delivery'
-  }
-
-  const mode = deliveryInfo.delivery_mode || 'Delivery'
-  const fee = Number(deliveryInfo.delivery_fee || 0)
-
-  const address =
-    deliveryInfo.resolved_address ||
-    order.buyer_address ||
-    [
-      deliveryInfo.address?.address1,
-      deliveryInfo.address?.address2,
-      deliveryInfo.address?.postcode,
-      deliveryInfo.address?.city,
-      deliveryInfo.address?.district,
-      deliveryInfo.address?.state,
-    ]
-      .filter(Boolean)
-      .join(', ')
-
-  const distanceText =
-    deliveryInfo.distance_km !== null &&
-    deliveryInfo.distance_km !== undefined
-      ? ` | ${Number(deliveryInfo.distance_km).toFixed(2)}km`
-      : ''
-
-  return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${address || '-'}`
-}
-
+/* =========================
+   🔥 POST (hantar WhatsApp)
+========================= */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -140,49 +35,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const templateName =
-      process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER || 'seller_new_order'
-
-    const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en'
-
-    const { data: orderData, error: orderError } = await supabase
+    const { data: order } = await supabase
       .from('orders')
-      .select(`
-        id,
-        order_number,
-        buyer_name,
-        buyer_phone,
-        buyer_address,
-        customer_name,
-        customer_phone,
-        total_amount,
-        amount,
-        delivery_info,
-        items,
-        checkout_items,
-        seller_profile_id,
-        delivery_slot_label,
-        receipt_token,
-        whatsapp_notified_at
-      `)
+      .select('*')
       .eq('order_number', orderNumber)
       .maybeSingle()
 
-    if (orderError) {
-      return NextResponse.json(
-        { ok: false, error: orderError.message },
-        { status: 500 }
-      )
-    }
-
-    if (!orderData) {
+    if (!order) {
       return NextResponse.json(
         { ok: false, error: 'Order not found' },
         { status: 404 }
       )
     }
-
-    const order = orderData as OrderRow
 
     if (order.whatsapp_notified_at) {
       return NextResponse.json({
@@ -191,47 +55,22 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    if (!order.seller_profile_id) {
-      return NextResponse.json(
-        { ok: false, error: 'Missing seller_profile_id' },
-        { status: 400 }
-      )
-    }
-
-    const { data: sellerData, error: sellerError } = await supabase
+    const { data: seller } = await supabase
       .from('seller_profiles')
       .select('store_name, whatsapp')
       .eq('id', order.seller_profile_id)
       .maybeSingle()
 
-    if (sellerError) {
-      return NextResponse.json(
-        { ok: false, error: sellerError.message },
-        { status: 500 }
-      )
-    }
+    const phone = (seller?.whatsapp || '').replace(/\D/g, '')
 
-    const seller = sellerData as SellerRow | null
-    const sellerPhone = normalizeWhatsAppPhone(seller?.whatsapp)
-
-    if (!sellerPhone) {
+    if (!phone) {
       return NextResponse.json(
         { ok: false, error: 'Seller WhatsApp not found' },
         { status: 400 }
       )
     }
 
-    const customerName =
-      order.buyer_name ||
-      order.customer_name ||
-      '-'
-
-    const itemsText = formatItems(order)
-    const deliveryText = formatDelivery(order)
-    const slotText = order.delivery_slot_label || '-'
-    const total = Number(order.total_amount ?? order.amount ?? 0).toFixed(2)
-
-    const waRes = await fetch(
+    const res = await fetch(
       `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
       {
         method: 'POST',
@@ -241,41 +80,34 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           messaging_product: 'whatsapp',
-          to: sellerPhone,
+          to: phone,
           type: 'template',
           template: {
-            name: templateName,
-            language: {
-              code: languageCode,
-            },
+            name: process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER || 'seller_new_order',
+            language: { code: 'en' },
             components: [
               {
                 type: 'body',
                 parameters: [
-                  { type: 'text', text: order.order_number || orderNumber },
-                  { type: 'text', text: customerName },
-                  { type: 'text', text: itemsText || '-' },
-                  { type: 'text', text: total },
-                  { type: 'text', text: deliveryText || '-' },
-                  { type: 'text', text: slotText },
+                  { type: 'text', text: order.order_number },
+                  { type: 'text', text: order.buyer_name || '-' },
+                  { type: 'text', text: 'Order received' },
+                  { type: 'text', text: String(order.total_amount || 0) },
+                  { type: 'text', text: '-' },
+                  { type: 'text', text: '-' },
                 ],
               },
             ],
           },
         }),
-        cache: 'no-store',
       }
     )
 
-    const waJson = await waRes.json()
+    const json = await res.json()
 
-    if (!waRes.ok) {
+    if (!res.ok) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: 'WhatsApp send failed',
-          details: waJson,
-        },
+        { ok: false, error: json },
         { status: 500 }
       )
     }
@@ -289,16 +121,46 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      sent_to: sellerPhone,
-      result: waJson,
+      result: json,
     })
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unexpected server error'
-
     return NextResponse.json(
-      { ok: false, error: message },
+      { ok: false, error: String(error) },
       { status: 500 }
     )
   }
+}
+
+/* =========================
+   🧪 GET (test manual)
+========================= */
+export async function GET(req: NextRequest) {
+  const orderNumber = req.nextUrl.searchParams.get('order_number')
+
+  if (!orderNumber) {
+    return NextResponse.json(
+      { ok: false, error: 'Missing order_number' },
+      { status: 400 }
+    )
+  }
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my'
+
+  const res = await fetch(`${baseUrl}/api/notifications/whatsapp-order`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      order_number: orderNumber,
+    }),
+  })
+
+  const json = await res.json()
+
+  return NextResponse.json({
+    ok: res.ok,
+    result: json,
+  })
 }
