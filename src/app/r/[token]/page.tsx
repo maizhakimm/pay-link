@@ -13,26 +13,9 @@ type Props = {
   params: { token: string }
 }
 
-function normalizeWhatsappNumber(value?: string | null) {
-  if (!value) return ''
-
-  let cleaned = value.replace(/[^\d]/g, '')
-
-  if (cleaned.startsWith('0')) {
-    cleaned = `6${cleaned}`
-  }
-
-  if (!cleaned.startsWith('60') && cleaned.length >= 9) {
-    cleaned = `60${cleaned}`
-  }
-
-  return cleaned
-}
-
 export default async function ReceiptPage({ params }: Props) {
   const token = params.token
 
-  // 🔥 get order
   const { data: order } = await supabase
     .from('orders')
     .select('*')
@@ -41,37 +24,16 @@ export default async function ReceiptPage({ params }: Props) {
 
   if (!order) return notFound()
 
-  // 🔥 get seller
   const { data: seller } = await supabase
     .from('seller_profiles')
-    .select('store_name, whatsapp, profile_image')
+    .select('store_name, profile_image')
     .eq('id', order.seller_profile_id)
     .single()
 
-  // 🔥 get items
   const { data: items } = await supabase
     .from('order_items')
     .select('*')
     .eq('order_id', order.id)
-
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-
-const waText = encodeURIComponent(
-  `Hi ${seller?.store_name || ''},
-
-Saya telah membuat pembayaran untuk order berikut:
-
-🧾 Order No: ${order.order_number}
-💰 Total: RM${Number(order.total_amount || 0).toFixed(2)}
-
-🔗 Receipt:
-${baseUrl}/r/${token}
-
-📊 Semak Order:
-${baseUrl}/dashboard/orders?order=${order.order_number}
-
-Terima kasih 🙏`
-)
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 flex justify-center">
@@ -90,10 +52,10 @@ Terima kasih 🙏`
           <p className="text-lg font-bold text-gray-900">
             {seller?.store_name}
           </p>
-          <h1 className="text-xl font-semibold">Payment Successful ✅</h1>
-          <p className="text-sm text-gray-500">
-            Sila hantar resit kepada seller
-          </p>
+
+          <h1 className="text-xl font-semibold">
+            Payment Successful
+          </h1>
         </div>
 
         {/* SUMMARY */}
@@ -101,11 +63,6 @@ Terima kasih 🙏`
           <div className="flex justify-between">
             <span>Order No</span>
             <span className="font-medium">{order.order_number}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span>Store</span>
-            <span className="font-medium">{seller?.store_name}</span>
           </div>
 
           <div className="flex justify-between">
@@ -141,38 +98,30 @@ Terima kasih 🙏`
           </div>
         </div>
 
-{/* STATUS */}
-<div className="border rounded-xl p-4 text-center">
-  <p className="text-sm text-gray-500">Status Order</p>
+        {/* STATUS */}
+        <div className="border rounded-xl p-4 text-center">
+          <p className="text-sm text-gray-500">Status Order</p>
 
-  <p className="font-semibold">
-    {order.fulfillment_status === 'pending' && (
-      <span className="text-yellow-600">Menunggu pengesahan</span>
-    )}
+          <p className="font-semibold">
+            {order.fulfillment_status === 'pending' && (
+              <span className="text-yellow-600">Menunggu pengesahan</span>
+            )}
 
-    {order.fulfillment_status === 'processing' && (
-      <span className="text-blue-600">Sedang disediakan</span>
-    )}
+            {order.fulfillment_status === 'processing' && (
+              <span className="text-blue-600">Sedang disediakan</span>
+            )}
 
-    {order.fulfillment_status === 'completed' && (
-      <span className="text-green-600">Selesai</span>
-    )}
+            {order.fulfillment_status === 'completed' && (
+              <span className="text-green-600">Selesai</span>
+            )}
 
-    {order.fulfillment_status === 'cancelled' && (
-      <span className="text-red-600">Dibatalkan</span>
-    )}
-  </p>
-</div>
+            {order.fulfillment_status === 'cancelled' && (
+              <span className="text-red-600">Dibatalkan</span>
+            )}
+          </p>
+        </div>
 
-        {/* BUTTON */}
-        <a
-          href={`https://wa.me/${normalizeWhatsappNumber(seller?.whatsapp)}?text=${waText}`}
-          target="_blank"
-          className="block w-full text-center bg-green-500 text-white py-3 rounded-xl font-medium"
-        >
-          Hantar Resit ke Seller
-        </a>
-
+        {/* FOOTER */}
         <div className="border-t pt-4 text-center">
           <p className="text-xs text-gray-400 mb-2">Powered by</p>
           <img
