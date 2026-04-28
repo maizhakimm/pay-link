@@ -6,6 +6,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+function normalizePhone(phone?: string | null) {
+  const cleaned = String(phone || '').replace(/\D/g, '')
+
+  if (!cleaned) return ''
+  if (cleaned.startsWith('0')) return `6${cleaned}`
+  if (cleaned.startsWith('60')) return cleaned
+
+  return cleaned
+}
+
 function formatItems(order: any) {
   const sourceItems = Array.isArray(order.items)
     ? order.items
@@ -80,7 +90,7 @@ function formatDelivery(order: any) {
 }
 
 /* =========================
-   🔥 POST — Hantar WhatsApp
+   POST — Hantar WhatsApp
 ========================= */
 export async function POST(req: NextRequest) {
   try {
@@ -148,8 +158,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const sellerPhoneRaw = seller?.whatsapp || ''
-    const sellerPhone = sellerPhoneRaw.replace(/\D/g, '')
+    const sellerPhone = normalizePhone(seller?.whatsapp)
 
     if (!sellerPhone) {
       return NextResponse.json(
@@ -158,10 +167,16 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const customerName = order.buyer_name || order.customer_name || '-'
+    const customerPhone = normalizePhone(order.buyer_phone || order.customer_phone)
+    const customerPhoneLink = customerPhone
+      ? `https://wa.me/${customerPhone}`
+      : '-'
+
     const itemsText = formatItems(order)
     const deliveryText = formatDelivery(order)
     const slotText = order.delivery_slot_label || '-'
-    const totalText = String(Number(order.total_amount || order.amount || 0).toFixed(2))
+    const totalText = Number(order.total_amount || order.amount || 0).toFixed(2)
 
     const res = await fetch(
       `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
@@ -192,7 +207,7 @@ export async function POST(req: NextRequest) {
                   },
                   {
                     type: 'text',
-                    text: order.buyer_name || order.customer_name || '-',
+                    text: `${customerName}\n📱 ${customerPhoneLink}`,
                   },
                   {
                     type: 'text',
@@ -257,7 +272,7 @@ export async function POST(req: NextRequest) {
 }
 
 /* =========================
-   🧪 GET — Test Manual
+   GET — Test Manual
 ========================= */
 export async function GET(req: NextRequest) {
   const orderNumber = req.nextUrl.searchParams.get('order_number')
