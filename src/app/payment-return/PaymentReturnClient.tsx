@@ -217,8 +217,7 @@ export default function PaymentReturnClient() {
         // 🔥 redirect bila order dah load
         if (Number(status) === 3 && foundOrder?.receipt_token) {
 
-        // 🔥 trigger telegram dulu
-        await fetch('/api/notifications/telegram-order', {
+        await fetch('/api/notifications/whatsapp-order', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -227,7 +226,7 @@ export default function PaymentReturnClient() {
             order_number: foundOrder.order_number || cleanOrderNumber,
           }),
         })
-
+          
         // 🔥 baru redirect
         window.location.replace(`/r/${foundOrder.receipt_token}`)
         return
