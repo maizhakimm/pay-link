@@ -1,155 +1,138 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { useParams } from 'next/navigation'
+import { notFound } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export default function ReceiptPage() {
-  const params = useParams()
-  const token = params.token as string
+type Props = {
+  params: { token: string }
+}
 
-  const [order, setOrder] = useState<any>(null)
-  const [items, setItems] = useState<any[]>([])
-  const [seller, setSeller] = useState<any>(null)
+export default async function ReceiptPage({ params }: Props) {
+  const token = params.token
 
-  async function loadData() {
-    const { data: orderData } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('receipt_token', token)
-      .single()
+  const { data: order } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('receipt_token', token)
+    .single()
 
-    if (!orderData) return
+  if (!order) return notFound()
 
-    setOrder(orderData)
+  const { data: seller } = await supabase
+    .from('seller_profiles')
+    .select('store_name, profile_image')
+    .eq('id', order.seller_profile_id)
+    .single()
 
-    const { data: sellerData } = await supabase
-      .from('seller_profiles')
-      .select('store_name, profile_image')
-      .eq('id', orderData.seller_profile_id)
-      .single()
-
-    setSeller(sellerData)
-
-    const { data: itemData } = await supabase
-      .from('order_items')
-      .select('*')
-      .eq('order_id', orderData.id)
-
-    setItems(itemData || [])
-  }
-
-  useEffect(() => {
-    loadData()
-
-    // 🔥 realtime subscribe
-    const channel = supabase
-      .channel('order-status')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-        },
-        (payload) => {
-          if (payload.new.receipt_token === token) {
-            setOrder(payload.new)
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
-
-  if (!order) return null
+  const { data: items } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', order.id)
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 flex justify-center">
       <div className="w-full max-w-md bg-white rounded-2xl shadow p-5 space-y-5">
 
-        {/* HEADER */}
         <div className="text-center">
           {seller?.profile_image && (
             <img
               src={seller.profile_image}
+              alt={seller?.store_name || 'Seller'}
               className="mx-auto mb-3 h-20 w-20 rounded-full object-cover border shadow-sm"
             />
           )}
 
-          <p className="text-lg font-bold">{seller?.store_name}</p>
+          <p className="text-lg font-bold text-gray-900">
+            {seller?.store_name}
+          </p>
+
           <h1 className="text-xl font-semibold">
             Payment Successful
           </h1>
         </div>
 
-        {/* SUMMARY */}
-        <div className="border rounded-xl p-4 text-sm space-y-2">
+        <div className="border rounded-xl p-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <span>Order No</span>
-            <span>{order.order_number}</span>
+            <span className="font-medium">{order.order_number}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Store</span>
+            <span className="font-medium">{seller?.store_name}</span>
           </div>
 
           <div className="flex justify-between">
             <span>Total</span>
             <span className="font-semibold">
-              RM {Number(order.total_amount).toFixed(2)}
+              RM {Number(order.total_amount || 0).toFixed(2)}
+            </span>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Payment</span>
+            <span className="text-green-600 font-medium">
+              {order.payment_status}
             </span>
           </div>
         </div>
 
-        {/* ITEMS */}
         <div className="border rounded-xl p-4 text-sm">
-          <h2 className="mb-2 font-medium">Items</h2>
-          {items.map((item, i) => (
-            <div key={i} className="flex justify-between">
-              <span>{item.product_name} x{item.quantity}</span>
-              <span>RM {Number(item.line_total).toFixed(2)}</span>
-            </div>
-          ))}
+          <h2 className="font-medium mb-2">Items</h2>
+
+          <div className="space-y-2">
+            {items?.length ? (
+              items.map((item, i) => (
+                <div key={i} className="flex justify-between gap-3">
+                  <span>
+                    {item.product_name} x{item.quantity}
+                  </span>
+                  <span className="font-medium whitespace-nowrap">
+                    RM {Number(item.line_total || 0).toFixed(2)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400">No item details available.</p>
+            )}
+          </div>
         </div>
 
-        {/* 🔥 LIVE STATUS */}
         <div className="border rounded-xl p-4 text-center">
           <p className="text-sm text-gray-500">Status Order</p>
 
-          {order.fulfillment_status === 'pending' && (
-            <p className="text-yellow-600 font-semibold">
-              ⏳ Menunggu pengesahan
-            </p>
-          )}
+          <p className="font-semibold">
+            {order.fulfillment_status === 'pending' && (
+              <span className="text-yellow-600">Menunggu pengesahan</span>
+            )}
 
-          {order.fulfillment_status === 'processing' && (
-            <p className="text-blue-600 font-semibold">
-              👨‍🍳 Sedang disediakan
-            </p>
-          )}
+            {order.fulfillment_status === 'processing' && (
+              <span className="text-blue-600">Sedang disediakan</span>
+            )}
 
-          {order.fulfillment_status === 'completed' && (
-            <p className="text-green-600 font-semibold">
-              ✅ Selesai
-            </p>
-          )}
+            {order.fulfillment_status === 'completed' && (
+              <span className="text-green-600">Selesai</span>
+            )}
 
-          {order.fulfillment_status === 'cancelled' && (
-            <p className="text-red-600 font-semibold">
-              ❌ Dibatalkan
-            </p>
-          )}
+            {order.fulfillment_status === 'cancelled' && (
+              <span className="text-red-600">Dibatalkan</span>
+            )}
+          </p>
         </div>
 
-        {/* FOOTER */}
         <div className="border-t pt-4 text-center">
           <p className="text-xs text-gray-400 mb-2">Powered by</p>
-          <img src="/BayarLink-Logo-Shop-Page.svg" className="h-4 mx-auto" />
+          <img
+            src="/BayarLink-Logo-Shop-Page.svg"
+            alt="BayarLink"
+            className="h-4 mx-auto"
+          />
         </div>
 
       </div>
