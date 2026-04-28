@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
@@ -9,119 +9,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-type OrderItem = {
-  product_name?: string
-  quantity?: number
-  line_total?: number
-}
-
 type OrderData = {
   id: string
   order_number?: string | null
   receipt_token?: string | null
-  amount?: string | number | null
   total_amount?: number | null
-  customer_name?: string | null
-  customer_phone?: string | null
+  amount?: string | number | null
   buyer_name?: string | null
-  buyer_phone?: string | null
-  items?: OrderItem[] | null
-  delivery_info?: Record<string, unknown> | null
-  seller_profile_id?: string | null
-  gateway_payment_intent_id?: string | null
-}
-
-function getStatusDetails(status?: string) {
-  const numericStatus = Number(status)
-
-  if (numericStatus === 3) {
-    return {
-      title: 'Payment Successful',
-      message: 'Your payment has been received successfully.',
-      badge: 'Success',
-      badgeBg: '#dcfce7',
-      badgeColor: '#166534',
-      icon: '🎉',
-    }
-  }
-
-  if (numericStatus === 2) {
-    return {
-      title: 'Payment Failed',
-      message: 'Your payment could not be completed. Please try again.',
-      badge: 'Failed',
-      badgeBg: '#fee2e2',
-      badgeColor: '#991b1b',
-      icon: '⚠️',
-    }
-  }
-
-  if (numericStatus === 4) {
-    return {
-      title: 'Payment Cancelled',
-      message: 'You cancelled this payment before completion.',
-      badge: 'Cancelled',
-      badgeBg: '#f3f4f6',
-      badgeColor: '#374151',
-      icon: '🛑',
-    }
-  }
-
-  return {
-    title: 'Payment Pending',
-    message: 'Payment sedang diproses. Sila tunggu sebentar.',
-    badge: 'Pending',
-    badgeBg: '#fef3c7',
-    badgeColor: '#92400e',
-    icon: '⏳',
-  }
-}
-
-function normalizeWhatsappNumber(value?: string | null) {
-  if (!value) return ''
-  let cleaned = value.replace(/[^\d]/g, '')
-  if (cleaned.startsWith('0')) cleaned = `6${cleaned}`
-  if (!cleaned.startsWith('60') && cleaned.length >= 9) cleaned = `60${cleaned}`
-  return cleaned
-}
-
-function buildDeliveryText(deliveryInfo?: Record<string, unknown> | null) {
-  if (!deliveryInfo || typeof deliveryInfo !== 'object') return '-'
-
-  const parts = [
-    deliveryInfo['address1'],
-    deliveryInfo['address2'],
-    deliveryInfo['postcode'],
-    deliveryInfo['city'],
-    deliveryInfo['district'],
-    deliveryInfo['state'],
-  ]
-    .filter(Boolean)
-    .map((value) => String(value).trim())
-    .filter(Boolean)
-
-  return parts.length ? parts.join(', ') : '-'
-}
-
-function formatAmount(order: OrderData | null, fallback?: string) {
-  if (order?.total_amount != null) {
-    const value = Number(order.total_amount)
-    return Number.isNaN(value) ? '-' : value.toFixed(2)
-  }
-
-  if (order?.amount != null && order.amount !== '') {
-    const value = Number(order.amount)
-    if (!Number.isNaN(value)) return value.toFixed(2)
-    return String(order.amount)
-  }
-
-  if (fallback) {
-    const value = Number(fallback)
-    if (!Number.isNaN(value)) return value.toFixed(2)
-    return fallback
-  }
-
-  return '-'
+  customer_name?: string | null
 }
 
 function sanitizeOrderNumber(value?: string | null) {
@@ -140,11 +35,16 @@ function sanitizePaymentIntent(value?: string | null, orderValue?: string | null
   return ''
 }
 
+function formatAmount(order: OrderData | null, fallback?: string) {
+  const raw = order?.total_amount ?? order?.amount ?? fallback ?? 0
+  const value = Number(raw)
+  return Number.isNaN(value) ? '-' : value.toFixed(2)
+}
+
 export default function PaymentReturnClient() {
   const params = useSearchParams()
 
   const status = params.get('status') || ''
-  const statusDescription = params.get('status_description') || ''
   const rawOrderNumber = params.get('order_number') || ''
   const amountParam = params.get('amount') || ''
   const payerName = params.get('payer_name') || ''
@@ -152,23 +52,22 @@ export default function PaymentReturnClient() {
   const paymentIntentIdParam =
     params.get('payment_intent_id') || params.get('payment_intent') || ''
 
-  const statusInfo = getStatusDetails(status)
-  const isSuccess = Number(status) === 3
-  const isFailed = Number(status) === 2
-  const isCancelled = Number(status) === 4
-
-  const [order, setOrder] = useState<OrderData | null>(null)
-  const [sellerWhatsapp, setSellerWhatsapp] = useState('')
-  const [loadingOrder, setLoadingOrder] = useState(true)
-  const [savedShopSlug, setSavedShopSlug] = useState('')
-
-  const hasAutoConfirmedRef = useRef(false)
-
   const cleanOrderNumber = sanitizeOrderNumber(rawOrderNumber)
   const cleanPaymentIntentId = sanitizePaymentIntent(
     paymentIntentIdParam,
     rawOrderNumber
   )
+
+  const isSuccess = Number(status) === 3
+  const isFailed = Number(status) === 2
+  const isCancelled = Number(status) === 4
+
+  const [order, setOrder] = useState<OrderData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('Preparing receipt...')
+  const [savedShopSlug, setSavedShopSlug] = useState('')
+
+  const hasRunRef = useRef(false)
 
   const finalShopSlug = shopParam || savedShopSlug
   const shopUrl = finalShopSlug ? `/s/${finalShopSlug}` : '/'
@@ -177,171 +76,104 @@ export default function PaymentReturnClient() {
     try {
       const storedShopSlug =
         window.sessionStorage.getItem('bayarlink_shop_slug') || ''
-      if (storedShopSlug) {
-        setSavedShopSlug(storedShopSlug)
-      }
+      setSavedShopSlug(storedShopSlug)
     } catch {
       setSavedShopSlug('')
     }
   }, [])
 
-  useEffect(() => {
-    async function loadOrder() {
-      try {
-        setLoadingOrder(true)
+  async function findOrder() {
+    let foundOrder: OrderData | null = null
 
-        let foundOrder: OrderData | null = null
+    if (cleanOrderNumber) {
+      const { data } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('order_number', cleanOrderNumber)
+        .maybeSingle()
 
-        if (cleanOrderNumber) {
-          const { data } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('order_number', cleanOrderNumber)
-            .maybeSingle()
+      if (data) foundOrder = data as OrderData
+    }
 
-          if (data) foundOrder = data as OrderData
-        }
+    if (!foundOrder && cleanPaymentIntentId) {
+      const { data } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('gateway_payment_intent_id', cleanPaymentIntentId)
+        .maybeSingle()
 
-        if (!foundOrder && cleanPaymentIntentId) {
-          const { data } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('gateway_payment_intent_id', cleanPaymentIntentId)
-            .maybeSingle()
+      if (data) foundOrder = data as OrderData
+    }
 
-          if (data) foundOrder = data as OrderData
-        }
+    return foundOrder
+  }
 
-        setOrder(foundOrder)
+  async function refreshStatus() {
+    setLoading(true)
+    setMessage('Checking latest order status...')
 
-        // 🔥 redirect bila order dah load
-        if (Number(status) === 3 && foundOrder?.receipt_token) {
+    try {
+      const foundOrder = await findOrder()
+      setOrder(foundOrder)
 
-        await fetch('/api/notifications/whatsapp-order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            order_number: foundOrder.order_number || cleanOrderNumber,
-          }),
-        })
-          
-        // 🔥 baru redirect
+      if (foundOrder?.receipt_token && isSuccess) {
         window.location.replace(`/r/${foundOrder.receipt_token}`)
         return
       }
-
-        if (foundOrder?.seller_profile_id) {
-          const { data: seller } = await supabase
-            .from('seller_profiles')
-            .select('whatsapp')
-            .eq('id', foundOrder.seller_profile_id)
-            .maybeSingle()
-
-          if (seller?.whatsapp) {
-            setSellerWhatsapp(normalizeWhatsappNumber(seller.whatsapp))
-          } else {
-            setSellerWhatsapp('')
-          }
-        } else {
-          setSellerWhatsapp('')
-        }
-      } catch (error) {
-        console.error('Payment return loadOrder error:', error)
-        setOrder(null)
-        setSellerWhatsapp('')
-      } finally {
-        setLoadingOrder(false)
-      }
+    } catch (error) {
+      console.error('Refresh order failed:', error)
+    } finally {
+      setLoading(false)
     }
-
-    loadOrder()
-  }, [cleanOrderNumber, cleanPaymentIntentId, status])
+  }
 
   useEffect(() => {
-    async function autoConfirmPayment() {
-      if (hasAutoConfirmedRef.current) return
-      if (Number(status) !== 3 || !cleanOrderNumber) return
-
-      hasAutoConfirmedRef.current = true
+    async function handleReturn() {
+      if (hasRunRef.current) return
+      hasRunRef.current = true
 
       try {
-        await fetch('/api/payments/manual-confirm', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            order_number: cleanOrderNumber,
-            status: 3,
-            amount: amountParam,
-            payment_intent_id: cleanPaymentIntentId || null,
-          }),
-        })
-                
+        setLoading(true)
+
+        if (isSuccess && cleanOrderNumber) {
+          setMessage('Confirming payment...')
+
+          await fetch('/api/payments/manual-confirm', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              order_number: cleanOrderNumber,
+              status: 3,
+              amount: amountParam,
+              payment_intent_id: cleanPaymentIntentId || null,
+            }),
+          })
+
+          setMessage('Opening receipt...')
+        }
+
+        const foundOrder = await findOrder()
+        setOrder(foundOrder)
+
+        if (isSuccess && foundOrder?.receipt_token) {
+          window.location.replace(`/r/${foundOrder.receipt_token}`)
+          return
+        }
       } catch (error) {
-        console.error('Manual confirm payment failed:', error)
+        console.error('Payment return error:', error)
+        setMessage('Unable to open receipt. Please refresh status.')
+      } finally {
+        setLoading(false)
       }
     }
 
-    autoConfirmPayment()
+    handleReturn()
   }, [status, cleanOrderNumber, amountParam, cleanPaymentIntentId])
-
-  const canNotifySeller = useMemo(() => {
-    return Boolean(sellerWhatsapp)
-  }, [sellerWhatsapp])
 
   function handleBackToShop() {
     window.location.href = shopUrl
-  }
-
-  function handleNotifySeller() {
-    if (!sellerWhatsapp) return
-
-    const now = new Date()
-    const date = now.toLocaleDateString('en-GB')
-    const time = now.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-
-    const customerName =
-      order?.customer_name || order?.buyer_name || payerName || 'Customer'
-
-    const customerPhone = order?.customer_phone || order?.buyer_phone || '-'
-    const total = formatAmount(order, amountParam)
-
-    const itemsText =
-      order?.items && order.items.length
-        ? order.items
-            .map((item) => `- ${item.product_name || 'Item'} x${item.quantity || 1}`)
-            .join('\n')
-        : '- Order details available in dashboard'
-
-    const deliveryText = buildDeliveryText(order?.delivery_info)
-
-    const message = `🎉 Order Baru Masuk!
-
-📦 Order No: ${order?.order_number || cleanOrderNumber || '-'}
-🕒 Tarikh: ${date}
-⏰ Masa: ${time}
-
-👤 Customer: ${customerName}
-📱 Phone: ${customerPhone}
-
-🛒 Order:
-${itemsText}
-
-💰 Total: RM${total}
-
-📍 Delivery:
-${deliveryText}
-
-👉 Sila prepare order sekarang.`
-
-    const whatsappUrl = `https://wa.me/${sellerWhatsapp}?text=${encodeURIComponent(message)}`
-    window.open(whatsappUrl, '_blank')
   }
 
   return (
@@ -370,11 +202,7 @@ ${deliveryText}
           <img
             src="/BayarLink-Logo-Shop-Page.svg"
             alt="BayarLink"
-            style={{
-              height: 34,
-              margin: '0 auto 16px auto',
-              display: 'block',
-            }}
+            style={{ height: 34, margin: '0 auto 16px auto', display: 'block' }}
           />
 
           <div
@@ -382,37 +210,22 @@ ${deliveryText}
               display: 'inline-block',
               padding: '8px 14px',
               borderRadius: '999px',
-              background: statusInfo.badgeBg,
-              color: statusInfo.badgeColor,
+              background: isSuccess ? '#dcfce7' : isFailed ? '#fee2e2' : '#fef3c7',
+              color: isSuccess ? '#166534' : isFailed ? '#991b1b' : '#92400e',
               fontWeight: 700,
               fontSize: '13px',
               marginBottom: '16px',
             }}
           >
-            {statusInfo.badge}
+            {isSuccess ? 'Success' : isFailed ? 'Failed' : isCancelled ? 'Cancelled' : 'Pending'}
           </div>
 
-          <h1
-            style={{
-              margin: '0 0 12px 0',
-              fontSize: '30px',
-              color: '#111827',
-              fontWeight: 800,
-              lineHeight: 1.2,
-            }}
-          >
-            {statusInfo.icon} {isSuccess ? 'Payment Successful' : statusInfo.title}
+          <h1 style={{ margin: 0, fontSize: 30, color: '#111827', fontWeight: 800 }}>
+            {isSuccess ? 'Payment Successful' : isFailed ? 'Payment Failed' : 'Payment Status'}
           </h1>
 
-          <p
-            style={{
-              margin: 0,
-              color: '#6b7280',
-              fontSize: '15px',
-              lineHeight: 1.7,
-            }}
-          >
-            {statusDescription || statusInfo.message}
+          <p style={{ margin: '10px 0 0', color: '#64748b', fontSize: 15 }}>
+            {loading ? message : isSuccess ? 'Redirecting to receipt...' : 'Please check your order status.'}
           </p>
         </div>
 
@@ -424,23 +237,14 @@ ${deliveryText}
             background: '#f8fafc',
           }}
         >
-          <h2
-            style={{
-              margin: '0 0 16px 0',
-              fontSize: '18px',
-              color: '#111827',
-              fontWeight: 700,
-            }}
-          >
+          <h2 style={{ margin: '0 0 16px', fontSize: 18, color: '#111827' }}>
             Payment Details
           </h2>
 
-          <div style={{ display: 'grid', gap: '12px' }}>
+          <div style={{ display: 'grid', gap: 12 }}>
             <div>
               <div style={labelStyle}>Order Number</div>
-              <div style={valueStyle}>
-                {order?.order_number || cleanOrderNumber || '-'}
-              </div>
+              <div style={valueStyle}>{order?.order_number || cleanOrderNumber || '-'}</div>
             </div>
 
             <div>
@@ -462,85 +266,17 @@ ${deliveryText}
           </div>
         </div>
 
-        <div
-          style={{
-            marginTop: '18px',
-            padding: '14px 16px',
-            borderRadius: '14px',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            color: '#64748b',
-            fontSize: '13px',
-            lineHeight: 1.6,
-          }}
-        >
-          {loadingOrder ? (
-            <span>Loading order data...</span>
-          ) : canNotifySeller ? (
-            <span>Tap button below to notify seller via WhatsApp.</span>
-          ) : (
-            <span>
-              Order data belum lengkap untuk notify seller. Pastikan seller ada nombor
-              WhatsApp dan order boleh dibaca dari return URL.
-            </span>
-          )}
-        </div>
+        <div style={{ marginTop: 20, display: 'grid', gap: 10 }}>
+          <button onClick={refreshStatus} style={greenButton}>
+            Refresh Order Status
+          </button>
 
-        <div
-          style={{
-            marginTop: '20px',
-            display: 'grid',
-            gap: '10px',
-          }}
-        >
-          <button
-            onClick={handleBackToShop}
-            style={{
-              width: '100%',
-              padding: '14px',
-              borderRadius: '12px',
-              background: '#0f172a',
-              color: '#fff',
-              fontWeight: 700,
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
+          <button onClick={handleBackToShop} style={darkButton}>
             Back to Shop
           </button>
 
-          <button
-            onClick={handleNotifySeller}
-            disabled={!canNotifySeller}
-            style={{
-              width: '100%',
-              padding: '14px',
-              borderRadius: '12px',
-              background: canNotifySeller ? '#25D366' : '#bbf7d0',
-              color: '#fff',
-              fontWeight: 700,
-              border: 'none',
-              cursor: canNotifySeller ? 'pointer' : 'not-allowed',
-              opacity: canNotifySeller ? 1 : 0.75,
-            }}
-          >
-            Notify Seller (WhatsApp)
-          </button>
-
           {(isFailed || isCancelled) && (
-            <button
-              onClick={handleBackToShop}
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '12px',
-                background: '#ffffff',
-                color: '#111827',
-                fontWeight: 700,
-                border: '1px solid #d1d5db',
-                cursor: 'pointer',
-              }}
-            >
+            <button onClick={handleBackToShop} style={outlineButton}>
               Try Again
             </button>
           )}
@@ -548,11 +284,10 @@ ${deliveryText}
 
         <p
           style={{
-            margin: '20px 0 0 0',
+            margin: '20px 0 0',
             textAlign: 'center',
             color: '#94a3b8',
-            fontSize: '13px',
-            lineHeight: 1.7,
+            fontSize: 13,
           }}
         >
           Thank you for using BayarLink secure checkout.
@@ -572,4 +307,37 @@ const valueStyle = {
   fontSize: '15px',
   color: '#111827',
   fontWeight: 600,
+} as const
+
+const greenButton = {
+  width: '100%',
+  padding: '14px',
+  borderRadius: '12px',
+  background: '#22c55e',
+  color: '#fff',
+  fontWeight: 700,
+  border: 'none',
+  cursor: 'pointer',
+} as const
+
+const darkButton = {
+  width: '100%',
+  padding: '14px',
+  borderRadius: '12px',
+  background: '#0f172a',
+  color: '#fff',
+  fontWeight: 700,
+  border: 'none',
+  cursor: 'pointer',
+} as const
+
+const outlineButton = {
+  width: '100%',
+  padding: '14px',
+  borderRadius: '12px',
+  background: '#ffffff',
+  color: '#111827',
+  fontWeight: 700,
+  border: '1px solid #d1d5db',
+  cursor: 'pointer',
 } as const
