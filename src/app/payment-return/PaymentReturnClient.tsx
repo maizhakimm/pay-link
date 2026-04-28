@@ -58,15 +58,6 @@ export default function PaymentReturnClient() {
               payment_intent_id: cleanPaymentIntentId || null,
             }),
           })
-
-          // ✅ Trigger WhatsApp seller notification
-          fetch('/api/notifications/whatsapp-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              order_number: cleanOrderNumber,
-            }),
-          })
         }
 
         let receiptToken = ''
