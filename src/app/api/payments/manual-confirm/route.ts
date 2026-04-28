@@ -12,21 +12,19 @@ type ExistingPaymentRow = {
 
 async function triggerWhatsAppNotification(orderNumber: string) {
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      'https://www.bayarlink.my'
-
-    const res = await fetch(`${baseUrl}/api/notifications/whatsapp-order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        order_number: orderNumber,
-      }),
-      cache: 'no-store',
-    })
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/whatsapp-order`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          order_number: orderNumber,
+        }),
+        cache: 'no-store',
+      }
+    )
 
     const json = await res.json()
 
