@@ -60,7 +60,7 @@ export default function PaymentReturnClient() {
           })
 
           // ✅ Trigger WhatsApp seller notification
-          await fetch('/api/notifications/whatsapp-order', {
+          fetch('/api/notifications/whatsapp-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
