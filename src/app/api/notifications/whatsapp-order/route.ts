@@ -6,8 +6,81 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+function formatItems(order: any) {
+  const sourceItems = Array.isArray(order.items)
+    ? order.items
+    : Array.isArray(order.checkout_items)
+      ? order.checkout_items
+      : []
+
+  if (!sourceItems.length) return 'Order received'
+
+  return sourceItems
+    .map((item: any) => {
+      const name =
+        item.product_name ||
+        item.name ||
+        item.product?.name ||
+        'Item'
+
+      const qty = item.quantity || 1
+
+      const addons = Array.isArray(item.addons)
+        ? item.addons
+            .map((addon: any) => addon.option_name || addon.name || '')
+            .filter(Boolean)
+            .join(', ')
+        : ''
+
+      const addonText = addons ? ` + ${addons}` : ''
+      const noteText = item.note ? ` (${item.note})` : ''
+
+      return `• ${name}${addonText} x${qty}${noteText}`
+    })
+    .join('\n')
+}
+
+function formatDelivery(order: any) {
+  const deliveryInfo = order.delivery_info
+
+  if (!deliveryInfo) {
+    return order.buyer_address || '-'
+  }
+
+  const deliveryRequired = Boolean(deliveryInfo.delivery_required)
+
+  if (!deliveryRequired) {
+    return 'Pickup / No delivery'
+  }
+
+  const mode = deliveryInfo.delivery_mode || 'Delivery'
+  const fee = Number(deliveryInfo.delivery_fee || 0)
+
+  const address =
+    deliveryInfo.resolved_address ||
+    order.buyer_address ||
+    [
+      deliveryInfo.address?.address1,
+      deliveryInfo.address?.address2,
+      deliveryInfo.address?.postcode,
+      deliveryInfo.address?.city,
+      deliveryInfo.address?.district,
+      deliveryInfo.address?.state,
+    ]
+      .filter(Boolean)
+      .join(', ')
+
+  const distanceText =
+    deliveryInfo.distance_km !== null &&
+    deliveryInfo.distance_km !== undefined
+      ? ` | ${Number(deliveryInfo.distance_km).toFixed(2)}km`
+      : ''
+
+  return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${address || '-'}`
+}
+
 /* =========================
-   🔥 POST (hantar WhatsApp)
+   🔥 POST — Hantar WhatsApp
 ========================= */
 export async function POST(req: NextRequest) {
   try {
@@ -35,11 +108,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { data: order } = await supabase
+    const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('*')
       .eq('order_number', orderNumber)
       .maybeSingle()
+
+    if (orderError) {
+      return NextResponse.json(
+        { ok: false, error: orderError.message },
+        { status: 500 }
+      )
+    }
 
     if (!order) {
       return NextResponse.json(
@@ -55,20 +135,33 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const { data: seller } = await supabase
+    const { data: seller, error: sellerError } = await supabase
       .from('seller_profiles')
       .select('store_name, whatsapp')
       .eq('id', order.seller_profile_id)
       .maybeSingle()
 
-    const phone = (seller?.whatsapp || '').replace(/\D/g, '')
+    if (sellerError) {
+      return NextResponse.json(
+        { ok: false, error: sellerError.message },
+        { status: 500 }
+      )
+    }
 
-    if (!phone) {
+    const sellerPhoneRaw = seller?.whatsapp || ''
+    const sellerPhone = sellerPhoneRaw.replace(/\D/g, '')
+
+    if (!sellerPhone) {
       return NextResponse.json(
         { ok: false, error: 'Seller WhatsApp not found' },
         { status: 400 }
       )
     }
+
+    const itemsText = formatItems(order)
+    const deliveryText = formatDelivery(order)
+    const slotText = order.delivery_slot_label || '-'
+    const totalText = String(Number(order.total_amount || order.amount || 0).toFixed(2))
 
     const res = await fetch(
       `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
@@ -80,26 +173,49 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           messaging_product: 'whatsapp',
-          to: phone,
+          to: sellerPhone,
           type: 'template',
           template: {
-            name: process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER || 'seller_new_order',
-            language: { code: 'en' },
+            name:
+              process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER ||
+              'seller_new_order',
+            language: {
+              code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en',
+            },
             components: [
               {
                 type: 'body',
                 parameters: [
-                  { type: 'text', text: order.order_number },
-                  { type: 'text', text: order.buyer_name || '-' },
-                  { type: 'text', text: 'Order received' },
-                  { type: 'text', text: String(order.total_amount || 0) },
-                  { type: 'text', text: '-' },
-                  { type: 'text', text: '-' },
+                  {
+                    type: 'text',
+                    text: order.order_number || orderNumber,
+                  },
+                  {
+                    type: 'text',
+                    text: order.buyer_name || order.customer_name || '-',
+                  },
+                  {
+                    type: 'text',
+                    text: itemsText,
+                  },
+                  {
+                    type: 'text',
+                    text: totalText,
+                  },
+                  {
+                    type: 'text',
+                    text: deliveryText,
+                  },
+                  {
+                    type: 'text',
+                    text: slotText,
+                  },
                 ],
               },
             ],
           },
         }),
+        cache: 'no-store',
       }
     )
 
@@ -107,7 +223,10 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       return NextResponse.json(
-        { ok: false, error: json },
+        {
+          ok: false,
+          error: json,
+        },
         { status: 500 }
       )
     }
@@ -121,18 +240,24 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      sent_to: sellerPhone,
       result: json,
     })
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+
     return NextResponse.json(
-      { ok: false, error: String(error) },
+      {
+        ok: false,
+        error: message,
+      },
       { status: 500 }
     )
   }
 }
 
 /* =========================
-   🧪 GET (test manual)
+   🧪 GET — Test Manual
 ========================= */
 export async function GET(req: NextRequest) {
   const orderNumber = req.nextUrl.searchParams.get('order_number')
@@ -155,12 +280,14 @@ export async function GET(req: NextRequest) {
     body: JSON.stringify({
       order_number: orderNumber,
     }),
+    cache: 'no-store',
   })
 
   const json = await res.json()
 
   return NextResponse.json({
     ok: res.ok,
+    status: res.status,
     result: json,
   })
 }
