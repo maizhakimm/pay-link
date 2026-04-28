@@ -47,7 +47,7 @@ function formatItems(order: any) {
 
       return `• ${name}${addonText} x${qty}${noteText}`
     })
-    .join('\n')
+    .join(' | ')
 }
 
 function formatDelivery(order: any) {
@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
                   },
                   {
                     type: 'text',
-                    text: `${customerName}\n📱 ${customerPhoneLink}`,
+                    text: `${customerName} | ${customerPhoneLink}`,
                   },
                   {
                     type: 'text',
