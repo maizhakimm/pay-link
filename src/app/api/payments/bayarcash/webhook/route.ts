@@ -45,6 +45,27 @@ type FeeBreakdown = {
   sstAmount: number
 }
 
+type SellerNewOrderRow = {
+  id: string
+  order_number: string | null
+  buyer_name: string | null
+  buyer_phone: string | null
+  buyer_address: string | null
+  total_amount: number | null
+  amount: number | null
+  delivery_info: any
+  items: any
+  seller_profile_id: string | null
+  delivery_slot_label: string | null
+  receipt_token: string | null
+  whatsapp_notified_at?: string | null
+}
+
+type SellerProfileRow = {
+  store_name: string | null
+  whatsapp: string | null
+}
+
 function mapBayarcashStatus(status: number) {
   if (status === 3) return 'paid'
   if (status === 2) return 'failed'
@@ -123,6 +144,256 @@ function calculateNetSellerAmount(
   return roundMoney(grossAmount - sellerFeeAmount)
 }
 
+function normalizeWhatsAppPhone(phone?: string | null) {
+  const cleaned = String(phone || '').replace(/\D/g, '')
+
+  if (!cleaned) return ''
+
+  if (cleaned.startsWith('0')) {
+    return `6${cleaned}`
+  }
+
+  if (cleaned.startsWith('60')) {
+    return cleaned
+  }
+
+  return cleaned
+}
+
+function formatItemsForWhatsApp(order: SellerNewOrderRow) {
+  const sourceItems = Array.isArray(order.items) ? order.items : []
+
+  if (sourceItems.length > 0) {
+    return sourceItems
+      .map((item: any) => {
+        const name =
+          item.product_name ||
+          item.name ||
+          item.product?.name ||
+          'Item'
+
+        const quantity = Number(item.quantity || 1)
+
+        const addons = Array.isArray(item.addons)
+          ? item.addons
+              .map((addon: any) => addon.option_name || addon.name || '')
+              .filter(Boolean)
+              .join(', ')
+          : ''
+
+        const note = item.note ? ` (${item.note})` : ''
+        const addonText = addons ? ` + ${addons}` : ''
+
+        return `• ${name}${addonText} x${quantity}${note}`
+      })
+      .join('\n')
+  }
+
+  return '-'
+}
+
+function formatDeliveryForWhatsApp(order: SellerNewOrderRow) {
+  const deliveryInfo = order.delivery_info
+
+  if (!deliveryInfo) {
+    return order.buyer_address || '-'
+  }
+
+  const deliveryRequired = Boolean(deliveryInfo.delivery_required)
+
+  if (!deliveryRequired) {
+    return 'Pickup / No delivery'
+  }
+
+  const mode = deliveryInfo.delivery_mode || '-'
+  const fee = Number(deliveryInfo.delivery_fee || 0)
+
+  const address =
+    deliveryInfo.resolved_address ||
+    order.buyer_address ||
+    [
+      deliveryInfo.address?.address1,
+      deliveryInfo.address?.address2,
+      deliveryInfo.address?.postcode,
+      deliveryInfo.address?.city,
+      deliveryInfo.address?.district,
+      deliveryInfo.address?.state,
+    ]
+      .filter(Boolean)
+      .join(', ')
+
+  const distanceText =
+    deliveryInfo.distance_km !== null &&
+    deliveryInfo.distance_km !== undefined
+      ? ` | ${Number(deliveryInfo.distance_km).toFixed(2)}km`
+      : ''
+
+  return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${address || '-'}`
+}
+
+async function sendWhatsAppSellerNotification(orderNumber: string) {
+  try {
+    if (!process.env.WHATSAPP_ACCESS_TOKEN) {
+      console.log('WhatsApp skipped: missing WHATSAPP_ACCESS_TOKEN')
+      return
+    }
+
+    if (!process.env.WHATSAPP_PHONE_NUMBER_ID) {
+      console.log('WhatsApp skipped: missing WHATSAPP_PHONE_NUMBER_ID')
+      return
+    }
+
+    const templateName =
+      process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER || 'seller_new_order'
+
+    const languageCode =
+      process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en'
+
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        buyer_name,
+        buyer_phone,
+        buyer_address,
+        total_amount,
+        amount,
+        delivery_info,
+        items,
+        seller_profile_id,
+        delivery_slot_label,
+        receipt_token,
+        whatsapp_notified_at
+      `)
+      .eq('order_number', orderNumber)
+      .maybeSingle()
+
+    if (orderError) {
+      console.error('WhatsApp order query error:', orderError.message)
+      return
+    }
+
+    if (!orderData) {
+      console.log('WhatsApp skipped: order not found')
+      return
+    }
+
+    const order = orderData as SellerNewOrderRow
+
+    if (order.whatsapp_notified_at) {
+      console.log('WhatsApp skipped: already notified')
+      return
+    }
+
+    if (!order.seller_profile_id) {
+      console.log('WhatsApp skipped: missing seller_profile_id')
+      return
+    }
+
+    const { data: sellerData, error: sellerError } = await supabase
+      .from('seller_profiles')
+      .select('store_name, whatsapp')
+      .eq('id', order.seller_profile_id)
+      .maybeSingle()
+
+    if (sellerError) {
+      console.error('WhatsApp seller query error:', sellerError.message)
+      return
+    }
+
+    const seller = sellerData as SellerProfileRow | null
+
+    const sellerPhone = normalizeWhatsAppPhone(seller?.whatsapp)
+
+    if (!sellerPhone) {
+      console.log('WhatsApp skipped: seller whatsapp not found')
+      return
+    }
+
+    const itemsText = formatItemsForWhatsApp(order)
+    const deliveryText = formatDeliveryForWhatsApp(order)
+    const slotText = order.delivery_slot_label || '-'
+    const total = Number(order.total_amount ?? order.amount ?? 0)
+
+    const response = await fetch(
+      `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: sellerPhone,
+          type: 'template',
+          template: {
+            name: templateName,
+            language: {
+              code: languageCode,
+            },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  {
+                    type: 'text',
+                    text: order.order_number || '-',
+                  },
+                  {
+                    type: 'text',
+                    text: order.buyer_name || '-',
+                  },
+                  {
+                    type: 'text',
+                    text: itemsText || '-',
+                  },
+                  {
+                    type: 'text',
+                    text: total.toFixed(2),
+                  },
+                  {
+                    type: 'text',
+                    text: deliveryText || '-',
+                  },
+                  {
+                    type: 'text',
+                    text: slotText,
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+        cache: 'no-store',
+      }
+    )
+
+    const json = await response.json()
+
+    if (!response.ok) {
+      console.error('WhatsApp send error:', json)
+      return
+    }
+
+    await supabase
+      .from('orders')
+      .update({
+        whatsapp_notified_at: new Date().toISOString(),
+      })
+      .eq('id', order.id)
+
+    console.log('WhatsApp sent to seller:', {
+      order_number: order.order_number,
+      to: sellerPhone,
+      response: json,
+    })
+  } catch (error) {
+    console.error('WhatsApp notification error:', error)
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json()
@@ -178,6 +449,7 @@ export async function POST(req: NextRequest) {
       order.gateway_transaction_id &&
       order.gateway_transaction_id === transactionId
     ) {
+      await sendWhatsAppSellerNotification(orderNumber)
       return NextResponse.json({ ok: true, duplicate: true })
     }
 
@@ -195,11 +467,16 @@ export async function POST(req: NextRequest) {
       if (productIds.length > 0) {
         const { data: products } = await supabase
           .from('products')
-          .select('id, name, track_stock, stock_quantity, sold_out, reserved_quantity')
+          .select(
+            'id, name, track_stock, stock_quantity, sold_out, reserved_quantity'
+          )
           .in('id', productIds)
 
         const productMap = new Map(
-          (products || []).map((product) => [product.id, product as ProductRow])
+          (products || []).map((product) => [
+            product.id,
+            product as ProductRow,
+          ])
         )
 
         for (const item of typedOrderItems) {
@@ -217,23 +494,6 @@ export async function POST(req: NextRequest) {
               })
               .eq('order_number', orderNumber)
 
-              // 🔥 Auto notify seller via Telegram after successful payment
-              if (statusNumber === 3) {
-                try {
-                  await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/telegram-order`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      order_number: orderNumber,
-                    }),
-                  })
-                } catch (notifyError) {
-                  console.error('Telegram notification failed:', notifyError)
-                }
-              }
-            
             return NextResponse.json(
               { ok: false, error: 'Stock conflict' },
               { status: 409 }
@@ -280,11 +540,16 @@ export async function POST(req: NextRequest) {
       if (productIds.length > 0) {
         const { data: products } = await supabase
           .from('products')
-          .select('id, name, track_stock, stock_quantity, sold_out, reserved_quantity')
+          .select(
+            'id, name, track_stock, stock_quantity, sold_out, reserved_quantity'
+          )
           .in('id', productIds)
 
         const productMap = new Map(
-          (products || []).map((product) => [product.id, product as ProductRow])
+          (products || []).map((product) => [
+            product.id,
+            product as ProductRow,
+          ])
         )
 
         for (const item of typedOrderItems) {
@@ -356,20 +621,18 @@ export async function POST(req: NextRequest) {
         payout_status: statusNumber === 3 ? 'eligible' : 'unpaid',
         paid_at: statusNumber === 3 ? new Date().toISOString() : null,
         settlement_days: statusNumber === 3 ? 1 : null,
-        eligible_payout_at: statusNumber === 3 ? new Date().toISOString() : null,
+        eligible_payout_at:
+          statusNumber === 3 ? new Date().toISOString() : null,
 
-        // Legacy compatibility
         gateway_fee: feeBreakdown.sellerFeeAmount,
         platform_fee: 0,
         platform_fee_amount: 0,
         sst: 0,
         seller_net: netSellerAmount,
 
-        // Main fields
         gross_amount: grossAmount,
         net_seller_amount: netSellerAmount,
 
-        // New scalable fields
         seller_fee_amount: feeBreakdown.sellerFeeAmount,
         gateway_cost_amount: feeBreakdown.gatewayCostAmount,
         gateway_sst_amount: feeBreakdown.gatewaySstAmount,
@@ -380,6 +643,10 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq('order_number', orderNumber)
+
+    if (statusNumber === 3) {
+      await sendWhatsAppSellerNotification(orderNumber)
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error: unknown) {
