@@ -10,6 +10,36 @@ type ExistingPaymentRow = {
   id: string
 }
 
+async function triggerWhatsAppNotification(orderNumber: string) {
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      'https://www.bayarlink.my'
+
+    const res = await fetch(`${baseUrl}/api/notifications/whatsapp-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        order_number: orderNumber,
+      }),
+      cache: 'no-store',
+    })
+
+    const json = await res.json()
+
+    if (!res.ok) {
+      console.error('WhatsApp notification failed:', json)
+    } else {
+      console.log('WhatsApp notification triggered:', json)
+    }
+  } catch (error) {
+    console.error('WhatsApp notification trigger error:', error)
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -38,8 +68,8 @@ export async function POST(req: NextRequest) {
         source: 'manual-confirm',
         event_type: 'order_not_found',
         reference_no: orderNumber,
-        payload: body,
-        created_at: new Date().toISOString(),
+        payload_json: body,
+        received_at: new Date().toISOString(),
       })
 
       return NextResponse.json(
@@ -48,16 +78,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // log request masuk supaya awak boleh trace fallback ini
     await supabase.from('webhook_logs').insert({
       source: 'manual-confirm',
       event_type: 'payment_success_fallback',
       reference_no: orderNumber,
-      payload: body,
-      created_at: new Date().toISOString(),
+      payload_json: body,
+      received_at: new Date().toISOString(),
     })
 
-    // update order
     await supabase
       .from('orders')
       .update({
@@ -65,11 +93,11 @@ export async function POST(req: NextRequest) {
         gateway_status: 3,
         gateway_status_description: 'Manual confirm via return page',
         payout_status: 'eligible',
+        paid_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('order_number', orderNumber)
 
-    // avoid duplicate payment rows
     let existingPayment: ExistingPaymentRow | null = null
 
     if (paymentIntentId) {
@@ -118,6 +146,9 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // ✅ Trigger WhatsApp notification after payment confirmed
+    await triggerWhatsAppNotification(orderNumber)
+
     return NextResponse.json({ ok: true })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Server error'
@@ -126,8 +157,8 @@ export async function POST(req: NextRequest) {
       source: 'manual-confirm',
       event_type: 'server_error',
       reference_no: null,
-      payload: { error: message },
-      created_at: new Date().toISOString(),
+      payload_json: { error: message },
+      received_at: new Date().toISOString(),
     })
 
     return NextResponse.json(
