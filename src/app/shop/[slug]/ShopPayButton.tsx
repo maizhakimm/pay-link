@@ -1,25 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-
-type CartItemAddon = {
-  group_id: string
-  group_name: string
-  option_id: string
-  option_name: string
-  price: number
-}
-
-type CartItem = {
-  product_id: string
-  quantity: number
-  name?: string
-  base_price?: number
-  unit_price?: number
-  line_total?: number
-  note?: string
-  addons?: CartItemAddon[]
-}
+import { useEffect, useMemo, useRef, useState } from 'react'
+import ShopPayButton from './ShopPayButton'
 
 type DeliveryMode =
   | 'free_delivery'
@@ -28,48 +10,245 @@ type DeliveryMode =
   | 'pay_rider_separately'
   | 'distance_based'
 
+type DayKey =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
+type OperatingDayItem = {
+  enabled: boolean
+  opening_time: string
+  closing_time: string
+}
+
+type OperatingDays = Record<DayKey, OperatingDayItem>
+
+type OrderMode = 'anytime' | 'scheduled' | 'preorder'
+
+type MinimumOrderType = 'quantity' | 'amount'
+
+type ProductAddonOption = {
+  id: string
+  addon_group_id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  price_delta: number
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+type ProductAddonGroup = {
+  id: string
+  product_id: string
+  seller_profile_id: string
+  name: string
+  selection_type: 'single' | 'multiple'
+  is_required: boolean
+  min_select: number
+  max_select: number | null
+  sort_order: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+  options: ProductAddonOption[]
+}
+
+type ProductAddonsMap = Record<string, ProductAddonGroup[]>
+
 type DeliverySlot = {
   id: string
   label: string
 }
 
-const STATES = [
-  'Perlis',
-  'Kedah',
-  'Pulau Pinang',
-  'Perak',
-  'Selangor',
-  'W.P. Kuala Lumpur',
-  'W.P. Putrajaya',
-  'Negeri Sembilan',
-  'Melaka',
-  'Johor',
-  'Pahang',
-  'Terengganu',
-  'Kelantan',
-  'W.P. Labuan',
-  'Sabah',
-  'Sarawak',
+type SellerProfile = {
+  id: string
+  store_name: string | null
+  profile_image?: string | null
+  email?: string | null
+  whatsapp?: string | null
+  business_address?: string | null
+  shop_description?: string | null
+  accept_orders_anytime?: boolean | null
+  opening_time?: string | null
+  closing_time?: string | null
+  temporarily_closed?: boolean | null
+  closed_message?: string | null
+  operating_days?: OperatingDays | null
+  delivery_mode?: DeliveryMode | null
+  delivery_fee?: number | null
+  delivery_area?: string | null
+  delivery_note?: string | null
+  delivery_radius_km?: number | null
+  delivery_rate_per_km?: number | null
+  delivery_min_fee?: number | null
+  pickup_address?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  order_mode?: OrderMode | null
+  preorder_days?: number | null
+  minimum_order_enabled?: boolean | null
+  minimum_order_type?: MinimumOrderType | null
+  minimum_order_value?: number | null
+  minimum_order_message?: string | null
+}
+
+type MenuCategory = {
+  id: string
+  name: string
+  sort_order?: number | null
+  is_active?: boolean | null
+}
+
+type ProductRow = {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  price: number
+  image_1?: string | null
+  image_2?: string | null
+  image_3?: string | null
+  image_4?: string | null
+  image_5?: string | null
+  is_active?: boolean | null
+  seller_profile_id?: string | null
+  track_stock?: boolean
+  stock_quantity?: number
+  sold_out?: boolean
+  menu_category_id?: string | null
+}
+
+type GalleryState = {
+  isOpen: boolean
+  images: string[]
+  productName: string
+  currentIndex: number
+}
+
+type CartAddon = {
+  group_id: string
+  group_name: string
+  option_id: string
+  option_name: string
+  price: number
+}
+
+type CartLine = {
+  id: string
+  product_id: string
+  name: string
+  base_price: number
+  quantity: number
+  addons: CartAddon[]
+  note?: string
+  unit_price: number
+  line_total: number
+}
+
+const DAY_KEYS_SUNDAY_FIRST: DayKey[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
 ]
 
-const PAYMENT_METHODS = [
-  {
-    value: 1,
-    label: 'FPX Online Banking',
-  },
-  {
-    value: 4,
-    label: 'Credit / Debit Card',
-  },
-  {
-    value: 6,
-    label: 'DuitNow QR',
-  },
-  {
-    value: 8,
-    label: 'Boost PayFlex',
-  },
-]
+const DAY_LABELS_MY: Record<DayKey, string> = {
+  sunday: 'Ahad',
+  monday: 'Isnin',
+  tuesday: 'Selasa',
+  wednesday: 'Rabu',
+  thursday: 'Khamis',
+  friday: 'Jumaat',
+  saturday: 'Sabtu',
+}
+
+function getImageUrl(path?: string | null) {
+  if (!path) return ''
+
+  const trimmed = path.trim()
+  if (!trimmed) return ''
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (trimmed.startsWith('/')) return trimmed
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!baseUrl) return trimmed
+
+  let cleanPath = trimmed
+    .replace(/^storage\/v1\/object\/public\//, '')
+    .replace(/^\/+/, '')
+
+  const knownBuckets = ['product-images', 'product-assets']
+
+  if (!knownBuckets.some((bucket) => cleanPath.startsWith(`${bucket}/`))) {
+    cleanPath = `product-images/${cleanPath}`
+  }
+
+  return `${baseUrl}/storage/v1/object/public/${cleanPath}`
+}
+
+function getProductImages(product: ProductRow) {
+  return [
+    product.image_1,
+    product.image_2,
+    product.image_3,
+    product.image_4,
+    product.image_5,
+  ].filter(Boolean) as string[]
+}
+
+function getFirstImage(product: ProductRow) {
+  return (
+    product.image_1 ||
+    product.image_2 ||
+    product.image_3 ||
+    product.image_4 ||
+    product.image_5 ||
+    ''
+  )
+}
+
+function formatTime(value?: string | null) {
+  if (!value) return ''
+
+  const [hourString, minuteString] = value.split(':')
+  const hour = Number(hourString)
+  const minute = Number(minuteString || '0')
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return value
+
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const normalizedHour = hour % 12 === 0 ? 12 : hour % 12
+  const normalizedMinute = minute.toString().padStart(2, '0')
+
+  return `${normalizedHour}:${normalizedMinute} ${period}`
+}
+
+function getTodayKey(date = new Date()): DayKey {
+  return DAY_KEYS_SUNDAY_FIRST[date.getDay()]
+}
+
+function getMinutesFromTime(value?: string | null) {
+  if (!value || !value.includes(':')) return null
+
+  const [hourString, minuteString] = value.split(':')
+  const hour = Number(hourString)
+  const minute = Number(minuteString)
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return null
+
+  return hour * 60 + minute
+}
 
 function formatCurrency(amount?: number | null) {
   return new Intl.NumberFormat('ms-MY', {
@@ -79,929 +258,2396 @@ function formatCurrency(amount?: number | null) {
   }).format(Number(amount || 0))
 }
 
-function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100
-}
+function getDeliverySummary(seller: SellerProfile) {
+  const fee = Number(seller.delivery_fee || 0)
+  const rate = Number(seller.delivery_rate_per_km || 0)
+  const minFee = Number(seller.delivery_min_fee || 0)
+  const radius = Number(seller.delivery_radius_km || 0)
 
-function calculateDistanceKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-) {
-  const toRad = (value: number) => (value * Math.PI) / 180
-
-  const earthRadiusKm = 6371
-  const dLat = toRad(lat2 - lat1)
-  const dLng = toRad(lng2 - lng1)
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2)
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return earthRadiusKm * c
-}
-
-async function geocodeAddress(address: string) {
-  const response = await fetch('/api/maps/geocode', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ address }),
-  })
-
-  const data = await response.json()
-
-  if (!response.ok || !data.ok) {
-    throw new Error(
-      data.error || 'Alamat tidak dapat dikenal pasti. Sila semak semula alamat.'
-    )
+  switch (seller.delivery_mode) {
+    case 'free_delivery':
+      return 'Free delivery tersedia untuk kawasan terpilih.'
+    case 'fixed_fee':
+      return fee > 0
+        ? `Delivery fee: ${formatCurrency(fee)}`
+        : 'Delivery fee akan dikenakan.'
+    case 'included_in_price':
+      return 'Harga produk telah termasuk delivery.'
+    case 'distance_based':
+      return `Caj delivery dikira ikut jarak. Kadar ${formatCurrency(
+        rate
+      )}/km, minimum ${formatCurrency(minFee)}, radius maksimum ${radius}km.`
+    case 'pay_rider_separately':
+    default:
+      return (
+        seller.delivery_note?.trim() ||
+        'Bayaran delivery dibuat terus kepada rider semasa order sampai.'
+      )
   }
+}
+
+function getEffectiveOrderMode(seller: SellerProfile): OrderMode {
+  if (seller.order_mode === 'anytime') return 'anytime'
+  if (seller.order_mode === 'preorder') return 'preorder'
+  if (seller.order_mode === 'scheduled') return 'scheduled'
+
+  if (seller.accept_orders_anytime === true) {
+    return 'anytime'
+  }
+
+  return 'scheduled'
+}
+
+function getNextOpeningText(seller: SellerProfile) {
+  if (!seller.operating_days) {
+    return seller.closed_message || 'Kedai kini ditutup.'
+  }
+
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const todayIndex = now.getDay()
+
+  for (let offset = 0; offset < 7; offset += 1) {
+    const dayIndex = (todayIndex + offset) % 7
+    const dayKey = DAY_KEYS_SUNDAY_FIRST[dayIndex]
+    const config = seller.operating_days[dayKey]
+
+    if (!config?.enabled) continue
+
+    const openMinutes = getMinutesFromTime(config.opening_time)
+    const closeMinutes = getMinutesFromTime(config.closing_time)
+
+    if (openMinutes === null || closeMinutes === null) continue
+
+    if (offset === 0) {
+      if (openMinutes < closeMinutes && currentMinutes < openMinutes) {
+        return `Buka semula hari ini, ${formatTime(config.opening_time)}`
+      }
+
+      if (
+        openMinutes > closeMinutes &&
+        currentMinutes < openMinutes &&
+        currentMinutes > closeMinutes
+      ) {
+        return `Buka semula hari ini, ${formatTime(config.opening_time)}`
+      }
+
+      continue
+    }
+
+    if (offset === 1) {
+      return `Buka semula esok, ${formatTime(config.opening_time)}`
+    }
+
+    return `Buka semula ${DAY_LABELS_MY[dayKey]}, ${formatTime(config.opening_time)}`
+  }
+
+  return seller.closed_message || 'Kedai kini ditutup.'
+}
+
+function getShopAvailability(seller: SellerProfile) {
+  if (seller.temporarily_closed) {
+    return {
+      isOpen: false,
+      label: 'Temporarily Closed',
+      detail:
+        seller.closed_message ||
+        'Kedai ditutup sementara. Sila cuba lagi kemudian.',
+      inlineInfo: '',
+      timeRange: '',
+    }
+  }
+
+  const orderMode = getEffectiveOrderMode(seller)
+
+  if (orderMode === 'preorder') {
+    const days = Number(seller.preorder_days || 1)
+
+    return {
+      isOpen: true,
+      label: 'Pre-order',
+      detail: '',
+      inlineInfo: `${days} hari awal`,
+      timeRange: '',
+    }
+  }
+
+  if (orderMode === 'anytime') {
+    return {
+      isOpen: true,
+      label: 'Open Now',
+      detail: '',
+      inlineInfo: '24 jam',
+      timeRange: '',
+    }
+  }
+
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+  if (seller.operating_days) {
+    const todayKey = getTodayKey(now)
+    const todayConfig = seller.operating_days[todayKey]
+
+    if (!todayConfig || !todayConfig.enabled) {
+      const nextOpening = getNextOpeningText(seller)
+
+      return {
+        isOpen: false,
+        label: 'Closed',
+        detail: nextOpening,
+        inlineInfo: nextOpening,
+        timeRange: '',
+      }
+    }
+
+    const openMinutes = getMinutesFromTime(todayConfig.opening_time)
+    const closeMinutes = getMinutesFromTime(todayConfig.closing_time)
+
+    if (openMinutes === null || closeMinutes === null) {
+      return {
+        isOpen: false,
+        label: 'Closed',
+        detail:
+          seller.closed_message ||
+          'Waktu operasi tidak lengkap. Sila cuba lagi kemudian.',
+        inlineInfo:
+          seller.closed_message ||
+          'Waktu operasi tidak lengkap. Sila cuba lagi kemudian.',
+        timeRange: '',
+      }
+    }
+
+    let isOpen = false
+
+    if (openMinutes < closeMinutes) {
+      isOpen = currentMinutes >= openMinutes && currentMinutes <= closeMinutes
+    } else if (openMinutes > closeMinutes) {
+      isOpen = currentMinutes >= openMinutes || currentMinutes <= closeMinutes
+    }
+
+    const timeRange = `${formatTime(todayConfig.opening_time)} - ${formatTime(
+      todayConfig.closing_time
+    )}`
+
+    return {
+      isOpen,
+      label: isOpen ? 'Open Now' : 'Closed',
+      detail: isOpen ? '' : getNextOpeningText(seller),
+      inlineInfo: isOpen ? timeRange : getNextOpeningText(seller),
+      timeRange,
+    }
+  }
+
+  const openMinutes = getMinutesFromTime(seller.opening_time)
+  const closeMinutes = getMinutesFromTime(seller.closing_time)
+
+  if (openMinutes === null || closeMinutes === null) {
+    return {
+      isOpen: true,
+      label: 'Open Now',
+      detail: '',
+      inlineInfo: '',
+      timeRange: '',
+    }
+  }
+
+  let isOpen = false
+
+  if (openMinutes < closeMinutes) {
+    isOpen = currentMinutes >= openMinutes && currentMinutes <= closeMinutes
+  } else if (openMinutes > closeMinutes) {
+    isOpen = currentMinutes >= openMinutes || currentMinutes <= closeMinutes
+  }
+
+  const timeRange = `${formatTime(seller.opening_time)} - ${formatTime(
+    seller.closing_time
+  )}`
 
   return {
-    latitude: Number(data.latitude),
-    longitude: Number(data.longitude),
-    formattedAddress: String(data.formatted_address || address),
+    isOpen,
+    label: isOpen ? 'Open Now' : 'Closed',
+    detail: isOpen
+      ? ''
+      : seller.closed_message ||
+        'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
+    inlineInfo: isOpen
+      ? timeRange
+      : seller.closed_message ||
+        'Kedai kini ditutup. Tempahan dibuka mengikut waktu operasi.',
+    timeRange,
   }
 }
 
-export default function ShopPayButton({
-  sellerId,
+function normalizeNote(note?: string) {
+  return (note || '').trim()
+}
+
+function sortAddons(addons: CartAddon[]) {
+  return [...addons].sort((a, b) => {
+    const keyA = `${a.group_id}|${a.option_id}|${a.price}`
+    const keyB = `${b.group_id}|${b.option_id}|${b.price}`
+    return keyA.localeCompare(keyB)
+  })
+}
+
+function isSameAddons(a: CartAddon[], b: CartAddon[]) {
+  if (a.length !== b.length) return false
+
+  const sortedA = sortAddons(a)
+  const sortedB = sortAddons(b)
+
+  return JSON.stringify(sortedA) === JSON.stringify(sortedB)
+}
+
+function isSameCartLine(a: CartLine, b: CartLine) {
+  return (
+    a.product_id === b.product_id &&
+    normalizeNote(a.note) === normalizeNote(b.note) &&
+    isSameAddons(a.addons || [], b.addons || [])
+  )
+}
+
+function getMinimumOrderDefaultMessage(
+  minimumOrderType: MinimumOrderType,
+  minimumOrderValue: number
+) {
+  if (minimumOrderType === 'amount') {
+    return `Minimum order ${formatCurrency(minimumOrderValue)}.`
+  }
+
+  return `Minimum order ${minimumOrderValue} pcs. Boleh campur-campur.`
+}
+
+export default function ShopPageClient({
+  seller,
+  products,
   shopSlug,
-  items,
-  total,
-  deliveryMode = 'pay_rider_separately',
-  deliveryFee = 0,
-  deliveryArea = '',
-  deliveryNote = '',
-  deliveryRadiusKm = 0,
-  deliveryRatePerKm = 0,
-  deliveryMinFee = 0,
-  pickupAddress = '',
-  sellerLatitude = null,
-  sellerLongitude = null,
+  categories = [],
+  productAddons = {},
   deliverySlots = [],
   enableDeliverySlots = false,
 }: {
-  sellerId: string
+  seller: SellerProfile
+  products: ProductRow[]
   shopSlug: string
-  items: CartItem[]
-  total: number
-  deliveryMode?: DeliveryMode
-  deliveryFee?: number
-  deliveryArea?: string
-  deliveryNote?: string
-  deliveryRadiusKm?: number
-  deliveryRatePerKm?: number
-  deliveryMinFee?: number
-  pickupAddress?: string
-  sellerLatitude?: number | null
-  sellerLongitude?: number | null
+  categories?: MenuCategory[]
+  productAddons?: ProductAddonsMap
   deliverySlots?: DeliverySlot[]
   enableDeliverySlots?: boolean
 }) {
-  const [loading, setLoading] = useState(false)
-  const [calculatingDelivery, setCalculatingDelivery] = useState(false)
+  const [cart, setCart] = useState<CartLine[]>([])
+  const [gallery, setGallery] = useState<GalleryState>({
+    isOpen: false,
+    images: [],
+    productName: '',
+    currentIndex: 0,
+  })
 
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('+60')
-  const [paymentChannel, setPaymentChannel] = useState<string>('1')
-
-  const [selectedSlotId, setSelectedSlotId] = useState('')
-  const [selectedSlotLabel, setSelectedSlotLabel] = useState('')
-
-  const [needsDelivery, setNeedsDelivery] = useState(false)
-
-  const [address1, setAddress1] = useState('')
-  const [address2, setAddress2] = useState('')
-  const [postcode, setPostcode] = useState('')
-  const [city, setCity] = useState('')
-  const [district, setDistrict] = useState('')
-  const [state, setState] = useState('')
-
-  const [calculatedDeliveryFee, setCalculatedDeliveryFee] = useState<number | null>(
-    null
-  )
-  const [calculatedDistanceKm, setCalculatedDistanceKm] = useState<number | null>(
-    null
-  )
-  const [resolvedCustomerAddress, setResolvedCustomerAddress] = useState('')
-  const [deliveryError, setDeliveryError] = useState('')
-
-  const fullDeliveryAddress = useMemo(() => {
-    return [
-      address1.trim(),
-      address2.trim(),
-      postcode.trim(),
-      city.trim(),
-      district.trim(),
-      state.trim(),
-      'Malaysia',
-    ]
-      .filter(Boolean)
-      .join(', ')
-  }, [address1, address2, postcode, city, district, state])
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
 
   useEffect(() => {
-    setCalculatedDeliveryFee(null)
-    setCalculatedDistanceKm(null)
-    setResolvedCustomerAddress('')
-    setDeliveryError('')
-  }, [
-    address1,
-    address2,
-    postcode,
-    city,
-    district,
-    state,
-    needsDelivery,
-    deliveryMode,
-  ])
-
-  useEffect(() => {
-    if (!enableDeliverySlots) {
-      setSelectedSlotId('')
-      setSelectedSlotLabel('')
+    function handleResize() {
+      setIsDesktop(window.innerWidth >= 1024)
     }
-  }, [enableDeliverySlots])
-  
 
-  const normalizedItems = useMemo(() => {
-    return items.map((item) => {
-      const quantity = Math.max(1, Number(item.quantity || 1))
-      const addons = Array.isArray(item.addons)
-        ? item.addons.map((addon) => ({
-            group_id: String(addon.group_id || ''),
-            group_name: String(addon.group_name || ''),
-            option_id: String(addon.option_id || ''),
-            option_name: String(addon.option_name || ''),
-            price: Number(addon.price || 0),
-          }))
-        : []
+    handleResize()
+    window.addEventListener('resize', handleResize)
 
-      const basePrice = Number(item.base_price || 0)
-      const addonTotal = addons.reduce(
-        (sum, addon) => sum + Number(addon.price || 0),
-        0
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    function setAppViewportHeight() {
+      const height = window.visualViewport?.height || window.innerHeight
+      document.documentElement.style.setProperty('--app-dvh', `${height}px`)
+    }
+
+    setAppViewportHeight()
+
+    window.addEventListener('resize', setAppViewportHeight)
+    window.addEventListener('orientationchange', setAppViewportHeight)
+    window.visualViewport?.addEventListener('resize', setAppViewportHeight)
+    window.visualViewport?.addEventListener('scroll', setAppViewportHeight)
+
+    return () => {
+      window.removeEventListener('resize', setAppViewportHeight)
+      window.removeEventListener('orientationchange', setAppViewportHeight)
+      window.visualViewport?.removeEventListener('resize', setAppViewportHeight)
+      window.visualViewport?.removeEventListener('scroll', setAppViewportHeight)
+    }
+  }, [])
+
+  const [addonModal, setAddonModal] = useState<{
+    product: ProductRow | null
+    groups: ProductAddonGroup[]
+    selections: Record<string, string[]>
+    note: string
+    isOpen: boolean
+    error: string
+    editingCartLineId: string | null
+  }>({
+    product: null,
+    groups: [],
+    selections: {},
+    note: '',
+    isOpen: false,
+    error: '',
+    editingCartLineId: null,
+  })
+
+  const productListRef = useRef<HTMLDivElement | null>(null)
+
+  const availability = useMemo(() => getShopAvailability(seller), [seller])
+  const isShopOpen = availability.isOpen
+  const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
+
+  useEffect(() => {
+    const shouldLockScroll = gallery.isOpen || addonModal.isOpen
+    const previousBodyOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+
+    if (shouldLockScroll) {
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+    }
+  }, [gallery.isOpen, addonModal.isOpen])
+
+  function getProductAddonGroups(productId: string) {
+    return productAddons[productId] || []
+  }
+
+  function buildCartLine(
+    product: ProductRow,
+    selections: Record<string, string[]>,
+    groups: ProductAddonGroup[],
+    note: string,
+    quantity = 1
+  ): CartLine {
+    const selectedAddons: CartAddon[] = []
+
+    for (const group of groups) {
+      const selectedIds = selections[group.id] || []
+
+      for (const optId of selectedIds) {
+        const opt = group.options.find((o) => o.id === optId)
+        if (!opt) continue
+
+        selectedAddons.push({
+          group_id: group.id,
+          group_name: group.name,
+          option_id: opt.id,
+          option_name: opt.name,
+          price: Number(opt.price_delta || 0),
+        })
+      }
+    }
+
+    const addonTotal = selectedAddons.reduce((sum, addon) => sum + addon.price, 0)
+    const unitPrice = Number(product.price) + addonTotal
+
+    return {
+      id:
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${product.id}-${Date.now()}`,
+      product_id: product.id,
+      name: product.name,
+      base_price: Number(product.price),
+      quantity,
+      addons: selectedAddons,
+      note: normalizeNote(note),
+      unit_price: unitPrice,
+      line_total: unitPrice * quantity,
+    }
+  }
+
+  function addOrMergeCartLine(newLine: CartLine) {
+    setCart((prev) => {
+      const index = prev.findIndex((item) => isSameCartLine(item, newLine))
+
+      if (index === -1) {
+        return [...prev, newLine]
+      }
+
+      const updated = [...prev]
+      const existing = updated[index]
+      const nextQuantity = existing.quantity + newLine.quantity
+
+      updated[index] = {
+        ...existing,
+        quantity: nextQuantity,
+        line_total: existing.unit_price * nextQuantity,
+      }
+
+      return updated
+    })
+  }
+
+  function updateCartLine(updatedLine: CartLine, originalLineId: string) {
+    setCart((prev) => {
+      const withoutOriginal = prev.filter((item) => item.id !== originalLineId)
+      const mergeIndex = withoutOriginal.findIndex((item) =>
+        isSameCartLine(item, updatedLine)
       )
-      const fallbackUnitPrice = basePrice + addonTotal
-      const unitPrice =
-        Number.isFinite(Number(item.unit_price)) && Number(item.unit_price) > 0
-          ? Number(item.unit_price)
-          : fallbackUnitPrice
 
-      const lineTotal =
-        Number.isFinite(Number(item.line_total)) && Number(item.line_total) > 0
-          ? Number(item.line_total)
-          : roundMoney(unitPrice * quantity)
+      if (mergeIndex === -1) {
+        return [...withoutOriginal, { ...updatedLine, id: originalLineId }]
+      }
+
+      const merged = [...withoutOriginal]
+      const existing = merged[mergeIndex]
+      const nextQuantity = existing.quantity + updatedLine.quantity
+
+      merged[mergeIndex] = {
+        ...existing,
+        quantity: nextQuantity,
+        line_total: existing.unit_price * nextQuantity,
+      }
+
+      return merged
+    })
+  }
+
+  function addToCartWithAddons(
+    product: ProductRow,
+    selections: Record<string, string[]>,
+    groups: ProductAddonGroup[],
+    note: string
+  ) {
+    const newLine = buildCartLine(product, selections, groups, note)
+    addOrMergeCartLine(newLine)
+  }
+
+  function validateAddonSelections(
+    groups: ProductAddonGroup[],
+    selections: Record<string, string[]>
+  ) {
+    for (const group of groups) {
+      const selectedIds = selections[group.id] || []
+      const selectedCount = selectedIds.length
+      const minSelect = Number(group.min_select || 0)
+      const maxSelect =
+        group.max_select === null || group.max_select === undefined
+          ? null
+          : Number(group.max_select)
+
+      if (group.is_required && selectedCount === 0) {
+        return `Please select at least one option for "${group.name}".`
+      }
+
+      if (selectedCount < minSelect) {
+        return `Please select at least ${minSelect} option${
+          minSelect > 1 ? 's' : ''
+        } for "${group.name}".`
+      }
+
+      if (maxSelect !== null && selectedCount > maxSelect) {
+        return `You can only select up to ${maxSelect} option${
+          maxSelect > 1 ? 's' : ''
+        } for "${group.name}".`
+      }
+
+      if (group.selection_type === 'single' && selectedCount > 1) {
+        return `Only one option is allowed for "${group.name}".`
+      }
+    }
+
+    return ''
+  }
+
+  function openAddonModalForNew(product: ProductRow) {
+    setAddonModal({
+      product,
+      groups: getProductAddonGroups(product.id),
+      selections: {},
+      note: '',
+      isOpen: true,
+      error: '',
+      editingCartLineId: null,
+    })
+  }
+
+  function openAddonModalForEdit(cartLine: CartLine) {
+    const product = products.find((item) => item.id === cartLine.product_id)
+    if (!product) return
+
+    const groups = getProductAddonGroups(product.id)
+    const selections: Record<string, string[]> = {}
+
+    for (const addon of cartLine.addons || []) {
+      if (!selections[addon.group_id]) {
+        selections[addon.group_id] = []
+      }
+      selections[addon.group_id].push(addon.option_id)
+    }
+
+    setAddonModal({
+      product,
+      groups,
+      selections,
+      note: cartLine.note || '',
+      isOpen: true,
+      error: '',
+      editingCartLineId: cartLine.id,
+    })
+  }
+
+  function closeAddonModal() {
+    setAddonModal({
+      product: null,
+      groups: [],
+      selections: {},
+      note: '',
+      isOpen: false,
+      error: '',
+      editingCartLineId: null,
+    })
+  }
+
+  function incrementCartLine(lineId: string) {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === lineId
+          ? {
+              ...item,
+              quantity: item.quantity + 1,
+              line_total: item.unit_price * (item.quantity + 1),
+            }
+          : item
+      )
+    )
+  }
+
+  function decrementCartLine(lineId: string) {
+    setCart((prev) => {
+      const current = prev.find((item) => item.id === lineId)
+      if (!current) return prev
+
+      if (current.quantity <= 1) {
+        return prev.filter((item) => item.id !== lineId)
+      }
+
+      return prev.map((item) =>
+        item.id === lineId
+          ? {
+              ...item,
+              quantity: item.quantity - 1,
+              line_total: item.unit_price * (item.quantity - 1),
+            }
+          : item
+      )
+    })
+  }
+
+  function removeCartLine(lineId: string) {
+    setCart((prev) => prev.filter((item) => item.id !== lineId))
+  }
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+
+    for (const product of products) {
+      const categoryId = product.menu_category_id || ''
+      if (!categoryId) continue
+      counts.set(categoryId, (counts.get(categoryId) || 0) + 1)
+    }
+
+    return counts
+  }, [products])
+
+  const visibleCategories = useMemo(() => {
+    return [...categories]
+      .filter((item) => item && item.id && item.name)
+      .filter((item) => (categoryCounts.get(item.id) || 0) > 0)
+      .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+  }, [categories, categoryCounts])
+
+  const hasCategoryFeature =
+    visibleCategories.length > 0 &&
+    products.some((product) => product.menu_category_id)
+
+  const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
+
+  useEffect(() => {
+    setActiveCategoryId('all')
+  }, [hasCategoryFeature])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (gallery.isOpen) {
+        if (event.key === 'Escape') closeGallery()
+        if (event.key === 'ArrowLeft') showPrevImage()
+        if (event.key === 'ArrowRight') showNextImage()
+      }
+
+      if (addonModal.isOpen && event.key === 'Escape') {
+        closeAddonModal()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [gallery.isOpen, gallery.currentIndex, gallery.images.length, addonModal.isOpen])
+
+  function scrollToProducts() {
+    if (!productListRef.current) return
+
+    const top =
+      productListRef.current.getBoundingClientRect().top + window.scrollY - 110
+
+    window.scrollTo({
+      top,
+      behavior: 'smooth',
+    })
+  }
+
+  function handleCategoryClick(categoryId: string) {
+    setActiveCategoryId(categoryId)
+    window.requestAnimationFrame(() => {
+      scrollToProducts()
+    })
+  }
+
+  function increase(product: ProductRow) {
+    if (!isShopOpen) return
+    if (product.sold_out) return
+
+    const addonGroups = getProductAddonGroups(product.id)
+
+    if (addonGroups.length > 0) {
+      openAddonModalForNew(product)
+      return
+    }
+
+    addToCartWithAddons(product, {}, [], '')
+  }
+
+  function decrease(productId: string) {
+    setCart((prev) => {
+      const index = [...prev]
+        .map((item) => item.product_id)
+        .lastIndexOf(productId)
+
+      if (index === -1) return prev
+
+      const next = [...prev]
+      const currentLine = next[index]
+
+      if (currentLine.quantity <= 1) {
+        next.splice(index, 1)
+        return next
+      }
+
+      next[index] = {
+        ...currentLine,
+        quantity: currentLine.quantity - 1,
+        line_total: currentLine.unit_price * (currentLine.quantity - 1),
+      }
+
+      return next
+    })
+  }
+
+  function openGallery(product: ProductRow, startIndex = 0) {
+    const images = getProductImages(product).map((img) => getImageUrl(img))
+    if (!images.length) return
+
+    setGallery({
+      isOpen: true,
+      images,
+      productName: product.name,
+      currentIndex: startIndex,
+    })
+  }
+
+  function closeGallery() {
+    setGallery((prev) => ({
+      ...prev,
+      isOpen: false,
+    }))
+  }
+
+  function showPrevImage() {
+    setGallery((prev) => {
+      if (!prev.images.length) return prev
 
       return {
-        product_id: item.product_id,
-        quantity,
-        name: item.name || '',
-        base_price: basePrice,
-        unit_price: unitPrice,
-        line_total: lineTotal,
-        note: item.note || '',
-        addons,
+        ...prev,
+        currentIndex:
+          prev.currentIndex === 0
+            ? prev.images.length - 1
+            : prev.currentIndex - 1,
       }
     })
-  }, [items])
+  }
 
-  const deliverySummary = useMemo(() => {
-    switch (deliveryMode) {
-      case 'free_delivery':
-        return 'Free delivery tersedia untuk kawasan terpilih.'
-      case 'fixed_fee':
-        return Number(deliveryFee || 0) > 0
-          ? `Delivery fee sebanyak ${formatCurrency(
-              deliveryFee
-            )} akan dikenakan jika anda pilih delivery.`
-          : 'Delivery fee akan dikenakan jika anda pilih delivery.'
-      case 'included_in_price':
-        return 'Harga produk telah termasuk delivery.'
-      case 'distance_based':
-        return `Caj delivery dikira ikut jarak. Kadar ${formatCurrency(
-          deliveryRatePerKm
-        )}/km, minimum ${formatCurrency(deliveryMinFee)}, radius maksimum ${
-          Number(deliveryRadiusKm || 0) || 0
-        }km.`
-      case 'pay_rider_separately':
-      default:
-        return 'Bayaran delivery dibuat berasingan terus kepada rider / seller.'
+  function showNextImage() {
+    setGallery((prev) => {
+      if (!prev.images.length) return prev
+
+      return {
+        ...prev,
+        currentIndex:
+          prev.currentIndex === prev.images.length - 1
+            ? 0
+            : prev.currentIndex + 1,
+      }
+    })
+  }
+
+  const visibleProducts = useMemo(() => {
+    if (!hasCategoryFeature) return products
+    if (activeCategoryId === 'all') return products
+
+    return products.filter(
+      (product) => (product.menu_category_id || '') === activeCategoryId
+    )
+  }, [products, hasCategoryFeature, activeCategoryId])
+
+  const cartItems = cart
+
+  const grandTotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.line_total, 0)
+  }, [cart])
+
+  const totalCartQuantity = useMemo(() => {
+    return cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+  }, [cart])
+
+  const minimumOrderEnabled = Boolean(seller.minimum_order_enabled)
+  const minimumOrderType: MinimumOrderType =
+    seller.minimum_order_type === 'amount' ? 'amount' : 'quantity'
+  const minimumOrderValue = Number(seller.minimum_order_value || 0)
+
+  const hasMinimumOrderRule = minimumOrderEnabled && minimumOrderValue > 0
+
+  const minimumOrderPassed = useMemo(() => {
+    if (!hasMinimumOrderRule) return true
+
+    if (minimumOrderType === 'amount') {
+      return Number(grandTotal || 0) >= minimumOrderValue
     }
+
+    return Number(totalCartQuantity || 0) >= minimumOrderValue
   }, [
-    deliveryMode,
-    deliveryFee,
-    deliveryRatePerKm,
-    deliveryMinFee,
-    deliveryRadiusKm,
+    hasMinimumOrderRule,
+    minimumOrderType,
+    minimumOrderValue,
+    grandTotal,
+    totalCartQuantity,
   ])
 
-  const appliedDeliveryFee = useMemo(() => {
-    if (!needsDelivery) return 0
+  const minimumOrderRemainingText = useMemo(() => {
+    if (!hasMinimumOrderRule || minimumOrderPassed) return ''
 
-    if (deliveryMode === 'fixed_fee') {
-      const parsed = Number(deliveryFee || 0)
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+    if (minimumOrderType === 'amount') {
+      const remainingAmount = Math.max(0, minimumOrderValue - grandTotal)
+      return `Tambah lagi ${formatCurrency(remainingAmount)} untuk checkout.`
     }
 
-    if (deliveryMode === 'distance_based') {
-      return Number.isFinite(Number(calculatedDeliveryFee))
-        ? Number(calculatedDeliveryFee || 0)
-        : 0
-    }
+    const remainingQty = Math.max(0, minimumOrderValue - totalCartQuantity)
+    return `Tambah lagi ${remainingQty} pcs untuk checkout.`
+  }, [
+    hasMinimumOrderRule,
+    minimumOrderPassed,
+    minimumOrderType,
+    minimumOrderValue,
+    grandTotal,
+    totalCartQuantity,
+  ])
 
-    return 0
-  }, [needsDelivery, deliveryMode, deliveryFee, calculatedDeliveryFee])
+  const minimumOrderDisplayMessage = useMemo(() => {
+    if (!hasMinimumOrderRule) return ''
 
-  const payableTotal = useMemo(() => {
-    return Number(total || 0) + appliedDeliveryFee
-  }, [total, appliedDeliveryFee])
+    const customMessage = seller.minimum_order_message?.trim()
 
-  function getDeliveryLabel() {
-    switch (deliveryMode) {
-      case 'free_delivery':
-        return '(FREE)'
-      case 'fixed_fee':
-        return '(Fixed)'
-      case 'included_in_price':
-        return '(Included)'
-      case 'pay_rider_separately':
-        return '(Pay rider)'
-      case 'distance_based':
-        return needsDelivery ? '(Calculated)' : '(Off)'
-      default:
-        return ''
-    }
-  }
+    if (customMessage) return customMessage
 
-  function getDeliveryAmountDisplay() {
-    if (!needsDelivery) return 'RM 0.00'
+    return getMinimumOrderDefaultMessage(minimumOrderType, minimumOrderValue)
+  }, [
+    hasMinimumOrderRule,
+    seller.minimum_order_message,
+    minimumOrderType,
+    minimumOrderValue,
+  ])
 
-    switch (deliveryMode) {
-      case 'free_delivery':
-        return 'RM 0.00'
-      case 'included_in_price':
-        return 'RM 0.00'
-      case 'pay_rider_separately':
-        return '-'
-      case 'fixed_fee':
-        return formatCurrency(deliveryFee)
-      case 'distance_based':
-        return Number.isFinite(Number(calculatedDeliveryFee))
-          ? formatCurrency(calculatedDeliveryFee)
-          : 'RM 0.00'
-      default:
-        return 'RM 0.00'
-    }
-  }
+  if (isDesktop === null) return null
 
-  function handlePhoneChange(value: string) {
-    let cleaned = value.replace(/[^\d+]/g, '')
-    if (!cleaned.startsWith('+60')) cleaned = '+60'
-    setPhone(cleaned)
-  }
-
-  function handlePostcodeChange(value: string) {
-    const cleaned = value.replace(/\D/g, '').slice(0, 5)
-    setPostcode(cleaned)
-  }
-
-  async function handleCalculateDelivery() {
-    if (!needsDelivery) {
-      setCalculatedDeliveryFee(0)
-      setCalculatedDistanceKm(0)
-      setResolvedCustomerAddress('')
-      setDeliveryError('')
-      return
-    }
-
-    if (deliveryMode !== 'distance_based') {
-      return
-    }
-
-    if (
-      !address1.trim() ||
-      !postcode.trim() ||
-      !city.trim() ||
-      !district.trim() ||
-      !state.trim()
-    ) {
-      alert('Sila lengkapkan maklumat penghantaran untuk kira caj delivery.')
-      return
-    }
-
-    if (
-      !Number.isFinite(Number(sellerLatitude)) ||
-      !Number.isFinite(Number(sellerLongitude))
-    ) {
-      alert('Lokasi seller belum lengkap. Sila update pickup address di Settings.')
-      return
-    }
-
-    try {
-      setCalculatingDelivery(true)
-      setDeliveryError('')
-
-      const customer = await geocodeAddress(fullDeliveryAddress)
-
-      const distance = calculateDistanceKm(
-        Number(sellerLatitude),
-        Number(sellerLongitude),
-        customer.latitude,
-        customer.longitude
-      )
-
-      const roundedDistance = roundMoney(distance)
-      const maxRadius = Number(deliveryRadiusKm || 0)
-      const minFee = Number(deliveryMinFee || 0)
-      const ratePerKm = Number(deliveryRatePerKm || 0)
-
-      if (!Number.isFinite(maxRadius) || maxRadius <= 0) {
-        throw new Error('Radius penghantaran seller belum ditetapkan dengan betul.')
-      }
-
-      if (roundedDistance > maxRadius) {
-        throw new Error(
-          `Maaf, lokasi anda di luar kawasan penghantaran seller ini. Jarak semasa ${roundedDistance.toFixed(
-            2
-          )}km, maksimum ${maxRadius.toFixed(2)}km.`
-        )
-      }
-
-      const fee = Math.max(minFee, roundedDistance * ratePerKm)
-
-      setCalculatedDistanceKm(roundedDistance)
-      setCalculatedDeliveryFee(roundMoney(fee))
-      setResolvedCustomerAddress(customer.formattedAddress)
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to calculate delivery fee'
-      setCalculatedDeliveryFee(null)
-      setCalculatedDistanceKm(null)
-      setResolvedCustomerAddress('')
-      setDeliveryError(message)
-      alert(message)
-    } finally {
-      setCalculatingDelivery(false)
-    }
-  }
-
-  async function handleClick() {
-    if (loading) return
-
-    if (!name.trim() || !email.trim() || phone.length <= 3) {
-      alert('Sila isi nama, emel dan nombor telefon yang sah')
-      return
-    }
-
-    if (normalizedItems.length === 0) {
-      alert('Sila pilih sekurang-kurangnya satu item')
-      return
-    }
-
-    if (enableDeliverySlots && !selectedSlotId) {
-      alert('Sila pilih slot delivery')
-      return
-    }
-
-    if (needsDelivery) {
-      if (
-        !address1.trim() ||
-        !postcode.trim() ||
-        !city.trim() ||
-        !district.trim() ||
-        !state.trim()
-      ) {
-        alert('Sila lengkapkan maklumat penghantaran')
-        return
-      }
-
-      if (deliveryMode === 'distance_based') {
-        if (
-          !Number.isFinite(Number(calculatedDeliveryFee)) ||
-          !Number.isFinite(Number(calculatedDistanceKm))
-        ) {
-          await handleCalculateDelivery()
-
-          if (
-            !Number.isFinite(Number(calculatedDeliveryFee)) ||
-            !Number.isFinite(Number(calculatedDistanceKm))
-          ) {
-            return
-          }
-        }
-      }
-    }
-
-    try {
-      setLoading(true)
-
-      const res = await fetch('/api/payments/bayarcash/create-shop', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sellerId,
-          shopSlug,
-          paymentChannel: Number(paymentChannel),
-          name: name.trim(),
-          email: email.trim(),
-          phone,
-          items: normalizedItems.map((item) => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-          })),
-          checkoutItems: normalizedItems,
-          subtotal: Number(total || 0),
-          deliveryMode,
-          deliveryFee: appliedDeliveryFee,
-          deliveryRequired: needsDelivery,
-          totalAmount: payableTotal,
-          deliveryArea: deliveryArea || null,
-          deliveryNote: deliveryNote || null,
-          deliverySummary,
-          deliverySlotId: selectedSlotId || null,
-          deliverySlotLabel: selectedSlotLabel || null,
-          delivery: needsDelivery
-            ? {
-                address1: address1.trim(),
-                address2: address2.trim(),
-                postcode: postcode.trim(),
-                city: city.trim(),
-                district: district.trim(),
-                state: state.trim(),
-                distance_km:
-                  deliveryMode === 'distance_based' ? calculatedDistanceKm : null,
-                resolved_address:
-                  deliveryMode === 'distance_based'
-                    ? resolvedCustomerAddress || fullDeliveryAddress
-                    : null,
-              }
-            : null,
-        }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || 'Payment failed')
-      }
-
-      if (data.payment_url) {
-        sessionStorage.setItem('bayarlink_shop_slug', shopSlug)
-        window.location.href = data.payment_url
-        return
-      }
-
-      alert('Payment link not available')
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Something went wrong'
-      alert(message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const sellerName = seller.store_name || 'Shop'
 
   return (
-    <div style={wrapper}>
-      <div style={formGrid}>
-        <div>
-          <label style={labelStyle}>Full Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your name"
-            style={inputStyle}
+    <main style={main}>
+      <div style={container}>
+        <div style={logoWrap}>
+          <img
+            src="/BayarLink-Logo-Shop-Page.svg"
+            alt="BayarLink"
+            style={logo}
           />
         </div>
 
-        <div>
-          <label style={labelStyle}>Email Address</label>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-            style={inputStyle}
-          />
-        </div>
+        <div style={heroCard}>
+          {!isDesktop && (
+            <div style={heroMobile}>
+              {seller.profile_image ? (
+                <img
+                  src={getImageUrl(seller.profile_image)}
+                  alt={sellerName}
+                  style={sellerImgMobile}
+                />
+              ) : (
+                <div style={sellerFallbackMobile}>
+                  {sellerName.charAt(0).toUpperCase()}
+                </div>
+              )}
 
-        <div>
-          <label style={labelStyle}>Phone Number</label>
-          <input
-            value={phone}
-            onChange={(e) => handlePhoneChange(e.target.value)}
-            style={inputStyle}
-          />
-        </div>
+              <h1 style={shopTitleMobile}>{sellerName}</h1>
 
-        <div>
-          <label style={labelStyle}>Payment Method</label>
-          <select
-            value={paymentChannel}
-            onChange={(e) => setPaymentChannel(e.target.value)}
-            style={inputStyle}
-          >
-            {PAYMENT_METHODS.map((method) => (
-              <option key={method.value} value={method.value}>
-                {method.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={toggleBox}>
-          <label style={toggleLabel}>
-            <div>
-              <strong style={toggleTitle}>Delivery required</strong>
-              <div style={toggleSubtext}>Turn on if delivery needed</div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setNeedsDelivery(!needsDelivery)}
-              style={{
-                ...toggleSwitch,
-                background: needsDelivery ? '#1d4ed8' : '#cbd5e1',
-              }}
-              aria-pressed={needsDelivery}
-            >
-              <span
-                style={{
-                  ...toggleKnob,
-                  left: needsDelivery ? '23px' : '3px',
-                }}
-              />
-            </button>
-          </label>
-        </div>
-
-        {needsDelivery && (
-          <>
-            <div>
-              <label style={labelStyle}>Address Line 1</label>
-              <input
-                value={address1}
-                onChange={(e) => setAddress1(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Address Line 2</label>
-              <input
-                value={address2}
-                onChange={(e) => setAddress2(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Postcode</label>
-              <input
-                value={postcode}
-                onChange={(e) => handlePostcodeChange(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>City</label>
-              <input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>District</label>
-              <input
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>State</label>
-              <select
-                value={state}
-                onChange={(e) => setState(e.target.value)}
-                style={inputStyle}
-              >
-                <option value="">Select state</option>
-                {STATES.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-
-            {deliveryMode === 'distance_based' ? (
-              <div style={distanceBox}>
-                {deliveryArea ? (
-                  <div style={deliveryAreaText}>Delivery area: {deliveryArea}</div>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={handleCalculateDelivery}
-                  disabled={calculatingDelivery}
+              <div style={badgeCenter}>
+                <div
                   style={{
-                    ...secondaryButton,
-                    opacity: calculatingDelivery ? 0.7 : 1,
-                    cursor: calculatingDelivery ? 'not-allowed' : 'pointer',
+                    ...statusBadge,
+                    background:
+                      availability.label === 'Pre-order'
+                        ? '#ede9fe'
+                        : isShopOpen
+                        ? '#dcfce7'
+                        : '#fee2e2',
+                    color:
+                      availability.label === 'Pre-order'
+                        ? '#6d28d9'
+                        : isShopOpen
+                        ? '#166534'
+                        : '#b91c1c',
                   }}
                 >
-                  {calculatingDelivery ? 'Calculating...' : 'Calculate Delivery'}
-                </button>
+                  {availability.label}
+                </div>
 
-                {Number.isFinite(Number(calculatedDistanceKm)) &&
-                Number.isFinite(Number(calculatedDeliveryFee)) ? (
-                  <div style={distanceResult}>
-                    <div>
-                      Distance:{' '}
-                      <strong>{Number(calculatedDistanceKm).toFixed(2)} km</strong>
-                    </div>
-                    <div>
-                      Delivery fee:{' '}
-                      <strong>{formatCurrency(Number(calculatedDeliveryFee))}</strong>
-                    </div>
+                {availability.inlineInfo && (
+                  <div style={statusInfoBadge}>{availability.inlineInfo}</div>
+                )}
+              </div>
+
+              {seller.shop_description?.trim() && (
+                <p style={shopDescriptionMobile}>{seller.shop_description}</p>
+              )}
+
+              {hasMinimumOrderRule ? (
+                <div style={minimumOrderHeroBox}>
+                  {minimumOrderDisplayMessage}
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {isDesktop && (
+            <div style={sellerRow}>
+              {seller.profile_image ? (
+                <img
+                  src={getImageUrl(seller.profile_image)}
+                  alt={sellerName}
+                  style={sellerImgDesktop}
+                />
+              ) : (
+                <div style={sellerFallbackDesktop}>
+                  {sellerName.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              <div style={heroContent}>
+                <h1 style={shopTitle}>{sellerName}</h1>
+
+                <div style={statusInlineWrap}>
+                  <div
+                    style={{
+                      ...statusBadge,
+                      background:
+                        availability.label === 'Pre-order'
+                          ? '#ede9fe'
+                          : isShopOpen
+                          ? '#dcfce7'
+                          : '#fee2e2',
+                      color:
+                        availability.label === 'Pre-order'
+                          ? '#6d28d9'
+                          : isShopOpen
+                          ? '#166534'
+                          : '#b91c1c',
+                    }}
+                  >
+                    {availability.label}
                   </div>
-                ) : (
-                  <div style={distanceHint}>
-                    Sila kira caj delivery selepas alamat lengkap diisi.
-                  </div>
+
+                  {availability.inlineInfo && (
+                    <div style={statusInfoBadge}>{availability.inlineInfo}</div>
+                  )}
+                </div>
+
+                {seller.shop_description?.trim() && (
+                  <p style={shopDescription}>{seller.shop_description}</p>
                 )}
 
-                {resolvedCustomerAddress ? (
-                  <div style={resolvedAddressBox}>
-                    <div style={resolvedAddressTitle}>Resolved delivery address</div>
-                    <div style={resolvedAddressText}>{resolvedCustomerAddress}</div>
+                {hasMinimumOrderRule ? (
+                  <div style={minimumOrderHeroBoxDesktop}>
+                    {minimumOrderDisplayMessage}
                   </div>
                 ) : null}
+              </div>
+            </div>
+          )}
+        </div>
 
-                {deliveryError ? <div style={errorBox}>{deliveryError}</div> : null}
+        {hasCategoryFeature ? (
+          <div style={stickyTabWrap}>
+            <div style={tabShell}>
+              <div style={tabScroller}>
+                <button
+                  type="button"
+                  onClick={() => handleCategoryClick('all')}
+                  style={{
+                    ...tabButton,
+                    ...(activeCategoryId === 'all'
+                      ? activeTabButton
+                      : inactiveTabButton),
+                  }}
+                >
+                  All
+                </button>
+
+                {visibleCategories.map((category) => {
+                  const isActive = activeCategoryId === category.id
+
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => handleCategoryClick(category.id)}
+                      style={{
+                        ...tabButton,
+                        ...(isActive ? activeTabButton : inactiveTabButton),
+                      }}
+                    >
+                      {category.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <div ref={productListRef}>
+          {visibleProducts.length === 0 ? (
+            <div style={emptyCard}>
+              <p style={{ margin: 0, color: '#64748b' }}>
+                Tiada menu aktif buat masa ini.
+              </p>
+            </div>
+          ) : (
+            <div
+              style={{
+                ...productGrid,
+                gridTemplateColumns: isDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr',
+              }}
+            >
+              {visibleProducts.map((product) => {
+                const image = getFirstImage(product)
+                const qty = cart.reduce(
+                  (sum, item) =>
+                    item.product_id === product.id ? sum + item.quantity : sum,
+                  0
+                )
+                const disableAddButton = !isShopOpen || Boolean(product.sold_out)
+                const allImages = getProductImages(product)
+
+                return (
+                  <div key={product.id} style={productCard}>
+                    <div style={productContent}>
+                      <div style={productInfo}>
+                        <div style={productName}>{product.name}</div>
+
+                        <div style={productPrice}>RM {product.price.toFixed(2)}</div>
+
+                        {product.track_stock ? (
+                          <div style={stockText}>
+                            Stock: {product.stock_quantity ?? 0}
+                          </div>
+                        ) : null}
+
+                        <div style={productDesc}>
+                          {product.description || 'Tiada deskripsi.'}
+                        </div>
+
+                        <div style={qtyWrap}>
+                          <div style={qtyRow}>
+                            <button
+                              type="button"
+                              onClick={() => decrease(product.id)}
+                              style={qtyBtn}
+                            >
+                              -
+                            </button>
+
+                            <span style={qtyValue}>{qty}</span>
+
+                            <button
+                              type="button"
+                              onClick={() => increase(product)}
+                              style={{
+                                ...qtyBtn,
+                                opacity: disableAddButton ? 0.4 : 1,
+                                cursor: disableAddButton ? 'not-allowed' : 'pointer',
+                              }}
+                              disabled={disableAddButton}
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {!isShopOpen ? (
+                            <div style={qtyHintClosed}>Ordering unavailable</div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => openGallery(product, 0)}
+                        style={{
+                          ...productImageButton,
+                          cursor: image ? 'pointer' : 'default',
+                        }}
+                        disabled={!image}
+                        aria-label={`View images for ${product.name}`}
+                      >
+                        <div style={productImageWrap}>
+                          {image ? (
+                            <img
+                              src={getImageUrl(image)}
+                              alt={product.name}
+                              style={productImage}
+                            />
+                          ) : (
+                            <div style={productImagePlaceholder}>No image</div>
+                          )}
+
+                          {product.sold_out ? (
+                            <div style={soldOutBadge}>Sold Out</div>
+                          ) : null}
+
+                          {allImages.length > 1 ? (
+                            <div style={multiImageBadge}>
+                              {allImages.length} photos
+                            </div>
+                          ) : null}
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div style={checkoutCard}>
+          <div style={checkoutHeader}>
+            <div>
+              <h2 style={checkoutTitle}>Checkout</h2>
+              <p style={checkoutSub}>
+                Subtotal RM {grandTotal.toFixed(2)}
+                {hasMinimumOrderRule && minimumOrderType === 'quantity'
+                  ? ` • ${totalCartQuantity} pcs`
+                  : ''}
+              </p>
+            </div>
+          </div>
+
+          {!isShopOpen ? (
+            <div style={closedCheckoutBox}>
+              <div style={closedCheckoutTitle}>
+                Kedai kini tidak menerima tempahan
+              </div>
+              <div style={closedCheckoutText}>{availability.detail}</div>
+            </div>
+          ) : cartItems.length === 0 ? (
+            <div style={emptyCartBox}>
+              Sila pilih sekurang-kurangnya satu item untuk teruskan pembayaran.
+            </div>
+          ) : (
+            <>
+              <div style={summaryList}>
+                {cartItems.map((item) => (
+                  <div key={item.id} style={summaryCard}>
+                    <button
+                      type="button"
+                      onClick={() => openAddonModalForEdit(item)}
+                      style={summaryRowButton}
+                    >
+                      <div style={summaryRow}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>
+                            {item.name} × {item.quantity}
+                          </div>
+
+                          {item.addons.length > 0 && (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: '#64748b',
+                                marginTop: 4,
+                              }}
+                            >
+                              {item.addons.map((a) => (
+                                <div key={`${item.id}-${a.option_id}`}>
+                                  + {a.option_name} (RM {a.price.toFixed(2)})
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {item.note ? (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: '#94a3b8',
+                                marginTop: 4,
+                              }}
+                            >
+                              Note: {item.note}
+                            </div>
+                          ) : null}
+
+                          <div style={summaryEditHint}>Tap details to edit</div>
+                        </div>
+                        <strong>RM {item.line_total.toFixed(2)}</strong>
+                      </div>
+                    </button>
+
+                    <div style={summaryActions}>
+                      <div style={lineQtyControls}>
+                        <button
+                          type="button"
+                          onClick={() => decrementCartLine(item.id)}
+                          style={lineQtyBtn}
+                        >
+                          -
+                        </button>
+                        <span style={lineQtyValue}>{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => incrementCartLine(item.id)}
+                          style={lineQtyBtn}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeCartLine(item.id)}
+                        style={deleteLineBtn}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {hasMinimumOrderRule ? (
+                <div
+                  style={
+                    minimumOrderPassed
+                      ? minimumOrderPassedBox
+                      : minimumOrderWarningBox
+                  }
+                >
+                  <div style={minimumOrderTitle}>
+                    {minimumOrderPassed
+                      ? 'Minimum order cukup'
+                      : minimumOrderDisplayMessage}
+                  </div>
+
+                  {!minimumOrderPassed && minimumOrderRemainingText ? (
+                    <div style={minimumOrderText}>
+                      {minimumOrderRemainingText}
+                    </div>
+                  ) : null}
+
+                  {minimumOrderPassed ? (
+                    <div style={minimumOrderText}>
+                      Boleh teruskan pembayaran.
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {minimumOrderPassed ? (
+                <ShopPayButton
+                  sellerId={seller.id}
+                  shopSlug={shopSlug}
+                  items={cartItems}
+                  total={grandTotal}
+                  deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
+                  deliveryFee={seller.delivery_fee || 0}
+                  deliveryArea={seller.delivery_area || ''}
+                  deliveryNote={seller.delivery_note || ''}
+                  deliveryRadiusKm={seller.delivery_radius_km || 0}
+                  deliveryRatePerKm={seller.delivery_rate_per_km || 0}
+                  deliveryMinFee={seller.delivery_min_fee || 0}
+                  pickupAddress={seller.pickup_address || ''}
+                  sellerLatitude={seller.latitude || null}
+                  sellerLongitude={seller.longitude || null}
+                  deliverySlots={deliverySlots}
+                  enableDeliverySlots={enableDeliverySlots}
+                  minimumOrderEnabled={minimumOrderEnabled}
+                  minimumOrderType={minimumOrderType}
+                  minimumOrderValue={minimumOrderValue}
+                  minimumOrderMessage={minimumOrderDisplayMessage}
+                  cartQuantity={totalCartQuantity}
+                />
+              ) : (
+                <button type="button" disabled style={disabledCheckoutButton}>
+                  Minimum order belum cukup
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {gallery.isOpen ? (
+        <div style={galleryOverlay} onClick={closeGallery}>
+          <div
+            style={galleryDialog}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button type="button" onClick={closeGallery} style={galleryCloseBtn}>
+              ✕
+            </button>
+
+            <div style={galleryHeader}>
+              <div style={galleryTitle}>{gallery.productName}</div>
+              <div style={galleryCounter}>
+                {gallery.currentIndex + 1} / {gallery.images.length}
+              </div>
+            </div>
+
+            <div style={galleryBody}>
+              <button type="button" onClick={showPrevImage} style={galleryNavBtn}>
+                ‹
+              </button>
+
+              <div style={galleryImageWrap}>
+                <img
+                  src={gallery.images[gallery.currentIndex]}
+                  alt={gallery.productName}
+                  style={galleryImage}
+                />
+              </div>
+
+              <button type="button" onClick={showNextImage} style={galleryNavBtn}>
+                ›
+              </button>
+            </div>
+
+            {gallery.images.length > 1 ? (
+              <div style={galleryThumbRow}>
+                {gallery.images.map((img, index) => (
+                  <button
+                    key={`${img}-${index}`}
+                    type="button"
+                    onClick={() =>
+                      setGallery((prev) => ({
+                        ...prev,
+                        currentIndex: index,
+                      }))
+                    }
+                    style={{
+                      ...galleryThumbBtn,
+                      borderColor:
+                        gallery.currentIndex === index ? '#0f172a' : '#e2e8f0',
+                    }}
+                  >
+                    <img
+                      src={img}
+                      alt={`${gallery.productName} ${index + 1}`}
+                      style={galleryThumbImg}
+                    />
+                  </button>
+                ))}
               </div>
             ) : null}
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      ) : null}
 
-      {enableDeliverySlots && deliverySlots.length > 0 && (
-        <div>
-          <label style={labelStyle}>Delivery Slot</label>
-          <select
-            value={selectedSlotId}
-            onChange={(e) => {
-              const nextId = e.target.value
-              setSelectedSlotId(nextId)
-
-              const selected = deliverySlots.find((slot) => slot.id === nextId)
-              setSelectedSlotLabel(selected?.label || '')
-            }}
-            style={inputStyle}
+      {addonModal.isOpen && addonModal.product ? (
+        <div style={modalOverlay} onClick={closeAddonModal}>
+          <div
+            style={isDesktop ? modalDialogDesktop : modalDialogMobile}
+            onClick={(event) => event.stopPropagation()}
           >
-            <option value="">Select slot</option>
-            {deliverySlots.map((slot) => (
-              <option key={slot.id} value={slot.id}>
-                {slot.label}
-              </option>
-            ))}
-          </select>
+            <div style={modalHeader}>
+              <div>
+                <div style={modalTitle}>{addonModal.product.name}</div>
+                <div style={modalSubtitle}>
+                  Base price: RM {addonModal.product.price.toFixed(2)}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeAddonModal}
+                style={modalCloseBtn}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={modalContent}>
+              {addonModal.groups.length === 0 ? (
+                <div style={emptyCartBox}>Tiada add-on untuk produk ini.</div>
+              ) : (
+                addonModal.groups.map((group) => {
+                  const selectedIds = addonModal.selections[group.id] || []
+
+                  return (
+                    <div key={group.id} style={addonGroupCard}>
+                      <div style={addonGroupHeader}>
+                        <div style={addonGroupTitle}>{group.name}</div>
+                        <div style={addonGroupMeta}>
+                          {group.selection_type === 'single'
+                            ? 'Pilih Satu Sahaja'
+                            : 'Boleh pilih banyak'}
+                          {group.is_required ? ' • Required' : ''}
+                        </div>
+                      </div>
+
+                      <div style={addonOptionsWrap}>
+                        {group.options
+                          .filter((option) => option.is_active !== false)
+                          .sort(
+                            (a, b) =>
+                              Number(a.sort_order || 0) - Number(b.sort_order || 0)
+                          )
+                          .map((option) => {
+                            const checked = selectedIds.includes(option.id)
+
+                            return (
+                              <label key={option.id} style={addonOptionRow}>
+                                <input
+                                  type={
+                                    group.selection_type === 'single'
+                                      ? 'radio'
+                                      : 'checkbox'
+                                  }
+                                  name={`group-${group.id}`}
+                                  checked={checked}
+                                  onChange={(event) => {
+                                    setAddonModal((prev) => {
+                                      const current = prev.selections[group.id] || []
+                                      let nextSelections = [...current]
+
+                                      if (group.selection_type === 'single') {
+                                        nextSelections = event.target.checked
+                                          ? [option.id]
+                                          : []
+                                      } else if (event.target.checked) {
+                                        if (!nextSelections.includes(option.id)) {
+                                          nextSelections.push(option.id)
+                                        }
+                                      } else {
+                                        nextSelections = nextSelections.filter(
+                                          (id) => id !== option.id
+                                        )
+                                      }
+
+                                      return {
+                                        ...prev,
+                                        selections: {
+                                          ...prev.selections,
+                                          [group.id]: nextSelections,
+                                        },
+                                        error: '',
+                                      }
+                                    })
+                                  }}
+                                />
+
+                                <div style={{ flex: 1 }}>
+                                  <div style={addonOptionName}>{option.name}</div>
+                                </div>
+
+                                <div style={addonOptionPrice}>
+                                  {Number(option.price_delta || 0) > 0
+                                    ? `+ RM ${Number(option.price_delta).toFixed(2)}`
+                                    : 'Free'}
+                                </div>
+                              </label>
+                            )
+                          })}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+
+              <div style={noteWrap}>
+                <label style={noteLabel}>Customer Note</label>
+                <textarea
+                  value={addonModal.note}
+                  onChange={(event) =>
+                    setAddonModal((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                      error: '',
+                    }))
+                  }
+                  rows={3}
+                  placeholder="Contoh: kurang pedas, asingkan sambal"
+                  style={noteTextarea}
+                />
+              </div>
+
+              {addonModal.error ? (
+                <div style={modalError}>{addonModal.error}</div>
+              ) : null}
+            </div>
+
+            <div style={modalFooter}>
+              <button
+                type="button"
+                onClick={closeAddonModal}
+                style={secondaryBtn}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!addonModal.product) return
+
+                  const validationMessage = validateAddonSelections(
+                    addonModal.groups,
+                    addonModal.selections
+                  )
+
+                  if (validationMessage) {
+                    setAddonModal((prev) => ({
+                      ...prev,
+                      error: validationMessage,
+                    }))
+                    return
+                  }
+
+                  const cartLine = buildCartLine(
+                    addonModal.product,
+                    addonModal.selections,
+                    addonModal.groups,
+                    addonModal.note
+                  )
+
+                  if (addonModal.editingCartLineId) {
+                    updateCartLine(cartLine, addonModal.editingCartLineId)
+                  } else {
+                    addOrMergeCartLine(cartLine)
+                  }
+
+                  closeAddonModal()
+                }}
+                style={primaryBtn}
+              >
+                {addonModal.editingCartLineId ? 'Update Item' : 'Add to Cart'}
+              </button>
+            </div>
+          </div>
         </div>
-      )}
-      
-
-
-
-      <div style={totalsBox}>
-        <div style={totalLine}>
-          <span>Subtotal</span>
-          <strong>{formatCurrency(total)}</strong>
-        </div>
-
-        <div style={totalLine}>
-          <span>
-            Delivery{' '}
-            <span style={deliveryLabelText}>{getDeliveryLabel()}</span>
-          </span>
-          <strong>{getDeliveryAmountDisplay()}</strong>
-        </div>
-
-        <div style={grandTotalLine}>
-          <span>Total</span>
-          <strong>{formatCurrency(payableTotal)}</strong>
-        </div>
-      </div>
-      
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={loading}
-        style={{
-          ...buttonStyle,
-          opacity: loading ? 0.7 : 1,
-          cursor: loading ? 'not-allowed' : 'pointer',
-        }}
-      >
-        {loading ? 'Processing payment...' : 'Proceed to Payment'}
-      </button>
-    </div>
+      ) : null}
+    </main>
   )
 }
 
-const wrapper = {
-  width: '100%',
-} as const
-
-const formGrid = {
-  display: 'grid',
-  gap: '14px',
-  marginBottom: '14px',
-} as const
-
-const labelStyle = {
-  display: 'block',
-  marginBottom: '6px',
-  fontSize: '14px',
-  fontWeight: 700,
-  color: '#0f172a',
-} as const
-
-const inputStyle = {
-  width: '100%',
-  padding: '13px',
-  borderRadius: '12px',
-  border: '1px solid #dbe2ea',
-  fontSize: '14px',
-  outline: 'none',
-  background: '#fff',
-} as const
-
-const toggleBox = {
-  padding: '12px',
-  border: '1px solid #e2e8f0',
-  borderRadius: '12px',
-  background: '#f8fafc',
-} as const
-
-const toggleLabel = {
+const heroMobile: React.CSSProperties = {
   display: 'flex',
-  justifyContent: 'space-between',
+  flexDirection: 'column',
   alignItems: 'center',
-  gap: '12px',
-} as const
+  textAlign: 'center',
+  gap: 10,
+  width: '100%',
+}
 
-const toggleTitle = {
-  display: 'block',
+const sellerImgMobile: React.CSSProperties = {
+  width: 72,
+  height: 72,
+  borderRadius: '9999px',
+  objectFit: 'cover',
+  border: '1px solid #e2e8f0',
+}
+
+const sellerFallbackMobile: React.CSSProperties = {
+  width: 72,
+  height: 72,
+  borderRadius: '9999px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#e2e8f0',
+  fontWeight: 800,
+  fontSize: 24,
+}
+
+const shopTitleMobile: React.CSSProperties = {
+  margin: 0,
+  fontSize: 16,
+  fontWeight: 800,
   color: '#0f172a',
-} as const
+}
 
-const toggleSubtext = {
-  fontSize: '12px',
-  color: '#64748b',
-  marginTop: '4px',
-} as const
+const badgeCenter: React.CSSProperties = {
+  display: 'flex',
+  gap: 8,
+  justifyContent: 'center',
+  flexWrap: 'wrap',
+}
 
-const toggleSwitch = {
-  width: '48px',
-  height: '28px',
-  borderRadius: '999px',
-  position: 'relative' as const,
-  border: 'none',
-  cursor: 'pointer',
-  flexShrink: 0,
-} as const
+const shopDescriptionMobile: React.CSSProperties = {
+  fontSize: 14,
+  color: '#475569',
+  lineHeight: 1.6,
+  marginTop: 6,
+}
 
-const toggleKnob = {
-  position: 'absolute' as const,
-  top: '3px',
-  width: '22px',
-  height: '22px',
-  borderRadius: '999px',
+const main: React.CSSProperties = {
+  minHeight: '100vh',
+  background: '#f8fafc',
+  padding: '20px 16px 80px',
+}
+
+const container: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 1180,
+  margin: '0 auto',
+}
+
+const logoWrap: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  marginBottom: 12,
+}
+
+const logo: React.CSSProperties = {
+  height: 20,
+  width: 'auto',
+}
+
+const heroCard: React.CSSProperties = {
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 24,
+  padding: 18,
+  boxShadow: '0 8px 30px rgba(15, 23, 42, 0.06)',
+  marginBottom: 16,
+}
+
+const sellerImgDesktop: React.CSSProperties = {
+  width: 96,
+  height: 96,
+  borderRadius: '9999px',
+  objectFit: 'cover',
+  border: '1px solid #e2e8f0',
+}
+
+const sellerFallbackDesktop: React.CSSProperties = {
+  width: 96,
+  height: 96,
+  borderRadius: '9999px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: '#e2e8f0',
+  fontWeight: 800,
+  fontSize: 26,
+}
+
+const heroContent: React.CSSProperties = {
+  minWidth: 0,
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+}
+
+const sellerRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 14,
+}
+
+const shopTitle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 16,
+  lineHeight: 1.2,
+  fontWeight: 600,
+  color: '#0f172a',
+}
+
+const shopDescription: React.CSSProperties = {
+  margin: '10px 0 0',
+  color: '#475569',
+  fontSize: 14,
+  lineHeight: 1.3,
+  maxWidth: 720,
+}
+
+const statusInlineWrap: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  flexWrap: 'wrap',
+  marginTop: 10,
+}
+
+const statusBadge: React.CSSProperties = {
+  borderRadius: 999,
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 800,
+}
+
+const statusInfoBadge: React.CSSProperties = {
+  borderRadius: 999,
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 600,
+  background: '#f8fafc',
+  color: '#475569',
+  border: '1px solid #e2e8f0',
+}
+
+const minimumOrderHeroBox: React.CSSProperties = {
+  borderRadius: 14,
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  padding: '10px 12px',
+  fontSize: 13,
+  fontWeight: 800,
+  lineHeight: 1.4,
+  width: '100%',
+}
+
+const minimumOrderHeroBoxDesktop: React.CSSProperties = {
+  marginTop: 12,
+  borderRadius: 14,
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  padding: '10px 12px',
+  fontSize: 13,
+  fontWeight: 800,
+  lineHeight: 1.4,
+  width: 'fit-content',
+  maxWidth: '100%',
+}
+
+const stickyTabWrap: React.CSSProperties = {
+  position: 'sticky',
+  top: 0,
+  zIndex: 10,
+  marginBottom: 16,
+}
+
+const tabShell: React.CSSProperties = {
+  background: 'rgba(248, 250, 252, 0.92)',
+  backdropFilter: 'blur(8px)',
+  padding: '8px 0',
+}
+
+const tabScroller: React.CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  overflowX: 'auto',
+  paddingBottom: 4,
+}
+
+const tabButton: React.CSSProperties = {
+  borderRadius: 999,
+  padding: '10px 14px',
+  border: '1px solid #cbd5e1',
   background: '#fff',
-  transition: 'left 0.2s ease',
-} as const
+  color: '#334155',
+  fontSize: 14,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+}
 
-const distanceBox = {
-  padding: '12px',
-  border: '1px solid #dbeafe',
-  borderRadius: '12px',
-  background: '#f8fbff',
+const activeTabButton: React.CSSProperties = {
+  background: '#0f172a',
+  color: '#fff',
+  borderColor: '#0f172a',
+}
+
+const inactiveTabButton: React.CSSProperties = {
+  background: '#fff',
+  color: '#334155',
+  borderColor: '#cbd5e1',
+}
+
+const emptyCard: React.CSSProperties = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 20,
+  padding: 18,
+}
+
+const productGrid: React.CSSProperties = {
   display: 'grid',
-  gap: '10px',
-} as const
+  gridTemplateColumns: '1fr',
+  gap: 16,
+}
 
-const deliveryAreaText = {
-  fontSize: '12px',
+const productCard: React.CSSProperties = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 24,
+  padding: 16,
+  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
+}
+
+const productContent: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 120px',
+  gap: 14,
+  alignItems: 'start',
+}
+
+const productInfo: React.CSSProperties = {
+  minWidth: 0,
+}
+
+const productName: React.CSSProperties = {
+  fontSize: 16,
+  fontWeight: 600,
+  color: '#0f172a',
+  lineHeight: 1.2,
+}
+
+const productPrice: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 14,
+  fontWeight: 600,
+  color: '#0f172a',
+}
+
+const stockText: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 12,
+  color: '#64748b',
+  fontWeight: 700,
+}
+
+const productDesc: React.CSSProperties = {
+  marginTop: 8,
+  color: '#64748b',
+  fontSize: 14,
+  lineHeight: 1.3,
+  whiteSpace: 'normal',
+  wordBreak: 'break-word',
+}
+
+const qtyWrap: React.CSSProperties = {
+  marginTop: 14,
+}
+
+const qtyRow: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 10,
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: 999,
+  padding: 6,
+}
+
+const qtyBtn: React.CSSProperties = {
+  width: 34,
+  height: 34,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  fontSize: 18,
+  fontWeight: 800,
+  cursor: 'pointer',
+}
+
+const qtyValue: React.CSSProperties = {
+  minWidth: 18,
+  textAlign: 'center',
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const qtyHintClosed: React.CSSProperties = {
+  marginTop: 8,
+  fontSize: 12,
+  color: '#b91c1c',
+  fontWeight: 700,
+}
+
+const productImageButton: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  padding: 0,
+}
+
+const productImageWrap: React.CSSProperties = {
+  position: 'relative',
+  width: 120,
+  height: 120,
+  borderRadius: 20,
+  overflow: 'hidden',
+  background: '#f1f5f9',
+  border: '1px solid #e2e8f0',
+}
+
+const productImage: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+}
+
+const productImagePlaceholder: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#94a3b8',
+  fontSize: 13,
+  fontWeight: 700,
+}
+
+const soldOutBadge: React.CSSProperties = {
+  position: 'absolute',
+  top: 8,
+  left: 8,
+  background: '#fee2e2',
+  color: '#b91c1c',
+  fontSize: 11,
+  fontWeight: 800,
+  borderRadius: 999,
+  padding: '6px 8px',
+}
+
+const multiImageBadge: React.CSSProperties = {
+  position: 'absolute',
+  right: 8,
+  bottom: 8,
+  background: 'rgba(15, 23, 42, 0.8)',
+  color: '#fff',
+  fontSize: 11,
+  fontWeight: 800,
+  borderRadius: 999,
+  padding: '6px 8px',
+}
+
+const checkoutCard: React.CSSProperties = {
+  marginTop: 18,
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 24,
+  padding: 18,
+  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
+}
+
+const checkoutHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  marginBottom: 14,
+}
+
+const checkoutTitle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 20,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const checkoutSub: React.CSSProperties = {
+  margin: '4px 0 0',
+  fontSize: 14,
+  color: '#64748b',
+}
+
+const closedCheckoutBox: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px solid #fed7aa',
+  background: '#fff7ed',
+  padding: 14,
+}
+
+const closedCheckoutTitle: React.CSSProperties = {
+  fontWeight: 800,
+  color: '#9a3412',
+}
+
+const closedCheckoutText: React.CSSProperties = {
+  marginTop: 6,
+  fontSize: 14,
+  color: '#9a3412',
+}
+
+const emptyCartBox: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px dashed #cbd5e1',
+  background: '#f8fafc',
+  padding: 16,
+  color: '#64748b',
+  fontSize: 14,
+}
+
+const summaryList: React.CSSProperties = {
+  display: 'grid',
+  gap: 12,
+  marginBottom: 16,
+}
+
+const summaryCard: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
+  borderRadius: 18,
+  padding: 12,
+  background: '#fff',
+}
+
+const summaryRowButton: React.CSSProperties = {
+  width: '100%',
+  border: 'none',
+  background: 'transparent',
+  padding: 0,
+  textAlign: 'left',
+  cursor: 'pointer',
+}
+
+const summaryRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 12,
+}
+
+const summaryEditHint: React.CSSProperties = {
+  marginTop: 8,
+  fontSize: 12,
+  color: '#2563eb',
+  fontWeight: 700,
+}
+
+const summaryActions: React.CSSProperties = {
+  marginTop: 10,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+}
+
+const lineQtyControls: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+}
+
+const lineQtyBtn: React.CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  fontSize: 16,
+  fontWeight: 800,
+  cursor: 'pointer',
+}
+
+const lineQtyValue: React.CSSProperties = {
+  minWidth: 16,
+  textAlign: 'center',
+  fontWeight: 800,
+}
+
+const deleteLineBtn: React.CSSProperties = {
+  border: '1px solid #fecaca',
+  background: '#fef2f2',
+  color: '#b91c1c',
+  borderRadius: 999,
+  padding: '8px 12px',
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: 'pointer',
+}
+
+const minimumOrderWarningBox: React.CSSProperties = {
+  borderRadius: 16,
+  border: '1px solid #fed7aa',
+  background: '#fff7ed',
+  padding: 14,
+  marginBottom: 14,
+}
+
+const minimumOrderPassedBox: React.CSSProperties = {
+  borderRadius: 16,
+  border: '1px solid #bbf7d0',
+  background: '#f0fdf4',
+  padding: 14,
+  marginBottom: 14,
+}
+
+const minimumOrderTitle: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: '#0f172a',
+  lineHeight: 1.4,
+}
+
+const minimumOrderText: React.CSSProperties = {
+  marginTop: 5,
+  fontSize: 13,
   color: '#64748b',
   lineHeight: 1.5,
-} as const
+}
 
-const secondaryButton = {
+const disabledCheckoutButton: React.CSSProperties = {
+  width: '100%',
+  border: 'none',
+  borderRadius: 14,
+  padding: '14px 16px',
+  background: '#cbd5e1',
+  color: '#475569',
+  fontSize: 15,
+  fontWeight: 800,
+  cursor: 'not-allowed',
+}
+
+const galleryOverlay: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(15, 23, 42, 0.78)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 'max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom))',
+  zIndex: 1000,
+}
+
+const galleryDialog: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 980,
+  maxHeight: 'calc(var(--app-dvh, 100vh) - 32px)',
+  background: '#fff',
+  borderRadius: 24,
+  padding: 16,
+  position: 'relative',
+  overflowY: 'auto',
+}
+
+const galleryCloseBtn: React.CSSProperties = {
+  position: 'absolute',
+  top: 12,
+  right: 12,
+  width: 36,
+  height: 36,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  cursor: 'pointer',
+  fontWeight: 800,
+}
+
+const galleryHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  marginBottom: 12,
+  paddingRight: 42,
+}
+
+const galleryTitle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const galleryCounter: React.CSSProperties = {
+  fontSize: 13,
+  color: '#64748b',
+  fontWeight: 700,
+}
+
+const galleryBody: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '48px 1fr 48px',
+  gap: 12,
+  alignItems: 'center',
+}
+
+const galleryNavBtn: React.CSSProperties = {
+  width: 48,
+  height: 48,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  fontSize: 26,
+  cursor: 'pointer',
+}
+
+const galleryImageWrap: React.CSSProperties = {
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: 20,
+  overflow: 'hidden',
+  minHeight: 320,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const galleryImage: React.CSSProperties = {
+  width: '100%',
+  maxHeight: '70vh',
+  objectFit: 'contain',
+  display: 'block',
+}
+
+const galleryThumbRow: React.CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  overflowX: 'auto',
+  marginTop: 14,
+}
+
+const galleryThumbBtn: React.CSSProperties = {
+  border: '2px solid #e2e8f0',
+  borderRadius: 14,
+  padding: 0,
+  background: '#fff',
+  overflow: 'hidden',
+  width: 72,
+  height: 72,
+  cursor: 'pointer',
+  flex: '0 0 auto',
+}
+
+const galleryThumbImg: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+}
+
+const modalOverlay: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(15, 23, 42, 0.62)',
+  display: 'flex',
+  alignItems: 'flex-end',
+  justifyContent: 'center',
+  paddingTop: 'max(12px, env(safe-area-inset-top))',
+  paddingRight: 12,
+  paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+  paddingLeft: 12,
+  zIndex: 1100,
+}
+
+const modalDialogBase: React.CSSProperties = {
+  width: '100%',
+  background: '#fff',
+  overflow: 'hidden',
+  boxShadow: '0 16px 50px rgba(15, 23, 42, 0.18)',
+  display: 'flex',
+  flexDirection: 'column',
+}
+
+const modalDialogMobile: React.CSSProperties = {
+  ...modalDialogBase,
+  maxWidth: 680,
+  height: 'auto',
+  maxHeight: 'calc(var(--app-dvh, 100vh) - 24px)',
+  borderRadius: '24px 24px 24px 24px',
+}
+
+const modalDialogDesktop: React.CSSProperties = {
+  ...modalDialogBase,
+  maxWidth: 680,
+  maxHeight: 'calc(var(--app-dvh, 100vh) - 32px)',
+  borderRadius: 24,
+  alignSelf: 'center',
+}
+
+const modalHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 12,
+  padding: 18,
+  borderBottom: '1px solid #e2e8f0',
+  flexShrink: 0,
+}
+
+const modalTitle: React.CSSProperties = {
+  fontSize: 20,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const modalSubtitle: React.CSSProperties = {
+  marginTop: 4,
+  color: '#64748b',
+  fontSize: 14,
+}
+
+const modalCloseBtn: React.CSSProperties = {
+  width: 36,
+  height: 36,
+  borderRadius: '9999px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  cursor: 'pointer',
+  fontWeight: 800,
+  flexShrink: 0,
+}
+
+const modalContent: React.CSSProperties = {
+  padding: 18,
+  display: 'grid',
+  gap: 14,
+  overflowY: 'auto',
+  WebkitOverflowScrolling: 'touch',
+  minHeight: 0,
+  flex: 1,
+}
+
+const addonGroupCard: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
+  borderRadius: 18,
+  padding: 14,
+  background: '#fff',
+}
+
+const addonGroupHeader: React.CSSProperties = {
+  marginBottom: 10,
+}
+
+const addonGroupTitle: React.CSSProperties = {
+  fontSize: 16,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const addonGroupMeta: React.CSSProperties = {
+  marginTop: 4,
+  fontSize: 12,
+  color: '#64748b',
+  fontWeight: 600,
+}
+
+const addonOptionsWrap: React.CSSProperties = {
+  display: 'grid',
+  gap: 10,
+}
+
+const addonOptionRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  border: '1px solid #e2e8f0',
+  borderRadius: 14,
+  padding: '10px 12px',
+  background: '#f8fafc',
+}
+
+const addonOptionName: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: '#0f172a',
+}
+
+const addonOptionPrice: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: '#334155',
+}
+
+const noteWrap: React.CSSProperties = {
+  display: 'grid',
+  gap: 8,
+}
+
+const noteLabel: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: '#0f172a',
+}
+
+const noteTextarea: React.CSSProperties = {
+  width: '100%',
+  borderRadius: 13,
+  border: '1px solid #cbd5e1',
+  padding: 12,
+  fontSize: 14,
+  fontFamily: 'inherit',
+  resize: 'vertical',
+}
+
+const modalError: React.CSSProperties = {
+  borderRadius: 14,
+  border: '1px solid #fecaca',
+  background: '#fef2f2',
+  padding: 12,
+  color: '#b91c1c',
+  fontSize: 14,
+  fontWeight: 700,
+}
+
+const modalFooter: React.CSSProperties = {
+  paddingTop: 14,
+  paddingRight: 18,
+  paddingBottom: 'calc(18px + env(safe-area-inset-bottom))',
+  paddingLeft: 18,
+  borderTop: '1px solid #e2e8f0',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  gap: 10,
+  background: '#fff',
+  flexShrink: 0,
+}
+
+const secondaryBtn: React.CSSProperties = {
+  borderRadius: 999,
   border: '1px solid #cbd5e1',
   background: '#fff',
   color: '#0f172a',
-  borderRadius: '12px',
-  padding: '12px 14px',
-  fontSize: '14px',
-  fontWeight: 700,
-} as const
-
-const distanceHint = {
-  fontSize: '12px',
-  color: '#64748b',
-} as const
-
-const distanceResult = {
-  fontSize: '13px',
-  color: '#0f172a',
-  lineHeight: 1.7,
-} as const
-
-const resolvedAddressBox = {
-  padding: '10px 12px',
-  border: '1px solid #bbf7d0',
-  background: '#f0fdf4',
-  borderRadius: '12px',
-} as const
-
-const resolvedAddressTitle = {
-  fontSize: '11px',
+  padding: '10px 16px',
   fontWeight: 800,
-  color: '#15803d',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.04em',
-  marginBottom: '4px',
-} as const
+  cursor: 'pointer',
+}
 
-const resolvedAddressText = {
-  fontSize: '13px',
-  color: '#166534',
-  lineHeight: 1.5,
-} as const
-
-const errorBox = {
-  padding: '10px 12px',
-  border: '1px solid #fecaca',
-  background: '#fef2f2',
-  borderRadius: '12px',
-  fontSize: '12px',
-  color: '#b91c1c',
-  lineHeight: 1.5,
-} as const
-
-const totalsBox = {
-  marginBottom: '12px',
-  paddingTop: '10px',
-  borderTop: '1px solid #e2e8f0',
-  display: 'grid',
-  gap: '8px',
-} as const
-
-const totalLine = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '12px',
-  fontSize: '14px',
-  color: '#334155',
-} as const
-
-const deliveryLabelText = {
-  fontSize: '12px',
-  color: '#64748b',
-  fontWeight: 600,
-} as const
-
-const grandTotalLine = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '12px',
-  fontSize: '16px',
-  fontWeight: 800,
-  color: '#0f172a',
-  paddingTop: '6px',
-  borderTop: '1px dashed #e2e8f0',
-} as const
-
-const buttonStyle = {
-  width: '100%',
-  border: 'none',
-  borderRadius: '14px',
-  padding: '14px 16px',
+const primaryBtn: React.CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid #0f172a',
   background: '#0f172a',
   color: '#fff',
-  fontSize: '15px',
+  padding: '10px 16px',
   fontWeight: 800,
-} as const
+  cursor: 'pointer',
+}
