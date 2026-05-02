@@ -29,6 +29,8 @@ type OperatingDays = Record<DayKey, OperatingDayItem>
 
 type OrderMode = 'anytime' | 'scheduled' | 'preorder'
 
+type MinimumOrderType = 'quantity' | 'amount'
+
 type ProductAddonOption = {
   id: string
   addon_group_id: string
@@ -91,6 +93,10 @@ type SellerProfile = {
   longitude?: number | null
   order_mode?: OrderMode | null
   preorder_days?: number | null
+  minimum_order_enabled?: boolean | null
+  minimum_order_type?: MinimumOrderType | null
+  minimum_order_value?: number | null
+  minimum_order_message?: string | null
 }
 
 type MenuCategory = {
@@ -500,6 +506,17 @@ function isSameCartLine(a: CartLine, b: CartLine) {
     normalizeNote(a.note) === normalizeNote(b.note) &&
     isSameAddons(a.addons || [], b.addons || [])
   )
+}
+
+function getMinimumOrderDefaultMessage(
+  minimumOrderType: MinimumOrderType,
+  minimumOrderValue: number
+) {
+  if (minimumOrderType === 'amount') {
+    return `Minimum order ${formatCurrency(minimumOrderValue)}.`
+  }
+
+  return `Minimum order ${minimumOrderValue} pcs. Boleh campur-campur.`
 }
 
 export default function ShopPageClient({
@@ -999,6 +1016,67 @@ export default function ShopPageClient({
     return cart.reduce((sum, item) => sum + item.line_total, 0)
   }, [cart])
 
+  const totalCartQuantity = useMemo(() => {
+    return cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+  }, [cart])
+
+  const minimumOrderEnabled = Boolean(seller.minimum_order_enabled)
+  const minimumOrderType: MinimumOrderType =
+    seller.minimum_order_type === 'amount' ? 'amount' : 'quantity'
+  const minimumOrderValue = Number(seller.minimum_order_value || 0)
+
+  const hasMinimumOrderRule = minimumOrderEnabled && minimumOrderValue > 0
+
+  const minimumOrderPassed = useMemo(() => {
+    if (!hasMinimumOrderRule) return true
+
+    if (minimumOrderType === 'amount') {
+      return Number(grandTotal || 0) >= minimumOrderValue
+    }
+
+    return Number(totalCartQuantity || 0) >= minimumOrderValue
+  }, [
+    hasMinimumOrderRule,
+    minimumOrderType,
+    minimumOrderValue,
+    grandTotal,
+    totalCartQuantity,
+  ])
+
+  const minimumOrderRemainingText = useMemo(() => {
+    if (!hasMinimumOrderRule || minimumOrderPassed) return ''
+
+    if (minimumOrderType === 'amount') {
+      const remainingAmount = Math.max(0, minimumOrderValue - grandTotal)
+      return `Tambah lagi ${formatCurrency(remainingAmount)} untuk checkout.`
+    }
+
+    const remainingQty = Math.max(0, minimumOrderValue - totalCartQuantity)
+    return `Tambah lagi ${remainingQty} pcs untuk checkout.`
+  }, [
+    hasMinimumOrderRule,
+    minimumOrderPassed,
+    minimumOrderType,
+    minimumOrderValue,
+    grandTotal,
+    totalCartQuantity,
+  ])
+
+  const minimumOrderDisplayMessage = useMemo(() => {
+    if (!hasMinimumOrderRule) return ''
+
+    const customMessage = seller.minimum_order_message?.trim()
+
+    if (customMessage) return customMessage
+
+    return getMinimumOrderDefaultMessage(minimumOrderType, minimumOrderValue)
+  }, [
+    hasMinimumOrderRule,
+    seller.minimum_order_message,
+    minimumOrderType,
+    minimumOrderValue,
+  ])
+
   if (isDesktop === null) return null
 
   const sellerName = seller.store_name || 'Shop'
@@ -1060,6 +1138,12 @@ export default function ShopPageClient({
               {seller.shop_description?.trim() && (
                 <p style={shopDescriptionMobile}>{seller.shop_description}</p>
               )}
+
+              {hasMinimumOrderRule ? (
+                <div style={minimumOrderHeroBox}>
+                  {minimumOrderDisplayMessage}
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -1109,6 +1193,12 @@ export default function ShopPageClient({
                 {seller.shop_description?.trim() && (
                   <p style={shopDescription}>{seller.shop_description}</p>
                 )}
+
+                {hasMinimumOrderRule ? (
+                  <div style={minimumOrderHeroBoxDesktop}>
+                    {minimumOrderDisplayMessage}
+                  </div>
+                ) : null}
               </div>
             </div>
           )}
@@ -1271,7 +1361,12 @@ export default function ShopPageClient({
           <div style={checkoutHeader}>
             <div>
               <h2 style={checkoutTitle}>Checkout</h2>
-              <p style={checkoutSub}>Subtotal RM {grandTotal.toFixed(2)}</p>
+              <p style={checkoutSub}>
+                Subtotal RM {grandTotal.toFixed(2)}
+                {hasMinimumOrderRule && minimumOrderType === 'quantity'
+                  ? ` • ${totalCartQuantity} pcs`
+                  : ''}
+              </p>
             </div>
           </div>
 
@@ -1367,24 +1462,63 @@ export default function ShopPageClient({
                 ))}
               </div>
 
-              <ShopPayButton
-                sellerId={seller.id}
-                shopSlug={shopSlug}
-                items={cartItems}
-                total={grandTotal}
-                deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
-                deliveryFee={seller.delivery_fee || 0}
-                deliveryArea={seller.delivery_area || ''}
-                deliveryNote={seller.delivery_note || ''}
-                deliveryRadiusKm={seller.delivery_radius_km || 0}
-                deliveryRatePerKm={seller.delivery_rate_per_km || 0}
-                deliveryMinFee={seller.delivery_min_fee || 0}
-                pickupAddress={seller.pickup_address || ''}
-                sellerLatitude={seller.latitude || null}
-                sellerLongitude={seller.longitude || null}
-                deliverySlots={deliverySlots}
-                enableDeliverySlots={enableDeliverySlots}
-              />
+              {hasMinimumOrderRule ? (
+                <div
+                  style={
+                    minimumOrderPassed
+                      ? minimumOrderPassedBox
+                      : minimumOrderWarningBox
+                  }
+                >
+                  <div style={minimumOrderTitle}>
+                    {minimumOrderPassed
+                      ? 'Minimum order cukup'
+                      : minimumOrderDisplayMessage}
+                  </div>
+
+                  {!minimumOrderPassed && minimumOrderRemainingText ? (
+                    <div style={minimumOrderText}>
+                      {minimumOrderRemainingText}
+                    </div>
+                  ) : null}
+
+                  {minimumOrderPassed ? (
+                    <div style={minimumOrderText}>
+                      Boleh teruskan pembayaran.
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {minimumOrderPassed ? (
+                <ShopPayButton
+                  sellerId={seller.id}
+                  shopSlug={shopSlug}
+                  items={cartItems}
+                  total={grandTotal}
+                  deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
+                  deliveryFee={seller.delivery_fee || 0}
+                  deliveryArea={seller.delivery_area || ''}
+                  deliveryNote={seller.delivery_note || ''}
+                  deliveryRadiusKm={seller.delivery_radius_km || 0}
+                  deliveryRatePerKm={seller.delivery_rate_per_km || 0}
+                  deliveryMinFee={seller.delivery_min_fee || 0}
+                  pickupAddress={seller.pickup_address || ''}
+                  sellerLatitude={seller.latitude || null}
+                  sellerLongitude={seller.longitude || null}
+                  deliverySlots={deliverySlots}
+                  enableDeliverySlots={enableDeliverySlots}
+                  minimumOrderEnabled={minimumOrderEnabled}
+                  minimumOrderType={minimumOrderType}
+                  minimumOrderValue={minimumOrderValue}
+                  minimumOrderMessage={minimumOrderDisplayMessage}
+                  cartQuantity={totalCartQuantity}
+                />
+              ) : (
+                <button type="button" disabled style={disabledCheckoutButton}>
+                  Minimum order belum cukup
+                </button>
+              )}
             </>
           )}
         </div>
@@ -1799,6 +1933,32 @@ const statusInfoBadge: React.CSSProperties = {
   border: '1px solid #e2e8f0',
 }
 
+const minimumOrderHeroBox: React.CSSProperties = {
+  borderRadius: 14,
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  padding: '10px 12px',
+  fontSize: 13,
+  fontWeight: 800,
+  lineHeight: 1.4,
+  width: '100%',
+}
+
+const minimumOrderHeroBoxDesktop: React.CSSProperties = {
+  marginTop: 12,
+  borderRadius: 14,
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  padding: '10px 12px',
+  fontSize: 13,
+  fontWeight: 800,
+  lineHeight: 1.4,
+  width: 'fit-content',
+  maxWidth: '100%',
+}
+
 const stickyTabWrap: React.CSSProperties = {
   position: 'sticky',
   top: 0,
@@ -2134,6 +2294,48 @@ const deleteLineBtn: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 800,
   cursor: 'pointer',
+}
+
+const minimumOrderWarningBox: React.CSSProperties = {
+  borderRadius: 16,
+  border: '1px solid #fed7aa',
+  background: '#fff7ed',
+  padding: 14,
+  marginBottom: 14,
+}
+
+const minimumOrderPassedBox: React.CSSProperties = {
+  borderRadius: 16,
+  border: '1px solid #bbf7d0',
+  background: '#f0fdf4',
+  padding: 14,
+  marginBottom: 14,
+}
+
+const minimumOrderTitle: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: '#0f172a',
+  lineHeight: 1.4,
+}
+
+const minimumOrderText: React.CSSProperties = {
+  marginTop: 5,
+  fontSize: 13,
+  color: '#64748b',
+  lineHeight: 1.5,
+}
+
+const disabledCheckoutButton: React.CSSProperties = {
+  width: '100%',
+  border: 'none',
+  borderRadius: 14,
+  padding: '14px 16px',
+  background: '#cbd5e1',
+  color: '#475569',
+  fontSize: 15,
+  fontWeight: 800,
+  cursor: 'not-allowed',
 }
 
 const galleryOverlay: React.CSSProperties = {
