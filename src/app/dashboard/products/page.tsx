@@ -307,6 +307,7 @@ export default function ProductsPage() {
       .from('products')
       .select('*')
       .eq('seller_profile_id', sellerData.id)
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false })
 
     if (productError) {
@@ -1055,40 +1056,45 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
   }
 
   async function moveUp(product: ProductRow) {
-  const current = products.find(p => p.id === product.id)
-  if (!current) return
+    const currentIndex = products.findIndex((p) => p.id === product.id)
+    if (currentIndex <= 0) return
 
-  const above = products
-    .filter(p => p.sort_order < current.sort_order)
-    .sort((a, b) => b.sort_order - a.sort_order)[0]
-
-  if (!above) return
-
-  await swapSort(current, above)
+    const above = products[currentIndex - 1]
+    await swapSort(product, above)
   }
 
   async function moveDown(product: ProductRow) {
-    const current = products.find(p => p.id === product.id)
-    if (!current) return
+    const currentIndex = products.findIndex((p) => p.id === product.id)
+    if (currentIndex === -1 || currentIndex >= products.length - 1) return
 
-    const below = products
-      .filter(p => p.sort_order > current.sort_order)
-      .sort((a, b) => a.sort_order - b.sort_order)[0]
-
-    if (!below) return
-
-    await swapSort(current, below)
+    const below = products[currentIndex + 1]
+    await swapSort(product, below)
   }
 
   async function swapSort(a: ProductRow, b: ProductRow) {
-    await supabase.from('products').update({
-      sort_order: b.sort_order,
-    }).eq('id', a.id)
+    const aSort = Number(a.sort_order || 0)
+    const bSort = Number(b.sort_order || 0)
 
-    await supabase.from('products').update({
-      sort_order: a.sort_order,
-    }).eq('id', b.id)
-  
+    const { error: errorA } = await supabase
+      .from('products')
+      .update({ sort_order: bSort })
+      .eq('id', a.id)
+
+    if (errorA) {
+      alert(errorA.message)
+      return
+    }
+
+    const { error: errorB } = await supabase
+      .from('products')
+      .update({ sort_order: aSort })
+      .eq('id', b.id)
+
+    if (errorB) {
+      alert(errorB.message)
+      return
+    }
+
     await loadProductsPage()
   }
 
@@ -1957,21 +1963,23 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                           {link || 'Shop URL not ready yet'}
                         </div>
 
-                        <button
-                          onClick={() => moveUp(product)}
-                          className="rounded-2xl border px-3 py-3 text-xs font-bold"
-                        >
-                          ⬆️
-                        </button>
-                        
-                        <button
-                          onClick={() => moveDown(product)}
-                          className="rounded-2xl border px-3 py-3 text-xs font-bold"
-                        >
-                          ⬇️
-                        </button>
-
                         <div className="grid grid-cols-5 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => moveUp(product)}
+                            className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-xs font-bold text-slate-900 transition hover:bg-slate-50 sm:text-sm"
+                          >
+                            ⬆️
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => moveDown(product)}
+                            className="rounded-2xl border border-slate-300 bg-white px-3 py-3 text-xs font-bold text-slate-900 transition hover:bg-slate-50 sm:text-sm"
+                          >
+                            ⬇️
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => copyLink(product.slug)}
@@ -1979,6 +1987,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                           >
                             📋 Copy
                           </button>
+
                           <button
                             type="button"
                             onClick={() => shareLink(product.slug)}
@@ -1986,6 +1995,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                           >
                             🔗 Share
                           </button>
+
                           <button
                             type="button"
                             onClick={() => startEdit(product)}
