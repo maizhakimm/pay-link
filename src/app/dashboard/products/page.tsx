@@ -292,7 +292,7 @@ export default function ProductsPage() {
       .select('*')
       .eq('seller_profile_id', sellerData.id)
       .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
 
     if (categoryError) {
       setError(categoryError.message)
@@ -548,8 +548,16 @@ export default function ProductsPage() {
     }
 
     if (!name.trim() || !price.trim()) {
-      alert('Please fill in product name and price.')
+      alert('Sila isi nama produk dan harga.')
       return
+    }
+
+    // OPTIONAL validation
+    if (!description.trim()) {
+      const confirmProceed = confirm(
+        'Produk belum ada description. Nak teruskan?'
+      )
+      if (!confirmProceed) return
     }
 
     setSaving(true)
@@ -575,6 +583,17 @@ export default function ProductsPage() {
       const safeStock = trackStock ? Math.max(0, Number(stockQuantity || 0)) : 0
       const computedSoldOut = trackStock ? safeStock <= 0 : false
 
+// ambil max sort_order
+const { data: maxData } = await supabase
+  .from('products')
+  .select('sort_order')
+  .eq('seller_profile_id', sellerProfile.id)
+  .order('sort_order', { ascending: false })
+  .limit(1)
+  .maybeSingle()
+
+const nextSortOrder = (maxData?.sort_order || 0) + 1
+
       const { error: insertError } = await supabase.from('products').insert({
         name: name.trim(),
         slug: finalSlug,
@@ -587,6 +606,7 @@ export default function ProductsPage() {
         store_name: sellerProfile.store_name || null,
         seller_profile_id: sellerProfile.id,
         menu_category_id: menuCategoryId || null,
+        sort_order: nextSortOrder, // ✅ TAMBAH NI
         image_1: uploadedUrls[0] || null,
         image_2: uploadedUrls[1] || null,
         image_3: uploadedUrls[2] || null,
@@ -1030,6 +1050,44 @@ export default function ProductsPage() {
       resetAddonOptionForm()
     }
 
+    await loadProductsPage()
+  }
+
+  async function moveUp(product: ProductRow) {
+  const current = products.find(p => p.id === product.id)
+  if (!current) return
+
+  const above = products
+    .filter(p => p.sort_order < current.sort_order)
+    .sort((a, b) => b.sort_order - a.sort_order)[0]
+
+  if (!above) return
+
+  await swapSort(current, above)
+  }
+
+  async function moveDown(product: ProductRow) {
+    const current = products.find(p => p.id === product.id)
+    if (!current) return
+
+    const below = products
+      .filter(p => p.sort_order > current.sort_order)
+      .sort((a, b) => a.sort_order - b.sort_order)[0]
+
+    if (!below) return
+
+    await swapSort(current, below)
+  }
+
+  async function swapSort(a: ProductRow, b: ProductRow) {
+    await supabase.from('products').update({
+      sort_order: b.sort_order,
+    }).eq('id', a.id)
+
+    await supabase.from('products').update({
+      sort_order: a.sort_order,
+    }).eq('id', b.id)
+  
     await loadProductsPage()
   }
 
@@ -1898,7 +1956,21 @@ export default function ProductsPage() {
                           {link || 'Shop URL not ready yet'}
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
+                        <button
+                          onClick={() => moveUp(product)}
+                          className="rounded-2xl border px-3 py-3 text-xs font-bold"
+                        >
+                          ⬆️
+                        </button>
+                        
+                        <button
+                          onClick={() => moveDown(product)}
+                          className="rounded-2xl border px-3 py-3 text-xs font-bold"
+                        >
+                          ⬇️
+                        </button>
+
+                        <div className="grid grid-cols-5 gap-2">
                           <button
                             type="button"
                             onClick={() => copyLink(product.slug)}
