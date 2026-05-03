@@ -35,6 +35,23 @@ type DeliverySlot = {
   label: string
 }
 
+type DeliveryPricingRule = {
+  id: string
+  seller_profile_id: string
+  min_km: number
+  max_km: number | null
+  rate_type: 'flat' | 'per_km'
+  rate_value: number
+  sort_order: number
+  is_active: boolean
+}
+
+type DeliveryCalculationResult = {
+  fee: number
+  distanceKm: number
+  resolvedAddress: string
+}
+
 const STATES = [
   'Perlis',
   'Kedah',
@@ -108,6 +125,45 @@ function calculateDistanceKm(
   return earthRadiusKm * c
 }
 
+function calculateTieredDeliveryFee(
+  distanceKm: number,
+  rules: DeliveryPricingRule[],
+  fallbackRatePerKm: number,
+  fallbackMinFee: number
+) {
+  const activeRules = [...rules]
+    .filter((rule) => rule.is_active !== false)
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+
+  if (activeRules.length === 0) {
+    return Math.max(fallbackMinFee, distanceKm * fallbackRatePerKm)
+  }
+
+  const matchedRule = activeRules.find((rule) => {
+    const minKm = Number(rule.min_km || 0)
+    const maxKm =
+      rule.max_km === null || rule.max_km === undefined
+        ? null
+        : Number(rule.max_km)
+
+    return distanceKm >= minKm && (maxKm === null || distanceKm <= maxKm)
+  })
+
+  if (!matchedRule) {
+    throw new Error(
+      'Tiada delivery pricing rule yang sesuai untuk jarak ini. Sila hubungi seller.'
+    )
+  }
+
+  const rateValue = Number(matchedRule.rate_value || 0)
+
+  if (matchedRule.rate_type === 'flat') {
+    return rateValue
+  }
+
+  return distanceKm * rateValue
+}
+
 async function geocodeAddress(address: string) {
   const response = await fetch('/api/maps/geocode', {
     method: 'POST',
@@ -144,6 +200,7 @@ export default function ShopPayButton({
   deliveryRadiusKm = 0,
   deliveryRatePerKm = 0,
   deliveryMinFee = 0,
+  deliveryPricingRules = [],
   pickupAddress = '',
   sellerLatitude = null,
   sellerLongitude = null,
@@ -166,6 +223,7 @@ export default function ShopPayButton({
   deliveryRadiusKm?: number
   deliveryRatePerKm?: number
   deliveryMinFee?: number
+  deliveryPricingRules?: DeliveryPricingRule[]
   pickupAddress?: string
   sellerLatitude?: number | null
   sellerLongitude?: number | null
@@ -359,7 +417,7 @@ export default function ShopPayButton({
   const deliverySummary = useMemo(() => {
     switch (deliveryMode) {
       case 'free_delivery':
-        return 'Free delivery tersedia untuk kawasan terpilih.'
+        return 'Delivery percuma atau sudah termasuk dalam harga produk.'
       case 'fixed_fee':
         return Number(deliveryFee || 0) > 0
           ? `Delivery fee sebanyak ${formatCurrency(
@@ -369,22 +427,12 @@ export default function ShopPayButton({
       case 'included_in_price':
         return 'Harga produk telah termasuk delivery.'
       case 'distance_based':
-        return `Caj delivery dikira ikut jarak. Kadar ${formatCurrency(
-          deliveryRatePerKm
-        )}/km, minimum ${formatCurrency(deliveryMinFee)}, radius maksimum ${
-          Number(deliveryRadiusKm || 0) || 0
-        }km.`
+        return 'Caj delivery dikira secara automatik berdasarkan jarak penghantaran.'
       case 'pay_rider_separately':
       default:
         return 'Bayaran delivery dibuat berasingan terus kepada rider / seller.'
     }
-  }, [
-    deliveryMode,
-    deliveryFee,
-    deliveryRatePerKm,
-    deliveryMinFee,
-    deliveryRadiusKm,
-  ])
+  }, [deliveryMode, deliveryFee])
 
   const appliedDeliveryFee = useMemo(() => {
     if (!needsDelivery) return 0
@@ -456,17 +504,22 @@ export default function ShopPayButton({
     setPostcode(cleaned)
   }
 
-  async function handleCalculateDelivery() {
+  async function calculateDeliveryFeeNow(): Promise<DeliveryCalculationResult | null> {
     if (!needsDelivery) {
       setCalculatedDeliveryFee(0)
       setCalculatedDistanceKm(0)
       setResolvedCustomerAddress('')
       setDeliveryError('')
-      return
+
+      return {
+        fee: 0,
+        distanceKm: 0,
+        resolvedAddress: '',
+      }
     }
 
     if (deliveryMode !== 'distance_based') {
-      return
+      return null
     }
 
     if (
@@ -477,7 +530,7 @@ export default function ShopPayButton({
       !state.trim()
     ) {
       alert('Sila lengkapkan maklumat penghantaran untuk kira caj delivery.')
-      return
+      return null
     }
 
     if (
@@ -485,7 +538,7 @@ export default function ShopPayButton({
       !Number.isFinite(Number(sellerLongitude))
     ) {
       alert('Lokasi seller belum lengkap. Sila update pickup address di Settings.')
-      return
+      return null
     }
 
     try {
@@ -503,8 +556,8 @@ export default function ShopPayButton({
 
       const roundedDistance = roundMoney(distance)
       const maxRadius = Number(deliveryRadiusKm || 0)
-      const minFee = Number(deliveryMinFee || 0)
-      const ratePerKm = Number(deliveryRatePerKm || 0)
+      const fallbackMinFee = Number(deliveryMinFee || 0)
+      const fallbackRatePerKm = Number(deliveryRatePerKm || 0)
 
       if (!Number.isFinite(maxRadius) || maxRadius <= 0) {
         throw new Error('Radius penghantaran seller belum ditetapkan dengan betul.')
@@ -518,11 +571,24 @@ export default function ShopPayButton({
         )
       }
 
-      const fee = Math.max(minFee, roundedDistance * ratePerKm)
+      const fee = calculateTieredDeliveryFee(
+        roundedDistance,
+        deliveryPricingRules,
+        fallbackRatePerKm,
+        fallbackMinFee
+      )
+
+      const roundedFee = roundMoney(fee)
 
       setCalculatedDistanceKm(roundedDistance)
-      setCalculatedDeliveryFee(roundMoney(fee))
+      setCalculatedDeliveryFee(roundedFee)
       setResolvedCustomerAddress(customer.formattedAddress)
+
+      return {
+        fee: roundedFee,
+        distanceKm: roundedDistance,
+        resolvedAddress: customer.formattedAddress,
+      }
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to calculate delivery fee'
@@ -531,9 +597,14 @@ export default function ShopPayButton({
       setResolvedCustomerAddress('')
       setDeliveryError(message)
       alert(message)
+      return null
     } finally {
       setCalculatingDelivery(false)
     }
+  }
+
+  async function handleCalculateDelivery() {
+    await calculateDeliveryFeeNow()
   }
 
   async function handleClick() {
@@ -563,6 +634,10 @@ export default function ShopPayButton({
       return
     }
 
+    let finalDeliveryFee = appliedDeliveryFee
+    let finalDistanceKm = calculatedDistanceKm
+    let finalResolvedAddress = resolvedCustomerAddress
+
     if (needsDelivery) {
       if (
         !address1.trim() ||
@@ -576,21 +651,19 @@ export default function ShopPayButton({
       }
 
       if (deliveryMode === 'distance_based') {
-        if (
-          !Number.isFinite(Number(calculatedDeliveryFee)) ||
-          !Number.isFinite(Number(calculatedDistanceKm))
-        ) {
-          await handleCalculateDelivery()
+        const calculation = await calculateDeliveryFeeNow()
 
-          if (
-            !Number.isFinite(Number(calculatedDeliveryFee)) ||
-            !Number.isFinite(Number(calculatedDistanceKm))
-          ) {
-            return
-          }
+        if (!calculation) {
+          return
         }
+
+        finalDeliveryFee = calculation.fee
+        finalDistanceKm = calculation.distanceKm
+        finalResolvedAddress = calculation.resolvedAddress
       }
     }
+
+    const finalPayableTotal = Number(total || 0) + Number(finalDeliveryFee || 0)
 
     try {
       setLoading(true)
@@ -614,9 +687,9 @@ export default function ShopPayButton({
           checkoutItems: normalizedItems,
           subtotal: Number(total || 0),
           deliveryMode,
-          deliveryFee: appliedDeliveryFee,
+          deliveryFee: finalDeliveryFee,
           deliveryRequired: needsDelivery,
-          totalAmount: payableTotal,
+          totalAmount: finalPayableTotal,
           deliveryArea: deliveryArea || null,
           deliveryNote: deliveryNote || null,
           deliverySummary,
@@ -640,10 +713,10 @@ export default function ShopPayButton({
                 district: district.trim(),
                 state: state.trim(),
                 distance_km:
-                  deliveryMode === 'distance_based' ? calculatedDistanceKm : null,
+                  deliveryMode === 'distance_based' ? finalDistanceKm : null,
                 resolved_address:
                   deliveryMode === 'distance_based'
-                    ? resolvedCustomerAddress || fullDeliveryAddress
+                    ? finalResolvedAddress || fullDeliveryAddress
                     : null,
               }
             : null,
@@ -849,7 +922,7 @@ export default function ShopPayButton({
                   </div>
                 ) : null}
 
-                {deliveryError ? <div style={errorBox}>{deliveryError}</div> : null}
+                {deliveryError ? <div style={errorBoxStyle}>{deliveryError}</div> : null}
               </div>
             ) : null}
           </>
@@ -1080,7 +1153,7 @@ const resolvedAddressText = {
   lineHeight: 1.5,
 } as const
 
-const errorBox = {
+const errorBoxStyle = {
   padding: '10px 12px',
   border: '1px solid #fecaca',
   background: '#fef2f2',
