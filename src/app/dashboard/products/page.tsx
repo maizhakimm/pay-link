@@ -16,6 +16,7 @@ type ProductRow = {
   sold_out: boolean
   store_name: string | null
   seller_profile_id: string | null
+  sort_order: number
   created_at?: string
   image_1?: string | null
   image_2?: string | null
