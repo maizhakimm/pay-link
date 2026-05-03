@@ -55,6 +55,17 @@ type SellerProfile = {
   minimum_order_message?: string | null
 }
 
+type DeliveryPricingRule = {
+  id: string
+  seller_profile_id: string
+  min_km: number
+  max_km: number | null
+  rate_type: 'flat' | 'per_km'
+  rate_value: number
+  sort_order: number
+  is_active: boolean
+}
+
 type MenuCategory = {
   id: string
   name: string
@@ -704,7 +715,28 @@ export default async function Page({ params }: PageProps) {
     }
   }
 
-  return (
+   const { data: deliveryPricingRulesData, error: deliveryPricingRulesError } =
+    await supabase
+      .from('delivery_pricing_rules')
+      .select(
+        'id, seller_profile_id, min_km, max_km, rate_type, rate_value, sort_order, is_active'
+      )
+      .eq('seller_profile_id', seller.id)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+
+  if (deliveryPricingRulesError) {
+    return (
+      <main style={errorMain}>
+        <div style={errorBox}>
+          <h2 style={errorTitle}>Unable to load delivery pricing rules</h2>
+          <p style={errorText}>{deliveryPricingRulesError.message}</p>
+        </div>
+      </main>
+    )
+  }
+
+   return (
     <ShopPageClient
       seller={seller}
       products={productRows}
@@ -713,6 +745,11 @@ export default async function Page({ params }: PageProps) {
       productAddons={productAddons}
       deliverySlots={(deliverySlotsData || []) as { id: string; label: string }[]}
       enableDeliverySlots={Boolean(seller.enable_delivery_slots)}
+      deliveryPricingRules={
+        (deliveryPricingRulesData && deliveryPricingRulesData.length > 0
+          ? deliveryPricingRulesData
+          : []) as DeliveryPricingRule[]
+      }
     />
   )
 }
