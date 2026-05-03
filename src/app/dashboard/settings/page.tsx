@@ -28,11 +28,10 @@ const MALAYSIAN_BANKS = [
 ]
 
 const DELIVERY_MODES = [
-  { value: 'free_delivery', label: 'Free Delivery' },
+  { value: 'free_delivery', label: 'Free Delivery / Included' },
   { value: 'fixed_fee', label: 'Delivery Fee (Fixed)' },
-  { value: 'included_in_price', label: 'Included in Price' },
-  { value: 'pay_rider_separately', label: 'Pay Rider Separately' },
-  { value: 'distance_based', label: 'Distance Based' },
+  { value: 'pay_rider_separately', label: 'Customer Bayar Rider' },
+  { value: 'distance_based', label: 'Ikut Jarak (Auto Kira)' },
 ]
 
 const ORDER_MODE_OPTIONS = [
@@ -90,6 +89,18 @@ type DeliveryMode =
   | 'distance_based'
 
 type MinimumOrderType = 'quantity' | 'amount'
+type DeliveryRateType = 'flat' | 'per_km'
+
+type DeliveryPricingRule = {
+  id?: string
+  seller_profile_id?: string
+  min_km: string
+  max_km: string
+  rate_type: DeliveryRateType
+  rate_value: string
+  sort_order: number
+  is_active: boolean
+}
 
 type SellerProfileRow = {
   id: string
@@ -203,6 +214,69 @@ function normalizeOperatingDays(value: unknown): OperatingDays {
   return safe
 }
 
+function getDefaultDeliveryPricingRules(): DeliveryPricingRule[] {
+  return [
+    {
+      min_km: '0',
+      max_km: '5',
+      rate_type: 'flat',
+      rate_value: '5',
+      sort_order: 0,
+      is_active: true,
+    },
+    {
+      min_km: '5',
+      max_km: '10',
+      rate_type: 'per_km',
+      rate_value: '1',
+      sort_order: 1,
+      is_active: true,
+    },
+    {
+      min_km: '10',
+      max_km: '20',
+      rate_type: 'per_km',
+      rate_value: '0.90',
+      sort_order: 2,
+      is_active: true,
+    },
+    {
+      min_km: '20',
+      max_km: '30',
+      rate_type: 'per_km',
+      rate_value: '0.80',
+      sort_order: 3,
+      is_active: true,
+    },
+    {
+      min_km: '30',
+      max_km: '',
+      rate_type: 'per_km',
+      rate_value: '0.70',
+      sort_order: 4,
+      is_active: true,
+    },
+  ]
+}
+
+function formatRuleText(rule: DeliveryPricingRule) {
+  const min = Number(rule.min_km || 0)
+  const max = rule.max_km.trim() ? Number(rule.max_km) : null
+  const value = Number(rule.rate_value || 0)
+
+  const rangeText =
+    max === null
+      ? `${min}km ke atas`
+      : `${min}km - ${max}km`
+
+  const rateText =
+    rule.rate_type === 'flat'
+      ? `${formatCurrency(value)} flat`
+      : `${formatCurrency(value)}/km`
+
+  return `${rangeText} → ${rateText}`
+}
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -249,9 +323,11 @@ export default function SettingsPage() {
   const [deliveryArea, setDeliveryArea] = useState('')
   const [deliveryNote, setDeliveryNote] = useState('')
 
-  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('10')
+  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('30')
   const [deliveryRatePerKm, setDeliveryRatePerKm] = useState('1')
   const [deliveryMinFee, setDeliveryMinFee] = useState('5')
+  const [deliveryPricingRules, setDeliveryPricingRules] =
+    useState<DeliveryPricingRule[]>(getDefaultDeliveryPricingRules())
   const [pickupAddress, setPickupAddress] = useState('')
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
@@ -320,34 +396,30 @@ export default function SettingsPage() {
 
   const deliverySummaryText = useMemo(() => {
     const fee = Number(deliveryFee || 0)
-    const rate = Number(deliveryRatePerKm || 0)
-    const minFee = Number(deliveryMinFee || 0)
-    const radius = Number(deliveryRadiusKm || 0)
+    const activeRules = deliveryPricingRules.filter((rule) => rule.is_active)
 
     switch (deliveryMode) {
       case 'free_delivery':
-        return 'Free delivery tersedia untuk kawasan terpilih.'
+      case 'included_in_price':
+        return 'Delivery percuma atau sudah termasuk dalam harga produk.'
       case 'fixed_fee':
         return fee > 0
           ? `Delivery fee sebanyak ${formatCurrency(fee)} akan dikenakan.`
           : 'Delivery fee akan dikenakan.'
-      case 'included_in_price':
-        return 'Harga produk telah termasuk delivery.'
       case 'distance_based':
-        return `Caj delivery dikira berdasarkan jarak. Kadar ${formatCurrency(
-          rate
-        )}/km, minimum ${formatCurrency(minFee)}, radius maksimum ${radius}km.`
+        if (activeRules.length === 0) {
+          return 'Caj delivery dikira berdasarkan jarak. Sila tambah sekurang-kurangnya satu rule.'
+        }
+
+        return `Caj delivery dikira ikut jarak bertingkat. ${activeRules
+          .slice(0, 3)
+          .map(formatRuleText)
+          .join(' • ')}${activeRules.length > 3 ? ' • ...' : ''}`
       case 'pay_rider_separately':
       default:
         return 'Caj delivery tidak termasuk dalam harga. Bayaran delivery harus dibuat terus kepada rider semasa penghantaran.'
     }
-  }, [
-    deliveryMode,
-    deliveryFee,
-    deliveryRatePerKm,
-    deliveryMinFee,
-    deliveryRadiusKm,
-  ])
+  }, [deliveryMode, deliveryFee, deliveryPricingRules])
 
   const minimumOrderSummaryText = useMemo(() => {
     const value = Number(minimumOrderValue || 0)
@@ -375,6 +447,61 @@ export default function SettingsPage() {
         ...patch,
       },
     }))
+  }
+
+  function updateDeliveryRule(
+    index: number,
+    patch: Partial<DeliveryPricingRule>
+  ) {
+    setDeliveryPricingRules((prev) =>
+      prev.map((rule, ruleIndex) =>
+        ruleIndex === index ? { ...rule, ...patch } : rule
+      )
+    )
+  }
+
+  function addDeliveryRule() {
+    setDeliveryPricingRules((prev) => {
+      const lastRule = prev[prev.length - 1]
+      const nextMin = lastRule?.max_km?.trim()
+        ? lastRule.max_km
+        : lastRule?.min_km?.trim()
+        ? String(Number(lastRule.min_km || 0) + 5)
+        : '0'
+
+      return [
+        ...prev,
+        {
+          min_km: nextMin,
+          max_km: '',
+          rate_type: 'per_km',
+          rate_value: '1',
+          sort_order: prev.length,
+          is_active: true,
+        },
+      ]
+    })
+  }
+
+  function removeDeliveryRule(index: number) {
+    setDeliveryPricingRules((prev) =>
+      prev
+        .filter((_, ruleIndex) => ruleIndex !== index)
+        .map((rule, ruleIndex) => ({
+          ...rule,
+          sort_order: ruleIndex,
+        }))
+    )
+  }
+
+  function resetDefaultDeliveryRules() {
+    const confirmed = window.confirm(
+      'Reset delivery pricing rules kepada default BayarLink?'
+    )
+
+    if (!confirmed) return
+
+    setDeliveryPricingRules(getDefaultDeliveryPricingRules())
   }
 
   async function ensureSellerProfile(
@@ -416,7 +543,7 @@ export default function SettingsPage() {
         delivery_fee: 0,
         delivery_area: null,
         delivery_note: null,
-        delivery_radius_km: 10,
+        delivery_radius_km: 30,
         delivery_rate_per_km: 1,
         delivery_min_fee: 5,
         pickup_address: null,
@@ -436,6 +563,39 @@ export default function SettingsPage() {
     }
 
     return inserted as SellerProfileRow
+  }
+
+  async function loadDeliveryPricingRules(currentSellerId: string) {
+    const { data, error } = await supabase
+      .from('delivery_pricing_rules')
+      .select('*')
+      .eq('seller_profile_id', currentSellerId)
+      .order('sort_order', { ascending: true })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    if (!data || data.length === 0) {
+      setDeliveryPricingRules(getDefaultDeliveryPricingRules())
+      return
+    }
+
+    setDeliveryPricingRules(
+      data.map((rule: any, index: number) => ({
+        id: rule.id,
+        seller_profile_id: rule.seller_profile_id,
+        min_km: String(rule.min_km ?? 0),
+        max_km:
+          rule.max_km === null || rule.max_km === undefined
+            ? ''
+            : String(rule.max_km),
+        rate_type: rule.rate_type === 'flat' ? 'flat' : 'per_km',
+        rate_value: String(rule.rate_value ?? 0),
+        sort_order: Number(rule.sort_order ?? index),
+        is_active: rule.is_active !== false,
+      }))
+    )
   }
 
   async function loadProfile() {
@@ -491,11 +651,16 @@ export default function SettingsPage() {
       )
       setOperatingDays(normalizeOperatingDays(profile.operating_days))
 
-      setDeliveryMode(profile.delivery_mode || 'pay_rider_separately')
+      const loadedDeliveryMode =
+        profile.delivery_mode === 'included_in_price'
+          ? 'free_delivery'
+          : profile.delivery_mode || 'pay_rider_separately'
+
+      setDeliveryMode(loadedDeliveryMode)
       setDeliveryFee(String(profile.delivery_fee ?? 0))
       setDeliveryArea(profile.delivery_area || '')
       setDeliveryNote(profile.delivery_note || '')
-      setDeliveryRadiusKm(String(profile.delivery_radius_km ?? 10))
+      setDeliveryRadiusKm(String(profile.delivery_radius_km ?? 30))
       setDeliveryRatePerKm(String(profile.delivery_rate_per_km ?? 1))
       setDeliveryMinFee(String(profile.delivery_min_fee ?? 5))
       setPickupAddress(profile.pickup_address || '')
@@ -510,6 +675,8 @@ export default function SettingsPage() {
           ? String(profile.longitude)
           : ''
       )
+
+      await loadDeliveryPricingRules(profile.id)
 
       setMinimumOrderEnabled(Boolean(profile.minimum_order_enabled))
       setMinimumOrderType(
@@ -607,6 +774,88 @@ export default function SettingsPage() {
     }
   }
 
+  function validateDeliveryPricingRules() {
+    const activeRules = deliveryPricingRules.filter((rule) => rule.is_active)
+
+    if (activeRules.length === 0) {
+      alert('Please add at least one active delivery pricing rule.')
+      return false
+    }
+
+    for (let index = 0; index < activeRules.length; index += 1) {
+      const rule = activeRules[index]
+      const minKm = Number(rule.min_km || 0)
+      const maxKm = rule.max_km.trim() ? Number(rule.max_km) : null
+      const rateValue = Number(rule.rate_value || 0)
+
+      if (!Number.isFinite(minKm) || minKm < 0) {
+        alert(`Rule ${index + 1}: Please enter valid min KM.`)
+        return false
+      }
+
+      if (maxKm !== null && (!Number.isFinite(maxKm) || maxKm <= minKm)) {
+        alert(`Rule ${index + 1}: Max KM must be more than Min KM.`)
+        return false
+      }
+
+      if (!['flat', 'per_km'].includes(rule.rate_type)) {
+        alert(`Rule ${index + 1}: Please select valid rate type.`)
+        return false
+      }
+
+      if (!Number.isFinite(rateValue) || rateValue < 0) {
+        alert(`Rule ${index + 1}: Please enter valid rate value.`)
+        return false
+      }
+    }
+
+    const openEndedRules = activeRules.filter((rule) => !rule.max_km.trim())
+
+    if (openEndedRules.length > 1) {
+      alert('Only one rule can have empty Max KM / open-ended distance.')
+      return false
+    }
+
+    return true
+  }
+
+  async function saveDeliveryPricingRules(currentSellerId: string) {
+    if (deliveryMode !== 'distance_based') {
+      return
+    }
+
+    const rows = deliveryPricingRules
+      .filter((rule) => rule.is_active)
+      .map((rule, index) => ({
+        seller_profile_id: currentSellerId,
+        min_km: Number(rule.min_km || 0),
+        max_km: rule.max_km.trim() ? Number(rule.max_km) : null,
+        rate_type: rule.rate_type,
+        rate_value: Number(rule.rate_value || 0),
+        sort_order: index,
+        is_active: true,
+      }))
+
+    const { error: deleteError } = await supabase
+      .from('delivery_pricing_rules')
+      .delete()
+      .eq('seller_profile_id', currentSellerId)
+
+    if (deleteError) {
+      throw new Error(deleteError.message)
+    }
+
+    if (rows.length === 0) return
+
+    const { error: insertError } = await supabase
+      .from('delivery_pricing_rules')
+      .insert(rows)
+
+    if (insertError) {
+      throw new Error(insertError.message)
+    }
+  }
+
   async function handleSave() {
     if (saving) return
 
@@ -694,24 +943,13 @@ export default function SettingsPage() {
     }
 
     if (deliveryMode === 'distance_based') {
+      if (!validateDeliveryPricingRules()) return
+
       if (
         !Number.isFinite(parsedDeliveryRadiusKm) ||
         parsedDeliveryRadiusKm <= 0
       ) {
         alert('Please enter max delivery radius more than 0.')
-        return
-      }
-
-      if (
-        !Number.isFinite(parsedDeliveryRatePerKm) ||
-        parsedDeliveryRatePerKm <= 0
-      ) {
-        alert('Please enter rate per km more than 0.')
-        return
-      }
-
-      if (!Number.isFinite(parsedDeliveryMinFee) || parsedDeliveryMinFee < 0) {
-        alert('Please enter a valid minimum delivery fee.')
         return
       }
 
@@ -793,16 +1031,20 @@ export default function SettingsPage() {
           delivery_fee: deliveryMode === 'fixed_fee' ? parsedDeliveryFee : 0,
           delivery_area: trimmedDeliveryArea || null,
           delivery_note: trimmedDeliveryNote || null,
+
+          // legacy fields kept for compatibility
           delivery_radius_km:
             deliveryMode === 'distance_based' ? parsedDeliveryRadiusKm : null,
           delivery_rate_per_km:
             deliveryMode === 'distance_based' ? parsedDeliveryRatePerKm : null,
           delivery_min_fee:
             deliveryMode === 'distance_based' ? parsedDeliveryMinFee : null,
+
           pickup_address:
             deliveryMode === 'distance_based' ? trimmedPickupAddress : null,
           latitude: deliveryMode === 'distance_based' ? parsedLatitude : null,
           longitude: deliveryMode === 'distance_based' ? parsedLongitude : null,
+
           minimum_order_enabled: minimumOrderEnabled,
           minimum_order_type: minimumOrderType,
           minimum_order_value: minimumOrderEnabled
@@ -816,6 +1058,8 @@ export default function SettingsPage() {
       if (error) {
         throw new Error(error.message)
       }
+
+      await saveDeliveryPricingRules(currentSellerId)
 
       setStoreName(trimmedStoreName)
       setSavedShopSlug(finalShopSlug)
@@ -929,61 +1173,61 @@ export default function SettingsPage() {
               <div className="space-y-5">
                 <div>
                   <p className="mb-3 text-sm font-extrabold text-slate-900">
-  Nama Biz
-</p>
+                    Nama Biz
+                  </p>
 
-<div className="grid gap-3">
-  <input
-    placeholder="Store Name"
-    value={storeName}
-    onChange={(e) => setStoreName(e.target.value)}
-    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-  />
+                  <div className="grid gap-3">
+                    <input
+                      placeholder="Store Name"
+                      value={storeName}
+                      onChange={(e) => setStoreName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
 
-  <div>
-    <label className="mb-2 block text-sm font-bold text-slate-700">
-      Short Description (Max 160)
-    </label>
-    <textarea
-      placeholder="Contoh: Kek batik homemade, kurang manis, sesuai untuk gift & event."
-      value={shopDescription}
-      onChange={(e) => setShopDescription(e.target.value)}
-      maxLength={160}
-      rows={3}
-      className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-400"
-    />
-  </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-bold text-slate-700">
+                        Short Description (Max 160)
+                      </label>
+                      <textarea
+                        placeholder="Contoh: Kek batik homemade, kurang manis, sesuai untuk gift & event."
+                        value={shopDescription}
+                        onChange={(e) => setShopDescription(e.target.value)}
+                        maxLength={160}
+                        rows={3}
+                        className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-400"
+                      />
+                    </div>
 
-  <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-      Shop URL {slugLocked ? 'Locked' : 'Preview'}
-    </p>
+                    <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Shop URL {slugLocked ? 'Locked' : 'Preview'}
+                      </p>
 
-    <p className="mt-1 break-all text-sm font-bold text-slate-900">
-      {previewBaseUrl}/s/{livePreviewSlug}
-    </p>
+                      <p className="mt-1 break-all text-sm font-bold text-slate-900">
+                        {previewBaseUrl}/s/{livePreviewSlug}
+                      </p>
 
-    <p className="mt-1 text-xs text-slate-500">
-      {slugLocked
-        ? 'Your shop URL is locked after first successful save.'
-        : 'Preview only. Type your store name to preview your future shop URL.'}
-    </p>
-  </div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {slugLocked
+                          ? 'Your shop URL is locked after first successful save.'
+                          : 'Preview only. Type your store name to preview your future shop URL.'}
+                      </p>
+                    </div>
 
-  <input
-    placeholder="Email"
-    value={email}
-    onChange={(e) => setEmail(e.target.value)}
-    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-  />
+                    <input
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
 
-  <input
-    placeholder="WhatsApp Number"
-    value={whatsapp}
-    onChange={(e) => setWhatsapp(e.target.value)}
-    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-  />
-</div>
+                    <input
+                      placeholder="WhatsApp Number"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -1124,34 +1368,143 @@ export default function SettingsPage() {
 
                     {deliveryMode === 'distance_based' ? (
                       <div className="grid gap-4 rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
-                        <div>
-                          <label className="mb-2 block text-sm font-bold text-slate-700">
-                            Rate Per KM (RM)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="Contoh: 1.00"
-                            value={deliveryRatePerKm}
-                            onChange={(e) => setDeliveryRatePerKm(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                          />
-                        </div>
+                        <div className="rounded-2xl border border-blue-100 bg-white p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <p className="text-sm font-extrabold text-slate-900">
+                                Delivery Pricing Rules
+                              </p>
+                              <p className="mt-1 text-xs leading-5 text-slate-500">
+                                Tetapkan caj delivery ikut jarak. Contoh: 0-5km
+                                RM5 flat, 5-10km RM1/km.
+                              </p>
+                            </div>
 
-                        <div>
-                          <label className="mb-2 block text-sm font-bold text-slate-700">
-                            Minimum Delivery Fee (RM)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="Contoh: 5.00"
-                            value={deliveryMinFee}
-                            onChange={(e) => setDeliveryMinFee(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                          />
+                            <button
+                              type="button"
+                              onClick={resetDefaultDeliveryRules}
+                              className="rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-extrabold text-slate-800 transition hover:bg-slate-50"
+                            >
+                              Reset Default
+                            </button>
+                          </div>
+
+                          <div className="mt-4 grid gap-3">
+                            {deliveryPricingRules.map((rule, index) => (
+                              <div
+                                key={`${rule.id || 'new'}-${index}`}
+                                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                              >
+                                <div className="mb-3 flex items-center justify-between gap-3">
+                                  <p className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
+                                    Rule {index + 1}
+                                  </p>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDeliveryRule(index)}
+                                    disabled={deliveryPricingRules.length <= 1}
+                                    className="rounded-full border border-red-200 bg-rose-50 px-3 py-1 text-xs font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div>
+                                    <label className="mb-2 block text-xs font-bold text-slate-700">
+                                      Min KM
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={rule.min_km}
+                                      onChange={(e) =>
+                                        updateDeliveryRule(index, {
+                                          min_km: e.target.value,
+                                        })
+                                      }
+                                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="mb-2 block text-xs font-bold text-slate-700">
+                                      Max KM
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      placeholder="Kosongkan untuk tiada had"
+                                      value={rule.max_km}
+                                      onChange={(e) =>
+                                        updateDeliveryRule(index, {
+                                          max_km: e.target.value,
+                                        })
+                                      }
+                                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="mb-2 block text-xs font-bold text-slate-700">
+                                      Rate Type
+                                    </label>
+                                    <select
+                                      value={rule.rate_type}
+                                      onChange={(e) =>
+                                        updateDeliveryRule(index, {
+                                          rate_type: e.target
+                                            .value as DeliveryRateType,
+                                        })
+                                      }
+                                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                    >
+                                      <option value="flat">Flat Rate</option>
+                                      <option value="per_km">Per KM</option>
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="mb-2 block text-xs font-bold text-slate-700">
+                                      Rate Value (RM)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={rule.rate_value}
+                                      onChange={(e) =>
+                                        updateDeliveryRule(index, {
+                                          rate_value: e.target.value,
+                                        })
+                                      }
+                                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                  <p className="text-xs font-bold text-slate-500">
+                                    Preview
+                                  </p>
+                                  <p className="mt-1 text-sm font-extrabold text-slate-900">
+                                    {formatRuleText(rule)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+
+                            <button
+                              type="button"
+                              onClick={addDeliveryRule}
+                              className="rounded-2xl border border-dashed border-blue-300 bg-blue-50 px-4 py-3 text-sm font-extrabold text-blue-700 transition hover:bg-blue-100"
+                            >
+                              + Add Rule
+                            </button>
+                          </div>
                         </div>
 
                         <div>
@@ -1162,11 +1515,15 @@ export default function SettingsPage() {
                             type="number"
                             min="0"
                             step="0.01"
-                            placeholder="Contoh: 10"
+                            placeholder="Contoh: 30"
                             value={deliveryRadiusKm}
                             onChange={(e) => setDeliveryRadiusKm(e.target.value)}
                             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                           />
+                          <p className="mt-2 text-xs text-slate-500">
+                            Customer di luar radius ini tidak boleh checkout
+                            delivery.
+                          </p>
                         </div>
 
                         <div>

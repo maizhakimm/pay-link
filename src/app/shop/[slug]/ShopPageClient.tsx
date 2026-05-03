@@ -10,6 +10,17 @@ type DeliveryMode =
   | 'pay_rider_separately'
   | 'distance_based'
 
+type DeliveryPricingRule = {
+  id: string
+  seller_profile_id: string
+  min_km: number
+  max_km: number | null
+  rate_type: 'flat' | 'per_km'
+  rate_value: number
+  sort_order: number
+  is_active: boolean
+}
+
 type DayKey =
   | 'monday'
   | 'tuesday'
@@ -527,6 +538,7 @@ export default function ShopPageClient({
   productAddons = {},
   deliverySlots = [],
   enableDeliverySlots = false,
+  deliveryPricingRules = [],
 }: {
   seller: SellerProfile
   products: ProductRow[]
@@ -535,6 +547,7 @@ export default function ShopPageClient({
   productAddons?: ProductAddonsMap
   deliverySlots?: DeliverySlot[]
   enableDeliverySlots?: boolean
+  deliveryPricingRules?: DeliveryPricingRule[]
 }) {
   const [cart, setCart] = useState<CartLine[]>([])
   const [gallery, setGallery] = useState<GalleryState>({
@@ -1503,6 +1516,7 @@ export default function ShopPageClient({
                   deliveryRadiusKm={seller.delivery_radius_km || 0}
                   deliveryRatePerKm={seller.delivery_rate_per_km || 0}
                   deliveryMinFee={seller.delivery_min_fee || 0}
+                  deliveryPricingRules={deliveryPricingRules}
                   pickupAddress={seller.pickup_address || ''}
                   sellerLatitude={seller.latitude || null}
                   sellerLongitude={seller.longitude || null}
