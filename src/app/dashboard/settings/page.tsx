@@ -89,6 +89,8 @@ type DeliveryMode =
   | 'pay_rider_separately'
   | 'distance_based'
 
+type MinimumOrderType = 'quantity' | 'amount'
+
 type SellerProfileRow = {
   id: string
   user_id: string
@@ -122,6 +124,10 @@ type SellerProfileRow = {
   operating_days?: OperatingDays | null
   order_mode?: OrderMode | null
   preorder_days?: number | null
+  minimum_order_enabled?: boolean | null
+  minimum_order_type?: MinimumOrderType | null
+  minimum_order_value?: number | null
+  minimum_order_message?: string | null
 }
 
 function slugify(value: string) {
@@ -251,6 +257,12 @@ export default function SettingsPage() {
   const [longitude, setLongitude] = useState('')
   const [resolvedPickupAddress, setResolvedPickupAddress] = useState('')
 
+  const [minimumOrderEnabled, setMinimumOrderEnabled] = useState(false)
+  const [minimumOrderType, setMinimumOrderType] =
+    useState<MinimumOrderType>('quantity')
+  const [minimumOrderValue, setMinimumOrderValue] = useState('0')
+  const [minimumOrderMessage, setMinimumOrderMessage] = useState('')
+
   const previewBaseUrl = (
     process.env.NEXT_PUBLIC_APP_URL || 'https://www.bayarlink.my'
   ).replace(/\/$/, '')
@@ -337,6 +349,20 @@ export default function SettingsPage() {
     deliveryRadiusKm,
   ])
 
+  const minimumOrderSummaryText = useMemo(() => {
+    const value = Number(minimumOrderValue || 0)
+
+    if (!minimumOrderEnabled || value <= 0) {
+      return 'Tiada minimum order ditetapkan.'
+    }
+
+    if (minimumOrderType === 'amount') {
+      return `Customer perlu order sekurang-kurangnya ${formatCurrency(value)} sebelum checkout.`
+    }
+
+    return `Customer perlu order sekurang-kurangnya ${value} pcs sebelum checkout.`
+  }, [minimumOrderEnabled, minimumOrderType, minimumOrderValue])
+
   useEffect(() => {
     loadProfile()
   }, [])
@@ -397,6 +423,10 @@ export default function SettingsPage() {
         latitude: null,
         longitude: null,
         operating_days: DEFAULT_OPERATING_DAYS,
+        minimum_order_enabled: false,
+        minimum_order_type: 'quantity',
+        minimum_order_value: 0,
+        minimum_order_message: null,
       })
       .select('*')
       .single()
@@ -480,6 +510,13 @@ export default function SettingsPage() {
           ? String(profile.longitude)
           : ''
       )
+
+      setMinimumOrderEnabled(Boolean(profile.minimum_order_enabled))
+      setMinimumOrderType(
+        profile.minimum_order_type === 'amount' ? 'amount' : 'quantity'
+      )
+      setMinimumOrderValue(String(profile.minimum_order_value ?? 0))
+      setMinimumOrderMessage(profile.minimum_order_message || '')
 
       setStoreName(!existingSlug && isDefaultName ? '' : existingStoreName)
       setSlugLocked(Boolean(existingSlug))
@@ -589,6 +626,7 @@ export default function SettingsPage() {
     const parsedDeliveryRatePerKm = Number(deliveryRatePerKm || 0)
     const parsedDeliveryMinFee = Number(deliveryMinFee || 0)
     const parsedPreorderDays = Number(preorderDays || 1)
+    const parsedMinimumOrderValue = Number(minimumOrderValue || 0)
 
     let parsedLatitude = latitude.trim() === '' ? null : Number(latitude)
     let parsedLongitude = longitude.trim() === '' ? null : Number(longitude)
@@ -643,6 +681,16 @@ export default function SettingsPage() {
     if (deliveryMode === 'fixed_fee' && parsedDeliveryFee <= 0) {
       alert('Please enter delivery fee more than 0.')
       return
+    }
+
+    if (minimumOrderEnabled) {
+      if (
+        !Number.isFinite(parsedMinimumOrderValue) ||
+        parsedMinimumOrderValue <= 0
+      ) {
+        alert('Please enter minimum order value more than 0.')
+        return
+      }
     }
 
     if (deliveryMode === 'distance_based') {
@@ -755,6 +803,13 @@ export default function SettingsPage() {
             deliveryMode === 'distance_based' ? trimmedPickupAddress : null,
           latitude: deliveryMode === 'distance_based' ? parsedLatitude : null,
           longitude: deliveryMode === 'distance_based' ? parsedLongitude : null,
+          minimum_order_enabled: minimumOrderEnabled,
+          minimum_order_type: minimumOrderType,
+          minimum_order_value: minimumOrderEnabled
+            ? parsedMinimumOrderValue
+            : 0,
+          minimum_order_message:
+            minimumOrderMessage.trim() || null,
         })
         .eq('id', currentSellerId)
 
@@ -1207,6 +1262,122 @@ export default function SettingsPage() {
                         semasa checkout / shop page.
                       </p>
                     </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-extrabold text-slate-900">
+                      Minimum Order
+                    </p>
+                    <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                      Optional
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-bold text-slate-700">Preview</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {minimumOrderSummaryText}
+                    </p>
+
+                    {minimumOrderEnabled && minimumOrderMessage.trim() ? (
+                      <p className="mt-2 text-xs text-slate-500">
+                        Customer message: {minimumOrderMessage.trim()}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid gap-4">
+                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                      <input
+                        type="checkbox"
+                        checked={minimumOrderEnabled}
+                        onChange={(e) =>
+                          setMinimumOrderEnabled(e.target.checked)
+                        }
+                        className="mt-1 h-4 w-4"
+                      />
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">
+                          Enable Minimum Order
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          Customer hanya boleh checkout bila cart cukup minimum
+                          order yang seller tetapkan.
+                        </p>
+                      </div>
+                    </label>
+
+                    {minimumOrderEnabled ? (
+                      <div className="rounded-2xl border border-amber-100 bg-amber-50/40 p-4">
+                        <div className="grid gap-4">
+                          <div>
+                            <label className="mb-2 block text-sm font-bold text-slate-700">
+                              Minimum Type
+                            </label>
+                            <select
+                              value={minimumOrderType}
+                              onChange={(e) =>
+                                setMinimumOrderType(
+                                  e.target.value as MinimumOrderType
+                                )
+                              }
+                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                            >
+                              <option value="quantity">Quantity / pcs</option>
+                              <option value="amount">Amount / RM</option>
+                            </select>
+                            <p className="mt-2 text-xs text-slate-500">
+                              Pilih Quantity untuk kes seperti ais krim minimum
+                              10 pcs. Pilih Amount untuk minimum nilai order.
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-bold text-slate-700">
+                              Minimum Value
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step={
+                                minimumOrderType === 'amount' ? '0.01' : '1'
+                              }
+                              placeholder={
+                                minimumOrderType === 'amount'
+                                  ? 'Contoh: 20.00'
+                                  : 'Contoh: 10'
+                              }
+                              value={minimumOrderValue}
+                              onChange={(e) =>
+                                setMinimumOrderValue(e.target.value)
+                              }
+                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-bold text-slate-700">
+                              Message to Customer
+                            </label>
+                            <textarea
+                              placeholder="Contoh: Boleh campur-campur minimum 10 pcs."
+                              value={minimumOrderMessage}
+                              onChange={(e) =>
+                                setMinimumOrderMessage(e.target.value)
+                              }
+                              rows={3}
+                              className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                            />
+                            <p className="mt-2 text-xs text-slate-500">
+                              Optional. Kalau kosong, sistem akan guna mesej
+                              default.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
