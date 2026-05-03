@@ -25,6 +25,11 @@ const MALAYSIAN_BANKS = [
   'RHB Bank',
   'Standard Chartered',
   'UOB Bank',
+  'GX Bank Berhad',
+  'Boost Bank Berhad',
+  'AEON Bank (M) Berhad',
+  'KAF Digital Bank Berhad',
+  'YTL Digital Bank Berhad (Ryt Bank)',
 ]
 
 const DELIVERY_MODES = [
