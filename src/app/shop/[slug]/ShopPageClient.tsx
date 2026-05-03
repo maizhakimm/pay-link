@@ -547,6 +547,7 @@ export default function ShopPageClient({
   productAddons?: ProductAddonsMap
   deliverySlots?: DeliverySlot[]
   enableDeliverySlots?: boolean
+  deliveryPricingRules?: DeliveryPricingRule[]
 }) {
   const [cart, setCart] = useState<CartLine[]>([])
   const [gallery, setGallery] = useState<GalleryState>({
