@@ -28,6 +28,8 @@ type DeliveryMode =
   | 'pay_rider_separately'
   | 'distance_based'
 
+type MinimumOrderType = 'quantity' | 'amount'
+
 type DeliverySlot = {
   id: string
   label: string
@@ -147,6 +149,11 @@ export default function ShopPayButton({
   sellerLongitude = null,
   deliverySlots = [],
   enableDeliverySlots = false,
+  minimumOrderEnabled = false,
+  minimumOrderType = 'quantity',
+  minimumOrderValue = 0,
+  minimumOrderMessage = '',
+  cartQuantity = 0,
 }: {
   sellerId: string
   shopSlug: string
@@ -164,6 +171,11 @@ export default function ShopPayButton({
   sellerLongitude?: number | null
   deliverySlots?: DeliverySlot[]
   enableDeliverySlots?: boolean
+  minimumOrderEnabled?: boolean
+  minimumOrderType?: MinimumOrderType
+  minimumOrderValue?: number
+  minimumOrderMessage?: string
+  cartQuantity?: number
 }) {
   const [loading, setLoading] = useState(false)
   const [calculatingDelivery, setCalculatingDelivery] = useState(false)
@@ -230,7 +242,6 @@ export default function ShopPayButton({
       setSelectedSlotLabel('')
     }
   }, [enableDeliverySlots])
-  
 
   const normalizedItems = useMemo(() => {
     return items.map((item) => {
@@ -273,6 +284,77 @@ export default function ShopPayButton({
       }
     })
   }, [items])
+
+  const normalizedCartQuantity = useMemo(() => {
+    if (Number.isFinite(Number(cartQuantity)) && Number(cartQuantity) > 0) {
+      return Number(cartQuantity)
+    }
+
+    return normalizedItems.reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0
+    )
+  }, [cartQuantity, normalizedItems])
+
+  const minimumOrderRequirementMessage = useMemo(() => {
+    const value = Number(minimumOrderValue || 0)
+
+    if (!minimumOrderEnabled || value <= 0) return ''
+
+    if (minimumOrderMessage.trim()) {
+      return minimumOrderMessage.trim()
+    }
+
+    if (minimumOrderType === 'amount') {
+      return `Minimum order ${formatCurrency(value)}.`
+    }
+
+    return `Minimum order ${value} pcs. Boleh campur-campur.`
+  }, [
+    minimumOrderEnabled,
+    minimumOrderType,
+    minimumOrderValue,
+    minimumOrderMessage,
+  ])
+
+  const minimumOrderPassed = useMemo(() => {
+    const value = Number(minimumOrderValue || 0)
+
+    if (!minimumOrderEnabled || value <= 0) return true
+
+    if (minimumOrderType === 'amount') {
+      return Number(total || 0) >= value
+    }
+
+    return Number(normalizedCartQuantity || 0) >= value
+  }, [
+    minimumOrderEnabled,
+    minimumOrderType,
+    minimumOrderValue,
+    total,
+    normalizedCartQuantity,
+  ])
+
+  const minimumOrderRemainingMessage = useMemo(() => {
+    const value = Number(minimumOrderValue || 0)
+
+    if (!minimumOrderEnabled || value <= 0 || minimumOrderPassed) return ''
+
+    if (minimumOrderType === 'amount') {
+      const remainingAmount = Math.max(0, value - Number(total || 0))
+      return `Tambah lagi ${formatCurrency(remainingAmount)} untuk checkout.`
+    }
+
+    const remainingQty = Math.max(0, value - Number(normalizedCartQuantity || 0))
+    return `Tambah lagi ${remainingQty} pcs untuk checkout.`
+  }, [
+    minimumOrderEnabled,
+    minimumOrderType,
+    minimumOrderValue,
+    minimumOrderPassed,
+    total,
+    normalizedCartQuantity,
+  ])
 
   const deliverySummary = useMemo(() => {
     switch (deliveryMode) {
@@ -457,6 +539,15 @@ export default function ShopPayButton({
   async function handleClick() {
     if (loading) return
 
+    if (!minimumOrderPassed) {
+      alert(
+        [minimumOrderRequirementMessage, minimumOrderRemainingMessage]
+          .filter(Boolean)
+          .join('\n')
+      )
+      return
+    }
+
     if (!name.trim() || !email.trim() || phone.length <= 3) {
       alert('Sila isi nama, emel dan nombor telefon yang sah')
       return
@@ -531,6 +622,15 @@ export default function ShopPayButton({
           deliverySummary,
           deliverySlotId: selectedSlotId || null,
           deliverySlotLabel: selectedSlotLabel || null,
+          minimumOrder: minimumOrderEnabled
+            ? {
+                enabled: minimumOrderEnabled,
+                type: minimumOrderType,
+                value: Number(minimumOrderValue || 0),
+                cartQuantity: normalizedCartQuantity,
+                message: minimumOrderRequirementMessage || null,
+              }
+            : null,
           delivery: needsDelivery
             ? {
                 address1: address1.trim(),
@@ -779,15 +879,39 @@ export default function ShopPayButton({
           </select>
         </div>
       )}
-      
 
+      {minimumOrderEnabled && Number(minimumOrderValue || 0) > 0 ? (
+        <div
+          style={
+            minimumOrderPassed
+              ? minimumOrderPassedBox
+              : minimumOrderWarningBox
+          }
+        >
+          <div style={minimumOrderTitle}>
+            {minimumOrderPassed
+              ? 'Minimum order cukup'
+              : minimumOrderRequirementMessage}
+          </div>
 
+          {!minimumOrderPassed && minimumOrderRemainingMessage ? (
+            <div style={minimumOrderText}>{minimumOrderRemainingMessage}</div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div style={totalsBox}>
         <div style={totalLine}>
           <span>Subtotal</span>
           <strong>{formatCurrency(total)}</strong>
         </div>
+
+        {minimumOrderEnabled && minimumOrderType === 'quantity' ? (
+          <div style={totalLine}>
+            <span>Items</span>
+            <strong>{normalizedCartQuantity} pcs</strong>
+          </div>
+        ) : null}
 
         <div style={totalLine}>
           <span>
@@ -802,18 +926,24 @@ export default function ShopPayButton({
           <strong>{formatCurrency(payableTotal)}</strong>
         </div>
       </div>
-      
+
       <button
         type="button"
         onClick={handleClick}
-        disabled={loading}
+        disabled={loading || !minimumOrderPassed}
         style={{
           ...buttonStyle,
-          opacity: loading ? 0.7 : 1,
-          cursor: loading ? 'not-allowed' : 'pointer',
+          opacity: loading || !minimumOrderPassed ? 0.7 : 1,
+          cursor: loading || !minimumOrderPassed ? 'not-allowed' : 'pointer',
+          background: !minimumOrderPassed ? '#cbd5e1' : '#0f172a',
+          color: !minimumOrderPassed ? '#475569' : '#fff',
         }}
       >
-        {loading ? 'Processing payment...' : 'Proceed to Payment'}
+        {loading
+          ? 'Processing payment...'
+          : !minimumOrderPassed
+          ? 'Minimum order belum cukup'
+          : 'Proceed to Payment'}
       </button>
     </div>
   )
@@ -957,6 +1087,36 @@ const errorBox = {
   borderRadius: '12px',
   fontSize: '12px',
   color: '#b91c1c',
+  lineHeight: 1.5,
+} as const
+
+const minimumOrderWarningBox = {
+  borderRadius: '14px',
+  border: '1px solid #fed7aa',
+  background: '#fff7ed',
+  padding: '12px',
+  marginBottom: '12px',
+} as const
+
+const minimumOrderPassedBox = {
+  borderRadius: '14px',
+  border: '1px solid #bbf7d0',
+  background: '#f0fdf4',
+  padding: '12px',
+  marginBottom: '12px',
+} as const
+
+const minimumOrderTitle = {
+  fontSize: '13px',
+  fontWeight: 800,
+  color: '#0f172a',
+  lineHeight: 1.4,
+} as const
+
+const minimumOrderText = {
+  marginTop: '4px',
+  fontSize: '12px',
+  color: '#64748b',
   lineHeight: 1.5,
 } as const
 
