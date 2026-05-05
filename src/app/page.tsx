@@ -1066,6 +1066,20 @@ export default function LandingPage() {
         </div>
       </footer>
 
+      {/* FLOATING DEMO STORE */}
+      <a
+        href="/s/dana-store"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Demo Store"
+        className="fixed bottom-24 right-5 z-50 flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-white shadow-[0_12px_30px_rgba(37,99,235,0.35)] transition hover:-translate-y-1 hover:bg-blue-700"
+      >
+        <span className="text-lg">👀</span>
+        <span className="text-sm font-semibold hidden sm:block">
+          Kedai Demo
+        </span>
+      </a>
+
 {/* FLOATING WHATSAPP */}
 <a
   href="https://wa.me/60163352087"
