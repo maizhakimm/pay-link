@@ -214,8 +214,6 @@ export default function ShopPayButton({
   pickupNote = '',
   pickupLatitude = null,
   pickupLongitude = null,
-  pickupLatitude?: number | null
-  pickupLongitude?: number | null
   sellerLatitude = null,
   sellerLongitude = null,
   deliverySlots = [],
@@ -226,6 +224,7 @@ export default function ShopPayButton({
   minimumOrderMessage = '',
   cartQuantity = 0,
 }: {
+  pickupNote?: string
   sellerId: string
   shopSlug: string
   items: CartItem[]
@@ -1144,8 +1143,8 @@ const pickupBoxStyle = {
   marginTop: '14px',
   padding: '14px',
   borderRadius: '14px',
-  border: '1px solid #bfdbfe'
-  background: '#eff6ff'
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
   display: 'grid',
   gap: '10px',
 } as const
