@@ -134,6 +134,9 @@ type SellerProfileRow = {
   delivery_radius_km?: number | null
   delivery_rate_per_km?: number | null
   delivery_min_fee?: number | null
+  enable_delivery?: boolean | null
+  enable_self_pickup?: boolean | null
+  pickup_note?: string | null
   pickup_address?: string | null
   latitude?: number | null
   longitude?: number | null
@@ -324,6 +327,9 @@ export default function SettingsPage() {
 
   const [deliveryMode, setDeliveryMode] =
     useState<DeliveryMode>('pay_rider_separately')
+  const [enableDelivery, setEnableDelivery] = useState(true)
+  const [enableSelfPickup, setEnableSelfPickup] = useState(false)
+  const [pickupNote, setPickupNote] = useState('')
   const [deliveryFee, setDeliveryFee] = useState('0')
   const [deliveryArea, setDeliveryArea] = useState('')
   const [deliveryNote, setDeliveryNote] = useState('')
@@ -544,6 +550,9 @@ export default function SettingsPage() {
         temporarily_closed: false,
         closed_message:
           'Kedai kini ditutup. Tempahan akan dibuka semula pada waktu operasi.',
+        enable_delivery: true,
+        enable_self_pickup: false,
+        pickup_note: null,
         delivery_mode: 'pay_rider_separately',
         delivery_fee: 0,
         delivery_area: null,
@@ -662,6 +671,9 @@ export default function SettingsPage() {
           : profile.delivery_mode || 'pay_rider_separately'
 
       setDeliveryMode(loadedDeliveryMode)
+      setEnableDelivery(profile.enable_delivery ?? true)
+      setEnableSelfPickup(profile.enable_self_pickup ?? false)
+      setPickupNote(profile.pickup_note || '')
       setDeliveryFee(String(profile.delivery_fee ?? 0))
       setDeliveryArea(profile.delivery_area || '')
       setDeliveryNote(profile.delivery_note || '')
@@ -947,6 +959,11 @@ export default function SettingsPage() {
       }
     }
 
+    if (!enableDelivery && !enableSelfPickup) {
+      alert('Please enable at least one fulfillment method.')
+      return
+    }
+
     if (deliveryMode === 'distance_based') {
       if (!validateDeliveryPricingRules()) return
 
@@ -1017,6 +1034,9 @@ export default function SettingsPage() {
           account_holder_name: accountHolderName.trim() || null,
           profile_image: profileImage || null,
           shop_slug: finalShopSlug,
+          enable_delivery: enableDelivery,
+          enable_self_pickup: enableSelfPickup,
+          pickup_note: pickupNote.trim() || null,
 
           order_mode: orderMode,
           preorder_days: orderMode === 'preorder' ? parsedPreorderDays : 1,
@@ -1336,6 +1356,45 @@ export default function SettingsPage() {
 
                   <div className="mt-4 grid gap-4">
                     <div>
+                      <div className="grid gap-3">
+                        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                          <input
+                            type="checkbox"
+                            checked={enableDelivery}
+                            onChange={(e) => setEnableDelivery(e.target.checked)}
+                            className="mt-1 h-4 w-4"
+                          />
+
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">
+                              Enable Delivery
+                            </p>
+
+                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                              Customer boleh pilih delivery semasa checkout.
+                            </p>
+                          </div>
+                        </label>
+
+                        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                          <input
+                            type="checkbox"
+                            checked={enableSelfPickup}
+                            onChange={(e) => setEnableSelfPickup(e.target.checked)}
+                            className="mt-1 h-4 w-4"
+                          />
+
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">
+                              Enable Self Pickup
+                            </p>
+                      
+                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                              Customer boleh pickup sendiri dari lokasi seller.
+                            </p>
+                          </div>
+                        </label>
+                      </div>
                       <label className="mb-2 block text-sm font-bold text-slate-700">
                         Delivery Mode
                       </label>
@@ -1532,6 +1591,25 @@ export default function SettingsPage() {
                         </div>
 
                         <div>
+                          {enableSelfPickup ? (
+                            <div>
+                              <label className="mb-2 block text-sm font-bold text-slate-700">
+                                Pickup Note
+                             </label>
+
+                              <textarea
+                                placeholder="Contoh: Pickup selepas 5 petang. Sila WhatsApp dahulu sebelum datang."
+                                value={pickupNote}
+                                onChange={(e) => setPickupNote(e.target.value)}
+                                rows={3}
+                                className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                              />
+
+                              <p className="mt-2 text-xs text-slate-500">
+                                                          Nota tambahan untuk customer yang memilih self pickup.
+                              </p>
+                            </div>
+                          ) : null}
                           <label className="mb-2 block text-sm font-bold text-slate-700">
                             Pickup Address
                           </label>
