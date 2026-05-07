@@ -81,6 +81,8 @@ type DeliveryPayload = {
   resolved_address?: string | null
 } | null
 
+type FulfillmentMethod = 'delivery' | 'pickup'
+
 type DeliveryMode =
   | 'free_delivery'
   | 'fixed_fee'
@@ -414,8 +416,15 @@ export async function POST(req: NextRequest) {
     const checkoutItems = (body.checkoutItems || []) as RequestCheckoutItem[]
     const delivery = (body.delivery || null) as DeliveryPayload
 
+    const fulfillmentMethod = (
+      body.fulfillmentMethod || 'delivery'
+    ) as FulfillmentMethod
+
     const requestedSubtotal = Number(body.subtotal || 0)
-    const deliveryRequired = Boolean(body.deliveryRequired)
+    const deliveryRequired =
+      fulfillmentMethod === 'delivery'
+        ? Boolean(body.deliveryRequired)
+        : false
     const deliveryMode = (
       body.deliveryMode || 'pay_rider_separately'
     ) as DeliveryMode
@@ -680,12 +689,21 @@ export async function POST(req: NextRequest) {
       deliveryFee: effectiveDeliveryFee,
     })
 
-    const distanceDelivery = await getDistanceBasedDelivery({
-      seller: seller as SellerRow,
-      deliveryRequired,
-      deliveryMode: effectiveDeliveryMode,
-      delivery,
-    })
+    const distanceDelivery =
+      fulfillmentMethod === 'pickup'
+        ? {
+            fee: 0,
+            distanceKm: null,
+            resolvedAddress: null,
+            customerLatitude: null,
+            customerLongitude: null,
+          }
+        : await getDistanceBasedDelivery({
+            seller: seller as SellerRow,
+            deliveryRequired,
+            deliveryMode: effectiveDeliveryMode,
+            delivery,
+          })
 
     const appliedDeliveryFee =
       effectiveDeliveryMode === 'distance_based'
@@ -709,7 +727,10 @@ export async function POST(req: NextRequest) {
     const receiptToken = generateReceiptToken()
     const amount = totalAmount.toFixed(2)
     const buyerAddress =
-      distanceDelivery.resolvedAddress || buildBuyerAddress(delivery)
+      fulfillmentMethod === 'pickup'
+        ? seller.pickup_address || null
+        : distanceDelivery.resolvedAddress ||
+          buildBuyerAddress(delivery)
 
     const itemsSnapshot = validItems.map((item) => ({
       product_id: item.product.id,
@@ -724,6 +745,7 @@ export async function POST(req: NextRequest) {
     }))
 
     const deliveryInfoPayload = {
+      fulfillment_method: fulfillmentMethod,
       delivery_required: deliveryRequired,
       delivery_mode: effectiveDeliveryMode,
       delivery_fee: appliedDeliveryFee,
