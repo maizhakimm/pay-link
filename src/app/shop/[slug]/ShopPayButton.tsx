@@ -224,7 +224,6 @@ export default function ShopPayButton({
   minimumOrderMessage = '',
   cartQuantity = 0,
 }: {
-  pickupNote?: string
   sellerId: string
   shopSlug: string
   items: CartItem[]
