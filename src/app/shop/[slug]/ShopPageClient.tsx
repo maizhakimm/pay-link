@@ -100,6 +100,9 @@ type SellerProfile = {
   delivery_rate_per_km?: number | null
   delivery_min_fee?: number | null
   pickup_address?: string | null
+  enable_delivery?: boolean | null
+  enable_self_pickup?: boolean | null
+  pickup_note?: string | null
   latitude?: number | null
   longitude?: number | null
   order_mode?: OrderMode | null
@@ -1518,6 +1521,9 @@ export default function ShopPageClient({
                   deliveryMinFee={seller.delivery_min_fee || 0}
                   deliveryPricingRules={deliveryPricingRules}
                   pickupAddress={seller.pickup_address || ''}
+                  enableDelivery={seller.enable_delivery ?? true}
+                  enableSelfPickup={seller.enable_self_pickup ?? false}
+                  pickupNote={seller.pickup_note || ''}
                   sellerLatitude={seller.latitude || null}
                   sellerLongitude={seller.longitude || null}
                   deliverySlots={deliverySlots}
