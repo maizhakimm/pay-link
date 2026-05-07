@@ -1512,6 +1512,8 @@ export default function ShopPageClient({
                   shopSlug={shopSlug}
                   items={cartItems}
                   total={grandTotal}
+                  pickupLatitude={seller.latitude ?? null}
+                  pickupLongitude={seller.longitude ?? null}
                   deliveryMode={seller.delivery_mode || 'pay_rider_separately'}
                   deliveryFee={seller.delivery_fee || 0}
                   deliveryArea={seller.delivery_area || ''}
