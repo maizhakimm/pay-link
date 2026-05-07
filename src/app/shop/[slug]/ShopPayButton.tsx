@@ -1157,13 +1157,13 @@ const pickupTitleStyle = {
 const pickupAddressStyle = {
   fontSize: '13px',
   lineHeight: 1.6,
-  color: '#166534',
+  color: '#334155',
 } as const
 
 const pickupNoteStyle = {
   fontSize: '12px',
   lineHeight: 1.6,
-  color: '#15803d',
+  color: '#475569',
 } as const
 
 const pickupButtonStyle = {
@@ -1172,12 +1172,8 @@ const pickupButtonStyle = {
   justifyContent: 'center',
   padding: '12px 14px',
   borderRadius: '12px',
-  background: '#166534',
+  background: '#2563eb',
   color: '#fff',
-  fontSize: '13px',
-  fontWeight: 700,
-  textDecoration: 'none',
-} as const
 
 const wrapper = {
   width: '100%',
