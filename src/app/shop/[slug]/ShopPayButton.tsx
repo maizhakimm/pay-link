@@ -882,6 +882,30 @@ export default function ShopPayButton({
                {pickupAddress || 'Pickup address not available'}
              </div>
 
+             {pickupLatitude && pickupLongitude ? (
+               <div
+                 style={{
+                   marginTop: '12px',
+                   overflow: 'hidden',
+                   borderRadius: '16px',
+                   border: '1px solid #dbeafe',
+                 }}
+               >
+                 <iframe
+                   title="Pickup Location"
+                   src={`https://www.google.com/maps?q=${pickupLatitude},${pickupLongitude}&z=15&output=embed`}
+                   width="100%"
+                   height="220"
+                  style={{
+                     border: 0,
+                     display: 'block',
+                   }}
+      loading="lazy"
+      referrerPolicy="no-referrer-when-downgrade"
+    />
+  </div>
+) : null}
+
              {pickupNote ? <div style={pickupNoteStyle}>{pickupNote}</div> : null}
 
              {pickupAddress ? (
@@ -893,7 +917,7 @@ export default function ShopPayButton({
                  rel="noreferrer"
                  style={pickupButtonStyle}
                >
-                 Open in Google Maps
+                 Open Navigation
         </a>
       ) : null}
     </div>
