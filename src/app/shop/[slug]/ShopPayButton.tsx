@@ -102,27 +102,34 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-function calculateDistanceKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
+async function calculateDrivingDistanceKm(
+  originLat: number,
+  originLng: number,
+  destinationLat: number,
+  destinationLng: number
 ) {
-  const toRad = (value: number) => (value * Math.PI) / 180
+  const response = await fetch('/api/maps/distance', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      originLat,
+      originLng,
+      destinationLat,
+      destinationLng,
+    }),
+  })
 
-  const earthRadiusKm = 6371
-  const dLat = toRad(lat2 - lat1)
-  const dLng = toRad(lng2 - lng1)
+  const data = await response.json()
 
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2)
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.error || 'Failed to calculate driving distance'
+    )
+  }
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return earthRadiusKm * c
+  return Number(data.distance_km || 0)
 }
 
 function calculateTieredDeliveryFee(
@@ -547,7 +554,7 @@ export default function ShopPayButton({
 
       const customer = await geocodeAddress(fullDeliveryAddress)
 
-      const distance = calculateDistanceKm(
+      const distance = await calculateDrivingDistanceKm(
         Number(sellerLatitude),
         Number(sellerLongitude),
         customer.latitude,
