@@ -212,6 +212,10 @@ export default function ShopPayButton({
   enableDelivery = true,
   enableSelfPickup = false,
   pickupNote = '',
+  pickupLatitude = null,
+  pickupLongitude = null,
+  pickupLatitude?: number | null
+  pickupLongitude?: number | null
   sellerLatitude = null,
   sellerLongitude = null,
   deliverySlots = [],
@@ -235,6 +239,8 @@ export default function ShopPayButton({
   deliveryMinFee?: number
   deliveryPricingRules?: DeliveryPricingRule[]
   pickupAddress?: string
+  pickupLatitude?: number | null
+  pickupLongitude?: number | null
   enableDelivery?: boolean
   enableSelfPickup?: boolean
   pickupNote?: string
@@ -857,10 +863,10 @@ export default function ShopPayButton({
                  ...methodButtonStyle,
                  border:
                    fulfillmentMethod === 'pickup'
-                     ? '2px solid #16a34a'
+                     ? '2px solid #2563eb'
                      : '1px solid #dbe2ea',
                  background:
-                   fulfillmentMethod === 'pickup' ? '#f0fdf4' : '#fff',
+                   fulfillmentMethod === 'pickup' ? '#eff6ff' : '#fff',
                }}
              >
                🛍️ Self Pickup
@@ -1114,8 +1120,8 @@ const pickupBoxStyle = {
   marginTop: '14px',
   padding: '14px',
   borderRadius: '14px',
-  border: '1px solid #bbf7d0',
-  background: '#f0fdf4',
+  border: '1px solid #bfdbfe'
+  background: '#eff6ff'
   display: 'grid',
   gap: '10px',
 } as const
@@ -1123,7 +1129,7 @@ const pickupBoxStyle = {
 const pickupTitleStyle = {
   fontSize: '13px',
   fontWeight: 800,
-  color: '#166534',
+  color: '#1d4ed8',
 } as const
 
 const pickupAddressStyle = {
