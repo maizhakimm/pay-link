@@ -1174,6 +1174,10 @@ const pickupButtonStyle = {
   borderRadius: '12px',
   background: '#2563eb',
   color: '#fff',
+  fontSize: '13px',
+  fontWeight: 700,
+  textDecoration: 'none',
+} as const
 
 const wrapper = {
   width: '100%',
