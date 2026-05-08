@@ -306,28 +306,25 @@ export default function DashboardMarketplacePage() {
               <Field label="Marketplace description">
                 <textarea className={inputCls} rows={4} value={profile.marketplace_description || ''} onChange={(e) => updateProfileField('marketplace_description', e.target.value)} placeholder="Terangkan apa special tentang kedai anda..." />
               </Field>
-              <Field label="Banner image URL (text only)">
-                <input className={inputCls} value={profile.marketplace_banner_image || ''} onChange={(e) => updateProfileField('marketplace_banner_image', e.target.value)} placeholder="https://..." />
-              </Field>
             </Card>
 
-            <Card title="3) Area & Community">
+            <Card title="3) Area & Taman / Apartment / Kawasan">
               <Field label="Area select (optional)">
                 <select className={inputCls} value={profile.area_id || ''} onChange={(e) => updateProfileField('area_id', e.target.value || null)}>
                   <option value="">Select area</option>
                   {areas.map((area) => <option key={area.id} value={area.id}>{area.area_name}</option>)}
                 </select>
               </Field>
-              <Field label="Community select (optional)">
+              <Field label="Taman / Apartment / Kawasan (optional)">
                 <select className={inputCls} value={profile.community_id || ''} onChange={(e) => updateProfileField('community_id', e.target.value || null)}>
-                  <option value="">Select community</option>
+                  <option value="">Pilih taman / apartment / kawasan</option>
                   {filteredCommunities.map((community) => <option key={community.id} value={community.id}>{community.community_name}</option>)}
                 </select>
               </Field>
               <Field label="Area text">
                 <input className={inputCls} value={profile.area_text || ''} onChange={(e) => updateProfileField('area_text', e.target.value)} placeholder="Contoh: Sekitar Shah Alam & Setia Alam" />
               </Field>
-              <Field label="Community text">
+              <Field label="Taman / Apartment / Kawasan text">
                 <input className={inputCls} value={profile.community_text || ''} onChange={(e) => updateProfileField('community_text', e.target.value)} placeholder="Contoh: Seksyen 7, Seksyen 9" />
               </Field>
             </Card>
@@ -378,7 +375,7 @@ export default function DashboardMarketplacePage() {
                 <h3 className="mt-1 text-lg font-bold text-slate-900">{seller?.store_name || 'Your Store'}</h3>
                 <p className="mt-1 text-sm font-medium text-slate-700">{profile.tagline || 'Add a tagline'}</p>
                 <p className="mt-2 text-sm text-slate-600">{profile.marketplace_description || 'Add a marketplace description to preview your profile.'}</p>
-                <p className="mt-3 text-xs text-slate-500">Area: {profile.area_text || '—'} · Community: {profile.community_text || '—'}</p>
+                <p className="mt-3 text-xs text-slate-500">Area: {profile.area_text || '—'} · Taman / Apartment / Kawasan: {profile.community_text || '—'}</p>
               </div>
             </Card>
           </>
