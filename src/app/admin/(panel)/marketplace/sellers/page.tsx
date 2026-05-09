@@ -23,6 +23,23 @@ type MarketplaceSellerRow = {
   created_at: string
 }
 
+type MarketplaceSellerRowRaw = Omit<MarketplaceSellerRow, 'seller_profiles'> & {
+  seller_profiles?:
+    | {
+        store_name: string | null
+        email: string | null
+        whatsapp: string | null
+        shop_slug: string | null
+      }
+    | {
+        store_name: string | null
+        email: string | null
+        whatsapp: string | null
+        shop_slug: string | null
+      }[]
+    | null
+}
+
 export default function MarketplaceSellersPage() {
   const [rows, setRows] = useState<MarketplaceSellerRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,7 +56,18 @@ export default function MarketplaceSellersPage() {
     if (error) {
       setError(error.message)
     } else {
-      setRows((data || []) as MarketplaceSellerRow[])
+      const normalizedRows = ((data || []) as MarketplaceSellerRowRaw[]).map((row) => {
+        const sellerProfiles = Array.isArray(row.seller_profiles)
+          ? row.seller_profiles[0] || null
+          : row.seller_profiles || null
+
+        return {
+          ...row,
+          seller_profiles: sellerProfiles,
+        }
+      })
+
+      setRows(normalizedRows)
     }
 
     setLoading(false)
