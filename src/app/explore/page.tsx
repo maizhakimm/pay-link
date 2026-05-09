@@ -34,6 +34,7 @@ type ExploreProfileRaw = {
 }
 
 type ExploreProfile = {
+  isDemo?: boolean
   id: string
   is_featured: boolean
   is_verified: boolean
@@ -51,6 +52,65 @@ type ExploreProfile = {
   categories: string[]
   categoryIds: string[]
 }
+
+const DEMO_SHOPS: ExploreProfile[] = [
+  {
+    isDemo: true,
+    id: 'demo-dana',
+    is_featured: true,
+    is_verified: true,
+    tagline: 'Menu sarapan homemade setiap pagi',
+    area_text: 'Shah Alam',
+    community_text: 'Seksyen 7',
+    created_at: '',
+    area_id: null,
+    seller: { store_name: 'Dana Home Cook', shop_slug: 'dana-store', profile_image: null, whatsapp: null },
+    categories: ['Breakfast', 'Lunch', 'Drinks'],
+    categoryIds: [],
+  },
+  {
+    isDemo: true,
+    id: 'demo-kakyan',
+    is_featured: false,
+    is_verified: true,
+    tagline: 'Masakan kampung panas-panas setiap hari',
+    area_text: 'Setia Alam',
+    community_text: 'Kota Kemuning',
+    created_at: '',
+    area_id: null,
+    seller: { store_name: 'Kak Yan Kitchen', shop_slug: null, profile_image: null, whatsapp: null },
+    categories: ['Lunch', 'Drinks'],
+    categoryIds: [],
+  },
+  {
+    isDemo: true,
+    id: 'demo-rina',
+    is_featured: true,
+    is_verified: false,
+    tagline: 'Biskut, kek mini dan manisan tempahan',
+    area_text: 'Shah Alam',
+    community_text: 'Seksyen 7',
+    created_at: '',
+    area_id: null,
+    seller: { store_name: 'Auntie Rina Bakes', shop_slug: null, profile_image: null, whatsapp: null },
+    categories: ['Bakery', 'Dessert', 'Kuih Muih'],
+    categoryIds: [],
+  },
+  {
+    isDemo: true,
+    id: 'demo-azizah',
+    is_featured: false,
+    is_verified: false,
+    tagline: 'Kuih tradisional dan menu rumah',
+    area_text: 'Setia Alam',
+    community_text: 'Kota Kemuning',
+    created_at: '',
+    area_id: null,
+    seller: { store_name: 'Dapur Azizah', shop_slug: null, profile_image: null, whatsapp: null },
+    categories: ['Kuih Muih', 'Breakfast'],
+    categoryIds: [],
+  },
+]
 
 export default function ExplorePage() {
   const [loading, setLoading] = useState(true)
@@ -138,23 +198,26 @@ export default function ExplorePage() {
   }, [])
 
   const filteredProfiles = useMemo(() => {
-    return profiles.filter((profile) => {
+    const realProfiles = profiles.filter((profile) => {
       const areaPass = selectedAreaId === 'all' || profile.area_id === selectedAreaId
       const categoryPass = selectedCategoryId === 'all' || profile.categoryIds.includes(selectedCategoryId)
       return areaPass && categoryPass
     })
+
+    if (realProfiles.length >= 4) return realProfiles
+    return [...realProfiles, ...DEMO_SHOPS.slice(0, 4 - realProfiles.length)]
   }, [profiles, selectedAreaId, selectedCategoryId])
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-rose-50 via-slate-50 to-slate-100">
       <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
         <header className="rounded-3xl border border-rose-100 bg-white p-5 shadow-sm sm:p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">BayarLink</p>
+          <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-7 w-auto" />
           <h1 className="mt-1 text-2xl font-extrabold text-slate-900 sm:text-3xl">Cari makanan homemade sekitar komuniti anda</h1>
           <p className="mt-2 text-sm text-slate-600">Sokong seller lokal dan jumpa menu menarik sekitar kawasan anda.</p>
-          <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            BayarLink Explore kini dalam fasa beta. Buat masa ini, discovery marketplace dibuka secara berperingkat untuk kawasan terpilih.
-          </p>
+          <div className="mt-3 inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+            Beta Preview
+          </div>
         </header>
 
         <section className="mt-4 grid gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 sm:p-5">
@@ -182,7 +245,9 @@ export default function ExplorePage() {
         {loading ? <p className="mt-4 text-sm text-slate-500">Memuatkan seller...</p> : null}
         {error ? <p className="mt-4 text-sm font-semibold text-red-600">{error}</p> : null}
 
-        <section className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="mt-5">
+          <h2 className="mb-3 text-lg font-bold text-slate-800">Seller sekitar komuniti</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {!loading && filteredProfiles.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 sm:col-span-2 lg:col-span-3">
               Belum ada seller aktif untuk kawasan ini.
@@ -216,6 +281,7 @@ export default function ExplorePage() {
                     <h2 className="text-base font-extrabold text-slate-900">{storeName}</h2>
                   </div>
                   <div className="flex flex-wrap justify-end gap-1">
+                    {profile.isDemo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">Demo</span> : null}
                     {profile.is_featured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">Featured</span> : null}
                     {profile.is_verified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Trusted</span> : null}
                   </div>
@@ -237,15 +303,16 @@ export default function ExplorePage() {
                   <p className="truncate text-xs text-slate-500">{profile.seller?.whatsapp ? `Hubungi: ${profile.seller.whatsapp}` : 'No contact yet'}</p>
                   {shopSlug ? (
                     <Link href={`/s/${encodeURIComponent(shopSlug)}`} className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-700">
-                      Lihat Kedai
+                      {profile.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}
                     </Link>
                   ) : (
-                    <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400">Lihat Kedai</span>
+                    <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400">{profile.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</span>
                   )}
                 </div>
               </article>
             )
           })}
+          </div>
         </section>
       </div>
     </main>
