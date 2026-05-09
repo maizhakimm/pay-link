@@ -21,6 +21,18 @@ const FOOD_CHIPS = [
   { key: 'kuih', label: '🍪 Kuih' },
 ]
 
+const CHIP_MATCHERS: Record<string, string[]> = {
+  nasi: ['nasi', 'lemak', 'rice'],
+  burger: ['burger'],
+  goreng: ['goreng', 'fried'],
+  drinks: ['drink', 'air', 'teh', 'kopi', 'juice'],
+  dessert: ['dessert', 'cake', 'brownies', 'manis'],
+  bakery: ['bakery', 'roti', 'bread', 'pastry'],
+  mee: ['mee', 'mi', 'noodle'],
+  lunch: ['lunch', 'tengah hari'],
+  kuih: ['kuih'],
+}
+
 const DEMO_PRODUCTS: ProductCard[] = [
   { id: 'demo-1', name: 'Nasi Lemak Ayam Crispy', price: 12, seller_profile_id: '', image: null, sellerName: 'Dana Home Cook', shopSlug: 'dana-store', areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Nasi Lemak', isFeatured: true, isVerified: true, isDemo: true },
   { id: 'demo-2', name: 'Burger Homemade', price: 14, seller_profile_id: '', image: null, sellerName: 'Kak Yan Kitchen', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Burger', isFeatured: false, isVerified: true, isDemo: true },
@@ -43,6 +55,8 @@ export default function ExplorePage() {
   const [areaOptions, setAreaOptions] = useState<string[]>(['Shah Alam'])
   const [showAreaPicker, setShowAreaPicker] = useState(false)
   const [showServices, setShowServices] = useState(false)
+  const [showInstallSheet, setShowInstallSheet] = useState(false)
+  const [showSellerSheet, setShowSellerSheet] = useState(false)
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
@@ -109,7 +123,12 @@ export default function ExplorePage() {
       if (!q) return true
       return [p.name, p.sellerName, p.categoryLabel || '', p.areaText || '', p.communityText || ''].join(' ').toLowerCase().includes(q)
     })
-    const byChip = bySearch.filter((p) => selectedChip === 'all' || [p.name, p.categoryLabel || ''].join(' ').toLowerCase().includes(selectedChip))
+    const byChip = bySearch.filter((p) => {
+      if (selectedChip === 'all') return true
+      const keywords = CHIP_MATCHERS[selectedChip] || [selectedChip]
+      const haystack = [p.name, p.categoryLabel || ''].join(' ').toLowerCase()
+      return keywords.some((kw) => haystack.includes(kw))
+    })
     const byArea = byChip.filter((p) => !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
     return byArea.length >= 6 ? byArea : [...byArea, ...DEMO_PRODUCTS.slice(0, 6 - byArea.length)]
   }, [products, query, selectedChip, area])
@@ -138,8 +157,13 @@ export default function ExplorePage() {
             <div className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">Beta Preview</div>
           </div>
           <div className="mt-3 relative">
-            <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari menu homemade sekitar kawasan anda" className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 pr-12 text-sm" />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-slate-900 px-3 py-1.5 text-xs text-white">🔍</button>
+            <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari menu homemade sekitar kawasan anda" className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 pr-12 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+            <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-white p-1.5 text-slate-700" aria-label="Search">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M16 16l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
           </div>
           <div ref={nearbyRef} className="mt-2">
             <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">📍 {area}</button>
@@ -156,6 +180,11 @@ export default function ExplorePage() {
 
         <section className="mt-4">
           {loading ? <p className="text-sm text-slate-500">Memuatkan menu...</p> : null}
+          {displayedProducts.length === 0 && !loading ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              Tiada menu untuk kategori ini buat masa ini.
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {displayedProducts.map((item) => (
               <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
@@ -184,10 +213,23 @@ export default function ExplorePage() {
             {sellerCards.map((item: any) => (
               <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-slate-900">{item.seller?.store_name || 'Local Seller'}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-50 text-[10px] font-bold text-rose-700">
+                      {(item.seller?.store_name || 'LS').slice(0, 2).toUpperCase()}
+                    </div>
+                    <p className="text-sm font-bold text-slate-900">{item.seller?.store_name || 'Local Seller'}</p>
+                  </div>
                   {item.isDemo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">Demo</span> : null}
                 </div>
+                <p className="mt-1 text-xs text-slate-600 line-clamp-1">Homemade & fresh setiap hari</p>
                 <p className="text-xs text-slate-500">{item.area_text || '-'} · {item.community_text || '-'}</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {item.is_featured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
+                  {item.is_verified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Trusted</span> : null}
+                </div>
+                <div className="mt-2">
+                  <button className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-bold text-white">Lihat Kedai</button>
+                </div>
               </article>
             ))}
           </div>
@@ -196,15 +238,15 @@ export default function ExplorePage() {
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
-          <button onClick={() => searchRef.current?.focus()} className="flex flex-col items-center rounded-xl px-2 py-1">🔎<span>Search</span></button>
           <button onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">🍲<span>Food</span></button>
           <button onClick={() => setShowServices(true)} className="flex flex-col items-center rounded-xl px-2 py-1">🔧<span>Services</span></button>
+          <button onClick={() => searchRef.current?.focus()} className="flex flex-col items-center rounded-xl px-2 py-1">🔎<span>Explore</span></button>
           <button onClick={() => nearbyRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">📍<span>Location</span></button>
-          <button onClick={() => sellerRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">🏪<span>Seller</span></button>
+          <button onClick={() => setShowSellerSheet(true)} className="flex flex-col items-center rounded-xl px-2 py-1">🏪<span>Seller</span></button>
         </div>
       </nav>
 
-      <button className="fixed bottom-20 right-4 z-40 rounded-full bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-xl sm:hidden">📲 Add di Phone</button>
+      <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xl sm:hidden">+ Add di Phone</button>
 
       {showAreaPicker ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowAreaPicker(false)}>
@@ -221,6 +263,32 @@ export default function ExplorePage() {
             <h3 className="text-base font-bold text-slate-900">Coming Soon</h3>
             <p className="mt-1 text-sm text-slate-600">Kami sedang membuka servis komuniti seperti runner, printing, laundry dan lain-lain.</p>
             <button onClick={() => setShowServices(false)} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Saya berminat</button>
+          </div>
+        </div>
+      ) : null}
+
+      {showInstallSheet ? (
+        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowInstallSheet(false)}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900">Tambah BayarLink ke phone?</h3>
+            <p className="mt-1 text-sm text-slate-600">Simpan BayarLink di skrin utama supaya mudah buka semula tanpa cari link.</p>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setShowInstallSheet(false)} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Ya, tunjuk cara</button>
+              <button onClick={() => setShowInstallSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Nanti dulu</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showSellerSheet ? (
+        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowSellerSheet(false)}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900">Nak jadi seller BayarLink?</h3>
+            <p className="mt-1 text-sm text-slate-600">Buka kedai online ringkas dan mula terima order melalui link.</p>
+            <div className="mt-4 flex gap-2">
+              <Link href="/auth" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Ya, daftar seller</Link>
+              <button onClick={() => setShowSellerSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Tutup</button>
+            </div>
           </div>
         </div>
       ) : null}
