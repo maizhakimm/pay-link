@@ -30,6 +30,11 @@ const DEMO_PRODUCTS: ProductCard[] = [
   { id: 'demo-6', name: 'Teh Ais Kaw', price: 4, seller_profile_id: '', image: null, sellerName: 'Kak Yan Kitchen', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Drinks', isFeatured: false, isVerified: false, isDemo: true },
 ]
 
+const DEMO_SELLERS = [
+  { id: 'demo-s1', store_name: 'Dana Home Cook', area_text: 'Shah Alam', community_text: 'Seksyen 7' },
+  { id: 'demo-s2', store_name: 'Kak Yan Kitchen', area_text: 'Setia Alam', community_text: 'Kota Kemuning' },
+]
+
 export default function ExplorePage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -109,7 +114,20 @@ export default function ExplorePage() {
     return byArea.length >= 6 ? byArea : [...byArea, ...DEMO_PRODUCTS.slice(0, 6 - byArea.length)]
   }, [products, query, selectedChip, area])
 
-  const sellerCards = useMemo(() => profiles.map((p) => ({ ...p, seller: sellers[p.seller_profile_id] })).filter((row) => row.seller), [profiles, sellers])
+  const sellerCards = useMemo(() => {
+    const realSellers = profiles
+      .map((p) => ({ ...p, seller: sellers[p.seller_profile_id], isDemo: false }))
+      .filter((row) => row.seller)
+    if (realSellers.length >= 4) return realSellers
+    const fillers = DEMO_SELLERS.slice(0, 4 - realSellers.length).map((item) => ({
+      id: item.id,
+      seller: { store_name: item.store_name },
+      area_text: item.area_text,
+      community_text: item.community_text,
+      isDemo: true,
+    }))
+    return [...realSellers, ...fillers]
+  }, [profiles, sellers])
 
   return (
     <main className="min-h-screen bg-white pb-24">
@@ -163,9 +181,12 @@ export default function ExplorePage() {
         <section ref={sellerRef} className="mt-7">
           <h2 className="mb-3 text-lg font-bold text-slate-800">Seller di 📍 {area}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {sellerCards.map((item) => (
+            {sellerCards.map((item: any) => (
               <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                <p className="text-sm font-bold text-slate-900">{item.seller?.store_name || 'Local Seller'}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-slate-900">{item.seller?.store_name || 'Local Seller'}</p>
+                  {item.isDemo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">Demo</span> : null}
+                </div>
                 <p className="text-xs text-slate-500">{item.area_text || '-'} · {item.community_text || '-'}</p>
               </article>
             ))}
@@ -176,14 +197,14 @@ export default function ExplorePage() {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
           <button onClick={() => searchRef.current?.focus()} className="flex flex-col items-center rounded-xl px-2 py-1">🔎<span>Search</span></button>
-          <button onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">🍽️<span>Food</span></button>
-          <button onClick={() => setShowServices(true)} className="flex flex-col items-center rounded-xl px-2 py-1">🛠️<span>Services</span></button>
+          <button onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">🍲<span>Food</span></button>
+          <button onClick={() => setShowServices(true)} className="flex flex-col items-center rounded-xl px-2 py-1">🔧<span>Services</span></button>
           <button onClick={() => nearbyRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">📍<span>Location</span></button>
           <button onClick={() => sellerRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">🏪<span>Seller</span></button>
         </div>
       </nav>
 
-      <button className="fixed bottom-20 right-4 z-40 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-lg sm:hidden">📲 Simpan di Home</button>
+      <button className="fixed bottom-20 right-4 z-40 rounded-full bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-xl sm:hidden">📲 Add di Phone</button>
 
       {showAreaPicker ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowAreaPicker(false)}>
@@ -197,7 +218,7 @@ export default function ExplorePage() {
       {showServices ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowServices(false)}>
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Servis kawasan akan datang</h3>
+            <h3 className="text-base font-bold text-slate-900">Coming Soon</h3>
             <p className="mt-1 text-sm text-slate-600">Kami sedang membuka servis komuniti seperti runner, printing, laundry dan lain-lain.</p>
             <button onClick={() => setShowServices(false)} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Saya berminat</button>
           </div>
