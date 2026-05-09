@@ -59,7 +59,7 @@ export default function ExplorePage() {
   const [showSellerSheet, setShowSellerSheet] = useState(false)
   const [showShopSheet, setShowShopSheet] = useState(false)
   const [showReportSheet, setShowReportSheet] = useState(false)
-  const [activeMenu, setActiveMenu] = useState<'food' | 'services' | 'shop' | 'seller' | 'report'>('shop')
+  const [activeMenu, setActiveMenu] = useState<'food' | 'services' | 'shop' | 'seller' | 'report'>('food')
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
@@ -160,7 +160,7 @@ export default function ExplorePage() {
             <div className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">Beta Preview</div>
           </div>
           <div className="mt-3 relative">
-            <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari menu homemade sekitar kawasan anda" className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 pr-12 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+            <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nak makan apa hari ni?" className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 pr-12 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
             <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-white p-1.5 text-slate-700" aria-label="Search">
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
                 <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
@@ -211,7 +211,10 @@ export default function ExplorePage() {
         </section>
 
         <section ref={sellerRef} className="mt-7">
-          <h2 className="mb-3 text-lg font-bold text-slate-800">Seller di 📍 {area}</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-lg font-bold text-slate-800">Explore Seller</h2>
+            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">📍 {area}</button>
+          </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sellerCards.map((item: any) => (
               <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -242,11 +245,11 @@ export default function ExplorePage() {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
           <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M7 3v8M5.5 3v8M8.5 3v8M4 11h6M15 3v7a3 3 0 01-3 3v8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M7 3v8M10 3v8M5 11h7M15 3v18M15 12h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Food</span>
           </button>
           <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M14.5 5.5l4 4M4 20l5.5-1.5L18.5 9.5 14.5 5.5 5.5 14.5 4 20z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M10 4l-6 6 4 4 6-6-4-4zM14 14l6 6M16.5 11.5l3-3 2 2-3 3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Services</span>
           </button>
           <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-slate-100 text-slate-900' : ''}`}>
@@ -258,7 +261,7 @@ export default function ExplorePage() {
             <span>Seller</span>
           </button>
           <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M6 4h12v16l-3-2-3 2-3-2-3 2V4zM9 9h6M9 13h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M5 7a4 4 0 014-4h6a4 4 0 014 4v6a4 4 0 01-4 4h-1.5L9 20v-3H9a4 4 0 01-4-4V7zM9 9h6M9 12.5h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Report</span>
           </button>
         </div>
@@ -326,10 +329,10 @@ export default function ExplorePage() {
       {showReportSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowReportSheet(false)}>
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Lapor atau cadang kawasan</h3>
-            <p className="mt-1 text-sm text-slate-600">Beritahu kami kawasan yang patut dibuka seterusnya di BayarLink.</p>
+            <h3 className="text-base font-bold text-slate-900">Ada sebarang aduan?</h3>
+            <p className="mt-1 text-sm text-slate-600">Laporkan sebarang isu kepada kami melalui WhatsApp.</p>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setShowReportSheet(false)} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Saya berminat</button>
+              <a href="https://wa.me/60163352087" target="_blank" rel="noreferrer" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">WhatsApp Kami</a>
               <button onClick={() => setShowReportSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Tutup</button>
             </div>
           </div>
