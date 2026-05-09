@@ -192,7 +192,9 @@ export default function ExplorePage() {
           <div className="mt-3">
             <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari nasi lemak, burger, kuih..." className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 text-sm" />
           </div>
-          <button ref={nearbyRef} onClick={() => setShowAreaPicker(true)} className="mt-2 inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">📍 {area}</button>
+          <div ref={nearbyRef} className="mt-2">
+            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">📍 {area}</button>
+          </div>
         </header>
 
         <section ref={categoriesRef} className="mt-4">
