@@ -57,6 +57,7 @@ export default function ExplorePage() {
   const [showServices, setShowServices] = useState(false)
   const [showInstallSheet, setShowInstallSheet] = useState(false)
   const [showSellerSheet, setShowSellerSheet] = useState(false)
+  const [activeMenu, setActiveMenu] = useState<'food' | 'services' | 'explore' | 'location' | 'seller'>('explore')
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
@@ -238,15 +239,30 @@ export default function ExplorePage() {
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
-          <button onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">🍲<span>Food</span></button>
-          <button onClick={() => setShowServices(true)} className="flex flex-col items-center rounded-xl px-2 py-1">🔧<span>Services</span></button>
-          <button onClick={() => searchRef.current?.focus()} className="flex flex-col items-center rounded-xl px-2 py-1">🔎<span>Explore</span></button>
-          <button onClick={() => nearbyRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">📍<span>Location</span></button>
-          <button onClick={() => setShowSellerSheet(true)} className="flex flex-col items-center rounded-xl px-2 py-1">🏪<span>Seller</span></button>
+          <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-slate-100 text-slate-900' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><path d="M4 10h16M6 14h12M8 18h8M7 6h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
+            <span>Food</span>
+          </button>
+          <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-slate-100 text-slate-900' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><path d="M14 6l4 4-8 8H6v-4l8-8zM13 7l4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <span>Services</span>
+          </button>
+          <button onClick={() => { setActiveMenu('explore'); searchRef.current?.focus() }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'explore' ? 'bg-slate-100 text-slate-900' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" /><path d="M16 16l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+            <span>Explore</span>
+          </button>
+          <button onClick={() => { setActiveMenu('location'); nearbyRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'location' ? 'bg-slate-100 text-slate-900' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><path d="M12 21s6-5.2 6-10a6 6 0 10-12 0c0 4.8 6 10 6 10z" stroke="currentColor" strokeWidth="1.7"/><circle cx="12" cy="11" r="2" stroke="currentColor" strokeWidth="1.7"/></svg>
+            <span>Location</span>
+          </button>
+          <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-slate-100 text-slate-900' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><path d="M4 9l8-5 8 5v10H4V9zM9 19v-5h6v5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span>Seller</span>
+          </button>
         </div>
       </nav>
 
-      <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xl sm:hidden">+ Add di Phone</button>
+      <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xl sm:hidden">⬇ Add di Phone</button>
 
       {showAreaPicker ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowAreaPicker(false)}>
@@ -270,10 +286,10 @@ export default function ExplorePage() {
       {showInstallSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowInstallSheet(false)}>
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Tambah BayarLink ke phone?</h3>
-            <p className="mt-1 text-sm text-slate-600">Simpan BayarLink di skrin utama supaya mudah buka semula tanpa cari link.</p>
+            <h3 className="text-base font-bold text-slate-900">Add BayarLink launcher icon di Device?</h3>
+            <p className="mt-1 text-sm text-slate-600">Buka dan akses BayarLink akan jadi lebih mudah.</p>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setShowInstallSheet(false)} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Ya, tunjuk cara</button>
+              <button onClick={() => setShowInstallSheet(false)} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Ya, add launcher di device</button>
               <button onClick={() => setShowInstallSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Nanti dulu</button>
             </div>
           </div>
@@ -283,8 +299,8 @@ export default function ExplorePage() {
       {showSellerSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowSellerSheet(false)}>
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Nak jadi seller BayarLink?</h3>
-            <p className="mt-1 text-sm text-slate-600">Buka kedai online ringkas dan mula terima order melalui link.</p>
+            <h3 className="text-base font-bold text-slate-900">Nak daftar sebagai Seller?</h3>
+            <p className="mt-1 text-sm text-slate-600">Daftar dan jual menggunakan BayarLink dan senaraikan produk dan servis anda di marketplace.</p>
             <div className="mt-4 flex gap-2">
               <Link href="/auth" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Ya, daftar seller</Link>
               <button onClick={() => setShowSellerSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Tutup</button>
