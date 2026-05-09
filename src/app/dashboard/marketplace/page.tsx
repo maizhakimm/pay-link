@@ -106,17 +106,20 @@ export default function DashboardMarketplacePage() {
       setCommunities((communitiesRes.data || []) as Community[])
 
       let mp: MarketplaceProfile | null = null
-      const { data: existingProfile, error: profileError } = await supabase
+      const { data: existingProfiles, error: profileError } = await supabase
         .from('marketplace_profiles')
         .select('id,seller_profile_id,status,is_marketplace_visible,tagline,marketplace_description,marketplace_banner_image,area_text,community_text,area_id,community_id')
         .eq('seller_profile_id', sellerId)
-        .maybeSingle()
+        .order('created_at', { ascending: true })
+        .limit(1)
 
       if (profileError) {
         setError(profileError.message)
         setLoading(false)
         return
       }
+
+      const existingProfile = (existingProfiles || [])[0] as MarketplaceProfile | undefined
 
       if (!existingProfile) {
         const { data: createdProfile, error: createError } = await supabase
