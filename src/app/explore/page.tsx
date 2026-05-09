@@ -146,12 +146,12 @@ export default function ExplorePage() {
   }, [profiles, selectedAreaId, selectedCategoryId])
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-gradient-to-b from-rose-50 via-slate-50 to-slate-100">
       <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-        <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <header className="rounded-3xl border border-rose-100 bg-white p-5 shadow-sm sm:p-6">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">BayarLink</p>
-          <h1 className="mt-1 text-2xl font-extrabold text-slate-900 sm:text-3xl">Explore Beta</h1>
-          <p className="mt-2 text-sm text-slate-600">Sokong seller komuniti sekitar anda.</p>
+          <h1 className="mt-1 text-2xl font-extrabold text-slate-900 sm:text-3xl">Cari makanan homemade sekitar komuniti anda</h1>
+          <p className="mt-2 text-sm text-slate-600">Sokong seller lokal dan jumpa menu menarik sekitar kawasan anda.</p>
           <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
             BayarLink Explore kini dalam fasa beta. Buat masa ini, discovery marketplace dibuka secara berperingkat untuk kawasan terpilih.
           </p>
@@ -191,19 +191,39 @@ export default function ExplorePage() {
 
           {filteredProfiles.map((profile) => {
             const shopSlug = profile.seller?.shop_slug
+            const storeName = profile.seller?.store_name?.trim() || 'Local Seller'
+            const initials = storeName
+              .split(' ')
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part) => part[0]?.toUpperCase())
+              .join('') || 'LS'
             return (
-              <article key={profile.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-base font-extrabold text-slate-900">{profile.seller?.store_name || 'Unnamed Seller'}</h2>
+              <article key={profile.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {profile.seller?.profile_image ? (
+                      <img
+                        src={profile.seller.profile_image}
+                        alt={storeName}
+                        className="h-12 w-12 rounded-2xl border border-slate-200 object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-sm font-bold text-rose-700">
+                        {initials}
+                      </div>
+                    )}
+                    <h2 className="text-base font-extrabold text-slate-900">{storeName}</h2>
+                  </div>
                   <div className="flex flex-wrap justify-end gap-1">
                     {profile.is_featured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">Featured</span> : null}
-                    {profile.is_verified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Verified</span> : null}
+                    {profile.is_verified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Trusted</span> : null}
                   </div>
                 </div>
 
                 <p className="mt-1 text-sm text-slate-700">{profile.tagline || 'Seller komuniti BayarLink'}</p>
                 <p className="mt-2 text-xs text-slate-500">Area: {profile.area_text || '-'}</p>
-                <p className="text-xs text-slate-500">Taman / Apartment / Kawasan: {profile.community_text || '-'}</p>
+                <p className="text-xs text-slate-500">Taman / Kawasan: {profile.community_text || '-'}</p>
 
                 {profile.categories.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-1.5">
@@ -214,13 +234,13 @@ export default function ExplorePage() {
                 ) : null}
 
                 <div className="mt-4 flex items-center justify-between gap-2">
-                  <p className="truncate text-xs text-slate-500">{profile.seller?.whatsapp || 'No contact yet'}</p>
+                  <p className="truncate text-xs text-slate-500">{profile.seller?.whatsapp ? `Hubungi: ${profile.seller.whatsapp}` : 'No contact yet'}</p>
                   {shopSlug ? (
-                    <Link href={`/s/${encodeURIComponent(shopSlug)}`} className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800">
-                      View Shop
+                    <Link href={`/s/${encodeURIComponent(shopSlug)}`} className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-700">
+                      Lihat Kedai
                     </Link>
                   ) : (
-                    <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400">View Shop</span>
+                    <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400">Lihat Kedai</span>
                   )}
                 </div>
               </article>
