@@ -6,12 +6,18 @@ import MarketplaceSubnav from '../components/MarketplaceSubnav'
 
 type MarketplaceSellerRow = {
   id: string
-  seller_profiles?: { store_name: string | null } | null
+  seller_profiles?: {
+    store_name: string | null
+    email: string | null
+    whatsapp: string | null
+    shop_slug: string | null
+  } | null
   seller_profile_id: string
   status: string
   is_marketplace_visible: boolean
   is_featured: boolean
   is_verified: boolean
+  tagline: string | null
   area_text: string | null
   community_text: string | null
   created_at: string
@@ -27,7 +33,7 @@ export default function MarketplaceSellersPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('marketplace_profiles')
-      .select('id,seller_profile_id,status,is_marketplace_visible,is_featured,is_verified,area_text,community_text,created_at,seller_profiles(store_name)')
+      .select('id,seller_profile_id,status,is_marketplace_visible,is_featured,is_verified,tagline,area_text,community_text,created_at,seller_profiles(store_name,email,whatsapp,shop_slug)')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -59,26 +65,27 @@ export default function MarketplaceSellersPage() {
     setActionLoadingId(`${row.id}:${action}`)
     setError(null)
 
-    const payload: Record<string, unknown> = {}
-    if (action === 'approve') {
-      payload.status = 'published'
-      payload.is_marketplace_visible = true
-    } else if (action === 'reject') {
-      payload.status = 'rejected'
-      payload.is_marketplace_visible = false
-    } else if (action === 'feature') {
-      payload.is_featured = !row.is_featured
-    } else if (action === 'verify') {
-      payload.is_verified = !row.is_verified
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+    if (!accessToken) {
+      setError('Admin session expired. Please log in again.')
+      setActionLoadingId(null)
+      return
     }
 
-    const { error } = await supabase
-      .from('marketplace_profiles')
-      .update(payload)
-      .eq('id', row.id)
+    const response = await fetch(`/api/admin/marketplace/sellers/${row.id}/moderate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ action }),
+    })
 
-    if (error) {
-      setError(error.message)
+    const result = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      setError(result?.error || 'Failed to update marketplace profile.')
     } else {
       await loadData()
     }
@@ -103,10 +110,14 @@ export default function MarketplaceSellersPage() {
               <tr className="border-b border-slate-200 text-left text-slate-500">
                 <th className="px-3 py-2 font-semibold">Seller Profile ID</th>
                 <th className="px-3 py-2 font-semibold">Store Name</th>
+                <th className="px-3 py-2 font-semibold">Email</th>
+                <th className="px-3 py-2 font-semibold">Contact Phone</th>
+                <th className="px-3 py-2 font-semibold">Shop Slug</th>
                 <th className="px-3 py-2 font-semibold">Status</th>
                 <th className="px-3 py-2 font-semibold">Visible</th>
                 <th className="px-3 py-2 font-semibold">Featured</th>
                 <th className="px-3 py-2 font-semibold">Verified</th>
+                <th className="px-3 py-2 font-semibold">Tagline</th>
                 <th className="px-3 py-2 font-semibold">Area</th>
                 <th className="px-3 py-2 font-semibold">Taman / Apartment / Kawasan</th>
                 <th className="px-3 py-2 font-semibold">Created At</th>
@@ -118,17 +129,21 @@ export default function MarketplaceSellersPage() {
                 <tr key={row.id} className="border-b border-slate-100 text-slate-700">
                   <td className="px-3 py-2 font-mono text-xs sm:text-sm">{row.seller_profile_id}</td>
                   <td className="px-3 py-2">{row.seller_profiles?.store_name || '-'}</td>
+                  <td className="px-3 py-2">{row.seller_profiles?.email || '-'}</td>
+                  <td className="px-3 py-2">{row.seller_profiles?.whatsapp || '-'}</td>
+                  <td className="px-3 py-2">{row.seller_profiles?.shop_slug || '-'}</td>
                   <td className="px-3 py-2">{row.status}</td>
                   <td className="px-3 py-2">{row.is_marketplace_visible ? 'Yes' : 'No'}</td>
                   <td className="px-3 py-2">{row.is_featured ? 'Yes' : 'No'}</td>
                   <td className="px-3 py-2">{row.is_verified ? 'Yes' : 'No'}</td>
+                  <td className="px-3 py-2 max-w-[240px] truncate">{row.tagline || '-'}</td>
                   <td className="px-3 py-2 max-w-[200px] truncate">{row.area_text || '-'}</td>
                   <td className="px-3 py-2 max-w-[240px] truncate">{row.community_text || '-'}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{new Date(row.created_at).toLocaleString()}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => moderateAction(row, 'approve')} disabled={Boolean(actionLoadingId)} className="rounded-xl bg-emerald-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-60">Approve</button>
-                      <button onClick={() => moderateAction(row, 'reject')} disabled={Boolean(actionLoadingId)} className="rounded-xl bg-rose-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-60">Reject</button>
+                      <button onClick={() => moderateAction(row, 'approve')} disabled={Boolean(actionLoadingId)} className="rounded-xl bg-emerald-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-60">{actionLoadingId === `${row.id}:approve` ? 'Approving...' : 'Approve'}</button>
+                      <button onClick={() => moderateAction(row, 'reject')} disabled={Boolean(actionLoadingId)} className="rounded-xl bg-rose-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-60">{actionLoadingId === `${row.id}:reject` ? 'Rejecting...' : 'Reject'}</button>
                       <button onClick={() => moderateAction(row, 'feature')} disabled={Boolean(actionLoadingId)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 disabled:opacity-60">{actionLoadingId === `${row.id}:feature` ? 'Updating...' : row.is_featured ? 'Unfeature' : 'Feature'}</button>
                       <button onClick={() => moderateAction(row, 'verify')} disabled={Boolean(actionLoadingId)} className="rounded-xl border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 disabled:opacity-60">{actionLoadingId === `${row.id}:verify` ? 'Updating...' : row.is_verified ? 'Unverify' : 'Verify'}</button>
                     </div>
@@ -137,7 +152,7 @@ export default function MarketplaceSellersPage() {
               ))}
               {!loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-3 py-6 text-center text-slate-500">
+                  <td colSpan={14} className="px-3 py-6 text-center text-slate-500">
                     No marketplace profiles found.
                   </td>
                 </tr>
