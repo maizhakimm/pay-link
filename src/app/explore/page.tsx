@@ -57,7 +57,9 @@ export default function ExplorePage() {
   const [showServices, setShowServices] = useState(false)
   const [showInstallSheet, setShowInstallSheet] = useState(false)
   const [showSellerSheet, setShowSellerSheet] = useState(false)
-  const [activeMenu, setActiveMenu] = useState<'food' | 'services' | 'explore' | 'location' | 'seller'>('explore')
+  const [showShopSheet, setShowShopSheet] = useState(false)
+  const [showReportSheet, setShowReportSheet] = useState(false)
+  const [activeMenu, setActiveMenu] = useState<'food' | 'services' | 'shop' | 'seller' | 'report'>('shop')
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
@@ -240,29 +242,31 @@ export default function ExplorePage() {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
           <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><path d="M4 10h16M6 14h12M8 18h8M7 6h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M7 3v8M5.5 3v8M8.5 3v8M4 11h6M15 3v7a3 3 0 01-3 3v8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Food</span>
           </button>
           <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><path d="M14 6l4 4-8 8H6v-4l8-8zM13 7l4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M14.5 5.5l4 4M4 20l5.5-1.5L18.5 9.5 14.5 5.5 5.5 14.5 4 20z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Services</span>
           </button>
-          <button onClick={() => { setActiveMenu('explore'); searchRef.current?.focus() }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'explore' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" /><path d="M16 16l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-            <span>Explore</span>
-          </button>
-          <button onClick={() => { setActiveMenu('location'); nearbyRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'location' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><path d="M12 21s6-5.2 6-10a6 6 0 10-12 0c0 4.8 6 10 6 10z" stroke="currentColor" strokeWidth="1.7"/><circle cx="12" cy="11" r="2" stroke="currentColor" strokeWidth="1.7"/></svg>
-            <span>Location</span>
+          <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-slate-100 text-slate-900' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8zM9 8V6a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span>Shop</span>
           </button>
           <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true"><path d="M4 9l8-5 8 5v10H4V9zM9 19v-5h6v5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.7"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
             <span>Seller</span>
+          </button>
+          <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-slate-100 text-slate-900' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M6 4h12v16l-3-2-3 2-3-2-3 2V4zM9 9h6M9 13h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span>Report</span>
           </button>
         </div>
       </nav>
 
-      <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xl sm:hidden">⬇ Add di Phone</button>
+      <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl sm:hidden" aria-label="Add di Phone">
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 20h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </button>
 
       {showAreaPicker ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowAreaPicker(false)}>
@@ -304,6 +308,29 @@ export default function ExplorePage() {
             <div className="mt-4 flex gap-2">
               <Link href="/auth" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Ya, daftar seller</Link>
               <button onClick={() => setShowSellerSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Tutup</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showShopSheet ? (
+        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowShopSheet(false)}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900">Marketplace barangan akan datang</h3>
+            <p className="mt-1 text-sm text-slate-600">Kami sedang membuka ruang untuk seller menjual barangan komuniti seperti produk homemade, gift, bundle dan item harian.</p>
+            <button onClick={() => setShowShopSheet(false)} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Saya berminat</button>
+          </div>
+        </div>
+      ) : null}
+
+      {showReportSheet ? (
+        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowReportSheet(false)}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900">Lapor atau cadang kawasan</h3>
+            <p className="mt-1 text-sm text-slate-600">Beritahu kami kawasan yang patut dibuka seterusnya di BayarLink.</p>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setShowReportSheet(false)} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Saya berminat</button>
+              <button onClick={() => setShowReportSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Tutup</button>
             </div>
           </div>
         </div>
