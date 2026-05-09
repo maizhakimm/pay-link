@@ -4,45 +4,15 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
-type Seller = {
-  id: string
-  store_name: string | null
-  shop_slug: string | null
-  profile_image: string | null
-  whatsapp: string | null
-}
-
-type MarketplaceProfile = {
-  id: string
-  seller_profile_id: string
-  is_featured: boolean
-  is_verified: boolean
-  area_text: string | null
-  community_text: string | null
-  categoryNames: string[]
-}
-
-type ProductCard = {
-  id: string
-  name: string
-  price: number
-  seller_profile_id: string
-  image: string | null
-  sellerName: string
-  shopSlug: string | null
-  areaText: string | null
-  communityText: string | null
-  categoryLabel: string | null
-  isFeatured: boolean
-  isVerified: boolean
-  isDemo?: boolean
-}
+type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
+type MarketplaceProfile = { id: string; seller_profile_id: string; is_featured: boolean; is_verified: boolean; area_text: string | null; community_text: string | null; categoryNames: string[] }
+type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; isDemo?: boolean }
 
 const FOOD_CHIPS = [
   { key: 'all', label: '✨ Semua' },
   { key: 'nasi', label: '🍛 Nasi Lemak' },
   { key: 'burger', label: '🍔 Burger' },
-  { key: 'goreng', label: '🍗 Goreng-Goreng' },
+  { key: 'goreng', label: '🍗 Goreng' },
   { key: 'drinks', label: '🥤 Drinks' },
   { key: 'dessert', label: '🍰 Dessert' },
   { key: 'bakery', label: '🥐 Bakery' },
@@ -67,6 +37,7 @@ export default function ExplorePage() {
   const [area, setArea] = useState('Shah Alam')
   const [areaOptions, setAreaOptions] = useState<string[]>(['Shah Alam'])
   const [showAreaPicker, setShowAreaPicker] = useState(false)
+  const [showServices, setShowServices] = useState(false)
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
@@ -81,24 +52,19 @@ export default function ExplorePage() {
       setLoading(true)
       const [{ data: mpRows }, { data: areaRows }] = await Promise.all([
         supabase
-        .from('marketplace_profiles')
-        .select('id,seller_profile_id,is_featured,is_verified,area_text,community_text,marketplace_profile_categories(category_id,marketplace_categories(category_name))')
-        .eq('status', 'published')
-        .eq('is_marketplace_visible', true)
-        .order('is_featured', { ascending: false })
-        .order('is_verified', { ascending: false })
-        .order('created_at', { ascending: false }),
+          .from('marketplace_profiles')
+          .select('id,seller_profile_id,is_featured,is_verified,area_text,community_text,marketplace_profile_categories(category_id,marketplace_categories(category_name))')
+          .eq('status', 'published')
+          .eq('is_marketplace_visible', true)
+          .order('is_featured', { ascending: false })
+          .order('is_verified', { ascending: false })
+          .order('created_at', { ascending: false }),
         supabase.from('marketplace_areas').select('area_name').eq('is_enabled', true).order('display_order', { ascending: true }),
       ])
 
       if (areaRows && areaRows.length > 0) {
         const options = areaRows.map((r: any) => r.area_name).filter(Boolean)
-        if (options.length > 0) {
-          setAreaOptions(options)
-          if (!options.includes(area)) {
-            setArea(options[0])
-          }
-        }
+        setAreaOptions(options)
       }
 
       const normalizedProfiles = ((mpRows || []) as any[]).map((row) => ({
@@ -108,45 +74,20 @@ export default function ExplorePage() {
         is_verified: row.is_verified,
         area_text: row.area_text,
         community_text: row.community_text,
-        categoryNames: (row.marketplace_profile_categories || [])
-          .map((entry: any) => (Array.isArray(entry.marketplace_categories) ? entry.marketplace_categories[0]?.category_name : entry.marketplace_categories?.category_name))
-          .filter(Boolean),
+        categoryNames: (row.marketplace_profile_categories || []).map((entry: any) => (Array.isArray(entry.marketplace_categories) ? entry.marketplace_categories[0]?.category_name : entry.marketplace_categories?.category_name)).filter(Boolean),
       })) as MarketplaceProfile[]
 
       const sellerIds = normalizedProfiles.map((p) => p.seller_profile_id)
-      const { data: sellerRows } = await supabase
-        .from('seller_profiles')
-        .select('id,store_name,shop_slug,profile_image,whatsapp')
-        .in('id', sellerIds)
-
+      const { data: sellerRows } = await supabase.from('seller_profiles').select('id,store_name,shop_slug,whatsapp').in('id', sellerIds)
       const sellerMap: Record<string, Seller> = {}
       ;(sellerRows || []).forEach((row: any) => { sellerMap[row.id] = row as Seller })
 
-      const { data: productRows } = await supabase
-        .from('products')
-        .select('*')
-        .in('seller_profile_id', sellerIds)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-
+      const { data: productRows } = await supabase.from('products').select('*').in('seller_profile_id', sellerIds).eq('is_active', true).order('created_at', { ascending: false })
       const productCards = ((productRows || []) as any[]).map((p) => {
         const profile = normalizedProfiles.find((mp) => mp.seller_profile_id === p.seller_profile_id)
         const seller = sellerMap[p.seller_profile_id]
         const image = p.product_image_url || p.image_1 || p.image_2 || p.image_url || null
-        return {
-          id: p.id,
-          name: p.name,
-          price: Number(p.price || 0),
-          seller_profile_id: p.seller_profile_id,
-          image,
-          sellerName: seller?.store_name || 'Local Seller',
-          shopSlug: seller?.shop_slug || null,
-          areaText: profile?.area_text || null,
-          communityText: profile?.community_text || null,
-          categoryLabel: profile?.categoryNames?.[0] || null,
-          isFeatured: Boolean(profile?.is_featured),
-          isVerified: Boolean(profile?.is_verified),
-        } as ProductCard
+        return { id: p.id, name: p.name, price: Number(p.price || 0), seller_profile_id: p.seller_profile_id, image, sellerName: seller?.store_name || 'Local Seller', shopSlug: seller?.shop_slug || null, areaText: profile?.area_text || null, communityText: profile?.community_text || null, categoryLabel: profile?.categoryNames?.[0] || null, isFeatured: Boolean(profile?.is_featured), isVerified: Boolean(profile?.is_verified) } as ProductCard
       })
 
       setProfiles(normalizedProfiles)
@@ -154,7 +95,6 @@ export default function ExplorePage() {
       setProducts(productCards)
       setLoading(false)
     }
-
     load()
   }, [])
 
@@ -164,20 +104,12 @@ export default function ExplorePage() {
       if (!q) return true
       return [p.name, p.sellerName, p.categoryLabel || '', p.areaText || '', p.communityText || ''].join(' ').toLowerCase().includes(q)
     })
-
-    const byChip = bySearch.filter((p) => {
-      if (selectedChip === 'all') return true
-      return [p.name, p.categoryLabel || ''].join(' ').toLowerCase().includes(selectedChip)
-    })
-
+    const byChip = bySearch.filter((p) => selectedChip === 'all' || [p.name, p.categoryLabel || ''].join(' ').toLowerCase().includes(selectedChip))
     const byArea = byChip.filter((p) => !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
-    if (byArea.length >= 6) return byArea
-    return [...byArea, ...DEMO_PRODUCTS.slice(0, 6 - byArea.length)]
+    return byArea.length >= 6 ? byArea : [...byArea, ...DEMO_PRODUCTS.slice(0, 6 - byArea.length)]
   }, [products, query, selectedChip, area])
 
-  const sellerCards = useMemo(() => {
-    return profiles.map((p) => ({ ...p, seller: sellers[p.seller_profile_id] })).filter((row) => row.seller)
-  }, [profiles, sellers])
+  const sellerCards = useMemo(() => profiles.map((p) => ({ ...p, seller: sellers[p.seller_profile_id] })).filter((row) => row.seller), [profiles, sellers])
 
   return (
     <main className="min-h-screen bg-white pb-24">
@@ -187,10 +119,9 @@ export default function ExplorePage() {
             <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-5 w-auto" />
             <div className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">Beta Preview</div>
           </div>
-          <h1 className="mt-3 text-2xl font-extrabold text-slate-900">Apa nak makan hari ini?</h1>
-          <p className="mt-1 text-sm text-slate-600">Cari menu homemade sekitar kawasan anda.</p>
-          <div className="mt-3">
-            <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari nasi lemak, burger, kuih..." className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 text-sm" />
+          <div className="mt-3 relative">
+            <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari menu homemade sekitar kawasan anda" className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 pr-12 text-sm" />
+            <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-slate-900 px-3 py-1.5 text-xs text-white">🔍</button>
           </div>
           <div ref={nearbyRef} className="mt-2">
             <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">📍 {area}</button>
@@ -200,54 +131,42 @@ export default function ExplorePage() {
         <section ref={categoriesRef} className="mt-4">
           <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {FOOD_CHIPS.map((chip) => (
-              <button key={chip.key} onClick={() => setSelectedChip(chip.key)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip.key ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>
-                {chip.label}
-              </button>
+              <button key={chip.key} onClick={() => setSelectedChip(chip.key)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip.key ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip.label}</button>
             ))}
           </div>
         </section>
 
-        <section className="mt-5">
-          <h2 className="mb-3 text-lg font-bold text-slate-800">Menu sekitar kawasan</h2>
+        <section className="mt-4">
           {loading ? <p className="text-sm text-slate-500">Memuatkan menu...</p> : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {displayedProducts.map((item) => {
-              const initials = item.name.slice(0, 2).toUpperCase()
-              return (
-                <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
-                  {item.image ? <img src={item.image} alt={item.name} className="h-24 w-full rounded-xl object-cover" /> : <div className="flex h-24 w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700">{initials}</div>}
-                  <div className="mt-3 flex items-start justify-between gap-2">
-                    <h3 className="line-clamp-2 text-sm font-bold text-slate-900">{item.name}</h3>
-                    {item.isDemo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">Demo</span> : null}
-                  </div>
-                  <p className="mt-1 text-sm font-extrabold text-rose-700">RM {item.price.toFixed(2)}</p>
-                  <p className="truncate text-xs text-slate-600">{item.sellerName}</p>
-                  <p className="text-xs text-slate-500">{item.areaText || '-'} · {item.communityText || '-'}</p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {item.categoryLabel ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{item.categoryLabel}</span> : null}
-                    {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
-                    {item.isVerified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Trusted</span> : null}
-                  </div>
-                  <div className="mt-2">
-                    {item.shopSlug ? <Link href={`/s/${encodeURIComponent(item.shopSlug)}`} className="inline-flex rounded-lg bg-rose-600 px-2.5 py-1.5 text-[11px] font-bold text-white">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</Link> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</span>}
-                  </div>
-                </article>
-              )
-            })}
+            {displayedProducts.map((item) => (
+              <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
+                {item.image ? <img src={item.image} alt={item.name} className="h-24 w-full rounded-xl object-cover" /> : <div className="flex h-24 w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700">{item.name.slice(0, 2).toUpperCase()}</div>}
+                <div className="mt-2 flex items-start justify-between gap-2">
+                  <h3 className="line-clamp-2 text-sm font-bold text-slate-900">{item.name}</h3>
+                  {item.isDemo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">Demo</span> : null}
+                </div>
+                <p className="mt-1 text-sm font-extrabold text-rose-700">RM {item.price.toFixed(2)}</p>
+                <p className="truncate text-xs text-slate-600">{item.sellerName}</p>
+                <p className="text-xs text-slate-500">{item.areaText || '-'} · {item.communityText || '-'}</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {item.categoryLabel ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{item.categoryLabel}</span> : null}
+                  {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
+                  {item.isVerified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Trusted</span> : null}
+                </div>
+                <div className="mt-2">{item.shopSlug ? <Link href={`/s/${encodeURIComponent(item.shopSlug)}`} className="inline-flex rounded-lg bg-rose-600 px-2.5 py-1.5 text-[11px] font-bold text-white">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</Link> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</span>}</div>
+              </article>
+            ))}
           </div>
         </section>
 
         <section ref={sellerRef} className="mt-7">
-          <h2 className="mb-3 text-lg font-bold text-slate-800">Seller sekitar kawasan</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="mb-3 text-lg font-bold text-slate-800">Seller di 📍 {area}</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sellerCards.map((item) => (
-              <article key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+              <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
                 <p className="text-sm font-bold text-slate-900">{item.seller?.store_name || 'Local Seller'}</p>
                 <p className="text-xs text-slate-500">{item.area_text || '-'} · {item.community_text || '-'}</p>
-                <div className="mt-2 flex gap-1">
-                  {item.is_featured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
-                  {item.is_verified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Trusted</span> : null}
-                </div>
               </article>
             ))}
           </div>
@@ -255,36 +174,32 @@ export default function ExplorePage() {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[11px] font-semibold text-slate-600">
-          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="rounded-xl px-2 py-2">Explore</button>
-          <button onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="rounded-xl px-2 py-2">Categories</button>
-          <button onClick={() => searchRef.current?.focus()} className="rounded-xl px-2 py-2">Search</button>
-          <button onClick={() => nearbyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="rounded-xl px-2 py-2">Nearby</button>
-          <button onClick={() => sellerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="rounded-xl px-2 py-2">Seller</button>
+        <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
+          <button onClick={() => searchRef.current?.focus()} className="flex flex-col items-center rounded-xl px-2 py-1">🔎<span>Search</span></button>
+          <button onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">🍽️<span>Food</span></button>
+          <button onClick={() => setShowServices(true)} className="flex flex-col items-center rounded-xl px-2 py-1">🛠️<span>Services</span></button>
+          <button onClick={() => nearbyRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">📍<span>Location</span></button>
+          <button onClick={() => sellerRef.current?.scrollIntoView({ behavior: 'smooth' })} className="flex flex-col items-center rounded-xl px-2 py-1">🏪<span>Seller</span></button>
         </div>
       </nav>
 
+      <button className="fixed bottom-20 right-4 z-40 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-lg sm:hidden">📲 Simpan di Home</button>
+
       {showAreaPicker ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowAreaPicker(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900">Pilih kawasan</h3>
-              <button onClick={() => setShowAreaPicker(false)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600">Tutup</button>
-            </div>
-            <div className="space-y-2">
-              {areaOptions.map((areaItem) => (
-                <button
-                  key={areaItem}
-                  onClick={() => {
-                    setArea(areaItem)
-                    setShowAreaPicker(false)
-                  }}
-                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === areaItem ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200 text-slate-700'}`}
-                >
-                  {areaItem}
-                </button>
-              ))}
-            </div>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold">Pilih kawasan</h3><button onClick={() => setShowAreaPicker(false)} className="rounded-lg border px-2 py-1 text-xs">Tutup</button></div>
+            <div className="space-y-2">{areaOptions.map((item) => <button key={item} onClick={() => { setArea(item); setShowAreaPicker(false) }} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === item ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>{item}</button>)}</div>
+          </div>
+        </div>
+      ) : null}
+
+      {showServices ? (
+        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowServices(false)}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900">Servis kawasan akan datang</h3>
+            <p className="mt-1 text-sm text-slate-600">Kami sedang membuka servis komuniti seperti runner, printing, laundry dan lain-lain.</p>
+            <button onClick={() => setShowServices(false)} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Saya berminat</button>
           </div>
         </div>
       ) : null}
