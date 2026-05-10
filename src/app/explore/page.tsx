@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BotMessageSquare, Download, Handbag, Soup, Store, Wrench } from 'lucide-react'
+import { BotMessageSquare, Download, ShoppingBag, Soup, Store, Wrench } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
@@ -263,7 +263,7 @@ export default function ExplorePage() {
             <span>Services</span>
           </button>
           <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <Handbag className="h-6 w-6" strokeWidth={2} />
+            <ShoppingBag className="h-6 w-6" strokeWidth={2} />
             <span>Shop</span>
           </button>
           <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
