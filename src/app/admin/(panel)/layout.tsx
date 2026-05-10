@@ -59,6 +59,7 @@ export default function AdminPanelLayout({
     { href: '/admin/reports', label: 'Reports' },
     { href: '/admin/users', label: 'Users' },
     { href: '/admin/sellers', label: 'Sellers' },
+    { href: '/admin/marketplace', label: 'Marketplace' },
   ]
 
   if (checking) {

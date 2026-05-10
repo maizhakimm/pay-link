@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ShopPayButton from './ShopPayButton'
 
 type DeliveryMode =
@@ -552,6 +553,7 @@ export default function ShopPageClient({
   enableDeliverySlots?: boolean
   deliveryPricingRules?: DeliveryPricingRule[]
 }) {
+  const searchParams = useSearchParams()
   const [cart, setCart] = useState<CartLine[]>([])
   const [gallery, setGallery] = useState<GalleryState>({
     isOpen: false,
@@ -613,6 +615,10 @@ export default function ShopPageClient({
   })
 
   const productListRef = useRef<HTMLDivElement | null>(null)
+  const productRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null)
+  const selectedProductId = searchParams.get('product')
+  const cameFromExplore = searchParams.get('from') === 'explore'
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
@@ -895,6 +901,16 @@ export default function ShopPageClient({
   }, [hasCategoryFeature])
 
   useEffect(() => {
+    if (!selectedProductId || products.length === 0) return
+    const target = productRefs.current[selectedProductId]
+    if (!target) return
+    setHighlightedProductId(selectedProductId)
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const timer = window.setTimeout(() => setHighlightedProductId(null), 2200)
+    return () => window.clearTimeout(timer)
+  }, [selectedProductId, products])
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (gallery.isOpen) {
         if (event.key === 'Escape') closeGallery()
@@ -1098,7 +1114,7 @@ export default function ShopPageClient({
   const sellerName = seller.store_name || 'Shop'
 
   return (
-    <main style={main}>
+    <main style={main} data-delivery-summary={deliverySummary}>
       <div style={container}>
         <div style={logoWrap}>
           <img
@@ -1260,6 +1276,16 @@ export default function ShopPageClient({
         ) : null}
 
         <div ref={productListRef}>
+          {cameFromExplore ? (
+            <div style={exploreBackWrap}>
+              <a
+                href={`/explore?${new URLSearchParams(Array.from(searchParams.entries()).filter(([key]) => ['area', 'category', 'q'].includes(key))).toString()}`}
+                style={exploreBackButton}
+              >
+                ← Explore
+              </a>
+            </div>
+          ) : null}
           {visibleProducts.length === 0 ? (
             <div style={emptyCard}>
               <p style={{ margin: 0, color: '#64748b' }}>
@@ -1284,7 +1310,11 @@ export default function ShopPageClient({
                 const allImages = getProductImages(product)
 
                 return (
-                  <div key={product.id} style={productCard}>
+                  <div
+                    key={product.id}
+                    ref={(el) => { productRefs.current[product.id] = el }}
+                    style={{ ...productCard, ...(highlightedProductId === product.id ? highlightedProductCard : {}) }}
+                  >
                     <div style={productContent}>
                       <div style={productInfo}>
                         <div style={productName}>{product.name}</div>
@@ -1806,6 +1836,36 @@ const heroMobile: React.CSSProperties = {
   textAlign: 'center',
   gap: 10,
   width: '100%',
+}
+
+const exploreBackWrap: React.CSSProperties = {
+  position: 'sticky',
+  top: 72,
+  zIndex: 30,
+  display: 'flex',
+  justifyContent: 'flex-end',
+  marginBottom: 10,
+  pointerEvents: 'none',
+}
+
+const exploreBackButton: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  background: '#DD0894',
+  color: '#ffffff',
+  padding: '8px 12px',
+  borderRadius: 9999,
+  fontSize: 12,
+  fontWeight: 700,
+  textDecoration: 'none',
+  boxShadow: '0 10px 22px rgba(221, 8, 148, 0.28)',
+  pointerEvents: 'auto',
+}
+
+const highlightedProductCard: React.CSSProperties = {
+  border: '1px solid #2563eb',
+  boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.16)',
 }
 
 const sellerImgMobile: React.CSSProperties = {

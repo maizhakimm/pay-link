@@ -12,11 +12,11 @@ type LayoutProps = {
 type NavItem = {
   label: string
   href: string
-  icon: 'home' | 'box' | 'receipt' | 'settings'
+  icon: 'home' | 'box' | 'receipt' | 'settings' | 'sparkles'
 }
 
 type NavIconProps = {
-  type: 'home' | 'box' | 'receipt' | 'settings'
+  type: 'home' | 'box' | 'receipt' | 'settings' | 'sparkles'
   active: boolean
 }
 
@@ -24,6 +24,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'home' },
   { label: 'Products', href: '/dashboard/products', icon: 'box' },
   { label: 'Orders', href: '/dashboard/orders', icon: 'receipt' },
+  { label: 'Marketplace', href: '/dashboard/marketplace', icon: 'sparkles' },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings' },
 ]
 
@@ -81,7 +82,7 @@ export default function Layout({ children }: LayoutProps) {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-3 py-2 backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-4 gap-2">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-2">
           {navItems.map((item) => {
             const active = isActive(item.href)
 
@@ -149,6 +150,20 @@ function NavIcon({ type, active }: NavIconProps) {
           d="M7 3h10a2 2 0 012 2v16l-3-1.5L12 21l-4-1.5L5 21V5a2 2 0 012-2zm2 5h6M9 12h6M9 16h4"
           stroke={stroke}
           strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  if (type === 'sparkles') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+        <path
+          d="M12 3l1.65 3.75L17.5 8.4l-3.3 2.7.96 4.2L12 13.2l-3.16 2.1.96-4.2-3.3-2.7 3.85-1.65L12 3zm6.5 10.5l.8 1.85 1.85.8-1.85.8-.8 1.85-.8-1.85-1.85-.8 1.85-.8.8-1.85zM4.5 14l.65 1.35L6.5 16l-1.35.65L4.5 18l-.65-1.35L2.5 16l1.35-.65L4.5 14z"
+          stroke={stroke}
+          strokeWidth="1.6"
           strokeLinecap="round"
           strokeLinejoin="round"
         />

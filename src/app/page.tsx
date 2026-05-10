@@ -1066,19 +1066,27 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* FLOATING DEMO STORE */}
-      <a
-        href="/s/dana-store"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Demo Store"
-        className="fixed bottom-24 right-5 z-50 flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-white shadow-[0_12px_30px_rgba(37,99,235,0.35)] transition hover:-translate-y-1 hover:bg-blue-700"
-      >
-        <span className="text-lg">👀</span>
-        <span className="text-sm font-semibold hidden sm:block">
-          Kedai Demo
-        </span>
-      </a>
+      <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-2">
+        <a
+          href="/explore"
+          aria-label="Explore Marketplace"
+          className="inline-flex items-center gap-2 rounded-full bg-[#2563EB] px-3 py-2 text-white shadow-[0_12px_30px_rgba(37,99,235,0.35)] transition hover:-translate-y-1 hover:bg-blue-700"
+        >
+          <span className="text-sm">🧭</span>
+          <span className="text-xs font-semibold sm:text-sm">Explore</span>
+        </a>
+
+        <a
+          href="/s/dana-store"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Demo Store"
+          className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-2 text-white shadow-[0_12px_30px_rgba(37,99,235,0.35)] transition hover:-translate-y-1 hover:bg-blue-700"
+        >
+          <span className="text-sm">👀</span>
+          <span className="text-xs font-semibold sm:text-sm">Demo</span>
+        </a>
+      </div>
 
 {/* FLOATING WHATSAPP */}
 <a
