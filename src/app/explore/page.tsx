@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { BotMessageSquare, Download, Handbag, Soup, Store, Wrench } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
@@ -163,12 +164,12 @@ export default function ExplorePage() {
   return (
     <main className="min-h-screen bg-white pb-24">
       <div className="mx-auto max-w-5xl px-4 py-5">
-        <header className="-mx-4 -mt-5 bg-gradient-to-r from-[#2563EB] via-[#1D4ED8] to-[#DD0894] px-4 pb-3 pt-3">
+        <header className="-mx-4 -mt-5 bg-[radial-gradient(circle_at_10%_10%,rgba(191,219,254,0.95),transparent_35%),radial-gradient(circle_at_85%_15%,rgba(216,255,239,0.85),transparent_35%),radial-gradient(circle_at_55%_95%,rgba(244,220,255,0.7),transparent_40%),linear-gradient(180deg,#f7fbff_0%,#eef6ff_100%)] px-4 pb-4 pt-4">
           <div className="flex items-start justify-between">
-            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-4 w-auto brightness-0 invert" />
-            <div className="inline-flex rounded-full border border-white/35 bg-white/15 px-3 py-1 text-xs font-semibold text-white">Beta</div>
+            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-4 w-auto" />
+            <div className="inline-flex rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">Beta</div>
           </div>
-          <div className="mt-3 relative">
+          <div className="mt-3.5 relative">
             <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nak makan apa hari ni?" className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 pr-12 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
             <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-white p-1.5 text-slate-700" aria-label="Search">
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
@@ -177,12 +178,12 @@ export default function ExplorePage() {
               </svg>
             </button>
           </div>
-          <div ref={nearbyRef} className="mt-2">
-            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">📍 {area}</button>
+          <div ref={nearbyRef} className="mt-3">
+            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">📍 {area}</button>
           </div>
         </header>
 
-        <section ref={categoriesRef} className="mt-4">
+        <section ref={categoriesRef} className="mt-5">
           <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {FOOD_CHIPS.map((chip) => (
               <button key={chip.key} onClick={() => setSelectedChip(chip.key)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip.key ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip.label}</button>
@@ -190,7 +191,7 @@ export default function ExplorePage() {
           </div>
         </section>
 
-        <section className="mt-4">
+        <section className="mt-5">
           {loading ? <p className="text-sm text-slate-500">Memuatkan menu...</p> : null}
           {displayedProducts.length === 0 && !loading ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
@@ -254,30 +255,30 @@ export default function ExplorePage() {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
           <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M7 3v8M10 3v8M5 11h7M16 3v18M16 11h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <Soup className="h-6 w-6" strokeWidth={2} />
             <span>Food</span>
           </button>
           <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M14.5 5.5l4 4M4 20l5.5-1.5L18.5 9.5 14.5 5.5 5.5 14.5 4 20z" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <Wrench className="h-6 w-6" strokeWidth={2} />
             <span>Services</span>
           </button>
           <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M3 10l2-5h14l2 5M4 10h16v10H4V10zM9 14h6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <Handbag className="h-6 w-6" strokeWidth={2} />
             <span>Shop</span>
           </button>
           <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.9"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"/></svg>
+            <Store className="h-6 w-6" strokeWidth={2} />
             <span>Seller</span>
           </button>
           <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M5 13v-2a7 7 0 0114 0v2M5 13a2 2 0 002 2h1v3l3-3h2m7-2a2 2 0 01-2 2h-1" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            <span>Report</span>
+            <BotMessageSquare className="h-6 w-6" strokeWidth={2} />
+            <span>Support</span>
           </button>
         </div>
       </nav>
 
       <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#DD0894] text-white shadow-xl sm:hidden" aria-label="Add di Phone">
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 20h14" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <Download className="h-6 w-6" strokeWidth={2.3} />
       </button>
 
       {showAreaPicker ? (
