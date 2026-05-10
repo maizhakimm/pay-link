@@ -59,6 +59,7 @@ export default function ExplorePage() {
   const [areaOptions, setAreaOptions] = useState<string[]>(['Shah Alam'])
   const [showAreaPicker, setShowAreaPicker] = useState(false)
   const [showInstallSheet, setShowInstallSheet] = useState(false)
+  const [showIOSInstallSheet, setShowIOSInstallSheet] = useState(false)
   const [installInstruction, setInstallInstruction] = useState<string | null>(null)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
@@ -173,18 +174,23 @@ export default function ExplorePage() {
   }, [])
 
   async function handleInstallClick() {
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    const ua = navigator.userAgent || ''
+    const isIOSDevice = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|Chrome/i.test(ua)
+    const isIOSSafari = isIOSDevice && isSafari
+
+    if (isIOSSafari) {
+      setShowIOSInstallSheet(true)
+      return
+    }
+
     if (deferredPrompt) {
       deferredPrompt.prompt()
       const choiceResult = await deferredPrompt.userChoice
       if (choiceResult?.outcome) setDeferredPrompt(null)
       return
     }
-    if (isIOS) {
-      setInstallInstruction('Untuk iPhone, tekan Share dan pilih Add to Home Screen.')
-    } else {
-      setInstallInstruction('Untuk tambah BayarLink ke phone, buka menu browser dan pilih Add to Home Screen.')
-    }
+    setInstallInstruction('Untuk tambah BayarLink ke phone, buka menu browser dan pilih Add to Home Screen.')
     setShowInstallSheet(true)
   }
 
@@ -303,6 +309,23 @@ export default function ExplorePage() {
             <div className="mt-5 flex gap-2">
               <button onClick={() => setShowInstallSheet(false)} className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Ya, add launcher di device</button>
               <button onClick={() => setShowInstallSheet(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Nanti dulu</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showIOSInstallSheet ? (
+        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowIOSInstallSheet(false)}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900">Add BayarLink ke iPhone?</h3>
+            <p className="mt-1 text-sm text-slate-600">Untuk akses lebih mudah, tekan butang Share di Safari dan pilih ‘Add to Home Screen’.</p>
+            <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+              <p>1. Tekan ikon <span className="font-semibold">Share</span> ⎋</p>
+              <p className="mt-1">2. Pilih <span className="font-semibold">Add to Home Screen</span></p>
+            </div>
+            <div className="mt-5 flex gap-2">
+              <button onClick={() => setShowIOSInstallSheet(false)} className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Okay</button>
+              <button onClick={() => setShowIOSInstallSheet(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Tutup</button>
             </div>
           </div>
         </div>
