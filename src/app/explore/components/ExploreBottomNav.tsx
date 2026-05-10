@@ -11,7 +11,7 @@ export default function ExploreBottomNav() {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-40 px-0 pb-[max(env(safe-area-inset-bottom),4px)] pt-1 md:px-2 md:py-2">
+      <nav className="fixed inset-x-0 bottom-0 z-40 px-0 pb-0 pt-0 md:px-2 md:py-2">
         <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-1 rounded-none border-t border-slate-200 bg-white/95 p-1 text-[10px] font-semibold text-slate-600 shadow-lg backdrop-blur md:max-w-lg md:rounded-2xl md:border md:p-1">
           <Link href="/explore" className={`flex flex-col items-center rounded-xl px-2 py-1 ${pathname === '/explore' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
             <Soup className="h-6 w-6" strokeWidth={2} />
