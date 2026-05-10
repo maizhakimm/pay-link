@@ -48,6 +48,8 @@ const DEMO_SELLERS = [
   { id: 'demo-s2', store_name: 'Kak Yan Kitchen', area_text: 'Setia Alam', community_text: 'Kota Kemuning' },
 ]
 
+const DELIVERY_BADGES = ['Self-pickup / Delivery', 'Delivery', 'Self-pickup']
+
 export default function ExplorePage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -161,12 +163,15 @@ export default function ExplorePage() {
     return params
   }, [area, selectedChip, query])
 
+  const getDeliveryBadge = (seed: string) => DELIVERY_BADGES[Math.abs(seed.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0)) % DELIVERY_BADGES.length]
+
   return (
     <main className="min-h-screen bg-white pb-24">
-      <div className="mx-auto max-w-5xl px-4 py-5">
-        <header className="-mx-4 -mt-5 bg-[radial-gradient(circle_at_10%_10%,rgba(191,219,254,0.95),transparent_35%),radial-gradient(circle_at_85%_15%,rgba(216,255,239,0.85),transparent_35%),radial-gradient(circle_at_55%_95%,rgba(244,220,255,0.7),transparent_40%),linear-gradient(180deg,#f7fbff_0%,#eef6ff_100%)] px-4 pb-4 pt-4">
+      <div className="mx-auto max-w-6xl px-4 py-5">
+        <header className="relative -mx-4 -mt-5 bg-[radial-gradient(circle_at_8%_12%,rgba(186,230,253,0.88),transparent_36%),radial-gradient(circle_at_82%_14%,rgba(187,247,208,0.78),transparent_34%),radial-gradient(circle_at_58%_96%,rgba(233,213,255,0.62),transparent_42%),linear-gradient(180deg,#fbfdff_0%,#eef7ff_58%,#f7fbff_100%)] px-4 pb-5 pt-4">
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-white/10 blur-2xl" />
           <div className="flex items-start justify-between">
-            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-4 w-auto" />
+            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-5 w-auto" />
             <div className="inline-flex rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">Beta</div>
           </div>
           <div className="mt-3.5 relative">
@@ -182,6 +187,24 @@ export default function ExplorePage() {
             <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">📍 {area}</button>
           </div>
         </header>
+
+        <nav className="mt-4 hidden items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/85 p-2 backdrop-blur md:flex">
+          {[
+            { key: 'food', label: 'Food', icon: Soup, action: () => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) },
+            { key: 'services', label: 'Services', icon: Wrench, action: () => setShowServices(true) },
+            { key: 'shop', label: 'Shop', icon: ShoppingBag, action: () => setShowShopSheet(true) },
+            { key: 'seller', label: 'Seller', icon: Store, action: () => setShowSellerSheet(true) },
+            { key: 'report', label: 'Support', icon: BotMessageSquare, action: () => setShowReportSheet(true) },
+          ].map((item) => {
+            const Icon = item.icon
+            return (
+              <button key={item.key} onClick={() => { setActiveMenu(item.key as any); item.action() }} className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${activeMenu === item.key ? 'bg-[#2563EB] text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
+                <Icon className="h-4 w-4" strokeWidth={2} />
+                <span>{item.label}</span>
+              </button>
+            )
+          })}
+        </nav>
 
         <section ref={categoriesRef} className="mt-5">
           <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -204,17 +227,17 @@ export default function ExplorePage() {
                 {item.image ? <img src={item.image} alt={item.name} className="h-24 w-full rounded-xl object-cover" /> : <div className="flex h-24 w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700">{item.name.slice(0, 2).toUpperCase()}</div>}
                 <div className="mt-2 flex items-start justify-between gap-2">
                   <h3 className="line-clamp-2 text-sm font-bold text-slate-900">{item.name}</h3>
-                  {item.isDemo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">Demo</span> : null}
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Trusted</span>
                 </div>
                 <p className="mt-1 text-sm font-extrabold text-rose-700">RM {item.price.toFixed(2)}</p>
                 <p className="truncate text-xs text-slate-600">{item.sellerName}</p>
                 <p className="text-xs text-slate-500">{item.areaText || '-'} · {item.communityText || '-'}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {item.categoryLabel ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{item.categoryLabel}</span> : null}
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
-                  {item.isVerified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Trusted</span> : null}
+                  {!item.isDemo && item.isVerified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Trusted</span> : null}
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
                 </div>
-                <div className="mt-2">{item.shopSlug ? <Link href={`/s/${encodeURIComponent(item.shopSlug)}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`} className="inline-flex rounded-lg bg-rose-600 px-2.5 py-1.5 text-[11px] font-bold text-white">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</Link> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</span>}</div>
+                <div className="mt-2">{item.shopSlug ? <Link href={`/s/${encodeURIComponent(item.shopSlug)}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`} className="inline-flex rounded-lg bg-rose-600 px-2.5 py-1.5 text-[11px] font-bold text-white">{item.isDemo ? 'Order Now' : 'View Shop'}</Link> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>}</div>
               </article>
             ))}
           </div>
@@ -235,13 +258,14 @@ export default function ExplorePage() {
                     </div>
                     <p className="text-sm font-bold text-slate-900">{item.seller?.store_name || 'Local Seller'}</p>
                   </div>
-                  {item.isDemo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">Demo</span> : null}
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Open</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-600 line-clamp-1">Homemade & fresh setiap hari</p>
                 <p className="text-xs text-slate-500">{item.area_text || '-'} · {item.community_text || '-'}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {item.is_featured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
                   {item.is_verified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Trusted</span> : null}
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.id || item.seller?.store_name || 'seller')}</span>
                 </div>
                 <div className="mt-2">
                   <button className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-bold text-white">Lihat Kedai</button>
