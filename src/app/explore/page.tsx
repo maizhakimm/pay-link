@@ -59,6 +59,8 @@ export default function ExplorePage() {
   const [areaOptions, setAreaOptions] = useState<string[]>(['Shah Alam'])
   const [showAreaPicker, setShowAreaPicker] = useState(false)
   const [showInstallSheet, setShowInstallSheet] = useState(false)
+  const [installInstruction, setInstallInstruction] = useState<string | null>(null)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
@@ -161,6 +163,31 @@ export default function ExplorePage() {
 
   const getDeliveryBadge = (seed: string) => DELIVERY_BADGES[Math.abs(seed.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0)) % DELIVERY_BADGES.length]
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      event.preventDefault()
+      setDeferredPrompt(event)
+    }
+    window.addEventListener('beforeinstallprompt', handler as EventListener)
+    return () => window.removeEventListener('beforeinstallprompt', handler as EventListener)
+  }, [])
+
+  async function handleInstallClick() {
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      const choiceResult = await deferredPrompt.userChoice
+      if (choiceResult?.outcome) setDeferredPrompt(null)
+      return
+    }
+    if (isIOS) {
+      setInstallInstruction('Untuk iPhone, tekan Share dan pilih Add to Home Screen.')
+    } else {
+      setInstallInstruction('Untuk tambah BayarLink ke phone, buka menu browser dan pilih Add to Home Screen.')
+    }
+    setShowInstallSheet(true)
+  }
+
   return (
     <main className="min-h-screen bg-white pb-24">
       <div className="mx-auto max-w-6xl px-4 py-5">
@@ -254,7 +281,7 @@ export default function ExplorePage() {
 
       <ExploreBottomNav />
 
-      <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#DD0894] text-white shadow-xl sm:hidden" aria-label="Add di Phone">
+      <button onClick={handleInstallClick} className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#DD0894] text-white shadow-xl sm:hidden" aria-label="Add di Phone">
         <Download className="h-6 w-6" strokeWidth={2.3} />
       </button>
 
@@ -272,7 +299,7 @@ export default function ExplorePage() {
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowInstallSheet(false)}>
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold text-slate-900">Add BayarLink launcher icon di Device?</h3>
-            <p className="mt-1 text-sm text-slate-600">Buka dan akses BayarLink akan jadi lebih mudah.</p>
+            <p className="mt-1 text-sm text-slate-600">{installInstruction || 'Buka dan akses BayarLink akan jadi lebih mudah.'}</p>
             <div className="mt-5 flex gap-2">
               <button onClick={() => setShowInstallSheet(false)} className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Ya, add launcher di device</button>
               <button onClick={() => setShowInstallSheet(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Nanti dulu</button>
