@@ -42,7 +42,7 @@ export default function ExploreBottomNav() {
             <h3 className="text-base font-bold text-slate-900">Ada sebarang aduan?</h3>
             <p className="mt-1 text-sm text-slate-600">Laporkan sebarang isu kepada kami melalui WhatsApp.</p>
             <div className="mt-5 flex gap-2">
-              <a href="https://wa.me/60163352087" target="_blank" rel="noreferrer" className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">WhatsApp Kami</a>
+              <a href="https://wa.me/60163352087?text=Hai%20BayarLink%20Support!" target="_blank" rel="noreferrer" className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">WhatsApp Kami</a>
               <button onClick={() => setShowSupport(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Tutup</button>
             </div>
           </div>

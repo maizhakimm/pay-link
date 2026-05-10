@@ -1,15 +1,43 @@
+'use client'
+
 import ExploreBottomNav from '../components/ExploreBottomNav'
 import Link from 'next/link'
+import { FormEvent, useState } from 'react'
 
 export default function ExploreShopPage() {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
+  const [productCategory, setProductCategory] = useState('')
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    const subject = 'BayarLink Shop Category Request'
+    const body = [
+      'BayarLink Shop Category Request',
+      '',
+      `Nama: ${name || '-'}`,
+      `Email address: ${email || '-'}`,
+      `No. WhatsApp: ${whatsapp || '-'}`,
+      `Produk kategori apa yang nak dijual: ${productCategory || '-'}`,
+    ].join('\n')
+    window.location.href = `mailto:bayarlink.hq@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  }
+
   return (
     <main className="min-h-screen bg-white p-6">
-      <div className="mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <form onSubmit={handleSubmit} className="mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <h1 className="text-xl font-bold text-slate-900">Coming Soon</h1>
         <p className="mt-2 text-sm text-slate-600">Buat masa ini BayarLink hanya menyenaraikan barangan masakan dan makanan. Jika anda berminat untuk menyertai dan menjual produk selain makanan sila isi borang di bawah. Jika ada permintaan yang tinggi kami akan mempercepatkan features kategori ini secepat mungkin.</p>
-        <button className="mt-5 w-full rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Saya berminat</button>
+        <div className="mt-4 space-y-3">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama" className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email address" className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="No. WhatsApp" className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          <textarea value={productCategory} onChange={(e) => setProductCategory(e.target.value)} placeholder="Produk kategori apa yang nak dijual" className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" rows={3} />
+        </div>
+        <button type="submit" className="mt-5 w-full rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Saya berminat</button>
         <Link href="/explore" className="mt-3 inline-flex text-sm font-semibold text-slate-600">Kembali ke Explore</Link>
-      </div>
+      </form>
       <ExploreBottomNav />
     </main>
   )
