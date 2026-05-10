@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BotMessageSquare, Download, ShoppingBag, Soup, Store, Wrench } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
@@ -168,11 +168,11 @@ export default function ExplorePage() {
   return (
     <main className="min-h-screen bg-white pb-24">
       <div className="mx-auto max-w-6xl px-4 py-5">
-        <header className="relative -mx-4 -mt-5 bg-[radial-gradient(circle_at_8%_12%,rgba(186,230,253,0.88),transparent_36%),radial-gradient(circle_at_82%_14%,rgba(187,247,208,0.78),transparent_34%),radial-gradient(circle_at_58%_96%,rgba(233,213,255,0.62),transparent_42%),linear-gradient(180deg,#fbfdff_0%,#eef7ff_58%,#f7fbff_100%)] px-4 pb-5 pt-4">
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-white/10 blur-2xl" />
+        <header className="relative -mx-4 -mt-5 bg-gradient-to-r from-[#2563EB] via-[#1D4ED8] to-[#3B82F6] px-4 pb-5 pt-4">
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t from-white/0 via-white/5 to-white/15" />
           <div className="flex items-start justify-between">
-            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-5 w-auto" />
-            <div className="inline-flex rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">Beta</div>
+            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-5 w-auto brightness-0 invert" />
+            <div className="inline-flex rounded-full border border-white/40 bg-white/15 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">Beta</div>
           </div>
           <div className="mt-3.5 relative">
             <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nak makan apa hari ni?" className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 pr-12 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
@@ -184,22 +184,20 @@ export default function ExplorePage() {
             </button>
           </div>
           <div ref={nearbyRef} className="mt-3">
-            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">📍 {area}</button>
+            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-white/45 bg-white/15 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">📍 {area}</button>
           </div>
         </header>
 
         <nav className="mt-4 hidden items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/85 p-2 backdrop-blur md:flex">
           {[
-            { key: 'food', label: 'Food', icon: Soup, action: () => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) },
-            { key: 'services', label: 'Services', icon: Wrench, action: () => setShowServices(true) },
-            { key: 'shop', label: 'Shop', icon: ShoppingBag, action: () => setShowShopSheet(true) },
-            { key: 'seller', label: 'Seller', icon: Store, action: () => setShowSellerSheet(true) },
-            { key: 'report', label: 'Support', icon: BotMessageSquare, action: () => setShowReportSheet(true) },
+            { key: 'food', label: 'Food', action: () => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) },
+            { key: 'services', label: 'Services', action: () => setShowServices(true) },
+            { key: 'shop', label: 'Shop', action: () => setShowShopSheet(true) },
+            { key: 'seller', label: 'Seller', action: () => setShowSellerSheet(true) },
+            { key: 'report', label: 'Support', action: () => setShowReportSheet(true) },
           ].map((item) => {
-            const Icon = item.icon
             return (
               <button key={item.key} onClick={() => { setActiveMenu(item.key as any); item.action() }} className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${activeMenu === item.key ? 'bg-[#2563EB] text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
-                <Icon className="h-4 w-4" strokeWidth={2} />
                 <span>{item.label}</span>
               </button>
             )
@@ -279,24 +277,24 @@ export default function ExplorePage() {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
           <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <Soup className="h-6 w-6" strokeWidth={2} />
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M7 3v8M10 3v8M5 11h7M16 3v18M16 11h3" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Food</span>
           </button>
           <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <Wrench className="h-6 w-6" strokeWidth={2} />
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M14.5 5.5l4 4M4 20l5.5-1.5L18.5 9.5 14.5 5.5 5.5 14.5 4 20z" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Services</span>
           </button>
           <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <ShoppingBag className="h-6 w-6" strokeWidth={2} />
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M3 10l2-5h14l2 5M4 10h16v10H4V10zM9 14h6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Shop</span>
           </button>
           <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <Store className="h-6 w-6" strokeWidth={2} />
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.9"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"/></svg>
             <span>Seller</span>
           </button>
           <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <BotMessageSquare className="h-6 w-6" strokeWidth={2} />
-            <span>Support</span>
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M5 13v-2a7 7 0 0114 0v2M5 13a2 2 0 002 2h1v3l3-3h2m7-2a2 2 0 01-2 2h-1" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span>Report</span>
           </button>
         </div>
       </nav>
