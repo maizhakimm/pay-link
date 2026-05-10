@@ -151,12 +151,21 @@ export default function ExplorePage() {
     return [...realSellers, ...fillers]
   }, [profiles, sellers])
 
+  const exploreContextQuery = useMemo(() => {
+    const params = new URLSearchParams()
+    params.set('from', 'explore')
+    if (area) params.set('area', area)
+    if (selectedChip && selectedChip !== 'all') params.set('category', selectedChip)
+    if (query.trim()) params.set('q', query.trim())
+    return params
+  }, [area, selectedChip, query])
+
   return (
     <main className="min-h-screen bg-white pb-24">
       <div className="mx-auto max-w-5xl px-4 py-5">
-        <header className="rounded-3xl border border-rose-100 bg-white p-4 shadow-sm">
+        <header className="-mx-4 -mt-5 bg-blue-50/70 px-4 pb-3 pt-3">
           <div className="flex items-start justify-between">
-            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-5 w-auto" />
+            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-4 w-auto" />
             <div className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">Beta Preview</div>
           </div>
           <div className="mt-3 relative">
@@ -204,7 +213,7 @@ export default function ExplorePage() {
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
                   {item.isVerified ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Trusted</span> : null}
                 </div>
-                <div className="mt-2">{item.shopSlug ? <Link href={`/s/${encodeURIComponent(item.shopSlug)}`} className="inline-flex rounded-lg bg-rose-600 px-2.5 py-1.5 text-[11px] font-bold text-white">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</Link> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</span>}</div>
+                <div className="mt-2">{item.shopSlug ? <Link href={`/s/${encodeURIComponent(item.shopSlug)}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`} className="inline-flex rounded-lg bg-rose-600 px-2.5 py-1.5 text-[11px] font-bold text-white">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</Link> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Lihat Contoh' : 'Lihat Kedai'}</span>}</div>
               </article>
             ))}
           </div>
@@ -244,23 +253,23 @@ export default function ExplorePage() {
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
-          <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M7 3v8M10 3v8M5 11h7M15 3v18M15 12h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M7 3v8M10 3v8M5 11h7M16 3v18M16 11h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Food</span>
           </button>
-          <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-slate-100 text-slate-900' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M10 4l-6 6 4 4 6-6-4-4zM14 14l6 6M16.5 11.5l3-3 2 2-3 3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M14.5 5.5l4 4M4 20l5.5-1.5L18.5 9.5 14.5 5.5 5.5 14.5 4 20z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Services</span>
           </button>
-          <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-slate-100 text-slate-900' : ''}`}>
+          <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
             <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8zM9 8V6a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Shop</span>
           </button>
-          <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-slate-100 text-slate-900' : ''}`}>
+          <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
             <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.7"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
             <span>Seller</span>
           </button>
-          <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-slate-100 text-slate-900' : ''}`}>
+          <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
             <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M5 7a4 4 0 014-4h6a4 4 0 014 4v6a4 4 0 01-4 4h-1.5L9 20v-3H9a4 4 0 01-4-4V7zM9 9h6M9 12.5h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Report</span>
           </button>

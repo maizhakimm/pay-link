@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ShopPayButton from './ShopPayButton'
 
 type DeliveryMode =
@@ -549,6 +550,7 @@ export default function ShopPageClient({
   enableDeliverySlots?: boolean
   deliveryPricingRules?: DeliveryPricingRule[]
 }) {
+  const searchParams = useSearchParams()
   const [cart, setCart] = useState<CartLine[]>([])
   const [gallery, setGallery] = useState<GalleryState>({
     isOpen: false,
@@ -610,10 +612,13 @@ export default function ShopPageClient({
   })
 
   const productListRef = useRef<HTMLDivElement | null>(null)
+  const productRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null)
+  const selectedProductId = searchParams.get('product')
+  const cameFromExplore = searchParams.get('from') === 'explore'
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
-  const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
 
   useEffect(() => {
     const shouldLockScroll = gallery.isOpen || addonModal.isOpen
@@ -890,6 +895,16 @@ export default function ShopPageClient({
   useEffect(() => {
     setActiveCategoryId('all')
   }, [hasCategoryFeature])
+
+  useEffect(() => {
+    if (!selectedProductId || products.length === 0) return
+    const target = productRefs.current[selectedProductId]
+    if (!target) return
+    setHighlightedProductId(selectedProductId)
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const timer = window.setTimeout(() => setHighlightedProductId(null), 2200)
+    return () => window.clearTimeout(timer)
+  }, [selectedProductId, products])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -1257,6 +1272,16 @@ export default function ShopPageClient({
         ) : null}
 
         <div ref={productListRef}>
+          {cameFromExplore ? (
+            <div style={exploreBackWrap}>
+              <a
+                href={`/explore?${new URLSearchParams(Array.from(searchParams.entries()).filter(([key]) => ['area', 'category', 'q'].includes(key))).toString()}`}
+                style={exploreBackButton}
+              >
+                ← Explore
+              </a>
+            </div>
+          ) : null}
           {visibleProducts.length === 0 ? (
             <div style={emptyCard}>
               <p style={{ margin: 0, color: '#64748b' }}>
@@ -1281,7 +1306,11 @@ export default function ShopPageClient({
                 const allImages = getProductImages(product)
 
                 return (
-                  <div key={product.id} style={productCard}>
+                  <div
+                    key={product.id}
+                    ref={(el) => { productRefs.current[product.id] = el }}
+                    style={{ ...productCard, ...(highlightedProductId === product.id ? highlightedProductCard : {}) }}
+                  >
                     <div style={productContent}>
                       <div style={productInfo}>
                         <div style={productName}>{product.name}</div>
@@ -1798,6 +1827,34 @@ const heroMobile: React.CSSProperties = {
   textAlign: 'center',
   gap: 10,
   width: '100%',
+}
+
+const exploreBackWrap: React.CSSProperties = {
+  position: 'sticky',
+  top: 10,
+  zIndex: 30,
+  display: 'flex',
+  justifyContent: 'flex-start',
+  marginBottom: 10,
+}
+
+const exploreBackButton: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  background: '#0f172a',
+  color: '#ffffff',
+  padding: '8px 12px',
+  borderRadius: 9999,
+  fontSize: 12,
+  fontWeight: 700,
+  textDecoration: 'none',
+  boxShadow: '0 8px 20px rgba(15, 23, 42, 0.2)',
+}
+
+const highlightedProductCard: React.CSSProperties = {
+  border: '1px solid #2563eb',
+  boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.16)',
 }
 
 const sellerImgMobile: React.CSSProperties = {
