@@ -223,7 +223,7 @@ export default function ExplorePage() {
         <section ref={sellerRef} className="mt-7">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-slate-800">Explore Seller</h2>
-            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">📍 {area}</button>
+            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">📍 {area}</button>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sellerCards.map((item: any) => (
