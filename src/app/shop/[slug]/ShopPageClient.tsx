@@ -619,6 +619,7 @@ export default function ShopPageClient({
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
+  const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
 
   useEffect(() => {
     const shouldLockScroll = gallery.isOpen || addonModal.isOpen
@@ -1110,7 +1111,7 @@ export default function ShopPageClient({
   const sellerName = seller.store_name || 'Shop'
 
   return (
-    <main style={main}>
+    <main style={main} data-delivery-summary={deliverySummary}>
       <div style={container}>
         <div style={logoWrap}>
           <img
@@ -1831,25 +1832,27 @@ const heroMobile: React.CSSProperties = {
 
 const exploreBackWrap: React.CSSProperties = {
   position: 'sticky',
-  top: 10,
+  top: 72,
   zIndex: 30,
   display: 'flex',
-  justifyContent: 'flex-start',
+  justifyContent: 'flex-end',
   marginBottom: 10,
+  pointerEvents: 'none',
 }
 
 const exploreBackButton: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: 6,
-  background: '#0f172a',
+  background: '#DD0894',
   color: '#ffffff',
   padding: '8px 12px',
   borderRadius: 9999,
   fontSize: 12,
   fontWeight: 700,
   textDecoration: 'none',
-  boxShadow: '0 8px 20px rgba(15, 23, 42, 0.2)',
+  boxShadow: '0 10px 22px rgba(221, 8, 148, 0.28)',
+  pointerEvents: 'auto',
 }
 
 const highlightedProductCard: React.CSSProperties = {

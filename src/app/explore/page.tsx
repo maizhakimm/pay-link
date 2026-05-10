@@ -163,10 +163,10 @@ export default function ExplorePage() {
   return (
     <main className="min-h-screen bg-white pb-24">
       <div className="mx-auto max-w-5xl px-4 py-5">
-        <header className="-mx-4 -mt-5 bg-blue-50/70 px-4 pb-3 pt-3">
+        <header className="-mx-4 -mt-5 bg-gradient-to-r from-[#2563EB] via-[#1D4ED8] to-[#DD0894] px-4 pb-3 pt-3">
           <div className="flex items-start justify-between">
-            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-4 w-auto" />
-            <div className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">Beta Preview</div>
+            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-4 w-auto brightness-0 invert" />
+            <div className="inline-flex rounded-full border border-white/35 bg-white/15 px-3 py-1 text-xs font-semibold text-white">Beta</div>
           </div>
           <div className="mt-3 relative">
             <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nak makan apa hari ni?" className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 pr-12 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
@@ -253,36 +253,36 @@ export default function ExplorePage() {
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
-          <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
+          <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
             <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M7 3v8M10 3v8M5 11h7M16 3v18M16 11h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Food</span>
           </button>
-          <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M14.5 5.5l4 4M4 20l5.5-1.5L18.5 9.5 14.5 5.5 5.5 14.5 4 20z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M14.5 5.5l4 4M4 20l5.5-1.5L18.5 9.5 14.5 5.5 5.5 14.5 4 20z" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Services</span>
           </button>
-          <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8zM9 8V6a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M3 10l2-5h14l2 5M4 10h16v10H4V10zM9 14h6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Shop</span>
           </button>
-          <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.7"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
+          <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.9"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"/></svg>
             <span>Seller</span>
           </button>
-          <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-slate-900 text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" aria-hidden="true"><path d="M5 7a4 4 0 014-4h6a4 4 0 014 4v6a4 4 0 01-4 4h-1.5L9 20v-3H9a4 4 0 01-4-4V7zM9 9h6M9 12.5h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M5 13v-2a7 7 0 0114 0v2M5 13a2 2 0 002 2h1v3l3-3h2m7-2a2 2 0 01-2 2h-1" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <span>Report</span>
           </button>
         </div>
       </nav>
 
-      <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl sm:hidden" aria-label="Add di Phone">
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 20h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#DD0894] text-white shadow-xl sm:hidden" aria-label="Add di Phone">
+        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 20h14" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
 
       {showAreaPicker ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowAreaPicker(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold">Pilih kawasan</h3><button onClick={() => setShowAreaPicker(false)} className="rounded-lg border px-2 py-1 text-xs">Tutup</button></div>
             <div className="space-y-2">{areaOptions.map((item) => <button key={item} onClick={() => { setArea(item); setShowAreaPicker(false) }} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === item ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>{item}</button>)}</div>
           </div>
@@ -294,19 +294,19 @@ export default function ExplorePage() {
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold text-slate-900">Coming Soon</h3>
             <p className="mt-1 text-sm text-slate-600">Kami sedang membuka servis komuniti seperti runner, printing, laundry dan lain-lain.</p>
-            <button onClick={() => setShowServices(false)} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Saya berminat</button>
+            <button onClick={() => setShowServices(false)} className="mt-5 rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Saya berminat</button>
           </div>
         </div>
       ) : null}
 
       {showInstallSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowInstallSheet(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold text-slate-900">Add BayarLink launcher icon di Device?</h3>
             <p className="mt-1 text-sm text-slate-600">Buka dan akses BayarLink akan jadi lebih mudah.</p>
-            <div className="mt-4 flex gap-2">
-              <button onClick={() => setShowInstallSheet(false)} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Ya, add launcher di device</button>
-              <button onClick={() => setShowInstallSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Nanti dulu</button>
+            <div className="mt-5 flex gap-2">
+              <button onClick={() => setShowInstallSheet(false)} className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Ya, add launcher di device</button>
+              <button onClick={() => setShowInstallSheet(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Nanti dulu</button>
             </div>
           </div>
         </div>
@@ -314,12 +314,12 @@ export default function ExplorePage() {
 
       {showSellerSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowSellerSheet(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold text-slate-900">Nak daftar sebagai Seller?</h3>
             <p className="mt-1 text-sm text-slate-600">Daftar dan jual menggunakan BayarLink dan senaraikan produk dan servis anda di marketplace.</p>
-            <div className="mt-4 flex gap-2">
-              <Link href="/auth" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Ya, daftar seller</Link>
-              <button onClick={() => setShowSellerSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Tutup</button>
+            <div className="mt-5 flex gap-2">
+              <Link href="/auth" className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Ya, daftar seller</Link>
+              <button onClick={() => setShowSellerSheet(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Tutup</button>
             </div>
           </div>
         </div>
@@ -327,22 +327,22 @@ export default function ExplorePage() {
 
       {showShopSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowShopSheet(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold text-slate-900">Marketplace barangan akan datang</h3>
             <p className="mt-1 text-sm text-slate-600">Kami sedang membuka ruang untuk seller menjual barangan komuniti seperti produk homemade, gift, bundle dan item harian.</p>
-            <button onClick={() => setShowShopSheet(false)} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Saya berminat</button>
+            <button onClick={() => setShowShopSheet(false)} className="mt-5 rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Saya berminat</button>
           </div>
         </div>
       ) : null}
 
       {showReportSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowReportSheet(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold text-slate-900">Ada sebarang aduan?</h3>
             <p className="mt-1 text-sm text-slate-600">Laporkan sebarang isu kepada kami melalui WhatsApp.</p>
-            <div className="mt-4 flex gap-2">
-              <a href="https://wa.me/60163352087" target="_blank" rel="noreferrer" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">WhatsApp Kami</a>
-              <button onClick={() => setShowReportSheet(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Tutup</button>
+            <div className="mt-5 flex gap-2">
+              <a href="https://wa.me/60163352087" target="_blank" rel="noreferrer" className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">WhatsApp Kami</a>
+              <button onClick={() => setShowReportSheet(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Tutup</button>
             </div>
           </div>
         </div>
