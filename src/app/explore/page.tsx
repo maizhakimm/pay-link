@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Download } from 'lucide-react'
+import { BotMessageSquare, Download, ShoppingBag, Soup, Store, Wrench } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
@@ -57,10 +58,7 @@ export default function ExplorePage() {
   const [area, setArea] = useState('Shah Alam')
   const [areaOptions, setAreaOptions] = useState<string[]>(['Shah Alam'])
   const [showAreaPicker, setShowAreaPicker] = useState(false)
-  const [showServices, setShowServices] = useState(false)
   const [showInstallSheet, setShowInstallSheet] = useState(false)
-  const [showSellerSheet, setShowSellerSheet] = useState(false)
-  const [showShopSheet, setShowShopSheet] = useState(false)
   const [showReportSheet, setShowReportSheet] = useState(false)
   const [activeMenu, setActiveMenu] = useState<'food' | 'services' | 'shop' | 'seller' | 'report'>('food')
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
@@ -71,6 +69,7 @@ export default function ExplorePage() {
   const nearbyRef = useRef<HTMLDivElement>(null)
   const sellerRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const pathname = usePathname()
 
   useEffect(() => {
     async function load() {
@@ -168,11 +167,11 @@ export default function ExplorePage() {
   return (
     <main className="min-h-screen bg-white pb-24">
       <div className="mx-auto max-w-6xl px-4 py-5">
-        <header className="relative -mx-4 -mt-5 bg-gradient-to-r from-[#2563EB] via-[#1D4ED8] to-[#3B82F6] px-4 pb-5 pt-4">
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-t from-white/0 via-white/5 to-white/15" />
+        <header className="relative -mx-4 -mt-5 border-b border-white/40 bg-[radial-gradient(circle_at_12%_10%,rgba(186,230,253,0.35),transparent_32%),radial-gradient(circle_at_85%_12%,rgba(187,247,208,0.28),transparent_30%),radial-gradient(circle_at_60%_90%,rgba(244,220,255,0.25),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(239,246,255,0.74)_100%)] px-4 pb-5 pt-4 backdrop-blur-xl">
+          <div className="pointer-events-none absolute inset-0 -z-10 rounded-b-3xl bg-white/30 blur-xl" />
           <div className="flex items-start justify-between">
-            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-5 w-auto brightness-0 invert" />
-            <div className="inline-flex rounded-full border border-white/40 bg-white/15 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">Beta</div>
+            <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-5 w-auto" />
+            <div className="inline-flex rounded-full border border-sky-200/70 bg-white/70 px-3 py-1 text-xs font-semibold text-sky-700 shadow-sm backdrop-blur">Beta</div>
           </div>
           <div className="mt-3.5 relative">
             <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nak makan apa hari ni?" className="w-full rounded-2xl border border-slate-300 px-4 py-2.5 pr-12 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
@@ -184,25 +183,9 @@ export default function ExplorePage() {
             </button>
           </div>
           <div ref={nearbyRef} className="mt-3">
-            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-white/45 bg-white/15 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">📍 {area}</button>
+            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-sky-200/70 bg-white/70 px-3 py-1 text-xs font-semibold text-sky-700 shadow-sm backdrop-blur">📍 {area}</button>
           </div>
         </header>
-
-        <nav className="mt-4 hidden items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/85 p-2 backdrop-blur md:flex">
-          {[
-            { key: 'food', label: 'Food', action: () => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) },
-            { key: 'services', label: 'Services', action: () => setShowServices(true) },
-            { key: 'shop', label: 'Shop', action: () => setShowShopSheet(true) },
-            { key: 'seller', label: 'Seller', action: () => setShowSellerSheet(true) },
-            { key: 'report', label: 'Support', action: () => setShowReportSheet(true) },
-          ].map((item) => {
-            return (
-              <button key={item.key} onClick={() => { setActiveMenu(item.key as any); item.action() }} className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${activeMenu === item.key ? 'bg-[#2563EB] text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
-                <span>{item.label}</span>
-              </button>
-            )
-          })}
-        </nav>
 
         <section ref={categoriesRef} className="mt-5">
           <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -274,27 +257,27 @@ export default function ExplorePage() {
         </section>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-5 gap-1 text-[10px] font-semibold text-slate-600">
-          <button onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'food' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M7 3v8M10 3v8M5 11h7M16 3v18M16 11h3" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      <nav className="fixed inset-x-0 bottom-0 z-40 px-2 py-2">
+        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-1 rounded-2xl border border-slate-200 bg-white/95 p-1 text-[10px] font-semibold text-slate-600 shadow-lg backdrop-blur md:max-w-lg">
+          <Link href="/explore" onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${pathname === '/explore' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
+            <Soup className="h-6 w-6" strokeWidth={2} />
             <span>Food</span>
-          </button>
-          <button onClick={() => { setActiveMenu('services'); setShowServices(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'services' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M14.5 5.5l4 4M4 20l5.5-1.5L18.5 9.5 14.5 5.5 5.5 14.5 4 20z" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </Link>
+          <Link href="/explore/services" className={`flex flex-col items-center rounded-xl px-2 py-1 ${pathname === '/explore/services' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
+            <Wrench className="h-6 w-6" strokeWidth={2} />
             <span>Services</span>
-          </button>
-          <button onClick={() => { setActiveMenu('shop'); setShowShopSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'shop' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M3 10l2-5h14l2 5M4 10h16v10H4V10zM9 14h6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </Link>
+          <Link href="/explore/shop" className={`flex flex-col items-center rounded-xl px-2 py-1 ${pathname === '/explore/shop' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
+            <ShoppingBag className="h-6 w-6" strokeWidth={2} />
             <span>Shop</span>
-          </button>
-          <button onClick={() => { setActiveMenu('seller'); setShowSellerSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'seller' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.9"/><path d="M5 20a7 7 0 0114 0" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"/></svg>
+          </Link>
+          <Link href="/explore/seller" className={`flex flex-col items-center rounded-xl px-2 py-1 ${pathname === '/explore/seller' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
+            <Store className="h-6 w-6" strokeWidth={2} />
             <span>Seller</span>
-          </button>
+          </Link>
           <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true"><path d="M5 13v-2a7 7 0 0114 0v2M5 13a2 2 0 002 2h1v3l3-3h2m7-2a2 2 0 01-2 2h-1" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            <span>Report</span>
+            <BotMessageSquare className="h-6 w-6" strokeWidth={2} />
+            <span>Support</span>
           </button>
         </div>
       </nav>
@@ -312,15 +295,6 @@ export default function ExplorePage() {
         </div>
       ) : null}
 
-      {showServices ? (
-        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowServices(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Coming Soon</h3>
-            <p className="mt-1 text-sm text-slate-600">Kami sedang membuka servis komuniti seperti runner, printing, laundry dan lain-lain.</p>
-            <button onClick={() => setShowServices(false)} className="mt-5 rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Saya berminat</button>
-          </div>
-        </div>
-      ) : null}
 
       {showInstallSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowInstallSheet(false)}>
@@ -335,28 +309,6 @@ export default function ExplorePage() {
         </div>
       ) : null}
 
-      {showSellerSheet ? (
-        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowSellerSheet(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Nak daftar sebagai Seller?</h3>
-            <p className="mt-1 text-sm text-slate-600">Daftar dan jual menggunakan BayarLink dan senaraikan produk dan servis anda di marketplace.</p>
-            <div className="mt-5 flex gap-2">
-              <Link href="/auth" className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Ya, daftar seller</Link>
-              <button onClick={() => setShowSellerSheet(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Tutup</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {showShopSheet ? (
-        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowShopSheet(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Marketplace barangan akan datang</h3>
-            <p className="mt-1 text-sm text-slate-600">Kami sedang membuka ruang untuk seller menjual barangan komuniti seperti produk homemade, gift, bundle dan item harian.</p>
-            <button onClick={() => setShowShopSheet(false)} className="mt-5 rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Saya berminat</button>
-          </div>
-        </div>
-      ) : null}
 
       {showReportSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowReportSheet(false)}>
