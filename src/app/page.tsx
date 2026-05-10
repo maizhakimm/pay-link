@@ -1080,6 +1080,14 @@ export default function LandingPage() {
         </span>
       </a>
 
+      <a
+        href="/explore"
+        aria-label="Explore Marketplace"
+        className="fixed bottom-24 left-5 z-50 inline-flex items-center gap-2 rounded-full bg-[#2563EB] px-4 py-3 text-white shadow-[0_12px_30px_rgba(37,99,235,0.35)] transition hover:-translate-y-1 hover:bg-blue-700 md:bottom-6"
+      >
+        <span className="text-sm font-semibold">Explore</span>
+      </a>
+
 {/* FLOATING WHATSAPP */}
 <a
   href="https://wa.me/60163352087"

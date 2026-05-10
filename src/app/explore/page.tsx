@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BotMessageSquare, Download, ShoppingBag, Soup, Store, Wrench } from 'lucide-react'
-import { usePathname } from 'next/navigation'
+import { Download } from 'lucide-react'
+import ExploreBottomNav from './components/ExploreBottomNav'
 import { supabase } from '../../lib/supabase'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
@@ -59,8 +59,6 @@ export default function ExplorePage() {
   const [areaOptions, setAreaOptions] = useState<string[]>(['Shah Alam'])
   const [showAreaPicker, setShowAreaPicker] = useState(false)
   const [showInstallSheet, setShowInstallSheet] = useState(false)
-  const [showReportSheet, setShowReportSheet] = useState(false)
-  const [activeMenu, setActiveMenu] = useState<'food' | 'services' | 'shop' | 'seller' | 'report'>('food')
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
@@ -69,7 +67,6 @@ export default function ExplorePage() {
   const nearbyRef = useRef<HTMLDivElement>(null)
   const sellerRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
-  const pathname = usePathname()
 
   useEffect(() => {
     async function load() {
@@ -167,7 +164,7 @@ export default function ExplorePage() {
   return (
     <main className="min-h-screen bg-white pb-24">
       <div className="mx-auto max-w-6xl px-4 py-5">
-        <header className="relative -mx-4 -mt-5 border-b border-white/40 bg-[radial-gradient(circle_at_12%_10%,rgba(186,230,253,0.35),transparent_32%),radial-gradient(circle_at_85%_12%,rgba(187,247,208,0.28),transparent_30%),radial-gradient(circle_at_60%_90%,rgba(244,220,255,0.25),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(239,246,255,0.74)_100%)] px-4 pb-5 pt-4 backdrop-blur-xl">
+        <header className="relative -mx-4 -mt-5 border-b border-white/40 bg-[radial-gradient(circle_at_12%_10%,rgba(186,230,253,0.35),transparent_32%),radial-gradient(circle_at_85%_12%,rgba(187,247,208,0.28),transparent_30%),radial-gradient(circle_at_60%_90%,rgba(244,220,255,0.25),transparent_40%),linear-gradient(180deg,rgba(219,234,254,0.78)_0%,rgba(191,219,254,0.72)_100%)] px-4 pb-5 pt-4 backdrop-blur-xl">
           <div className="pointer-events-none absolute inset-0 -z-10 rounded-b-3xl bg-white/30 blur-xl" />
           <div className="flex items-start justify-between">
             <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-5 w-auto" />
@@ -257,30 +254,7 @@ export default function ExplorePage() {
         </section>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 px-2 py-2">
-        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-1 rounded-2xl border border-slate-200 bg-white/95 p-1 text-[10px] font-semibold text-slate-600 shadow-lg backdrop-blur md:max-w-lg">
-          <Link href="/explore" onClick={() => { setActiveMenu('food'); categoriesRef.current?.scrollIntoView({ behavior: 'smooth' }) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${pathname === '/explore' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <Soup className="h-6 w-6" strokeWidth={2} />
-            <span>Food</span>
-          </Link>
-          <Link href="/explore/services" className={`flex flex-col items-center rounded-xl px-2 py-1 ${pathname === '/explore/services' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <Wrench className="h-6 w-6" strokeWidth={2} />
-            <span>Services</span>
-          </Link>
-          <Link href="/explore/shop" className={`flex flex-col items-center rounded-xl px-2 py-1 ${pathname === '/explore/shop' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <ShoppingBag className="h-6 w-6" strokeWidth={2} />
-            <span>Shop</span>
-          </Link>
-          <Link href="/explore/seller" className={`flex flex-col items-center rounded-xl px-2 py-1 ${pathname === '/explore/seller' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <Store className="h-6 w-6" strokeWidth={2} />
-            <span>Seller</span>
-          </Link>
-          <button onClick={() => { setActiveMenu('report'); setShowReportSheet(true) }} className={`flex flex-col items-center rounded-xl px-2 py-1 ${activeMenu === 'report' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <BotMessageSquare className="h-6 w-6" strokeWidth={2} />
-            <span>Support</span>
-          </button>
-        </div>
-      </nav>
+      <ExploreBottomNav />
 
       <button onClick={() => setShowInstallSheet(true)} className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#DD0894] text-white shadow-xl sm:hidden" aria-label="Add di Phone">
         <Download className="h-6 w-6" strokeWidth={2.3} />
@@ -310,18 +284,6 @@ export default function ExplorePage() {
       ) : null}
 
 
-      {showReportSheet ? (
-        <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowReportSheet(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Ada sebarang aduan?</h3>
-            <p className="mt-1 text-sm text-slate-600">Laporkan sebarang isu kepada kami melalui WhatsApp.</p>
-            <div className="mt-5 flex gap-2">
-              <a href="https://wa.me/60163352087" target="_blank" rel="noreferrer" className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">WhatsApp Kami</a>
-              <button onClick={() => setShowReportSheet(false)} className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700">Tutup</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </main>
   )
 }
