@@ -452,7 +452,6 @@ function getOrderDeliveryAddress(order: OrderRow) {
     }
 
     const resolvedAddress = getObjectValue(deliveryInfo, ['resolved_address'], '')
-
     if (resolvedAddress && String(resolvedAddress).trim()) {
       return String(resolvedAddress).trim()
     }
@@ -466,7 +465,7 @@ function getOrderDeliveryAddress(order: OrderRow) {
         return String(nestedRaw).trim()
       }
 
-      const parts = [
+      const nestedParts = [
         getObjectValue(nestedRecord, ['address1'], ''),
         getObjectValue(nestedRecord, ['address2'], ''),
         getObjectValue(nestedRecord, ['unit_or_building'], ''),
@@ -479,15 +478,14 @@ function getOrderDeliveryAddress(order: OrderRow) {
         .map((value) => String(value).trim())
         .filter(Boolean)
 
-      if (parts.length > 0) {
-        return parts.join(', ')
+      if (nestedParts.length > 0) {
+        return nestedParts.join(', ')
       }
     }
   }
 
   if (parts.length > 0) {
     return parts.join(', ')
-  }
   }
 
   if (order.buyer_address && String(order.buyer_address).trim()) {
