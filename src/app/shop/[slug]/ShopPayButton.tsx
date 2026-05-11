@@ -254,6 +254,8 @@ export default function ShopPayButton({
   const [city, setCity] = useState('')
   const [district, setDistrict] = useState('')
   const [state, setState] = useState('')
+  const [unitOrBuilding, setUnitOrBuilding] = useState('')
+  const [riderNote, setRiderNote] = useState('')
 
   const [calculatedDeliveryFee, setCalculatedDeliveryFee] = useState<number | null>(
     null
@@ -272,11 +274,12 @@ export default function ShopPayButton({
       city.trim(),
       district.trim(),
       state.trim(),
+      unitOrBuilding.trim(),
       'Malaysia',
     ]
       .filter(Boolean)
       .join(', ')
-  }, [address1, address2, postcode, city, district, state])
+  }, [address1, address2, postcode, city, district, state, unitOrBuilding])
 
   useEffect(() => {
     setCalculatedDeliveryFee(null)
@@ -290,6 +293,8 @@ export default function ShopPayButton({
     city,
     district,
     state,
+    unitOrBuilding,
+    riderNote,
     needsDelivery,
     deliveryMode,
   ])
@@ -712,6 +717,9 @@ export default function ShopPayButton({
                 city: city.trim(),
                 district: district.trim(),
                 state: state.trim(),
+                unit_or_building: unitOrBuilding.trim(),
+                delivery_note: riderNote.trim(),
+                raw_full_address: fullDeliveryAddress,
                 distance_km:
                   deliveryMode === 'distance_based' ? finalDistanceKm : null,
                 resolved_address:
@@ -860,6 +868,24 @@ export default function ShopPayButton({
               <input
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Unit / Block / Building</label>
+              <input
+                value={unitOrBuilding}
+                onChange={(e) => setUnitOrBuilding(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Delivery Note (for rider)</label>
+              <input
+                value={riderNote}
+                onChange={(e) => setRiderNote(e.target.value)}
                 style={inputStyle}
               />
             </div>

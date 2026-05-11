@@ -239,6 +239,7 @@ function formatDeliveryForWhatsApp(order: SellerNewOrderRow) {
   const fee = Number(deliveryInfo.delivery_fee || 0)
 
   const address =
+    deliveryInfo.raw_full_address ||
     deliveryInfo.resolved_address ||
     order.buyer_address ||
     [
@@ -252,13 +253,18 @@ function formatDeliveryForWhatsApp(order: SellerNewOrderRow) {
       .filter(Boolean)
       .join(', ')
 
+  const unitOrBuilding = deliveryInfo.address?.unit_or_building || ''
+  const riderNote = deliveryInfo.address?.delivery_note || ''
+
   const distanceText =
     deliveryInfo.distance_km !== null &&
     deliveryInfo.distance_km !== undefined
       ? ` | ${Number(deliveryInfo.distance_km).toFixed(2)}km`
       : ''
 
-  return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${address || '-'}`
+  const noteText = riderNote ? ` | Note: ${riderNote}` : ''
+  const unitText = unitOrBuilding ? ` (${unitOrBuilding})` : ''
+  return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${(address || '-') + unitText}${noteText}`
 }
 
 async function sendWhatsAppSellerNotification(orderNumber: string) {

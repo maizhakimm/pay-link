@@ -401,6 +401,11 @@ function getOrderDeliveryAddress(order: OrderRow) {
   const deliveryInfo = toRecord(order.delivery_info)
 
   if (deliveryInfo) {
+    const rawAddress = getObjectValue(deliveryInfo, ['raw_full_address'], '')
+    if (rawAddress && String(rawAddress).trim()) {
+      return String(rawAddress).trim()
+    }
+
     const resolvedAddress = getObjectValue(deliveryInfo, ['resolved_address'], '')
 
     if (resolvedAddress && String(resolvedAddress).trim()) {
@@ -411,9 +416,15 @@ function getOrderDeliveryAddress(order: OrderRow) {
     const nestedRecord = toRecord(nestedAddress)
 
     if (nestedRecord) {
+      const nestedRaw = getObjectValue(nestedRecord, ['raw_full_address'], '')
+      if (nestedRaw && String(nestedRaw).trim()) {
+        return String(nestedRaw).trim()
+      }
+
       const parts = [
         getObjectValue(nestedRecord, ['address1'], ''),
         getObjectValue(nestedRecord, ['address2'], ''),
+        getObjectValue(nestedRecord, ['unit_or_building'], ''),
         getObjectValue(nestedRecord, ['postcode'], ''),
         getObjectValue(nestedRecord, ['city'], ''),
         getObjectValue(nestedRecord, ['district'], ''),
