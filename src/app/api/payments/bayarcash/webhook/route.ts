@@ -394,6 +394,93 @@ async function sendWhatsAppSellerNotification(orderNumber: string) {
   }
 }
 
+async function sendWhatsAppCustomerNotification(orderNumber: string) {
+  try {
+    if (!process.env.WHATSAPP_ACCESS_TOKEN) return
+    if (!process.env.WHATSAPP_PHONE_NUMBER_ID) return
+
+    const templateName =
+      process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER ||
+      'order_confirmation_bayarlink'
+    const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en'
+
+    if (!templateName) return
+
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .select(
+        `
+        id,
+        order_number,
+        buyer_name,
+        buyer_phone,
+        buyer_address,
+        total_amount,
+        amount,
+        delivery_info,
+        seller_profile_id
+      `
+      )
+      .eq('order_number', orderNumber)
+      .maybeSingle()
+
+    if (orderError || !orderData) return
+
+    const order = orderData as SellerNewOrderRow
+    const customerPhone = normalizeWhatsAppPhone(order.buyer_phone)
+
+    if (!customerPhone) return
+
+    const { data: sellerData } = await supabase
+      .from('seller_profiles')
+      .select('store_name')
+      .eq('id', order.seller_profile_id)
+      .maybeSingle()
+
+    const storeName = (sellerData as SellerProfileRow | null)?.store_name || '-'
+    const total = Number(order.total_amount ?? order.amount ?? 0).toFixed(2)
+    const deliveryRequired = Boolean(order.delivery_info?.delivery_required)
+    const deliveryMode = deliveryRequired ? 'Delivery' : 'Self Pickup'
+    const deliveryText = formatDeliveryForWhatsApp(order)
+
+    await fetch(
+      `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: customerPhone,
+          type: 'template',
+          template: {
+            name: templateName,
+            language: { code: languageCode },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  { type: 'text', text: order.buyer_name || '-' },
+                  { type: 'text', text: storeName },
+                  { type: 'text', text: order.order_number || '-' },
+                  { type: 'text', text: total },
+                  { type: 'text', text: deliveryMode },
+                  { type: 'text', text: deliveryText || '-' },
+                ],
+              },
+            ],
+          },
+        }),
+        cache: 'no-store',
+      }
+    )
+  } catch (error) {
+    console.error('WhatsApp customer notification error:', error)
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json()
@@ -646,6 +733,7 @@ export async function POST(req: NextRequest) {
 
     if (statusNumber === 3) {
       await sendWhatsAppSellerNotification(orderNumber)
+      await sendWhatsAppCustomerNotification(orderNumber)
     }
 
     return NextResponse.json({ ok: true })
