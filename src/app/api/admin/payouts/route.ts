@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireAdminFromRequest } from '@/lib/admin-auth'
+import { requireAdminFromRequest } from '../../../../lib/admin-auth'
 
 export async function GET(req: Request) {
   try {

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useMemo, useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabase } from "../../../../../lib/supabase"
 
 const MALAYSIAN_BANKS = [
   "Affin Bank",

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabase } from "../../../../lib/supabase"
 
 type DatePreset = "all" | "today" | "this_week" | "this_month" | "this_year"
 type StatusFilter = "eligible" | "paid" | "all"
