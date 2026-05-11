@@ -850,12 +850,6 @@ export async function POST(req: NextRequest) {
         amount,
         total_amount: totalAmount,
         subtotal,
-        requested_subtotal: Number.isFinite(requestedSubtotal)
-          ? requestedSubtotal
-          : subtotal,
-        requested_delivery_fee: Number.isFinite(requestedDeliveryFee)
-          ? requestedDeliveryFee
-          : appliedDeliveryFee,
         gateway_fee: gatewayFee,
         platform_fee: platformFee,
         seller_net: sellerNet,
