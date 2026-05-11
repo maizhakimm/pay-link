@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     "Simple shop link for WhatsApp sellers to manage orders and payments. Mudah jual, Mudah bayar.",
 
   applicationName: "BayarLink",
+  manifest: "/manifest.json",
 
   keywords: [
     "BayarLink",
