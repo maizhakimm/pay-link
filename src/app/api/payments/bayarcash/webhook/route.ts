@@ -70,6 +70,9 @@ type SellerNewOrderRow = {
   delivery_slot_label: string | null
   receipt_token: string | null
   whatsapp_notified_at?: string | null
+  customer_whatsapp_notified_at?: string | null
+  customer_name?: string | null
+  customer_phone?: string | null
 }
 
 type SellerProfileRow = {
@@ -435,6 +438,135 @@ async function sendWhatsAppSellerNotification(orderNumber: string) {
   }
 }
 
+async function sendWhatsAppCustomerNotification(orderNumber: string) {
+  try {
+    if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID) {
+      console.log('Customer WhatsApp skipped: missing WhatsApp env')
+      return
+    }
+
+    const templateName =
+      process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
+      process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER ||
+      'seller_new_order'
+
+    const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en'
+
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        buyer_name,
+        buyer_phone,
+        customer_name,
+        customer_phone,
+        buyer_address,
+        total_amount,
+        amount,
+        delivery_info,
+        items,
+        delivery_slot_label,
+        customer_whatsapp_notified_at
+      `)
+      .eq('order_number', orderNumber)
+      .maybeSingle()
+
+    if (orderError || !orderData) {
+      console.log('Customer WhatsApp skipped: order not found/error', orderError?.message)
+      return
+    }
+
+    const order = orderData as SellerNewOrderRow
+    if (order.customer_whatsapp_notified_at) {
+      console.log('Customer WhatsApp skipped: already notified')
+      return
+    }
+
+    const originalPhone = String(order.buyer_phone || order.customer_phone || '')
+    const customerPhone = normalizeMalaysianPhone(originalPhone)
+    if (!customerPhone) {
+      console.log('Customer WhatsApp skipped: invalid customer phone', {
+        order_number: orderNumber,
+        original_phone: originalPhone,
+      })
+      return
+    }
+
+    console.log('Customer WhatsApp phone normalized', {
+      order_number: orderNumber,
+      original_phone: originalPhone,
+      normalized_phone_masked: maskPhone(customerPhone),
+    })
+
+    const customerName = order.buyer_name || order.customer_name || 'Customer'
+    const deliveryText = formatDeliveryForWhatsApp(order)
+    const itemsText = formatItemsForWhatsApp(order)
+    const total = Number(order.total_amount ?? order.amount ?? 0)
+    const slotText = order.delivery_slot_label || '-'
+
+    const response = await fetch(
+      `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: customerPhone,
+          type: 'template',
+          template: {
+            name: templateName,
+            language: { code: languageCode },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  { type: 'text', text: order.order_number || '-' },
+                  { type: 'text', text: customerName },
+                  { type: 'text', text: itemsText || '-' },
+                  { type: 'text', text: total.toFixed(2) },
+                  { type: 'text', text: deliveryText || '-' },
+                  { type: 'text', text: slotText },
+                ],
+              },
+            ],
+          },
+        }),
+        cache: 'no-store',
+      }
+    )
+
+    const json = await response.json()
+    if (!response.ok) {
+      console.error('Customer WhatsApp send error:', {
+        order_number: orderNumber,
+        customer_phone_masked: maskPhone(customerPhone),
+        response: json,
+      })
+      return
+    }
+
+    const { error: customerNotifyUpdateError } = await supabase
+      .from('orders')
+      .update({
+        customer_whatsapp_notified_at: new Date().toISOString(),
+      })
+      .eq('id', order.id)
+
+    if (customerNotifyUpdateError) {
+      console.log(
+        'Customer WhatsApp sent but customer_whatsapp_notified_at not updated (column may not exist):',
+        customerNotifyUpdateError.message
+      )
+    }
+  } catch (error) {
+    console.error('Customer WhatsApp notification error:', error)
+  }
+}
+
 async function logWebhookEvent(params: {
   eventType: string
   referenceNo?: string | null
@@ -758,6 +890,7 @@ export async function POST(req: NextRequest) {
 
     if (statusNumber === 3) {
       await sendWhatsAppSellerNotification(orderNumber)
+      await sendWhatsAppCustomerNotification(orderNumber)
     }
 
     return NextResponse.json({ ok: true })

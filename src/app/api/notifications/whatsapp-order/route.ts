@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const orderNumber = String(body?.order_number || '').trim()
+    const target = String(body?.target || 'seller').trim().toLowerCase()
 
     if (!orderNumber) {
       return NextResponse.json(
@@ -184,8 +185,114 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const originalCustomerPhone = String(order.buyer_phone || order.customer_phone || '')
+    const customerPhone = normalizeMalaysianPhone(originalCustomerPhone)
     const originalSellerPhone = String(seller?.whatsapp || '')
     const sellerPhone = normalizeMalaysianPhone(seller?.whatsapp)
+
+    if (target === 'customer') {
+      if ((order as any).customer_whatsapp_notified_at) {
+        return NextResponse.json({ ok: true, skipped: 'Customer already notified' })
+      }
+
+      if (!customerPhone) {
+        console.log('Customer WhatsApp skipped: invalid customer phone', {
+          order_number: orderNumber,
+          original_phone: originalCustomerPhone,
+        })
+        return NextResponse.json(
+          { ok: false, error: 'Customer WhatsApp not found' },
+          { status: 400 }
+        )
+      }
+
+      console.log('Customer WhatsApp phone normalized', {
+        order_number: orderNumber,
+        original_phone: originalCustomerPhone,
+        normalized_phone_masked: maskPhone(customerPhone),
+      })
+
+      const customerName = order.buyer_name || order.customer_name || '-'
+      const itemsText = formatItems(order)
+      const deliveryText = formatDelivery(order)
+      const slotText = order.delivery_slot_label || '-'
+      const totalText = Number(order.total_amount || order.amount || 0).toFixed(2)
+
+      const customerRes = await fetch(
+        `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            to: customerPhone,
+            type: 'template',
+            template: {
+              name:
+                process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
+                process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER ||
+                'seller_new_order',
+              language: {
+                code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en',
+              },
+              components: [
+                {
+                  type: 'body',
+                  parameters: [
+                    { type: 'text', text: order.order_number || orderNumber },
+                    { type: 'text', text: customerName },
+                    { type: 'text', text: itemsText },
+                    { type: 'text', text: totalText },
+                    { type: 'text', text: deliveryText },
+                    { type: 'text', text: slotText },
+                  ],
+                },
+              ],
+            },
+          }),
+          cache: 'no-store',
+        }
+      )
+
+      const customerJson = await customerRes.json()
+      if (!customerRes.ok) {
+        console.error('Customer WhatsApp API non-OK response', {
+          order_number: orderNumber,
+          customer_phone_masked: maskPhone(customerPhone),
+          response: customerJson,
+        })
+        return NextResponse.json(
+          {
+            ok: false,
+            error: customerJson,
+          },
+          { status: 500 }
+        )
+      }
+
+      const { error: updateCustomerError } = await supabase
+        .from('orders')
+        .update({
+          customer_whatsapp_notified_at: new Date().toISOString(),
+        })
+        .eq('id', order.id)
+
+      if (updateCustomerError) {
+        console.log(
+          'Customer WhatsApp sent but customer timestamp not stored (column may not exist):',
+          updateCustomerError.message
+        )
+      }
+
+      return NextResponse.json({
+        ok: true,
+        sent_to: customerPhone,
+        result: customerJson,
+      })
+    }
 
     if (!sellerPhone) {
       console.log('WhatsApp skipped: invalid seller whatsapp phone', {
