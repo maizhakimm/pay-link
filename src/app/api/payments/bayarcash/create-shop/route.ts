@@ -430,6 +430,7 @@ export async function POST(req: NextRequest) {
     ) as DeliveryMode
     const requestedDeliveryFee = Number(body.deliveryFee || 0)
     const requestedTotalAmount = Number(body.totalAmount || 0)
+    const deliveryNote = String(body.deliveryNote || '').trim()
 
     const requestedChannel = Number(body.paymentChannel)
     const paymentChannel = isAllowedPaymentChannel(requestedChannel)
@@ -765,11 +766,7 @@ export async function POST(req: NextRequest) {
     const receiptToken = generateReceiptToken()
     const amount = totalAmount.toFixed(2)
     console.log('[create-shop] Bayarcash amount payload:', amount)
-    const buyerAddress =
-      fulfillmentMethod === 'pickup'
-        ? seller.pickup_address || null
-        : distanceDelivery.resolvedAddress ||
-          buildBuyerAddress(delivery)
+    const buyerAddress = buildBuyerAddress(delivery)
 
     const itemsSnapshot = validItems.map((item) => ({
       product_id: item.product.id,
@@ -795,6 +792,7 @@ export async function POST(req: NextRequest) {
       seller_longitude: seller.longitude ?? null,
       customer_latitude: distanceDelivery.customerLatitude,
       customer_longitude: distanceDelivery.customerLongitude,
+      delivery_note: deliveryNote || null,
       address: delivery,
     }
 
