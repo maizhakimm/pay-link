@@ -52,6 +52,17 @@ type OrderRow = {
   delivery_slot_label?: string | null
 }
 
+
+type DeliveryAddressDetails = {
+  addressLine: string
+  unit: string
+  postcode: string
+  city: string
+  state: string
+  deliveryNote: string
+  resolvedAddress: string
+}
+
 type SellerProfileRow = {
   id: string
   user_id: string
@@ -397,43 +408,50 @@ function getOrderSlotLabel(order: OrderRow) {
   return String(direct || '').trim()
 }
 
-function getOrderDeliveryAddress(order: OrderRow) {
+function getOrderDeliveryAddressDetails(order: OrderRow): DeliveryAddressDetails {
   const deliveryInfo = toRecord(order.delivery_info)
+  const nestedAddress = deliveryInfo ? getObjectValue(deliveryInfo, ['address'], null) : null
+  const nestedRecord = toRecord(nestedAddress)
 
-  if (deliveryInfo) {
-    const resolvedAddress = getObjectValue(deliveryInfo, ['resolved_address'], '')
+  const addressLine = String(getObjectValue(nestedRecord, ['address1'], '') || '').trim()
+  const unit = String(getObjectValue(nestedRecord, ['address2'], '') || '').trim()
+  const postcode = String(getObjectValue(nestedRecord, ['postcode'], '') || '').trim()
+  const city = String(
+    getObjectValue(nestedRecord, ['city'], '') ||
+      getObjectValue(nestedRecord, ['district'], '') ||
+      ''
+  ).trim()
+  const state = String(getObjectValue(nestedRecord, ['state'], '') || '').trim()
+  const deliveryNote = String(getObjectValue(deliveryInfo, ['delivery_note'], '') || '').trim()
+  const resolvedAddress = String(getObjectValue(deliveryInfo, ['resolved_address'], '') || '').trim()
 
-    if (resolvedAddress && String(resolvedAddress).trim()) {
-      return String(resolvedAddress).trim()
-    }
+  return {
+    addressLine,
+    unit,
+    postcode,
+    city,
+    state,
+    deliveryNote,
+    resolvedAddress,
+  }
+}
 
-    const nestedAddress = getObjectValue(deliveryInfo, ['address'], null)
-    const nestedRecord = toRecord(nestedAddress)
+function getOrderDeliveryAddress(order: OrderRow) {
+  const details = getOrderDeliveryAddressDetails(order)
+  const parts = [details.addressLine, details.unit, details.postcode, details.city, details.state]
+    .filter(Boolean)
+    .map((value) => String(value).trim())
+    .filter(Boolean)
 
-    if (nestedRecord) {
-      const parts = [
-        getObjectValue(nestedRecord, ['address1'], ''),
-        getObjectValue(nestedRecord, ['address2'], ''),
-        getObjectValue(nestedRecord, ['postcode'], ''),
-        getObjectValue(nestedRecord, ['city'], ''),
-        getObjectValue(nestedRecord, ['district'], ''),
-        getObjectValue(nestedRecord, ['state'], ''),
-      ]
-        .filter(Boolean)
-        .map((value) => String(value).trim())
-        .filter(Boolean)
-
-      if (parts.length > 0) {
-        return parts.join(', ')
-      }
-    }
+  if (parts.length > 0) {
+    return parts.join(', ')
   }
 
   if (order.buyer_address && String(order.buyer_address).trim()) {
     return String(order.buyer_address).trim()
   }
 
-  return ''
+  return details.resolvedAddress
 }
 
 function getOrderDeliveryType(order: OrderRow) {
@@ -913,7 +931,7 @@ export default function OrdersPage() {
                         const paymentStatus = normalizePaymentStatus(order.payment_status)
                         const sellerStatus = getSellerStatus(order)
                         const deliveryType = getOrderDeliveryType(order)
-                        const deliveryAddress = getOrderDeliveryAddress(order)
+                        const deliveryDetails = getOrderDeliveryAddressDetails(order)
                         const addressPreview = getOrderAddressPreview(order)
                         const slotLabel = getOrderSlotLabel(order)
 
@@ -1030,8 +1048,30 @@ export default function OrdersPage() {
                                         <DetailRow label="Type" value={deliveryType} />
                                         <DetailRow label="Time Slot" value={slotLabel || '-'} />
                                         <DetailRow
-                                          label="Address"
-                                          value={deliveryAddress || '-'}
+                                          label="Address Line"
+                                          value={deliveryDetails.addressLine || '-'}
+                                          multiline
+                                        />
+                                        <DetailRow
+                                          label="Unit/Apartment"
+                                          value={deliveryDetails.unit || '-'}
+                                          multiline
+                                        />
+                                        <DetailRow
+                                          label="Postcode"
+                                          value={deliveryDetails.postcode || '-'}
+                                        />
+                                        <DetailRow
+                                          label="City"
+                                          value={deliveryDetails.city || '-'}
+                                        />
+                                        <DetailRow
+                                          label="State"
+                                          value={deliveryDetails.state || '-'}
+                                        />
+                                        <DetailRow
+                                          label="Delivery Note"
+                                          value={deliveryDetails.deliveryNote || '-'}
                                           multiline
                                         />
                                       </div>
