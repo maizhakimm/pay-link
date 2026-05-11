@@ -266,6 +266,11 @@ export async function POST(req: NextRequest) {
           cache: 'no-store',
         }
       )
+      console.log(
+        'Customer WhatsApp template used:',
+        process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
+          'order_confirmation_bayarlink'
+      )
 
       const customerJson = await customerRes.json()
       if (!customerRes.ok) {

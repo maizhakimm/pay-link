@@ -415,6 +415,7 @@ async function sendWhatsAppSellerNotification(orderNumber: string) {
         cache: 'no-store',
       }
     )
+    console.log('Customer WhatsApp template used:', templateName)
 
     const json = await response.json()
 
