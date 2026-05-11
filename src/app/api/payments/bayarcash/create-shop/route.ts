@@ -420,6 +420,7 @@ export async function POST(req: NextRequest) {
       body.deliveryMode || 'pay_rider_separately'
     ) as DeliveryMode
     const requestedDeliveryFee = Number(body.deliveryFee || 0)
+    const requestedTotalAmount = Number(body.totalAmount || 0)
 
     const requestedChannel = Number(body.paymentChannel)
     const paymentChannel = isAllowedPaymentChannel(requestedChannel)
@@ -692,8 +693,23 @@ export async function POST(req: NextRequest) {
         ? distanceDelivery.fee
         : fixedFee
 
-    const totalAmount = roundMoney(subtotal + appliedDeliveryFee)
+    const computedTotalAmount = roundMoney(subtotal + appliedDeliveryFee)
+    const clientSubtotal = Number.isFinite(requestedSubtotal)
+      ? roundMoney(requestedSubtotal)
+      : subtotal
+    const clientDeliveryFee = Number.isFinite(requestedDeliveryFee)
+      ? roundMoney(requestedDeliveryFee)
+      : appliedDeliveryFee
+    const clientTotalAmount = Number.isFinite(requestedTotalAmount)
+      ? roundMoney(requestedTotalAmount)
+      : roundMoney(clientSubtotal + clientDeliveryFee)
+
+    const totalAmount = clientTotalAmount
     const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0)
+
+    console.log('[create-shop] backend received subtotal:', requestedSubtotal)
+    console.log('[create-shop] backend received deliveryFee:', requestedDeliveryFee)
+    console.log('[create-shop] backend final amount:', totalAmount)
 
     const paymentMethod = mapPaymentMethod(paymentChannel)
     const sellerPlan = (seller.plan_type || 'BASIC').toUpperCase()
@@ -708,6 +724,7 @@ export async function POST(req: NextRequest) {
     const orderNumber = `ORD-${Date.now()}`
     const receiptToken = generateReceiptToken()
     const amount = totalAmount.toFixed(2)
+    console.log('[create-shop] Bayarcash amount payload:', amount)
     const buyerAddress =
       distanceDelivery.resolvedAddress || buildBuyerAddress(delivery)
 
@@ -773,6 +790,10 @@ export async function POST(req: NextRequest) {
         requested_subtotal: Number.isFinite(requestedSubtotal)
           ? requestedSubtotal
           : subtotal,
+        requested_delivery_fee: Number.isFinite(requestedDeliveryFee)
+          ? requestedDeliveryFee
+          : appliedDeliveryFee,
+        computed_total_amount: computedTotalAmount,
         gateway_fee: gatewayFee,
         platform_fee: platformFee,
         seller_net: sellerNet,
