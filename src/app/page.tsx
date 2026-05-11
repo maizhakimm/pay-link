@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Store } from "lucide-react";
 
 export default function LandingPage() {
   const problems = [
@@ -686,74 +687,83 @@ export default function LandingPage() {
             </p>
 
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
-              Pricing yang jelas untuk seller
+              Jual secara percuma menggunakan BayarLink
             </h2>
 
             <p className="mt-5 text-lg leading-8 text-slate-600">
-              Tiada caj setup. Tiada kontrak. Hanya bayar bila anda berjaya
-              menjual.
+              BayarLink Basic kekal percuma. Yuran sewa tapak hanya dikenakan untuk seller yang mahu disenaraikan di Bazar BayarLink bagi mendapatkan exposure dan trafik tambahan.
             </p>
           </div>
 
           <div className="mt-14 grid gap-6 lg:grid-cols-3">
             {[
               {
-                name: "Basic (Beta)",
-                desc: "Sesuai untuk peniaga baru, kecil dan sederhana",
-                price: "RM0",
+                name: "BayarLink Basic",
+                desc: "Jual dan terima order secara percuma menggunakan link kedai sendiri.",
+                price: "FREE",
                 feeTitle: "Transaction fee standard:",
                 fees: [
                   "FPX: RM1.50",
                   "QR: 2.5%",
                   "Boost PayFlex: 2.5%",
                   "Card: RM1 + 2.5%",
-                  "T+1 payout to merchant account",
+                  "T+1 payout ke akaun seller",
                 ],
                 features: [
-                  "Shop link sendiri",
+                  "Kedai online sendiri",
+                  "Link order untuk WhatsApp & Facebook",
                   "Unlimited produk",
+                  "Pickup & delivery",
                   "WhatsApp order flow",
+                  "Tidak termasuk listing di Bazar BayarLink",
                 ],
-                button: "Get Started",
+                button: "Mula Percuma",
                 active: true,
               },
               {
-                name: "Pro",
-                desc: "Sesuai untuk peniaga aktif dan nak scale up",
-                price: "RM19",
-                feeTitle: "Lower transaction fee:",
+                name: "Sewa Tapak Bazar",
+                desc: "Buka tapak seller anda di Bazar BayarLink dan mula ditemui customer sekitar kawasan anda.",
+                price: "RM10",
+                feeSuffix: "/ bulan",
+                feeTitle: "Transaction fee masih sama seperti BayarLink Basic.",
                 fees: [
-                  "FPX: RM1.30",
-                  "QR: 2.2%",
-                  "Boost PayFlex: 2.2%",
-                  "Card: RM1 + 2.2%",
+                  "FPX: RM1.50",
+                  "QR: 2.5%",
+                  "Boost PayFlex: 2.5%",
+                  "Card: RM1 + 2.5%",
+                  "T+1 payout ke akaun seller",
                 ],
                 features: [
-                  "Semua dalam Free",
-                  "Remove watermark",
-                  "Analytics asas",
-                  "Auto WhatsApp summary",
+                  "Produk muncul di Bazar BayarLink",
+                  "Customer boleh cari makanan ikut kawasan",
+                  "Produk muncul dalam kategori makanan",
+                  "Sesuai untuk seller aktif",
+                  "BayarLink Basic masih termasuk",
+                  "Tapak kawasan adalah terhad",
                 ],
+                hook: "Lebih mudah customer jumpa kedai dan makanan anda tanpa perlu share link setiap masa.",
                 button: "Coming Soon",
                 active: false,
                 popular: true,
               },
               {
-                name: "Growth",
-                desc: "Sesuai untuk nak scale up bisnes",
-                price: "RM49",
-                feeTitle: "Lowest transaction fee:",
+                name: "Tapak Premium",
+                desc: "Untuk seller yang mahu lebih exposure dan featured placement di Bazar BayarLink.",
+                price: "Coming Soon",
+                feeTitle: "Transaction fee masih sama seperti BayarLink Basic.",
                 fees: [
-                  "FPX: RM1.10",
-                  "QR: 2.0%",
-                  "Boost PayFlex: 2.0%",
-                  "Card: RM1 + 1.9%",
+                  "FPX: RM1.50",
+                  "QR: 2.5%",
+                  "Boost PayFlex: 2.5%",
+                  "Card: RM1 + 2.5%",
+                  "T+1 payout ke akaun seller",
                 ],
                 features: [
-                  "Semua dalam Pro",
-                  "Multi staff",
-                  "Advanced automation",
-                  "Inventory tracking",
+                  "Featured seller",
+                  "Priority listing kawasan",
+                  "Highlight menu produk",
+                  "Exposure lebih tinggi",
+                  "Slot premium terhad",
                 ],
                 button: "Coming Soon",
                 active: false,
@@ -785,7 +795,7 @@ export default function LandingPage() {
                   <span className="text-5xl font-extrabold text-slate-900">
                     {plan.price}
                   </span>
-                  <span className="pb-2 text-slate-500">/month</span>
+                  <span className="pb-2 text-slate-500">{plan.feeSuffix || ""}</span>
                 </div>
 
                 <div className="mt-7">
@@ -808,10 +818,14 @@ export default function LandingPage() {
                   ))}
                 </div>
 
+                {plan.hook ? (
+                  <p className="mt-5 text-sm text-slate-600">{plan.hook}</p>
+                ) : null}
+
                 {plan.active ? (
                   <a
                     href="/login"
-                    className="mt-9 inline-flex h-12 w-full items-center justify-center rounded-xl bg-slate-900 px-6 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+                    className="mt-9 inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#2563EB] px-6 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-blue-700"
                   >
                     {plan.button}
                   </a>
@@ -1068,12 +1082,12 @@ export default function LandingPage() {
 
       <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-2">
         <a
-          href="/explore"
-          aria-label="Explore Marketplace"
-          className="inline-flex items-center gap-2 rounded-full bg-[#2563EB] px-3 py-2 text-white shadow-[0_12px_30px_rgba(37,99,235,0.35)] transition hover:-translate-y-1 hover:bg-blue-700"
+          href="/bazar"
+          aria-label="BAZAR BayarLink"
+          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#DD0894] via-[#8B5CF6] to-[#2563EB] px-4 py-2.5 text-white shadow-[0_12px_30px_rgba(37,99,235,0.32)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(221,8,148,0.35)] animate-[pulse_4s_ease-in-out_infinite]"
         >
-          <span className="text-sm">🧭</span>
-          <span className="text-xs font-semibold sm:text-sm">Explore</span>
+          <Store className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.2} />
+          <span className="text-xs font-semibold sm:text-sm">Jom ke BAZAR</span>
         </a>
 
         <a
