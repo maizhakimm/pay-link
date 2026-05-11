@@ -267,6 +267,40 @@ function formatDeliveryForWhatsApp(order: SellerNewOrderRow) {
   return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${(address || '-') + unitText}${noteText}`
 }
 
+async function parseBayarcashPayload(req: NextRequest) {
+  const contentType = req.headers.get('content-type') || ''
+
+  try {
+    if (contentType.includes('application/json')) {
+      return await req.json()
+    }
+
+    if (
+      contentType.includes('application/x-www-form-urlencoded') ||
+      contentType.includes('multipart/form-data')
+    ) {
+      const formData = await req.formData()
+      return Object.fromEntries(formData.entries())
+    }
+
+    const text = await req.text()
+
+    if (!text) {
+      return {}
+    }
+
+    try {
+      return JSON.parse(text)
+    } catch {
+      const params = new URLSearchParams(text)
+      return Object.fromEntries(params.entries())
+    }
+  } catch (error) {
+    console.error('Bayarcash payload parse error:', error)
+    return {}
+  }
+}
+
 async function sendWhatsAppSellerNotification(orderNumber: string) {
   try {
     if (!process.env.WHATSAPP_ACCESS_TOKEN) {
@@ -454,7 +488,7 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
 
     const templateName =
       process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
-      'order_confirmation_bayarlink'
+      'order_confirmation_bayarlink2'
 
     const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en'
 
@@ -542,12 +576,12 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
               {
                 type: 'body',
                 parameters: [
-                  { type: 'text', text: customerName },
-                  { type: 'text', text: storeName },
-                  { type: 'text', text: order.order_number || '-' },
-                  { type: 'text', text: itemsText },
-                  { type: 'text', text: total.toFixed(2) },
-                  { type: 'text', text: deliveryMethod },
+                    { type: 'text', text: customerName },
+                    { type: 'text', text: storeName },
+                    { type: 'text', text: order.order_number || '-' },
+                    { type: 'text', text: itemsText },
+                    { type: 'text', text: total.toFixed(2) },
+                    { type: 'text', text: deliveryMethod },
                   { type: 'text', text: deliveryText || '-' },
                   { type: 'text', text: slotText },
                 ],
@@ -607,7 +641,9 @@ async function logWebhookEvent(params: {
 
 export async function POST(req: NextRequest) {
   try {
-    const payload = (await req.json()) as WebhookPayload
+    const payload = await parseBayarcashPayload(req)
+
+    console.log('Bayarcash webhook payload:', payload)
 
     if (!payload || typeof payload !== 'object') {
       await logWebhookEvent({
@@ -714,6 +750,8 @@ export async function POST(req: NextRequest) {
       order.gateway_transaction_id === transactionId
     ) {
       await sendWhatsAppSellerNotification(orderNumber)
+      await sendWhatsAppCustomerNotification(orderNumber)
+      
       return NextResponse.json({ ok: true, duplicate: true })
     }
 
@@ -916,6 +954,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error'
+
+    console.error('Bayarcash webhook fatal error:', error)
 
     return NextResponse.json(
       { ok: false, error: message },

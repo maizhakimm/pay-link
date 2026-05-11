@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
             template: {
               name:
                 process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
-                'order_confirmation_bayarlink',
+                'order_confirmation_bayarlink2',
               language: {
                 code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en',
               },
@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
                     { type: 'text', text: customerName },
                     { type: 'text', text: seller?.store_name || '-' },
                     { type: 'text', text: order.order_number || orderNumber },
-                    { type: 'text', text: itemsText || '-' },
+                    { type: 'text', text: itemsText },
                     { type: 'text', text: totalText },
                     {
                       type: 'text',
@@ -266,10 +266,11 @@ export async function POST(req: NextRequest) {
           cache: 'no-store',
         }
       )
+
       console.log(
         'Customer WhatsApp template used:',
         process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
-          'order_confirmation_bayarlink'
+          'order_confirmation_bayarlink2'
       )
 
       const customerJson = await customerRes.json()
