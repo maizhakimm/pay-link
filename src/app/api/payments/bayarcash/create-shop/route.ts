@@ -73,10 +73,13 @@ type BayarcashResponse = {
 type DeliveryPayload = {
   address1?: string
   address2?: string
+  unit_or_building?: string
+  delivery_note?: string
   postcode?: string
   city?: string
   district?: string
   state?: string
+  raw_full_address?: string | null
   distance_km?: number | null
   resolved_address?: string | null
 } | null
@@ -115,9 +118,14 @@ function isReservationExpired(reservedUntil?: string | null) {
 function buildBuyerAddress(delivery: DeliveryPayload) {
   if (!delivery) return null
 
+  if (delivery.raw_full_address && String(delivery.raw_full_address).trim()) {
+    return String(delivery.raw_full_address).trim()
+  }
+
   const parts = [
     delivery.address1,
     delivery.address2,
+    delivery.unit_or_building,
     delivery.postcode,
     delivery.city,
     delivery.district,
@@ -765,8 +773,10 @@ export async function POST(req: NextRequest) {
     const orderNumber = `ORD-${Date.now()}`
     const receiptToken = generateReceiptToken()
     const amount = totalAmount.toFixed(2)
+    const buyerRawAddress = buildBuyerAddress(delivery)
+    const buyerAddress = buyerRawAddress || distanceDelivery.resolvedAddress
+
     console.log('[create-shop] Bayarcash amount payload:', amount)
-    const buyerAddress = buildBuyerAddress(delivery)
 
     const itemsSnapshot = validItems.map((item) => ({
       product_id: item.product.id,
@@ -786,14 +796,25 @@ export async function POST(req: NextRequest) {
       delivery_mode: effectiveDeliveryMode,
       delivery_fee: appliedDeliveryFee,
       distance_km: distanceDelivery.distanceKm,
-      resolved_address: distanceDelivery.resolvedAddress,
+      resolved_address: distanceDelivery.resolvedAddress || delivery?.resolved_address || null,
+      raw_full_address: buyerRawAddress,
       seller_pickup_address: seller.pickup_address || null,
       seller_latitude: seller.latitude ?? null,
       seller_longitude: seller.longitude ?? null,
       customer_latitude: distanceDelivery.customerLatitude,
       customer_longitude: distanceDelivery.customerLongitude,
-      delivery_note: deliveryNote || null,
-      address: delivery,
+      address: {
+        address1: delivery?.address1 || null,
+        address2: delivery?.address2 || null,
+        unit_or_building: delivery?.unit_or_building || null,
+        delivery_note: delivery?.delivery_note || null,
+        postcode: delivery?.postcode || null,
+        city: delivery?.city || null,
+        district: delivery?.district || null,
+        state: delivery?.state || null,
+        raw_full_address: buyerRawAddress,
+        resolved_address: distanceDelivery.resolvedAddress || delivery?.resolved_address || null,
+      },
     }
 
     const { data: insertedOrder, error: orderInsertError } = await supabase
@@ -829,13 +850,6 @@ export async function POST(req: NextRequest) {
         amount,
         total_amount: totalAmount,
         subtotal,
-        requested_subtotal: Number.isFinite(requestedSubtotal)
-          ? requestedSubtotal
-          : subtotal,
-        requested_delivery_fee: Number.isFinite(requestedDeliveryFee)
-          ? requestedDeliveryFee
-          : appliedDeliveryFee,
-        computed_total_amount: computedTotalAmount,
         gateway_fee: gatewayFee,
         platform_fee: platformFee,
         seller_net: sellerNet,

@@ -279,6 +279,8 @@ export default function ShopPayButton({
   const [city, setCity] = useState('')
   const [district, setDistrict] = useState('')
   const [state, setState] = useState('')
+  const [unitOrBuilding, setUnitOrBuilding] = useState('')
+  const [riderNote, setRiderNote] = useState('')
 
   const [calculatedDeliveryFee, setCalculatedDeliveryFee] = useState<number | null>(
     null
@@ -291,17 +293,18 @@ export default function ShopPayButton({
 
   const fullDeliveryAddress = useMemo(() => {
     return [
+      unitOrBuilding.trim(),
       address1.trim(),
       address2.trim(),
-      postcode.trim(),
       city.trim(),
       district.trim(),
+      postcode.trim(),
       state.trim(),
       'Malaysia',
     ]
       .filter(Boolean)
       .join(', ')
-  }, [address1, address2, postcode, city, district, state])
+  }, [address1, address2, postcode, city, district, state, unitOrBuilding])
 
   useEffect(() => {
     setCalculatedDeliveryFee(null)
@@ -315,6 +318,8 @@ export default function ShopPayButton({
     city,
     district,
     state,
+    unitOrBuilding,
+    riderNote,
     needsDelivery,
     deliveryMode,
   ])
@@ -746,6 +751,9 @@ export default function ShopPayButton({
                 city: city.trim(),
                 district: district.trim(),
                 state: state.trim(),
+                unit_or_building: unitOrBuilding.trim(),
+                delivery_note: riderNote.trim(),
+                raw_full_address: fullDeliveryAddress,
                 distance_km:
                   deliveryMode === 'distance_based' ? finalDistanceKm : null,
                 resolved_address:
@@ -925,6 +933,15 @@ export default function ShopPayButton({
         {needsDelivery && (
           <>
             <div>
+              <label style={labelStyle}>Unit / Block / Building</label>
+              <input
+                value={unitOrBuilding}
+                onChange={(e) => setUnitOrBuilding(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
               <label style={labelStyle}>Address Line 1</label>
               <input
                 value={address1}
@@ -934,19 +951,10 @@ export default function ShopPayButton({
             </div>
 
             <div>
-              <label style={labelStyle}>Address Line 2</label>
+              <label style={labelStyle}>Address Line 2 / Area</label>
               <input
                 value={address2}
                 onChange={(e) => setAddress2(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Postcode</label>
-              <input
-                value={postcode}
-                onChange={(e) => handlePostcodeChange(e.target.value)}
                 style={inputStyle}
               />
             </div>
@@ -961,10 +969,19 @@ export default function ShopPayButton({
             </div>
 
             <div>
-              <label style={labelStyle}>District</label>
+              <label style={labelStyle}>District / City / Area</label>
               <input
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Postcode</label>
+              <input
+                value={postcode}
+                onChange={(e) => handlePostcodeChange(e.target.value)}
                 style={inputStyle}
               />
             </div>

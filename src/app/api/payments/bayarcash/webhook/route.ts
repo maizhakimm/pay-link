@@ -239,6 +239,7 @@ function formatDeliveryForWhatsApp(order: SellerNewOrderRow) {
   const fee = Number(deliveryInfo.delivery_fee || 0)
 
   const address =
+    deliveryInfo.raw_full_address ||
     deliveryInfo.resolved_address ||
     order.buyer_address ||
     [
@@ -252,13 +253,18 @@ function formatDeliveryForWhatsApp(order: SellerNewOrderRow) {
       .filter(Boolean)
       .join(', ')
 
+  const unitOrBuilding = deliveryInfo.address?.unit_or_building || ''
+  const riderNote = deliveryInfo.address?.delivery_note || ''
+
   const distanceText =
     deliveryInfo.distance_km !== null &&
     deliveryInfo.distance_km !== undefined
       ? ` | ${Number(deliveryInfo.distance_km).toFixed(2)}km`
       : ''
 
-  return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${address || '-'}`
+  const noteText = riderNote ? ` | Note: ${riderNote}` : ''
+  const unitText = unitOrBuilding ? ` (${unitOrBuilding})` : ''
+  return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${(address || '-') + unitText}${noteText}`
 }
 
 async function parseBayarcashPayload(req: NextRequest) {
@@ -443,6 +449,7 @@ async function sendWhatsAppSellerNotification(orderNumber: string) {
         cache: 'no-store',
       }
     )
+    console.log('Customer WhatsApp template used:', templateName)
 
     const json = await response.json()
 
@@ -481,8 +488,7 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
 
     const templateName =
       process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
-      process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER ||
-      'seller_new_order'
+      'order_confirmation_bayarlink2'
 
     const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en'
 
@@ -495,6 +501,7 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
         buyer_phone,
         customer_name,
         customer_phone,
+        seller_profile_id,
         buyer_address,
         total_amount,
         amount,
@@ -534,9 +541,20 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
     })
 
     const customerName = order.buyer_name || order.customer_name || 'Customer'
+    let storeName = '-'
+    if (order.seller_profile_id) {
+      const { data: sellerData } = await supabase
+        .from('seller_profiles')
+        .select('store_name')
+        .eq('id', order.seller_profile_id)
+        .maybeSingle()
+      storeName = sellerData?.store_name || '-'
+    }
     const deliveryText = formatDeliveryForWhatsApp(order)
-    const itemsText = formatItemsForWhatsApp(order)
+    const itemsText = formatItemsForWhatsApp(order) || '-'
     const total = Number(order.total_amount ?? order.amount ?? 0)
+    const deliveryMethod =
+      deliveryText === 'Pickup / No delivery' ? 'Pickup' : 'Delivery'
     const slotText = order.delivery_slot_label || '-'
 
     const response = await fetch(
@@ -558,10 +576,12 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
               {
                 type: 'body',
                 parameters: [
-                  { type: 'text', text: order.order_number || '-' },
-                  { type: 'text', text: customerName },
-                  { type: 'text', text: itemsText || '-' },
-                  { type: 'text', text: total.toFixed(2) },
+                    { type: 'text', text: customerName },
+                    { type: 'text', text: storeName },
+                    { type: 'text', text: order.order_number || '-' },
+                    { type: 'text', text: itemsText },
+                    { type: 'text', text: total.toFixed(2) },
+                    { type: 'text', text: deliveryMethod },
                   { type: 'text', text: deliveryText || '-' },
                   { type: 'text', text: slotText },
                 ],
@@ -624,6 +644,14 @@ export async function POST(req: NextRequest) {
     const payload = await parseBayarcashPayload(req)
 
     console.log('Bayarcash webhook payload:', payload)
+
+    if (!payload || typeof payload !== 'object') {
+      await logWebhookEvent({
+        eventType: 'invalid_payload_type',
+        payload,
+      })
+      return NextResponse.json({ ok: false, error: 'Invalid payload' }, { status: 400 })
+    }
 
     const orderNumber = payload.order_number as string | undefined
     const transactionId = (payload.transaction_id as string | undefined) || null

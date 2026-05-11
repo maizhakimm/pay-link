@@ -443,6 +443,47 @@ function getOrderDeliveryAddress(order: OrderRow) {
     .map((value) => String(value).trim())
     .filter(Boolean)
 
+  const deliveryInfo = toRecord(order.delivery_info)
+
+  if (deliveryInfo) {
+    const rawAddress = getObjectValue(deliveryInfo, ['raw_full_address'], '')
+    if (rawAddress && String(rawAddress).trim()) {
+      return String(rawAddress).trim()
+    }
+
+    const resolvedAddress = getObjectValue(deliveryInfo, ['resolved_address'], '')
+    if (resolvedAddress && String(resolvedAddress).trim()) {
+      return String(resolvedAddress).trim()
+    }
+
+    const nestedAddress = getObjectValue(deliveryInfo, ['address'], null)
+    const nestedRecord = toRecord(nestedAddress)
+
+    if (nestedRecord) {
+      const nestedRaw = getObjectValue(nestedRecord, ['raw_full_address'], '')
+      if (nestedRaw && String(nestedRaw).trim()) {
+        return String(nestedRaw).trim()
+      }
+
+      const nestedParts = [
+        getObjectValue(nestedRecord, ['address1'], ''),
+        getObjectValue(nestedRecord, ['address2'], ''),
+        getObjectValue(nestedRecord, ['unit_or_building'], ''),
+        getObjectValue(nestedRecord, ['postcode'], ''),
+        getObjectValue(nestedRecord, ['city'], ''),
+        getObjectValue(nestedRecord, ['district'], ''),
+        getObjectValue(nestedRecord, ['state'], ''),
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+
+      if (nestedParts.length > 0) {
+        return nestedParts.join(', ')
+      }
+    }
+  }
+
   if (parts.length > 0) {
     return parts.join(', ')
   }

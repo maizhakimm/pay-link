@@ -93,6 +93,7 @@ function formatDelivery(order: any) {
   const fee = Number(deliveryInfo.delivery_fee || 0)
 
   const address =
+    deliveryInfo.raw_full_address ||
     deliveryInfo.resolved_address ||
     order.buyer_address ||
     [
@@ -106,13 +107,18 @@ function formatDelivery(order: any) {
       .filter(Boolean)
       .join(', ')
 
+  const unitOrBuilding = deliveryInfo.address?.unit_or_building || ''
+  const riderNote = deliveryInfo.address?.delivery_note || ''
+
   const distanceText =
     deliveryInfo.distance_km !== null &&
     deliveryInfo.distance_km !== undefined
       ? ` | ${Number(deliveryInfo.distance_km).toFixed(2)}km`
       : ''
 
-  return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${address || '-'}`
+  const noteText = riderNote ? ` | Note: ${riderNote}` : ''
+  const unitText = unitOrBuilding ? ` (${unitOrBuilding})` : ''
+  return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${(address || '-') + unitText}${noteText}`
 }
 
 /* =========================
@@ -213,7 +219,7 @@ export async function POST(req: NextRequest) {
       })
 
       const customerName = order.buyer_name || order.customer_name || '-'
-      const itemsText = formatItems(order)
+      const itemsText = formatItems(order) || '-'
       const deliveryText = formatDelivery(order)
       const slotText = order.delivery_slot_label || '-'
       const totalText = Number(order.total_amount || order.amount || 0).toFixed(2)
@@ -233,8 +239,7 @@ export async function POST(req: NextRequest) {
             template: {
               name:
                 process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
-                process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER ||
-                'seller_new_order',
+                'order_confirmation_bayarlink2',
               language: {
                 code: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en',
               },
@@ -242,12 +247,17 @@ export async function POST(req: NextRequest) {
                 {
                   type: 'body',
                   parameters: [
-                    { type: 'text', text: order.order_number || orderNumber },
                     { type: 'text', text: customerName },
+                    { type: 'text', text: seller?.store_name || '-' },
+                    { type: 'text', text: order.order_number || orderNumber },
                     { type: 'text', text: itemsText },
                     { type: 'text', text: totalText },
+                    {
+                      type: 'text',
+                      text: deliveryText === 'Pickup / No delivery' ? 'Pickup' : 'Delivery',
+                    },
                     { type: 'text', text: deliveryText },
-                    { type: 'text', text: slotText },
+                    { type: 'text', text: slotText || '-' },
                   ],
                 },
               ],
@@ -255,6 +265,12 @@ export async function POST(req: NextRequest) {
           }),
           cache: 'no-store',
         }
+      )
+
+      console.log(
+        'Customer WhatsApp template used:',
+        process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
+          'order_confirmation_bayarlink2'
       )
 
       const customerJson = await customerRes.json()
