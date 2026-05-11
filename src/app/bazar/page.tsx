@@ -200,7 +200,7 @@ export default function ExplorePage() {
         <header className="relative -mx-4 -mt-5 rounded-b-3xl border-b border-white/40 bg-[radial-gradient(circle_at_12%_10%,rgba(186,230,253,0.35),transparent_32%),radial-gradient(circle_at_85%_12%,rgba(187,247,208,0.28),transparent_30%),radial-gradient(circle_at_60%_90%,rgba(244,220,255,0.25),transparent_40%),linear-gradient(180deg,rgba(219,234,254,0.78)_0%,rgba(191,219,254,0.72)_100%)] px-4 pb-5 pt-4 backdrop-blur-xl">
           <div className="pointer-events-none absolute inset-0 -z-10 rounded-b-3xl bg-white/30 blur-xl" />
           <div className="flex items-center justify-between">
-            <img src="/Logo-BAZAR-BayarLink-Header.svg" alt="BayarLink" className="h-5 w-auto" />
+            <img src="/Logo-BAZAR-BayarLink-Header.svg" alt="BayarLink" className="h-6 w-auto md:h-7" />
             <div className="inline-flex rounded-full border border-sky-200/70 bg-white/70 px-3 py-1 text-xs font-semibold text-sky-700 shadow-sm backdrop-blur">Beta</div>
           </div>
           <div className="mt-3.5 relative">

@@ -1084,9 +1084,10 @@ export default function LandingPage() {
         <a
           href="/bazar"
           aria-label="BAZAR BayarLink"
-          className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#2563EB] via-[#3B82F6] to-[#DD0894] text-white shadow-[0_10px_24px_rgba(37,99,235,0.35)] transition hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(221,8,148,0.35)] animate-[pulse_3s_ease-in-out_infinite]"
+          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#DD0894] via-[#8B5CF6] to-[#2563EB] px-4 py-2.5 text-white shadow-[0_12px_30px_rgba(37,99,235,0.32)] transition hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(221,8,148,0.35)] animate-[pulse_4s_ease-in-out_infinite]"
         >
-          <Store className="h-5 w-5" strokeWidth={2.2} />
+          <Store className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.2} />
+          <span className="text-xs font-semibold sm:text-sm">Jom ke BAZAR</span>
         </a>
 
         <a
