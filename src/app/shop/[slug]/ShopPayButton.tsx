@@ -828,6 +828,15 @@ export default function ShopPayButton({
         {needsDelivery && (
           <>
             <div>
+              <label style={labelStyle}>Unit / Block / Building</label>
+              <input
+                value={unitOrBuilding}
+                onChange={(e) => setUnitOrBuilding(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
               <label style={labelStyle}>Address Line 1</label>
               <input
                 value={address1}
@@ -837,19 +846,10 @@ export default function ShopPayButton({
             </div>
 
             <div>
-              <label style={labelStyle}>Address Line 2</label>
+              <label style={labelStyle}>Address Line 2 / Area</label>
               <input
                 value={address2}
                 onChange={(e) => setAddress2(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Postcode</label>
-              <input
-                value={postcode}
-                onChange={(e) => handlePostcodeChange(e.target.value)}
                 style={inputStyle}
               />
             </div>
@@ -864,7 +864,7 @@ export default function ShopPayButton({
             </div>
 
             <div>
-              <label style={labelStyle}>District</label>
+              <label style={labelStyle}>District / City / Area</label>
               <input
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
@@ -873,19 +873,10 @@ export default function ShopPayButton({
             </div>
 
             <div>
-              <label style={labelStyle}>Unit / Block / Building</label>
+              <label style={labelStyle}>Postcode</label>
               <input
-                value={unitOrBuilding}
-                onChange={(e) => setUnitOrBuilding(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Delivery Note (for rider)</label>
-              <input
-                value={riderNote}
-                onChange={(e) => setRiderNote(e.target.value)}
+                value={postcode}
+                onChange={(e) => handlePostcodeChange(e.target.value)}
                 style={inputStyle}
               />
             </div>
