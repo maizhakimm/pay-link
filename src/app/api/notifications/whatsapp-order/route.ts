@@ -6,14 +6,40 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+function normalizeMalaysianPhone(phone?: string | null) {
+  const original = String(phone || '').trim()
+  if (!original) return null
+
+  const noPlus = original.replace(/^\+/, '')
+  const cleaned = noPlus.replace(/[\s\-()]/g, '').replace(/\D/g, '')
+  if (!cleaned) return null
+
+  let normalized = cleaned
+
+  if (normalized.startsWith('0')) {
+    normalized = `60${normalized.slice(1)}`
+  } else if (normalized.startsWith('60')) {
+    normalized = normalized
+  } else if (normalized.startsWith('1') && normalized.length >= 9 && normalized.length <= 10) {
+    normalized = `60${normalized}`
+  } else {
+    return null
+  }
+
+  if (!/^60\d{8,11}$/.test(normalized)) {
+    return null
+  }
+
+  return normalized
+}
+
+function maskPhone(phone: string) {
+  if (phone.length <= 6) return `${phone.slice(0, 2)}***`
+  return `${phone.slice(0, 4)}***${phone.slice(-3)}`
+}
+
 function normalizePhone(phone?: string | null) {
-  const cleaned = String(phone || '').replace(/\D/g, '')
-
-  if (!cleaned) return ''
-  if (cleaned.startsWith('0')) return `6${cleaned}`
-  if (cleaned.startsWith('60')) return cleaned
-
-  return cleaned
+  return String(phone || '').replace(/\D/g, '')
 }
 
 function formatItems(order: any) {
@@ -158,14 +184,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const sellerPhone = normalizePhone(seller?.whatsapp)
+    const originalSellerPhone = String(seller?.whatsapp || '')
+    const sellerPhone = normalizeMalaysianPhone(seller?.whatsapp)
 
     if (!sellerPhone) {
+      console.log('WhatsApp skipped: invalid seller whatsapp phone', {
+        order_number: orderNumber,
+        original_phone: originalSellerPhone,
+      })
       return NextResponse.json(
         { ok: false, error: 'Seller WhatsApp not found' },
         { status: 400 }
       )
     }
+
+    console.log('WhatsApp phone normalized', {
+      order_number: orderNumber,
+      original_phone: originalSellerPhone,
+      normalized_phone_masked: maskPhone(sellerPhone),
+    })
 
     const customerName = order.buyer_name || order.customer_name || '-'
     const customerPhone = normalizePhone(order.buyer_phone || order.customer_phone)
@@ -237,6 +274,11 @@ export async function POST(req: NextRequest) {
     const json = await res.json()
 
     if (!res.ok) {
+      console.error('WhatsApp API non-OK response', {
+        order_number: orderNumber,
+        seller_phone_masked: maskPhone(sellerPhone),
+        response: json,
+      })
       return NextResponse.json(
         {
           ok: false,
