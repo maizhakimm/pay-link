@@ -615,7 +615,7 @@ export default function ShopPageClient({
   const productRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null)
   const selectedProductId = searchParams.get('product')
-  const cameFromExplore = searchParams.get('from') === 'explore'
+  const cameFromExplore = ['explore','bazar'].includes(searchParams.get('from') || '')
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
@@ -1276,10 +1276,10 @@ export default function ShopPageClient({
           {cameFromExplore ? (
             <div style={exploreBackWrap}>
               <a
-                href={`/explore?${new URLSearchParams(Array.from(searchParams.entries()).filter(([key]) => ['area', 'category', 'q'].includes(key))).toString()}`}
+                href={`/bazar?${new URLSearchParams(Array.from(searchParams.entries()).filter(([key]) => ['area', 'category', 'q'].includes(key))).toString()}`}
                 style={exploreBackButton}
               >
-                ← Explore
+                ← BAZAR
               </a>
             </div>
           ) : null}
