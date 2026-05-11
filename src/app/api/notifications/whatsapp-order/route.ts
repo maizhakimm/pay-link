@@ -219,7 +219,9 @@ export async function POST(req: NextRequest) {
       })
 
       const customerName = order.buyer_name || order.customer_name || '-'
+      const itemsText = formatItems(order) || '-'
       const deliveryText = formatDelivery(order)
+      const slotText = order.delivery_slot_label || '-'
       const totalText = Number(order.total_amount || order.amount || 0).toFixed(2)
 
       const customerRes = await fetch(
@@ -248,12 +250,14 @@ export async function POST(req: NextRequest) {
                     { type: 'text', text: customerName },
                     { type: 'text', text: seller?.store_name || '-' },
                     { type: 'text', text: order.order_number || orderNumber },
+                    { type: 'text', text: itemsText || '-' },
                     { type: 'text', text: totalText },
                     {
                       type: 'text',
                       text: deliveryText === 'Pickup / No delivery' ? 'Pickup' : 'Delivery',
                     },
                     { type: 'text', text: deliveryText },
+                    { type: 'text', text: slotText || '-' },
                   ],
                 },
               ],

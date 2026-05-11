@@ -516,9 +516,11 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
       storeName = sellerData?.store_name || '-'
     }
     const deliveryText = formatDeliveryForWhatsApp(order)
+    const itemsText = formatItemsForWhatsApp(order) || '-'
     const total = Number(order.total_amount ?? order.amount ?? 0)
     const deliveryMethod =
       deliveryText === 'Pickup / No delivery' ? 'Pickup' : 'Delivery'
+    const slotText = order.delivery_slot_label || '-'
 
     const response = await fetch(
       `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
@@ -542,9 +544,11 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
                   { type: 'text', text: customerName },
                   { type: 'text', text: storeName },
                   { type: 'text', text: order.order_number || '-' },
+                  { type: 'text', text: itemsText },
                   { type: 'text', text: total.toFixed(2) },
                   { type: 'text', text: deliveryMethod },
                   { type: 'text', text: deliveryText || '-' },
+                  { type: 'text', text: slotText },
                 ],
               },
             ],
