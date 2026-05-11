@@ -1048,6 +1048,16 @@ export default function ShopPageClient({
     return cart.reduce((sum, item) => sum + item.line_total, 0)
   }, [cart])
 
+  useEffect(() => {
+    const frontendSubtotal = Number(grandTotal || 0)
+    const frontendDeliveryFee = Number(seller?.delivery_fee || 0)
+    const frontendTotal = frontendSubtotal + frontendDeliveryFee
+
+    console.log('[shop] frontend subtotal:', frontendSubtotal)
+    console.log('[shop] frontend deliveryFee:', frontendDeliveryFee)
+    console.log('[shop] frontend total:', frontendTotal)
+  }, [grandTotal, seller?.delivery_fee])
+
   const totalCartQuantity = useMemo(() => {
     return cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
   }, [cart])
