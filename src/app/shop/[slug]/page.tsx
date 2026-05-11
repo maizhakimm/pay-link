@@ -222,6 +222,7 @@ if (!seller) {
     .select('*')
     .eq('seller_profile_id', seller.id)
     .eq('is_active', true)
+    .order('sort_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false })
 
   // 🔥 NEW — GET MENU CATEGORIES
