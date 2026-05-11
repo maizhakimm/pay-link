@@ -231,6 +231,40 @@ function formatDeliveryForWhatsApp(order: SellerNewOrderRow) {
   return `${mode} | RM ${fee.toFixed(2)}${distanceText} | ${address || '-'}`
 }
 
+async function parseBayarcashPayload(req: NextRequest) {
+  const contentType = req.headers.get('content-type') || ''
+
+  try {
+    if (contentType.includes('application/json')) {
+      return await req.json()
+    }
+
+    if (
+      contentType.includes('application/x-www-form-urlencoded') ||
+      contentType.includes('multipart/form-data')
+    ) {
+      const formData = await req.formData()
+      return Object.fromEntries(formData.entries())
+    }
+
+    const text = await req.text()
+
+    if (!text) {
+      return {}
+    }
+
+    try {
+      return JSON.parse(text)
+    } catch {
+      const params = new URLSearchParams(text)
+      return Object.fromEntries(params.entries())
+    }
+  } catch (error) {
+    console.error('Bayarcash payload parse error:', error)
+    return {}
+  }
+}
+
 async function sendWhatsAppSellerNotification(orderNumber: string) {
   try {
     if (!process.env.WHATSAPP_ACCESS_TOKEN) {
@@ -483,7 +517,9 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const payload = await req.json()
+    const payload = await parseBayarcashPayload(req)
+
+    console.log('Bayarcash webhook payload:', payload)
 
     const orderNumber = payload.order_number as string | undefined
     const transactionId = (payload.transaction_id as string | undefined) || null
@@ -739,6 +775,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unexpected error'
+
+    console.error('Bayarcash webhook fatal error:', error)
 
     return NextResponse.json(
       { ok: false, error: message },

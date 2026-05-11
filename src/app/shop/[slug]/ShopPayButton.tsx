@@ -102,27 +102,34 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-function calculateDistanceKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
+async function calculateDrivingDistanceKm(
+  originLat: number,
+  originLng: number,
+  destinationLat: number,
+  destinationLng: number
 ) {
-  const toRad = (value: number) => (value * Math.PI) / 180
+  const response = await fetch('/api/maps/distance', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      originLat,
+      originLng,
+      destinationLat,
+      destinationLng,
+    }),
+  })
 
-  const earthRadiusKm = 6371
-  const dLat = toRad(lat2 - lat1)
-  const dLng = toRad(lng2 - lng1)
+  const data = await response.json()
 
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2)
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.error || 'Failed to calculate driving distance'
+    )
+  }
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return earthRadiusKm * c
+  return Number(data.distance_km || 0)
 }
 
 function calculateTieredDeliveryFee(
@@ -202,6 +209,11 @@ export default function ShopPayButton({
   deliveryMinFee = 0,
   deliveryPricingRules = [],
   pickupAddress = '',
+  enableDelivery = true,
+  enableSelfPickup = false,
+  pickupNote = '',
+  pickupLatitude = null,
+  pickupLongitude = null,
   sellerLatitude = null,
   sellerLongitude = null,
   deliverySlots = [],
@@ -225,6 +237,11 @@ export default function ShopPayButton({
   deliveryMinFee?: number
   deliveryPricingRules?: DeliveryPricingRule[]
   pickupAddress?: string
+  pickupLatitude?: number | null
+  pickupLongitude?: number | null
+  enableDelivery?: boolean
+  enableSelfPickup?: boolean
+  pickupNote?: string
   sellerLatitude?: number | null
   sellerLongitude?: number | null
   deliverySlots?: DeliverySlot[]
@@ -246,7 +263,15 @@ export default function ShopPayButton({
   const [selectedSlotId, setSelectedSlotId] = useState('')
   const [selectedSlotLabel, setSelectedSlotLabel] = useState('')
 
-  const [needsDelivery, setNeedsDelivery] = useState(false)
+  const [needsDelivery, setNeedsDelivery] = useState(
+    enableDelivery && !enableSelfPickup
+  )
+
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<
+    'delivery' | 'pickup'
+  >(
+    enableDelivery ? 'delivery' : 'pickup'
+  )
 
   const [address1, setAddress1] = useState('')
   const [address2, setAddress2] = useState('')
@@ -293,6 +318,13 @@ export default function ShopPayButton({
     needsDelivery,
     deliveryMode,
   ])
+
+  useEffect(() => {
+    const deliverySelected =
+      fulfillmentMethod === 'delivery'
+
+    setNeedsDelivery(deliverySelected)
+  }, [fulfillmentMethod])
 
   useEffect(() => {
     if (!enableDeliverySlots) {
@@ -435,7 +467,7 @@ export default function ShopPayButton({
   }, [deliveryMode, deliveryFee])
 
   const appliedDeliveryFee = useMemo(() => {
-    if (!needsDelivery) return 0
+    if (fulfillmentMethod === 'pickup') return 0
 
     if (deliveryMode === 'fixed_fee') {
       const parsed = Number(deliveryFee || 0)
@@ -449,7 +481,7 @@ export default function ShopPayButton({
     }
 
     return 0
-  }, [needsDelivery, deliveryMode, deliveryFee, calculatedDeliveryFee])
+  }, [fulfillmentMethod, deliveryMode, deliveryFee, calculatedDeliveryFee])
 
   const payableTotal = useMemo(() => {
     return Number(total || 0) + appliedDeliveryFee
@@ -547,7 +579,7 @@ export default function ShopPayButton({
 
       const customer = await geocodeAddress(fullDeliveryAddress)
 
-      const distance = calculateDistanceKm(
+      const distance = await calculateDrivingDistanceKm(
         Number(sellerLatitude),
         Number(sellerLongitude),
         customer.latitude,
@@ -689,6 +721,7 @@ export default function ShopPayButton({
           deliveryMode,
           deliveryFee: finalDeliveryFee,
           deliveryRequired: needsDelivery,
+          fulfillmentMethod,
           totalAmount: finalPayableTotal,
           deliveryArea: deliveryArea || null,
           deliveryNote: deliveryNote || null,
@@ -704,7 +737,8 @@ export default function ShopPayButton({
                 message: minimumOrderRequirementMessage || null,
               }
             : null,
-          delivery: needsDelivery
+          delivery:
+            fulfillmentMethod === 'delivery'
             ? {
                 address1: address1.trim(),
                 address2: address2.trim(),
@@ -791,31 +825,102 @@ export default function ShopPayButton({
           </select>
         </div>
 
-        <div style={toggleBox}>
-          <label style={toggleLabel}>
-            <div>
-              <strong style={toggleTitle}>Delivery required</strong>
-              <div style={toggleSubtext}>Turn on if delivery needed</div>
-            </div>
+       <div style={toggleBox}>
+         <div style={toggleTitle}>Fulfillment Method</div>
 
-            <button
-              type="button"
-              onClick={() => setNeedsDelivery(!needsDelivery)}
-              style={{
-                ...toggleSwitch,
-                background: needsDelivery ? '#1d4ed8' : '#cbd5e1',
-              }}
-              aria-pressed={needsDelivery}
-            >
-              <span
-                style={{
-                  ...toggleKnob,
-                  left: needsDelivery ? '23px' : '3px',
-                }}
-              />
-            </button>
-          </label>
+         <div
+           style={{
+             display: 'grid',
+             gap: '10px',
+             marginTop: '12px',
+           }}
+         >
+           {enableDelivery ? (
+             <button
+               type="button"
+               onClick={() => setFulfillmentMethod('delivery')}
+               style={{
+                 ...methodButtonStyle,
+                 border:
+                   fulfillmentMethod === 'delivery'
+                     ? '2px solid #2563eb'
+                     : '1px solid #dbe2ea',
+                 background:
+                   fulfillmentMethod === 'delivery' ? '#eff6ff' : '#fff',
+               }}
+             >
+               🚚 Delivery
+             </button>
+           ) : null}
+
+           {enableSelfPickup ? (
+             <button
+               type="button"
+               onClick={() => setFulfillmentMethod('pickup')}
+               style={{
+                 ...methodButtonStyle,
+                 border:
+                   fulfillmentMethod === 'pickup'
+                     ? '2px solid #2563eb'
+                     : '1px solid #dbe2ea',
+                 background:
+                   fulfillmentMethod === 'pickup' ? '#eff6ff' : '#fff',
+               }}
+             >
+               🛍️ Self Pickup
+             </button>
+           ) : null}
         </div>
+
+         {fulfillmentMethod === 'pickup' ? (
+           <div style={pickupBoxStyle}>
+             <div style={pickupTitleStyle}>Pickup Location</div>
+
+             <div style={pickupAddressStyle}>
+               {pickupAddress || 'Pickup address not available'}
+             </div>
+
+             {pickupLatitude && pickupLongitude ? (
+               <div
+                 style={{
+                   marginTop: '12px',
+                   overflow: 'hidden',
+                   borderRadius: '16px',
+                   border: '1px solid #dbeafe',
+                 }}
+               >
+                 <iframe
+                   title="Pickup Location"
+                   src={`https://www.google.com/maps?q=${pickupLatitude},${pickupLongitude}&z=15&output=embed`}
+                   width="100%"
+                   height="220"
+                  style={{
+                     border: 0,
+                     display: 'block',
+                   }}
+      loading="lazy"
+      referrerPolicy="no-referrer-when-downgrade"
+    />
+  </div>
+) : null}
+
+             {pickupNote ? <div style={pickupNoteStyle}>{pickupNote}</div> : null}
+
+             {pickupAddress ? (
+               <a
+                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                   pickupAddress
+                 )}`}
+                 target="_blank"
+                 rel="noreferrer"
+                 style={pickupButtonStyle}
+               >
+                 Open Navigation
+        </a>
+      ) : null}
+    </div>
+  ) : null}
+</div>
 
         {needsDelivery && (
           <>
@@ -1021,6 +1126,58 @@ export default function ShopPayButton({
     </div>
   )
 }
+
+const methodButtonStyle = {
+  width: '100%',
+  padding: '14px',
+  borderRadius: '14px',
+  background: '#fff',
+  fontSize: '14px',
+  fontWeight: 700,
+  color: '#0f172a',
+  textAlign: 'left' as const,
+} as const
+
+const pickupBoxStyle = {
+  marginTop: '14px',
+  padding: '14px',
+  borderRadius: '14px',
+  border: '1px solid #bfdbfe',
+  background: '#eff6ff',
+  display: 'grid',
+  gap: '10px',
+} as const
+
+const pickupTitleStyle = {
+  fontSize: '13px',
+  fontWeight: 800,
+  color: '#1d4ed8',
+} as const
+
+const pickupAddressStyle = {
+  fontSize: '13px',
+  lineHeight: 1.6,
+  color: '#334155',
+} as const
+
+const pickupNoteStyle = {
+  fontSize: '12px',
+  lineHeight: 1.6,
+  color: '#475569',
+} as const
+
+const pickupButtonStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '12px 14px',
+  borderRadius: '12px',
+  background: '#2563eb',
+  color: '#fff',
+  fontSize: '13px',
+  fontWeight: 700,
+  textDecoration: 'none',
+} as const
 
 const wrapper = {
   width: '100%',
