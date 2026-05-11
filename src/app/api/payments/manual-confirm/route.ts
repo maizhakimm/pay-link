@@ -38,6 +38,34 @@ async function triggerWhatsAppNotification(orderNumber: string) {
   }
 }
 
+async function triggerCustomerWhatsAppNotification(orderNumber: string) {
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/whatsapp-order`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          order_number: orderNumber,
+          target: 'customer',
+        }),
+        cache: 'no-store',
+      }
+    )
+
+    const json = await res.json()
+    if (!res.ok) {
+      console.error('Customer WhatsApp notification failed:', json)
+    } else {
+      console.log('Customer WhatsApp notification triggered:', json)
+    }
+  } catch (error) {
+    console.error('Customer WhatsApp notification trigger error:', error)
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -146,6 +174,7 @@ export async function POST(req: NextRequest) {
 
     // ✅ Trigger WhatsApp notification after payment confirmed
     await triggerWhatsAppNotification(orderNumber)
+    await triggerCustomerWhatsAppNotification(orderNumber)
 
     return NextResponse.json({ ok: true })
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { requireAdminFromRequest } from "../../../../../lib/admin-auth"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -58,6 +59,11 @@ function getRange(preset: DatePreset) {
 
 export async function POST(req: NextRequest) {
   try {
+    const adminCheck = await requireAdminFromRequest(req)
+    if (!adminCheck.ok) {
+      return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
+    }
+
     const body = await req.json()
     const sellerProfileId = body?.sellerProfileId as string | undefined
     const datePreset = (body?.datePreset || "all") as DatePreset
