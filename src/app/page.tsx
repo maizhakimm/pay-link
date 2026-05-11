@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Store } from "lucide-react";
 
 export default function LandingPage() {
   const problems = [
@@ -1083,10 +1084,9 @@ export default function LandingPage() {
         <a
           href="/bazar"
           aria-label="BAZAR BayarLink"
-          className="inline-flex items-center gap-2 rounded-full bg-[#2563EB] px-3 py-2 text-white shadow-[0_12px_30px_rgba(37,99,235,0.35)] transition hover:-translate-y-1 hover:bg-blue-700"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#2563EB] via-[#3B82F6] to-[#DD0894] text-white shadow-[0_10px_24px_rgba(37,99,235,0.35)] transition hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(221,8,148,0.35)] animate-[pulse_3s_ease-in-out_infinite]"
         >
-          <span className="text-sm">🧭</span>
-          <span className="text-xs font-semibold sm:text-sm">BAZAR</span>
+          <Store className="h-5 w-5" strokeWidth={2.2} />
         </a>
 
         <a
