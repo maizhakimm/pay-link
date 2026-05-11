@@ -706,6 +706,28 @@ export async function POST(req: NextRequest) {
 
     const totalAmount = clientTotalAmount
     const totalQuantity = validItems.reduce((sum, item) => sum + item.quantity, 0)
+    const priceDifference = roundMoney(Math.abs(computedTotalAmount - clientTotalAmount))
+
+    if (priceDifference > 0.01) {
+      console.error('[create-shop] PRICE_MISMATCH', {
+        serverComputedSubtotal: subtotal,
+        serverAppliedDeliveryFee: appliedDeliveryFee,
+        serverTotal: computedTotalAmount,
+        clientSubtotal,
+        clientDeliveryFee,
+        clientTotalAmount,
+        difference: priceDifference,
+      })
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            'Jumlah pembayaran tidak sepadan. Sila semak semula checkout anda dan cuba lagi.',
+        },
+        { status: 400 }
+      )
+    }
 
     console.log('[create-shop] backend received subtotal:', requestedSubtotal)
     console.log('[create-shop] backend received deliveryFee:', requestedDeliveryFee)
