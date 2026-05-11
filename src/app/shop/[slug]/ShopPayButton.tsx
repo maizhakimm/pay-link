@@ -268,13 +268,13 @@ export default function ShopPayButton({
 
   const fullDeliveryAddress = useMemo(() => {
     return [
+      unitOrBuilding.trim(),
       address1.trim(),
       address2.trim(),
-      postcode.trim(),
       city.trim(),
       district.trim(),
+      postcode.trim(),
       state.trim(),
-      unitOrBuilding.trim(),
       'Malaysia',
     ]
       .filter(Boolean)
