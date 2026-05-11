@@ -12,6 +12,7 @@ type OrderRow = {
   payment_status: string | null
   fulfillment_status?: string | null
   gateway_transaction_id: string | null
+  gateway_payment_intent_id?: string | null
   gross_amount?: number | null
   payment_method?: string | null
   seller_plan_type?: string | null
@@ -34,6 +35,16 @@ type ProductRow = {
 
 type ExistingPaymentRow = {
   id: string
+}
+
+type WebhookPayload = {
+  order_number?: string
+  transaction_id?: string | null
+  payment_intent_id?: string | null
+  status?: number | string
+  status_description?: string | null
+  amount?: number | string
+  payment_channel?: number | string | null
 }
 
 type FeeBreakdown = {
@@ -59,6 +70,9 @@ type SellerNewOrderRow = {
   delivery_slot_label: string | null
   receipt_token: string | null
   whatsapp_notified_at?: string | null
+  customer_whatsapp_notified_at?: string | null
+  customer_name?: string | null
+  customer_phone?: string | null
 }
 
 type SellerProfileRow = {
@@ -144,20 +158,36 @@ function calculateNetSellerAmount(
   return roundMoney(grossAmount - sellerFeeAmount)
 }
 
-function normalizeWhatsAppPhone(phone?: string | null) {
-  const cleaned = String(phone || '').replace(/\D/g, '')
+function normalizeMalaysianPhone(phone?: string | null) {
+  const original = String(phone || '').trim()
+  if (!original) return null
 
-  if (!cleaned) return ''
+  const noPlus = original.replace(/^\+/, '')
+  const cleaned = noPlus.replace(/[\s\-()]/g, '').replace(/\D/g, '')
+  if (!cleaned) return null
 
-  if (cleaned.startsWith('0')) {
-    return `6${cleaned}`
+  let normalized = cleaned
+
+  if (normalized.startsWith('0')) {
+    normalized = `60${normalized.slice(1)}`
+  } else if (normalized.startsWith('60')) {
+    normalized = normalized
+  } else if (normalized.startsWith('1') && normalized.length >= 9 && normalized.length <= 10) {
+    normalized = `60${normalized}`
+  } else {
+    return null
   }
 
-  if (cleaned.startsWith('60')) {
-    return cleaned
+  if (!/^60\d{8,11}$/.test(normalized)) {
+    return null
   }
 
-  return cleaned
+  return normalized
+}
+
+function maskPhone(phone: string) {
+  if (phone.length <= 6) return `${phone.slice(0, 2)}***`
+  return `${phone.slice(0, 4)}***${phone.slice(-3)}`
 }
 
 function formatItemsForWhatsApp(order: SellerNewOrderRow) {
@@ -338,12 +368,22 @@ async function sendWhatsAppSellerNotification(orderNumber: string) {
 
     const seller = sellerData as SellerProfileRow | null
 
-    const sellerPhone = normalizeWhatsAppPhone(seller?.whatsapp)
+    const originalSellerPhone = String(seller?.whatsapp || '')
+    const sellerPhone = normalizeMalaysianPhone(seller?.whatsapp)
 
     if (!sellerPhone) {
-      console.log('WhatsApp skipped: seller whatsapp not found')
+      console.log('WhatsApp skipped: seller whatsapp missing/invalid', {
+        order_number: orderNumber,
+        original_phone: originalSellerPhone,
+      })
       return
     }
+
+    console.log('WhatsApp phone normalized', {
+      order_number: orderNumber,
+      original_phone: originalSellerPhone,
+      normalized_phone_masked: maskPhone(sellerPhone),
+    })
 
     const itemsText = formatItemsForWhatsApp(order)
     const deliveryText = formatDeliveryForWhatsApp(order)
@@ -407,7 +447,11 @@ async function sendWhatsAppSellerNotification(orderNumber: string) {
     const json = await response.json()
 
     if (!response.ok) {
-      console.error('WhatsApp send error:', json)
+      console.error('WhatsApp send error:', {
+        order_number: orderNumber,
+        seller_phone_masked: maskPhone(sellerPhone),
+        response: json,
+      })
       return
     }
 
@@ -430,54 +474,72 @@ async function sendWhatsAppSellerNotification(orderNumber: string) {
 
 async function sendWhatsAppCustomerNotification(orderNumber: string) {
   try {
-    if (!process.env.WHATSAPP_ACCESS_TOKEN) return
-    if (!process.env.WHATSAPP_PHONE_NUMBER_ID) return
+    if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID) {
+      console.log('Customer WhatsApp skipped: missing WhatsApp env')
+      return
+    }
 
     const templateName =
-      process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER ||
-      'order_confirmation_bayarlink'
-    const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en'
+      process.env.WHATSAPP_TEMPLATE_CUSTOMER_ORDER_PAID ||
+      process.env.WHATSAPP_TEMPLATE_SELLER_NEW_ORDER ||
+      'seller_new_order'
 
-    if (!templateName) return
+    const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en'
 
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
-      .select(
-        `
+      .select(`
         id,
         order_number,
         buyer_name,
         buyer_phone,
+        customer_name,
+        customer_phone,
         buyer_address,
         total_amount,
         amount,
         delivery_info,
-        seller_profile_id
-      `
-      )
+        items,
+        delivery_slot_label,
+        customer_whatsapp_notified_at
+      `)
       .eq('order_number', orderNumber)
       .maybeSingle()
 
-    if (orderError || !orderData) return
+    if (orderError || !orderData) {
+      console.log('Customer WhatsApp skipped: order not found/error', orderError?.message)
+      return
+    }
 
     const order = orderData as SellerNewOrderRow
-    const customerPhone = normalizeWhatsAppPhone(order.buyer_phone)
+    if (order.customer_whatsapp_notified_at) {
+      console.log('Customer WhatsApp skipped: already notified')
+      return
+    }
 
-    if (!customerPhone) return
+    const originalPhone = String(order.buyer_phone || order.customer_phone || '')
+    const customerPhone = normalizeMalaysianPhone(originalPhone)
+    if (!customerPhone) {
+      console.log('Customer WhatsApp skipped: invalid customer phone', {
+        order_number: orderNumber,
+        original_phone: originalPhone,
+      })
+      return
+    }
 
-    const { data: sellerData } = await supabase
-      .from('seller_profiles')
-      .select('store_name')
-      .eq('id', order.seller_profile_id)
-      .maybeSingle()
+    console.log('Customer WhatsApp phone normalized', {
+      order_number: orderNumber,
+      original_phone: originalPhone,
+      normalized_phone_masked: maskPhone(customerPhone),
+    })
 
-    const storeName = (sellerData as SellerProfileRow | null)?.store_name || '-'
-    const total = Number(order.total_amount ?? order.amount ?? 0).toFixed(2)
-    const deliveryRequired = Boolean(order.delivery_info?.delivery_required)
-    const deliveryMode = deliveryRequired ? 'Delivery' : 'Self Pickup'
+    const customerName = order.buyer_name || order.customer_name || 'Customer'
     const deliveryText = formatDeliveryForWhatsApp(order)
+    const itemsText = formatItemsForWhatsApp(order)
+    const total = Number(order.total_amount ?? order.amount ?? 0)
+    const slotText = order.delivery_slot_label || '-'
 
-    await fetch(
+    const response = await fetch(
       `https://graph.facebook.com/v25.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
       {
         method: 'POST',
@@ -496,12 +558,12 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
               {
                 type: 'body',
                 parameters: [
-                  { type: 'text', text: order.buyer_name || '-' },
-                  { type: 'text', text: storeName },
                   { type: 'text', text: order.order_number || '-' },
-                  { type: 'text', text: total },
-                  { type: 'text', text: deliveryMode },
+                  { type: 'text', text: customerName },
+                  { type: 'text', text: itemsText || '-' },
+                  { type: 'text', text: total.toFixed(2) },
                   { type: 'text', text: deliveryText || '-' },
+                  { type: 'text', text: slotText },
                 ],
               },
             ],
@@ -510,8 +572,50 @@ async function sendWhatsAppCustomerNotification(orderNumber: string) {
         cache: 'no-store',
       }
     )
+
+    const json = await response.json()
+    if (!response.ok) {
+      console.error('Customer WhatsApp send error:', {
+        order_number: orderNumber,
+        customer_phone_masked: maskPhone(customerPhone),
+        response: json,
+      })
+      return
+    }
+
+    const { error: customerNotifyUpdateError } = await supabase
+      .from('orders')
+      .update({
+        customer_whatsapp_notified_at: new Date().toISOString(),
+      })
+      .eq('id', order.id)
+
+    if (customerNotifyUpdateError) {
+      console.log(
+        'Customer WhatsApp sent but customer_whatsapp_notified_at not updated (column may not exist):',
+        customerNotifyUpdateError.message
+      )
+    }
   } catch (error) {
-    console.error('WhatsApp customer notification error:', error)
+    console.error('Customer WhatsApp notification error:', error)
+  }
+}
+
+async function logWebhookEvent(params: {
+  eventType: string
+  referenceNo?: string | null
+  payload: unknown
+}) {
+  try {
+    await supabase.from('webhook_logs').insert({
+      source: 'bayarcash-webhook',
+      event_type: params.eventType,
+      reference_no: params.referenceNo || null,
+      payload_json: params.payload,
+      received_at: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error('Failed to insert webhook log', error)
   }
 }
 
@@ -523,6 +627,7 @@ export async function POST(req: NextRequest) {
 
     const orderNumber = payload.order_number as string | undefined
     const transactionId = (payload.transaction_id as string | undefined) || null
+    const paymentIntentId = (payload.payment_intent_id as string | undefined) || null
     const statusNumber = Number(payload.status || 0)
     const statusDescription = payload.status_description || null
     const newPaymentStatus = mapBayarcashStatus(statusNumber)
@@ -534,8 +639,36 @@ export async function POST(req: NextRequest) {
         : null
 
     if (!orderNumber) {
+      await logWebhookEvent({
+        eventType: 'missing_order_number',
+        payload,
+      })
       return NextResponse.json(
         { ok: false, error: 'Missing order_number' },
+        { status: 400 }
+      )
+    }
+
+    if (![2, 3, 4].includes(statusNumber)) {
+      await logWebhookEvent({
+        eventType: 'invalid_status',
+        referenceNo: orderNumber,
+        payload,
+      })
+      return NextResponse.json(
+        { ok: false, error: 'Invalid webhook status' },
+        { status: 400 }
+      )
+    }
+
+    if (statusNumber === 3 && (!transactionId || paidAmount <= 0)) {
+      await logWebhookEvent({
+        eventType: 'invalid_paid_payload',
+        referenceNo: orderNumber,
+        payload,
+      })
+      return NextResponse.json(
+        { ok: false, error: 'Invalid paid payload' },
         { status: 400 }
       )
     }
@@ -543,7 +676,7 @@ export async function POST(req: NextRequest) {
     const { data: existingOrder, error: existingOrderError } = await supabase
       .from('orders')
       .select(
-        'id, status, payment_status, fulfillment_status, gateway_transaction_id, gross_amount, payment_method, seller_plan_type'
+        'id, status, payment_status, fulfillment_status, gateway_transaction_id, gateway_payment_intent_id, gross_amount, payment_method, seller_plan_type'
       )
       .eq('order_number', orderNumber)
       .maybeSingle()
@@ -556,6 +689,22 @@ export async function POST(req: NextRequest) {
     }
 
     const order = existingOrder as OrderRow
+
+    if (
+      paymentIntentId &&
+      order.gateway_payment_intent_id &&
+      order.gateway_payment_intent_id !== paymentIntentId
+    ) {
+      await logWebhookEvent({
+        eventType: 'payment_intent_mismatch',
+        referenceNo: orderNumber,
+        payload,
+      })
+      return NextResponse.json(
+        { ok: false, error: 'Payment intent mismatch' },
+        { status: 409 }
+      )
+    }
 
     const grossAmount = roundMoney(Number(order.gross_amount ?? paidAmount ?? 0))
     const paymentMethod = String(order.payment_method || 'FPX').toUpperCase()
@@ -573,6 +722,8 @@ export async function POST(req: NextRequest) {
       order.gateway_transaction_id === transactionId
     ) {
       await sendWhatsAppSellerNotification(orderNumber)
+      await sendWhatsAppCustomerNotification(orderNumber)
+      
       return NextResponse.json({ ok: true, duplicate: true })
     }
 

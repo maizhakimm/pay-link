@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { supabase } from "../../../../lib/supabase"
 
 type DatePreset = "all" | "today" | "this_week" | "this_month" | "this_year"
 type StatusFilter = "eligible" | "paid" | "all"
@@ -464,11 +465,20 @@ export default function PayoutClient({
 
     try {
       setLoadingSellerId(payoutTarget.sellerProfileId)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Admin session missing. Please login again.")
+      }
 
       const res = await fetch("/api/admin/payout/mark-paid", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           sellerProfileId: payoutTarget.sellerProfileId,

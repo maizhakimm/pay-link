@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useMemo, useState } from "react"
+import { supabase } from "../../../../../lib/supabase"
 
 const MALAYSIAN_BANKS = [
   "Affin Bank",
@@ -491,10 +492,20 @@ export default function SellerEditClient({ seller }: { seller: SellerForm }) {
         operating_days: form.accept_orders_anytime ? null : operatingDays,
       }
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Admin session missing. Please login again.")
+      }
+
       const res = await fetch("/api/admin/sellers/update", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(payload),
       })
