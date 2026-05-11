@@ -312,9 +312,9 @@ export async function POST(req: NextRequest) {
     })
 
     const customerName = order.buyer_name || order.customer_name || '-'
-    const customerPhone = normalizePhone(order.buyer_phone || order.customer_phone)
-    const customerPhoneLink = customerPhone
-      ? `https://wa.me/${customerPhone}`
+    const sellerCustomerPhone = normalizePhone(order.buyer_phone || order.customer_phone)
+    const sellerCustomerPhoneLink = sellerCustomerPhone
+      ? `https://wa.me/${sellerCustomerPhone}`
       : '-'
 
     const itemsText = formatItems(order)
@@ -351,7 +351,7 @@ export async function POST(req: NextRequest) {
                   },
                   {
                     type: 'text',
-                    text: `${customerName} | ${customerPhoneLink}`,
+                    text: `${customerName} | ${sellerCustomerPhoneLink}`,
                   },
                   {
                     type: 'text',
