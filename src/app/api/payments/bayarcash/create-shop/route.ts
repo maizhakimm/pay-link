@@ -856,7 +856,6 @@ export async function POST(req: NextRequest) {
         requested_delivery_fee: Number.isFinite(requestedDeliveryFee)
           ? requestedDeliveryFee
           : appliedDeliveryFee,
-        computed_total_amount: computedTotalAmount,
         gateway_fee: gatewayFee,
         platform_fee: platformFee,
         seller_net: sellerNet,
