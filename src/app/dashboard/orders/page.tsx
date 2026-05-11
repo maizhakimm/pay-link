@@ -409,9 +409,9 @@ function getOrderSlotLabel(order: OrderRow) {
 }
 
 function getOrderDeliveryAddressDetails(order: OrderRow): DeliveryAddressDetails {
-  const deliveryInfo = toRecord(order.delivery_info)
-  const nestedAddress = deliveryInfo ? getObjectValue(deliveryInfo, ['address'], null) : null
-  const nestedRecord = toRecord(nestedAddress)
+  const deliveryInfo = toRecord(order.delivery_info) ?? {}
+  const nestedAddress = getObjectValue(deliveryInfo, ['address'], null)
+  const nestedRecord = toRecord(nestedAddress) ?? {}
 
   const addressLine = String(getObjectValue(nestedRecord, ['address1'], '') || '').trim()
   const unit = String(getObjectValue(nestedRecord, ['address2'], '') || '').trim()
