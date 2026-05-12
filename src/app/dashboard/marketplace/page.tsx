@@ -270,7 +270,7 @@ export default function DashboardMarketplacePage() {
     }
 
     setProfile((prev) => (prev ? { ...prev, status: 'pending_review', is_marketplace_visible: false } : prev))
-    setNotice('Submitted for review. Your marketplace profile remains hidden until approved.')
+    setNotice('Submitted for review. Your BAZAR profile remains hidden until approved.')
     setSubmitting(false)
   }
 
@@ -278,8 +278,8 @@ export default function DashboardMarketplacePage() {
     <Layout>
       <div className="space-y-5">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Marketplace Onboarding</h1>
-          <p className="mt-2 text-sm text-slate-600">Set up your marketplace profile in guided steps. This is draft-only until admin review.</p>
+          <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">BAZAR Onboarding</h1>
+          <p className="mt-2 text-sm text-slate-600">Set up your BAZAR profile in guided steps. This is draft-only until admin review.</p>
           <div className="mt-4">
             <div className="mb-2 flex items-center justify-between text-xs font-semibold text-slate-500">
               <span>Progress</span>
@@ -291,7 +291,7 @@ export default function DashboardMarketplacePage() {
           </div>
         </section>
 
-        {loading ? <Card><p className="text-sm text-slate-500">Loading marketplace setup...</p></Card> : null}
+        {loading ? <Card><p className="text-sm text-slate-500">Loading BAZAR setup...</p></Card> : null}
         {error ? <Card><p className="text-sm font-semibold text-red-600">{error}</p></Card> : null}
         {notice ? <Card><p className="text-sm font-semibold text-emerald-700">{notice}</p></Card> : null}
 
@@ -306,7 +306,7 @@ export default function DashboardMarketplacePage() {
               <Field label="Tagline">
                 <input className={inputCls} value={profile.tagline || ''} onChange={(e) => updateProfileField('tagline', e.target.value)} placeholder="Contoh: Homemade sedap setiap hari" />
               </Field>
-              <Field label="Marketplace description">
+              <Field label="BAZAR description">
                 <textarea className={inputCls} rows={4} value={profile.marketplace_description || ''} onChange={(e) => updateProfileField('marketplace_description', e.target.value)} placeholder="Terangkan apa special tentang kedai anda..." />
               </Field>
             </Card>
