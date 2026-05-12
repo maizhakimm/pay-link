@@ -24,7 +24,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'home' },
   { label: 'Products', href: '/dashboard/products', icon: 'box' },
   { label: 'Orders', href: '/dashboard/orders', icon: 'receipt' },
-  { label: 'Marketplace', href: '/dashboard/marketplace', icon: 'sparkles' },
+  { label: 'BAZAR', href: '/dashboard/marketplace', icon: 'sparkles' },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings' },
 ]
 
