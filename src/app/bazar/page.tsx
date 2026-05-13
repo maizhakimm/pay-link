@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Download } from 'lucide-react'
 import BazarBottomNav from './components/BazarBottomNav'
 import { supabase } from '../../lib/supabase'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
 type MarketplaceProfile = { id: string; seller_profile_id: string; is_featured: boolean; is_verified: boolean; area_text: string | null; community_text: string | null; categoryNames: string[] }
-type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; isDemo?: boolean }
+type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: 'shop' | 'services'; isDemo?: boolean }
 
 const FOOD_CHIPS = [
   { key: 'all', label: '✨ Semua' },
@@ -36,12 +37,12 @@ const CHIP_MATCHERS: Record<string, string[]> = {
 }
 
 const DEMO_PRODUCTS: ProductCard[] = [
-  { id: 'demo-1', name: 'Nasi Lemak Ayam Crispy', price: 12, seller_profile_id: '', image: null, sellerName: 'Dana Home Cook', shopSlug: 'dana-store', areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Nasi Lemak', isFeatured: true, isVerified: true, isDemo: true },
-  { id: 'demo-2', name: 'Burger Homemade', price: 14, seller_profile_id: '', image: null, sellerName: 'Kak Yan Kitchen', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Burger', isFeatured: false, isVerified: true, isDemo: true },
-  { id: 'demo-3', name: 'Kuih Seri Muka', price: 8, seller_profile_id: '', image: null, sellerName: 'Auntie Rina Bakes', shopSlug: null, areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Kuih Muih', isFeatured: true, isVerified: false, isDemo: true },
-  { id: 'demo-4', name: 'Roti Canai Frozen', price: 10, seller_profile_id: '', image: null, sellerName: 'Dapur Azizah', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Bakery', isFeatured: false, isVerified: false, isDemo: true },
-  { id: 'demo-5', name: 'Brownies Kedut', price: 15, seller_profile_id: '', image: null, sellerName: 'Auntie Rina Bakes', shopSlug: null, areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Dessert', isFeatured: false, isVerified: false, isDemo: true },
-  { id: 'demo-6', name: 'Teh Ais Kaw', price: 4, seller_profile_id: '', image: null, sellerName: 'Kak Yan Kitchen', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Drinks', isFeatured: false, isVerified: false, isDemo: true },
+  { id: 'demo-1', name: 'Nasi Lemak Ayam Crispy', price: 12, seller_profile_id: '', image: null, sellerName: 'Dana Home Cook', shopSlug: 'dana-store', areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Nasi Lemak', isFeatured: true, isVerified: true, listingType: 'shop', isDemo: true },
+  { id: 'demo-2', name: 'Burger Homemade', price: 14, seller_profile_id: '', image: null, sellerName: 'Kak Yan Kitchen', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Burger', isFeatured: false, isVerified: true, listingType: 'shop', isDemo: true },
+  { id: 'demo-3', name: 'Kuih Seri Muka', price: 8, seller_profile_id: '', image: null, sellerName: 'Auntie Rina Bakes', shopSlug: null, areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Kuih Muih', isFeatured: true, isVerified: false, listingType: 'shop', isDemo: true },
+  { id: 'demo-4', name: 'Roti Canai Frozen', price: 10, seller_profile_id: '', image: null, sellerName: 'Dapur Azizah', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Bakery', isFeatured: false, isVerified: false, listingType: 'shop', isDemo: true },
+  { id: 'demo-5', name: 'Brownies Kedut', price: 15, seller_profile_id: '', image: null, sellerName: 'Auntie Rina Bakes', shopSlug: null, areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Dessert', isFeatured: false, isVerified: false, listingType: 'shop', isDemo: true },
+  { id: 'demo-6', name: 'Teh Ais Kaw', price: 4, seller_profile_id: '', image: null, sellerName: 'Kak Yan Kitchen', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Drinks', isFeatured: false, isVerified: false, listingType: 'shop', isDemo: true },
 ]
 
 const DEMO_SELLERS = [
@@ -52,6 +53,8 @@ const DEMO_SELLERS = [
 const DELIVERY_BADGES = ['Self-pickup / Delivery', 'Delivery', 'Self-pickup']
 
 export default function ExplorePage() {
+  const searchParams = useSearchParams()
+  const requestedTab = searchParams.get('tab') === 'services' ? 'services' : 'shop'
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [selectedChip, setSelectedChip] = useState('all')
@@ -111,7 +114,7 @@ export default function ExplorePage() {
         const profile = normalizedProfiles.find((mp) => mp.seller_profile_id === p.seller_profile_id)
         const seller = sellerMap[p.seller_profile_id]
         const image = p.product_image_url || p.image_1 || p.image_2 || p.image_url || null
-        return { id: p.id, name: p.name, price: Number(p.price || 0), seller_profile_id: p.seller_profile_id, image, sellerName: seller?.store_name || 'Local Seller', shopSlug: seller?.shop_slug || null, areaText: profile?.area_text || null, communityText: profile?.community_text || null, categoryLabel: profile?.categoryNames?.[0] || null, isFeatured: Boolean(profile?.is_featured), isVerified: Boolean(profile?.is_verified) } as ProductCard
+        return { id: p.id, name: p.name, price: Number(p.price || 0), seller_profile_id: p.seller_profile_id, image, sellerName: seller?.store_name || 'Local Seller', shopSlug: seller?.shop_slug || null, areaText: profile?.area_text || null, communityText: profile?.community_text || null, categoryLabel: profile?.categoryNames?.[0] || null, isFeatured: Boolean(profile?.is_featured), isVerified: Boolean(profile?.is_verified), listingType: p.listing_type === 'services' ? 'services' : 'shop' } as ProductCard
       })
 
       setProfiles(normalizedProfiles)
@@ -123,7 +126,8 @@ export default function ExplorePage() {
   }, [])
 
   const displayedProducts = useMemo(() => {
-    const bySearch = products.filter((p) => {
+    const byTab = products.filter((p) => p.listingType === requestedTab)
+    const bySearch = byTab.filter((p) => {
       const q = query.trim().toLowerCase()
       if (!q) return true
       return [p.name, p.sellerName, p.categoryLabel || '', p.areaText || '', p.communityText || ''].join(' ').toLowerCase().includes(q)
@@ -135,8 +139,8 @@ export default function ExplorePage() {
       return keywords.some((kw) => haystack.includes(kw))
     })
     const byArea = byChip.filter((p) => !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
-    return byArea.length >= 6 ? byArea : [...byArea, ...DEMO_PRODUCTS.slice(0, 6 - byArea.length)]
-  }, [products, query, selectedChip, area])
+    return byArea
+  }, [products, query, selectedChip, area, requestedTab])
 
   const sellerCards = useMemo(() => {
     const realSellers = profiles
@@ -229,7 +233,8 @@ export default function ExplorePage() {
           {loading ? <p className="text-sm text-slate-500">Memuatkan menu...</p> : null}
           {displayedProducts.length === 0 && !loading ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-              Tiada menu untuk kategori ini buat masa ini.
+              <p>{requestedTab === 'services' ? 'Belum ada servis di kawasan ini.' : 'Belum ada produk di kawasan ini.'}</p>
+              <p className="mt-1">{requestedTab === 'services' ? 'Jadi antara service provider pertama di BazarLink.' : 'Jadi antara seller pertama di BazarLink.'}</p>
             </div>
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
