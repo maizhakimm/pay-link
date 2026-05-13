@@ -8,7 +8,9 @@ import { supabase } from '../../lib/supabase'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
 type MarketplaceProfile = { id: string; seller_profile_id: string; is_featured: boolean; is_verified: boolean; area_text: string | null; community_text: string | null; categoryNames: string[] }
-type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: 'shop' | 'services'; isDemo?: boolean }
+type RequestedTab = 'home' | 'food' | 'services' | 'shop' | 'nearby'
+type ListingType = 'food' | 'service' | 'shop'
+type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
 
 const FOOD_CHIPS = [
   { key: 'all', label: '✨ Semua' },
@@ -52,7 +54,7 @@ const DEMO_SELLERS = [
 const DELIVERY_BADGES = ['Self-pickup / Delivery', 'Delivery', 'Self-pickup']
 
 export default function ExplorePage() {
-  const [requestedTab, setRequestedTab] = useState<'shop' | 'services'>('shop')
+  const [requestedTab, setRequestedTab] = useState<RequestedTab>('home')
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [selectedChip, setSelectedChip] = useState('all')
@@ -74,7 +76,11 @@ export default function ExplorePage() {
 
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get('tab')
-    setRequestedTab(tab === 'services' ? 'services' : 'shop')
+    if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'nearby') {
+      setRequestedTab(tab)
+      return
+    }
+    setRequestedTab('home')
   }, [])
 
   useEffect(() => {
@@ -117,7 +123,12 @@ export default function ExplorePage() {
         const profile = normalizedProfiles.find((mp) => mp.seller_profile_id === p.seller_profile_id)
         const seller = sellerMap[p.seller_profile_id]
         const image = p.product_image_url || p.image_1 || p.image_2 || p.image_url || null
-        return { id: p.id, name: p.name, price: Number(p.price || 0), seller_profile_id: p.seller_profile_id, image, sellerName: seller?.store_name || 'Local Seller', shopSlug: seller?.shop_slug || null, areaText: profile?.area_text || null, communityText: profile?.community_text || null, categoryLabel: profile?.categoryNames?.[0] || null, isFeatured: Boolean(profile?.is_featured), isVerified: Boolean(profile?.is_verified), listingType: p.listing_type === 'services' ? 'services' : 'shop' } as ProductCard
+        const listingType: ListingType = p.listing_type === 'food'
+          ? 'food'
+          : p.listing_type === 'service' || p.listing_type === 'services'
+            ? 'service'
+            : 'shop'
+        return { id: p.id, name: p.name, price: Number(p.price || 0), seller_profile_id: p.seller_profile_id, image, sellerName: seller?.store_name || 'Local Seller', shopSlug: seller?.shop_slug || null, areaText: profile?.area_text || null, communityText: profile?.community_text || null, categoryLabel: profile?.categoryNames?.[0] || null, isFeatured: Boolean(profile?.is_featured), isVerified: Boolean(profile?.is_verified), listingType } as ProductCard
       })
 
       setProfiles(normalizedProfiles)
@@ -129,7 +140,12 @@ export default function ExplorePage() {
   }, [])
 
   const displayedProducts = useMemo(() => {
-    const byTab = products.filter((p) => p.listingType === requestedTab)
+    const byTab = products.filter((p) => {
+      if (requestedTab === 'home' || requestedTab === 'nearby') return true
+      if (requestedTab === 'food') return p.listingType === 'food'
+      if (requestedTab === 'services') return p.listingType === 'service'
+      return p.listingType === 'shop'
+    })
     const bySearch = byTab.filter((p) => {
       const q = query.trim().toLowerCase()
       if (!q) return true
