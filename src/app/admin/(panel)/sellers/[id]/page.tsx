@@ -17,6 +17,13 @@ export default async function Page({
     .select("*")
     .eq("id", params.id)
     .single()
+  const { data: marketplaceProfile } = await supabase
+    .from("marketplace_profiles")
+    .select("id,seller_profile_id,status,is_marketplace_visible,is_featured,is_verified")
+    .eq("seller_profile_id", params.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
 
   if (error || !data) {
     return (
@@ -42,5 +49,5 @@ export default async function Page({
     )
   }
 
-  return <SellerEditClient seller={data} />
+  return <SellerEditClient seller={data} marketplaceProfile={marketplaceProfile} />
 }

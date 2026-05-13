@@ -292,12 +292,23 @@ function StatusPill({
   )
 }
 
-export default function SellerEditClient({ seller }: { seller: SellerForm }) {
+type MarketplaceProfile = {
+  id: string
+  seller_profile_id: string
+  status: string | null
+  is_marketplace_visible: boolean | null
+  is_featured: boolean | null
+  is_verified: boolean | null
+} | null
+
+export default function SellerEditClient({ seller, marketplaceProfile }: { seller: SellerForm; marketplaceProfile: MarketplaceProfile }) {
   const [form, setForm] = useState<SellerForm>({
     ...seller,
     operating_days: normalizeOperatingDays(seller.operating_days),
   })
   const [loading, setLoading] = useState(false)
+  const [marketplaceState, setMarketplaceState] = useState<MarketplaceProfile>(marketplaceProfile)
+  const [marketplaceActionLoading, setMarketplaceActionLoading] = useState(false)
 
   function handleChange<K extends keyof SellerForm>(key: K, value: SellerForm[K]) {
     setForm((prev) => ({
@@ -527,7 +538,33 @@ export default function SellerEditClient({ seller }: { seller: SellerForm }) {
   }
 
   const publicStoreUrl = form.shop_slug ? `/s/${form.shop_slug}` : null
+  const publicBazarUrl = `/bazar?seller=${form.id}`
   const operatingDays = normalizeOperatingDays(form.operating_days)
+
+  async function handleMarketplaceAction(action: "approve" | "reject" | "feature" | "verify") {
+    if (!marketplaceState?.id) return
+    setMarketplaceActionLoading(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error("Admin session missing. Please login again.")
+      const res = await fetch(`/api/admin/marketplace/sellers/${marketplaceState.id}/moderate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ action }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error || "Failed to update marketplace profile")
+      if (action === "approve") setMarketplaceState((prev) => prev ? { ...prev, status: "published", is_marketplace_visible: true } : prev)
+      if (action === "reject") setMarketplaceState((prev) => prev ? { ...prev, status: "rejected", is_marketplace_visible: false } : prev)
+      if (action === "feature") setMarketplaceState((prev) => prev ? { ...prev, is_featured: !prev.is_featured } : prev)
+      if (action === "verify") setMarketplaceState((prev) => prev ? { ...prev, is_verified: !prev.is_verified } : prev)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unexpected error")
+    } finally {
+      setMarketplaceActionLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -910,6 +947,26 @@ export default function SellerEditClient({ seller }: { seller: SellerForm }) {
       </SectionCard>
 
       <SectionCard
+        title="Marketplace"
+        subtitle="Review and publish controls using existing marketplace moderation flow."
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <p><span className="font-semibold">Status:</span> {marketplaceState?.status || "draft"}</p>
+            <p><span className="font-semibold">Visible:</span> {marketplaceState?.is_marketplace_visible ? "Yes" : "No"}</p>
+            <p><span className="font-semibold">Featured:</span> {marketplaceState?.is_featured ? "Yes" : "No"}</p>
+            <p><span className="font-semibold">Verified:</span> {marketplaceState?.is_verified ? "Yes" : "No"}</p>
+          </div>
+          <div className="flex flex-wrap content-start gap-2">
+            <button onClick={() => handleMarketplaceAction("approve")} disabled={!marketplaceState?.id || marketplaceActionLoading} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">Approve / Publish</button>
+            <button onClick={() => handleMarketplaceAction("reject")} disabled={!marketplaceState?.id || marketplaceActionLoading} className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">Reject / Hide</button>
+            <button onClick={() => handleMarketplaceAction("feature")} disabled={!marketplaceState?.id || marketplaceActionLoading} className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-60">{marketplaceState?.is_featured ? "Unfeature" : "Feature"}</button>
+            <button onClick={() => handleMarketplaceAction("verify")} disabled={!marketplaceState?.id || marketplaceActionLoading} className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-60">{marketplaceState?.is_verified ? "Unverify" : "Verify"}</button>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
         title="Shop & Share"
         subtitle="Tetapan slug, branding, dan marketing share."
       >
@@ -970,13 +1027,17 @@ export default function SellerEditClient({ seller }: { seller: SellerForm }) {
       </SectionCard>
 
       <section className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          {loading ? "Saving..." : "Save Changes"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {publicStoreUrl ? <a href={publicStoreUrl} target="_blank" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Open Shop</a> : null}
+          <a href={publicBazarUrl} target="_blank" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">View Marketplace</a>
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {loading ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
       </section>
     </div>
   )
