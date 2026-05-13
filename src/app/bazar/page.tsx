@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { Download } from 'lucide-react'
 import BazarBottomNav from './components/BazarBottomNav'
 import { supabase } from '../../lib/supabase'
@@ -53,8 +52,7 @@ const DEMO_SELLERS = [
 const DELIVERY_BADGES = ['Self-pickup / Delivery', 'Delivery', 'Self-pickup']
 
 export default function ExplorePage() {
-  const searchParams = useSearchParams()
-  const requestedTab = searchParams.get('tab') === 'services' ? 'services' : 'shop'
+  const [requestedTab, setRequestedTab] = useState<'shop' | 'services'>('shop')
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [selectedChip, setSelectedChip] = useState('all')
@@ -73,6 +71,11 @@ export default function ExplorePage() {
   const nearbyRef = useRef<HTMLDivElement>(null)
   const sellerRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    setRequestedTab(tab === 'services' ? 'services' : 'shop')
+  }, [])
 
   useEffect(() => {
     async function load() {
