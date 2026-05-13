@@ -24,6 +24,7 @@ type ProductRow = {
   image_4?: string | null
   image_5?: string | null
   menu_category_id?: string | null
+  listing_type?: 'food' | 'shop' | 'service' | null
 }
 
 type SellerProfileRow = {
@@ -146,6 +147,7 @@ export default function ProductsPage() {
   const [trackStock, setTrackStock] = useState(true)
   const [stockQuantity, setStockQuantity] = useState('0')
   const [menuCategoryId, setMenuCategoryId] = useState('')
+  const [listingType, setListingType] = useState<'food' | 'shop' | 'service'>('food')
 
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategorySortOrder, setNewCategorySortOrder] = useState('0')
@@ -161,6 +163,7 @@ export default function ProductsPage() {
   const [editingExistingImages, setEditingExistingImages] = useState<string[]>([])
   const [editingNewImages, setEditingNewImages] = useState<File[]>([])
   const [editingMenuCategoryId, setEditingMenuCategoryId] = useState('')
+  const [editingListingType, setEditingListingType] = useState<'food' | 'shop' | 'service'>('food')
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [editingCategoryName, setEditingCategoryName] = useState('')
   const [editingCategorySortOrder, setEditingCategorySortOrder] = useState('0')
@@ -608,6 +611,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
         store_name: sellerProfile.store_name || null,
         seller_profile_id: sellerProfile.id,
         menu_category_id: menuCategoryId || null,
+        listing_type: listingType,
         sort_order: nextSortOrder, // ✅ TAMBAH NI
         image_1: uploadedUrls[0] || null,
         image_2: uploadedUrls[1] || null,
@@ -629,6 +633,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       setTrackStock(true)
       setStockQuantity('0')
       setMenuCategoryId('')
+      setListingType('food')
       await loadProductsPage()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Image upload failed'
@@ -649,6 +654,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
     setEditingExistingImages(getProductImages(product))
     setEditingNewImages([])
     setEditingMenuCategoryId(product.menu_category_id || '')
+    setEditingListingType(product.listing_type || 'food')
 
     setEditingAddonGroupId(null)
     setAddonGroupName('')
@@ -675,6 +681,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
     setEditingExistingImages([])
     setEditingNewImages([])
     setEditingMenuCategoryId('')
+    setEditingListingType('food')
 
     setEditingAddonGroupId(null)
     setAddonGroupName('')
@@ -738,6 +745,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           stock_quantity: safeStock,
           sold_out: computedSoldOut,
           menu_category_id: editingMenuCategoryId || null,
+          listing_type: editingListingType,
           image_1: finalImages[0] || null,
           image_2: finalImages[1] || null,
           image_3: finalImages[2] || null,
@@ -1254,6 +1262,19 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                   ))}
               </select>
 
+              <label className="text-sm font-bold text-slate-600">Jenis listing</label>
+              <select
+                value={listingType}
+                onChange={(e) =>
+                  setListingType(e.target.value as 'food' | 'shop' | 'service')
+                }
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+              >
+                <option value="food">Food / Makanan</option>
+                <option value="shop">Product / Barang</option>
+                <option value="service">Service / Servis</option>
+              </select>
+
               <label className="text-sm font-bold text-slate-600">Description</label>
               <textarea
                 value={description}
@@ -1413,6 +1434,23 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                                 {category.name}
                               </option>
                             ))}
+                        </select>
+
+                        <label className="text-sm font-bold text-slate-600">
+                          Jenis listing
+                        </label>
+                        <select
+                          value={editingListingType}
+                          onChange={(e) =>
+                            setEditingListingType(
+                              e.target.value as 'food' | 'shop' | 'service'
+                            )
+                          }
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                        >
+                          <option value="food">Food / Makanan</option>
+                          <option value="shop">Product / Barang</option>
+                          <option value="service">Service / Servis</option>
                         </select>
 
                         <textarea
