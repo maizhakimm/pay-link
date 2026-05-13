@@ -75,12 +75,35 @@ export default function ExplorePage() {
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const tab = new URLSearchParams(window.location.search).get('tab')
-    if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'nearby') {
-      setRequestedTab(tab)
-      return
+    const syncTabFromUrl = () => {
+      const tab = new URLSearchParams(window.location.search).get('tab')
+      if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'nearby') {
+        setRequestedTab(tab)
+        return
+      }
+      setRequestedTab('home')
     }
-    setRequestedTab('home')
+
+    syncTabFromUrl()
+
+    const originalPushState = window.history.pushState
+    const originalReplaceState = window.history.replaceState
+
+    window.history.pushState = function (...args) {
+      originalPushState.apply(this, args)
+      syncTabFromUrl()
+    }
+    window.history.replaceState = function (...args) {
+      originalReplaceState.apply(this, args)
+      syncTabFromUrl()
+    }
+
+    window.addEventListener('popstate', syncTabFromUrl)
+    return () => {
+      window.history.pushState = originalPushState
+      window.history.replaceState = originalReplaceState
+      window.removeEventListener('popstate', syncTabFromUrl)
+    }
   }, [])
 
   useEffect(() => {
@@ -252,8 +275,15 @@ export default function ExplorePage() {
           {loading ? <p className="text-sm text-slate-500">Memuatkan menu...</p> : null}
           {displayedProducts.length === 0 && !loading ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-              <p>{requestedTab === 'services' ? 'Belum ada servis di kawasan ini.' : 'Belum ada produk di kawasan ini.'}</p>
-              <p className="mt-1">{requestedTab === 'services' ? 'Jadi antara service provider pertama di BazarLink.' : 'Jadi antara seller pertama di BazarLink.'}</p>
+              <p>
+                {requestedTab === 'home' ? 'Belum ada listing di kawasan ini.' : null}
+                {requestedTab === 'food' ? 'Belum ada makanan di kawasan ini.' : null}
+                {requestedTab === 'services' ? 'Belum ada servis di kawasan ini.' : null}
+                {requestedTab === 'shop' ? 'Belum ada produk di kawasan ini.' : null}
+                {requestedTab === 'nearby' ? 'Belum ada seller berhampiran kawasan ini.' : null}
+              </p>
+              {requestedTab === 'services' ? <p className="mt-1">Jadi antara service provider pertama di BazarLink.</p> : null}
+              {requestedTab === 'shop' ? <p className="mt-1">Jadi antara seller pertama di BazarLink.</p> : null}
             </div>
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
