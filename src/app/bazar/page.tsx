@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
@@ -65,6 +66,18 @@ export default function ExplorePage() {
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
+  const [marketplaceTab, setMarketplaceTab] = useState('home')
+
+
+  useEffect(() => {
+    const syncTab = () => {
+      const params = new URLSearchParams(window.location.search)
+      setMarketplaceTab(params.get('tab') || 'home')
+    }
+    syncTab()
+    window.addEventListener('popstate', syncTab)
+    return () => window.removeEventListener('popstate', syncTab)
+  }, [])
 
   const categoriesRef = useRef<HTMLDivElement>(null)
   const nearbyRef = useRef<HTMLDivElement>(null)
@@ -123,20 +136,32 @@ export default function ExplorePage() {
   }, [])
 
   const displayedProducts = useMemo(() => {
+    const isFoodTab = marketplaceTab === 'food'
+    const isNearbyTab = marketplaceTab === 'nearby'
+
     const bySearch = products.filter((p) => {
       const q = query.trim().toLowerCase()
       if (!q) return true
       return [p.name, p.sellerName, p.categoryLabel || '', p.areaText || '', p.communityText || ''].join(' ').toLowerCase().includes(q)
     })
+
     const byChip = bySearch.filter((p) => {
+      if (!isFoodTab && selectedChip === 'all') return true
       if (selectedChip === 'all') return true
       const keywords = CHIP_MATCHERS[selectedChip] || [selectedChip]
       const haystack = [p.name, p.categoryLabel || ''].join(' ').toLowerCase()
       return keywords.some((kw) => haystack.includes(kw))
     })
+
     const byArea = byChip.filter((p) => !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
+
+    if (isNearbyTab) {
+      const nearbyDemo = DEMO_PRODUCTS.filter((p) => (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
+      return byArea.length >= 6 ? byArea : [...byArea, ...nearbyDemo.slice(0, 6 - byArea.length)]
+    }
+
     return byArea.length >= 6 ? byArea : [...byArea, ...DEMO_PRODUCTS.slice(0, 6 - byArea.length)]
-  }, [products, query, selectedChip, area])
+  }, [products, query, selectedChip, area, marketplaceTab])
 
   const sellerCards = useMemo(() => {
     const realSellers = profiles
@@ -285,7 +310,7 @@ export default function ExplorePage() {
         </section>
       </div>
 
-      <BazarBottomNav />
+      <Suspense fallback={null}><BazarBottomNav /></Suspense>
 
       <button onClick={handleInstallClick} className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#DD0894] text-white shadow-xl sm:hidden" aria-label="Add di Phone">
         <Download className="h-6 w-6" strokeWidth={2.3} />

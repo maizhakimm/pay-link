@@ -691,7 +691,7 @@ export default function LandingPage() {
             </h2>
 
             <p className="mt-5 text-lg leading-8 text-slate-600">
-              BayarLink Basic kekal percuma. Yuran sewa tapak hanya dikenakan untuk seller yang mahu disenaraikan di Bazar BayarLink bagi mendapatkan exposure dan trafik tambahan.
+              BayarLink Basic kekal percuma. BazarLink kini FREE sepanjang Beta untuk seller awal. Sebarang caj selepas Beta akan dimaklumkan lebih awal.
             </p>
           </div>
 
@@ -722,8 +722,8 @@ export default function LandingPage() {
               },
               {
                 name: "Sewa Tapak Bazar",
-                desc: "Buka tapak seller anda di Bazar BayarLink dan mula ditemui customer sekitar kawasan anda.",
-                price: "RM10",
+                desc: "Buka tapak digital percuma untuk seller awal BazarLink.",
+                price: "FREE sepanjang Beta",
                 feeSuffix: "/ bulan",
                 feeTitle: "Transaction fee masih sama seperti BayarLink Basic.",
                 fees: [
