@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import BazarBottomNav from '../components/BazarBottomNav'
 import Link from 'next/link'
 import { FormEvent, useState } from 'react'
@@ -39,7 +40,7 @@ export default function BazarSellerPage() {
           <button type="submit" className="w-full rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Mohon Kawasan</button>
         </form>
       </div>
-      <BazarBottomNav />
+      <Suspense fallback={null}><BazarBottomNav /></Suspense>
     </main>
   )
 }

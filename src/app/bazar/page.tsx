@@ -1,8 +1,8 @@
 'use client'
 
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { Download } from 'lucide-react'
 import BazarBottomNav from './components/BazarBottomNav'
 import { supabase } from '../../lib/supabase'
@@ -66,8 +66,18 @@ export default function ExplorePage() {
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
-  const searchParams = useSearchParams()
-  const marketplaceTab = searchParams.get('tab') || 'home'
+  const [marketplaceTab, setMarketplaceTab] = useState('home')
+
+
+  useEffect(() => {
+    const syncTab = () => {
+      const params = new URLSearchParams(window.location.search)
+      setMarketplaceTab(params.get('tab') || 'home')
+    }
+    syncTab()
+    window.addEventListener('popstate', syncTab)
+    return () => window.removeEventListener('popstate', syncTab)
+  }, [])
 
   const categoriesRef = useRef<HTMLDivElement>(null)
   const nearbyRef = useRef<HTMLDivElement>(null)
@@ -300,7 +310,7 @@ export default function ExplorePage() {
         </section>
       </div>
 
-      <BazarBottomNav />
+      <Suspense fallback={null}><BazarBottomNav /></Suspense>
 
       <button onClick={handleInstallClick} className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#DD0894] text-white shadow-xl sm:hidden" aria-label="Add di Phone">
         <Download className="h-6 w-6" strokeWidth={2.3} />

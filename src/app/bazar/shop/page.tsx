@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import BazarBottomNav from '../components/BazarBottomNav'
 import { FormEvent, useState } from 'react'
 
@@ -36,7 +37,7 @@ export default function ExploreShopPage() {
         </div>
         <button type="submit" className="mt-5 w-full rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Saya berminat</button>
       </form>
-      <BazarBottomNav />
+      <Suspense fallback={null}><BazarBottomNav /></Suspense>
     </main>
   )
 }
