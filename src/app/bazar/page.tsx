@@ -68,6 +68,7 @@ export default function ExplorePage() {
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
+  const isFoodTab = requestedTab === 'food'
 
   const categoriesRef = useRef<HTMLDivElement>(null)
   const nearbyRef = useRef<HTMLDivElement>(null)
@@ -175,6 +176,7 @@ export default function ExplorePage() {
       return [p.name, p.sellerName, p.categoryLabel || '', p.areaText || '', p.communityText || ''].join(' ').toLowerCase().includes(q)
     })
     const byChip = bySearch.filter((p) => {
+      if (!isFoodTab) return true
       if (selectedChip === 'all') return true
       const keywords = CHIP_MATCHERS[selectedChip] || [selectedChip]
       const haystack = [p.name, p.categoryLabel || ''].join(' ').toLowerCase()
@@ -182,9 +184,10 @@ export default function ExplorePage() {
     })
     const byArea = byChip.filter((p) => !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
     return byArea
-  }, [products, query, selectedChip, area, requestedTab])
+  }, [products, query, selectedChip, area, requestedTab, isFoodTab])
 
   const sellerCards = useMemo(() => {
+    // Keep published + visible marketplace scope from the query above.
     const realSellers = profiles
       .map((p) => ({ ...p, seller: sellers[p.seller_profile_id], isDemo: false }))
       .filter((row) => row.seller)
@@ -263,13 +266,15 @@ export default function ExplorePage() {
           </div>
         </header>
 
-        <section ref={categoriesRef} className="mt-5">
-          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {FOOD_CHIPS.map((chip) => (
-              <button key={chip.key} onClick={() => setSelectedChip(chip.key)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip.key ? 'bg-[#DD0894] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip.label}</button>
-            ))}
-          </div>
-        </section>
+        {isFoodTab ? (
+          <section ref={categoriesRef} className="mt-5">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {FOOD_CHIPS.map((chip) => (
+                <button key={chip.key} onClick={() => setSelectedChip(chip.key)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip.key ? 'bg-[#DD0894] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip.label}</button>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="mt-5">
           {loading ? <p className="text-sm text-slate-500">Memuatkan menu...</p> : null}
@@ -331,7 +336,11 @@ export default function ExplorePage() {
                   <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.id || item.seller?.store_name || 'seller')}</span>
                 </div>
                 <div className="mt-2">
-                  <button className="rounded-lg bg-[#2563EB] px-2.5 py-1.5 text-[11px] font-bold text-white">View Shop</button>
+                  {item.seller?.shop_slug ? (
+                    <Link href={`/s/${encodeURIComponent(item.seller.shop_slug)}`} className="inline-flex rounded-lg bg-[#2563EB] px-2.5 py-1.5 text-[11px] font-bold text-white">View Shop</Link>
+                  ) : (
+                    <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">View Shop</span>
+                  )}
                 </div>
               </article>
             ))}
