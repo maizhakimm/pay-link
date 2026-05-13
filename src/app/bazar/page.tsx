@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Download } from 'lucide-react'
 import BazarBottomNav from './components/BazarBottomNav'
 import { supabase } from '../../lib/supabase'
@@ -65,6 +66,8 @@ export default function ExplorePage() {
   const [profiles, setProfiles] = useState<MarketplaceProfile[]>([])
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
+  const searchParams = useSearchParams()
+  const marketplaceTab = searchParams.get('tab') || 'home'
 
   const categoriesRef = useRef<HTMLDivElement>(null)
   const nearbyRef = useRef<HTMLDivElement>(null)
@@ -123,20 +126,32 @@ export default function ExplorePage() {
   }, [])
 
   const displayedProducts = useMemo(() => {
+    const isFoodTab = marketplaceTab === 'food'
+    const isNearbyTab = marketplaceTab === 'nearby'
+
     const bySearch = products.filter((p) => {
       const q = query.trim().toLowerCase()
       if (!q) return true
       return [p.name, p.sellerName, p.categoryLabel || '', p.areaText || '', p.communityText || ''].join(' ').toLowerCase().includes(q)
     })
+
     const byChip = bySearch.filter((p) => {
+      if (!isFoodTab && selectedChip === 'all') return true
       if (selectedChip === 'all') return true
       const keywords = CHIP_MATCHERS[selectedChip] || [selectedChip]
       const haystack = [p.name, p.categoryLabel || ''].join(' ').toLowerCase()
       return keywords.some((kw) => haystack.includes(kw))
     })
+
     const byArea = byChip.filter((p) => !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
+
+    if (isNearbyTab) {
+      const nearbyDemo = DEMO_PRODUCTS.filter((p) => (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
+      return byArea.length >= 6 ? byArea : [...byArea, ...nearbyDemo.slice(0, 6 - byArea.length)]
+    }
+
     return byArea.length >= 6 ? byArea : [...byArea, ...DEMO_PRODUCTS.slice(0, 6 - byArea.length)]
-  }, [products, query, selectedChip, area])
+  }, [products, query, selectedChip, area, marketplaceTab])
 
   const sellerCards = useMemo(() => {
     const realSellers = profiles
