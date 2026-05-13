@@ -138,6 +138,7 @@ type ProductRow = {
   stock_quantity?: number
   sold_out?: boolean
   menu_category_id?: string | null
+  listing_type?: 'food' | 'shop' | 'service' | null
 }
 
 type GalleryState = {
@@ -1317,6 +1318,7 @@ export default function ShopPageClient({
                   0
                 )
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
+                const isServiceListing = product.listing_type === 'service'
                 const allImages = getProductImages(product)
 
                 return (
@@ -1341,36 +1343,29 @@ export default function ShopPageClient({
                           {product.description || 'Tiada deskripsi.'}
                         </div>
 
-                        <div style={qtyWrap}>
-                          <div style={qtyRow}>
-                            <button
-                              type="button"
-                              onClick={() => decrease(product.id)}
-                              style={qtyBtn}
-                            >
-                              -
-                            </button>
-
-                            <span style={qtyValue}>{qty}</span>
-
-                            <button
-                              type="button"
-                              onClick={() => increase(product)}
-                              style={{
-                                ...qtyBtn,
-                                opacity: disableAddButton ? 0.4 : 1,
-                                cursor: disableAddButton ? 'not-allowed' : 'pointer',
-                              }}
-                              disabled={disableAddButton}
-                            >
-                              +
-                            </button>
+                        {isServiceListing ? (
+                          <div style={qtyWrap}>
+                            <a href={seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}` : '#'} style={{ ...qtyBtn, display: 'inline-flex', width: '100%', justifyContent: 'center', textDecoration: 'none' }}>
+                              Hubungi Seller
+                            </a>
                           </div>
-
-                          {!isShopOpen ? (
-                            <div style={qtyHintClosed}>Ordering unavailable</div>
-                          ) : null}
-                        </div>
+                        ) : (
+                          <div style={qtyWrap}>
+                            <div style={qtyRow}>
+                              <button type="button" onClick={() => decrease(product.id)} style={qtyBtn}>-</button>
+                              <span style={qtyValue}>{qty}</span>
+                              <button
+                                type="button"
+                                onClick={() => increase(product)}
+                                style={{ ...qtyBtn, opacity: disableAddButton ? 0.4 : 1, cursor: disableAddButton ? 'not-allowed' : 'pointer' }}
+                                disabled={disableAddButton}
+                              >
+                                +
+                              </button>
+                            </div>
+                            {!isShopOpen ? <div style={qtyHintClosed}>Ordering unavailable</div> : null}
+                          </div>
+                        )}
                       </div>
 
                       <button
