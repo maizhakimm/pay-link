@@ -5,18 +5,13 @@ export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const hostname = request.nextUrl.hostname.toLowerCase()
 
-  const isBazarHost = hostname === 'bazarlink.my' || hostname === 'www.bazarlink.my'
+  const isBazarWwwHost = hostname === 'www.bazarlink.my'
+  const isBazarApexHost = hostname === 'bazarlink.my'
   const isBayarHost = hostname === 'bayarlink.my' || hostname === 'www.bayarlink.my'
+  const isLegacyBazarPath = pathname === '/bazar' || pathname.startsWith('/bazar/') || pathname.startsWith('/explore')
 
-  // Bazar domain: keep root URL, internally serve /bazar
-  if (isBazarHost && (pathname === '/' || pathname === '')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/bazar'
-    return NextResponse.rewrite(url)
-  }
-
-  // Bayar domain should not host bazar paths; send to canonical Bazar host root.
-  if (isBayarHost && (pathname === '/bazar' || pathname.startsWith('/explore'))) {
+  // 1) Bayar hosts should not serve bazar paths.
+  if (isBayarHost && isLegacyBazarPath) {
     const url = request.nextUrl.clone()
     url.protocol = 'https:'
     url.hostname = 'www.bazarlink.my'
@@ -25,7 +20,36 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308)
   }
 
-  // Canonicalize bayar apex to www for non-bazar pages.
+  // 2) Canonicalize bazar apex -> www.bazarlink.my.
+  if (isBazarApexHost) {
+    const url = request.nextUrl.clone()
+    url.protocol = 'https:'
+    url.hostname = 'www.bazarlink.my'
+    if (isLegacyBazarPath) {
+      url.pathname = '/'
+      url.search = ''
+    }
+    return NextResponse.redirect(url, 308)
+  }
+
+  // 3) Canonicalize legacy bazar/explore paths on www.bazarlink.my to root.
+  if (isBazarWwwHost && isLegacyBazarPath) {
+    const url = request.nextUrl.clone()
+    url.protocol = 'https:'
+    url.hostname = 'www.bazarlink.my'
+    url.pathname = '/'
+    url.search = ''
+    return NextResponse.redirect(url, 308)
+  }
+
+  // 4) Keep URL at https://www.bazarlink.my/ while rendering /bazar.
+  if (isBazarWwwHost && (pathname === '/' || pathname === '')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/bazar'
+    return NextResponse.rewrite(url)
+  }
+
+  // 5) Canonicalize bayar apex -> www.bayarlink.my for non-bazar pages.
   if (hostname === 'bayarlink.my') {
     const url = request.nextUrl.clone()
     url.protocol = 'https:'
