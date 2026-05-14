@@ -564,7 +564,7 @@ export default function ShopPageClient({
     currentIndex: 0,
   })
 
-  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
 
   useEffect(() => {
     function handleResize() {
@@ -620,7 +620,6 @@ export default function ShopPageClient({
   const productRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null)
   const selectedProductId = searchParams.get('product')
-  const cameFromExplore = ['explore','bazar'].includes(searchParams.get('from') || '')
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
@@ -1121,8 +1120,6 @@ export default function ShopPageClient({
     minimumOrderValue,
   ])
 
-  if (isDesktop === null) return null
-
   const sellerName = seller.store_name || 'Shop'
 
   return (
@@ -1291,16 +1288,6 @@ export default function ShopPageClient({
         ) : null}
 
         <div ref={productListRef}>
-          {cameFromExplore ? (
-            <div style={exploreBackWrap}>
-              <a
-                href={`/bazar?${new URLSearchParams(Array.from(searchParams.entries()).filter(([key]) => ['area', 'category', 'q'].includes(key))).toString()}`}
-                style={exploreBackButton}
-              >
-                ← BAZAR
-              </a>
-            </div>
-          ) : null}
           {visibleProducts.length === 0 ? (
             <div style={emptyCard}>
               <p style={{ margin: 0, color: '#64748b' }}>
@@ -1845,31 +1832,6 @@ const heroMobile: React.CSSProperties = {
   textAlign: 'center',
   gap: 10,
   width: '100%',
-}
-
-const exploreBackWrap: React.CSSProperties = {
-  position: 'sticky',
-  top: 72,
-  zIndex: 30,
-  display: 'flex',
-  justifyContent: 'flex-end',
-  marginBottom: 10,
-  pointerEvents: 'none',
-}
-
-const exploreBackButton: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  background: '#DD0894',
-  color: '#ffffff',
-  padding: '8px 12px',
-  borderRadius: 9999,
-  fontSize: 12,
-  fontWeight: 700,
-  textDecoration: 'none',
-  boxShadow: '0 10px 22px rgba(221, 8, 148, 0.28)',
-  pointerEvents: 'auto',
 }
 
 const highlightedProductCard: React.CSSProperties = {
