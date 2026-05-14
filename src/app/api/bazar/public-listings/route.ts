@@ -54,7 +54,7 @@ export async function GET(req: Request) {
       ? supabase.from('seller_profiles').select('id,store_name,shop_slug').in('id', sellerIds)
       : Promise.resolve({ data: [], error: null } as any),
     sellerIds.length
-      ? supabase.from('products').select('id,name,price,seller_profile_id,product_image_url,image_1,image_2,image_url,listing_type,is_active,created_at').in('seller_profile_id', sellerIds).eq('is_active', true).order('created_at', { ascending: false })
+      ? supabase.from('products').select('id,name,price,seller_profile_id,product_image_url,image_1,image_2,listing_type,is_active,created_at').in('seller_profile_id', sellerIds).eq('is_active', true).order('created_at', { ascending: false })
       : Promise.resolve({ data: [], error: null } as any),
   ])
 
@@ -86,7 +86,7 @@ export async function GET(req: Request) {
         name: p.name,
         price: Number(p.price || 0),
         seller_profile_id: p.seller_profile_id,
-        image: p.product_image_url || p.image_1 || p.image_2 || p.image_url || null,
+        image: p.product_image_url || p.image_1 || p.image_2 || null,
         sellerName: seller.store_name,
         shopSlug: seller.shop_slug,
         areaText: profile?.area_text || null,
