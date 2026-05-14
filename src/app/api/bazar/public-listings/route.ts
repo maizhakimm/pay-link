@@ -49,14 +49,37 @@ export async function GET(req: Request) {
 
   const sellerIds = profiles.map((p) => p.seller_profile_id)
 
-  const [{ data: sellerRows, error: sellerError }, { data: productRows, error: productError }] = await Promise.all([
-    sellerIds.length
-      ? supabase.from('seller_profiles').select('id,store_name,shop_slug').in('id', sellerIds)
-      : Promise.resolve({ data: [], error: null } as any),
-    sellerIds.length
-      ? supabase.from('products').select('id,name,price,seller_profile_id,product_image_url,image_1,image_2,listing_type,is_active,created_at').in('seller_profile_id', sellerIds).eq('is_active', true).order('created_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null } as any),
-  ])
+  const { data: sellerRows, error: sellerError } = sellerIds.length
+    ? await supabase.from('seller_profiles').select('id,store_name,shop_slug').in('id', sellerIds)
+    : ({ data: [], error: null } as any)
+
+  let listingTypeColumnAvailable = true
+  let productRows: any[] = []
+  let productError: { message?: string } | null = null
+
+  if (sellerIds.length) {
+    const withListingType = await supabase
+      .from('products')
+      .select('id,name,price,seller_profile_id,product_image_url,image_1,image_2,listing_type,is_active,created_at')
+      .in('seller_profile_id', sellerIds)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    if (withListingType.error && /column\s+products\.listing_type\s+does not exist/i.test(withListingType.error.message || '')) {
+      listingTypeColumnAvailable = false
+      const withoutListingType = await supabase
+        .from('products')
+        .select('id,name,price,seller_profile_id,product_image_url,image_1,image_2,is_active,created_at')
+        .in('seller_profile_id', sellerIds)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+      productRows = (withoutListingType.data || []) as any[]
+      productError = withoutListingType.error as any
+    } else {
+      productRows = (withListingType.data || []) as any[]
+      productError = withListingType.error as any
+    }
+  }
 
   if (sellerError || productError) {
     return NextResponse.json({ ok: false, error: sellerError?.message || productError?.message || 'Failed to load seller/product data' }, { status: 500 })
@@ -67,14 +90,14 @@ export async function GET(req: Request) {
     sellerMap[String(row.id)] = { store_name: row.store_name || null, shop_slug: row.shop_slug || null }
   })
 
-  const rawProductsCountBeforeVisibilityFilter = ((productRows || []) as any[]).length
+  const rawProductsCountBeforeVisibilityFilter = productRows.length
 
-  const products = ((productRows || []) as any[])
+  const products = productRows
     .map((p) => {
       const profile = profiles.find((mp) => mp.seller_profile_id === p.seller_profile_id)
       const seller = sellerMap[String(p.seller_profile_id)]
       if (!seller?.store_name) return null
-      const listingTypeRaw = String(p.listing_type || '').trim().toLowerCase()
+      const listingTypeRaw = listingTypeColumnAvailable ? String(p.listing_type || '').trim().toLowerCase() : 'food'
       const listingType: ListingType = listingTypeRaw === 'service' || listingTypeRaw === 'services'
         ? 'service'
         : listingTypeRaw === 'shop' || listingTypeRaw === 'product'
@@ -116,6 +139,7 @@ export async function GET(req: Request) {
       visibilityValuesFound: Array.from(new Set(raw.map((row) => String(Boolean(row.is_marketplace_visible))))),
       rawProductsCountBeforeVisibilityFilter,
       sanitizedProductsCount: products.length,
+      listingTypeColumnAvailable,
     }
   }
 
