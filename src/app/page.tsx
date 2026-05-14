@@ -723,8 +723,8 @@ export default function LandingPage() {
               {
                 name: "Sewa Tapak Bazar",
                 desc: "Buka tapak seller anda di Bazar BayarLink dan mula ditemui customer sekitar kawasan anda.",
-                price: "RM10",
-                feeSuffix: "/ bulan",
+                price: "FREE",
+                feeSuffix: "sepanjang Beta",
                 feeTitle: "Transaction fee masih sama seperti BayarLink Basic.",
                 fees: [
                   "FPX: RM1.50",
@@ -795,7 +795,7 @@ export default function LandingPage() {
                   <span className="text-5xl font-extrabold text-slate-900">
                     {plan.price}
                   </span>
-                  <span className="pb-2 text-slate-500">{plan.feeSuffix || ""}</span>
+                  <span className="pb-2 text-sm text-slate-500">{plan.feeSuffix || ""}</span>
                 </div>
 
                 <div className="mt-7">
