@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 import BazarBottomNav from './components/BazarBottomNav'
-import { supabase } from '../../lib/supabase'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
 type MarketplaceProfile = { id: string; seller_profile_id: string; is_featured: boolean; is_verified: boolean; area_text: string | null; community_text: string | null; categoryNames: string[] }
@@ -120,59 +119,28 @@ export default function ExplorePage() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const [{ data: mpRows }, { data: areaRows }] = await Promise.all([
-        supabase
-          .from('marketplace_profiles')
-          .select('id,seller_profile_id,is_featured,is_verified,area_text,community_text,marketplace_profile_categories(category_id,marketplace_categories(category_name))')
-          .eq('status', 'published')
-          .eq('is_marketplace_visible', true)
-          .order('is_featured', { ascending: false })
-          .order('is_verified', { ascending: false })
-          .order('created_at', { ascending: false }),
-        supabase.from('marketplace_areas').select('area_name').eq('is_enabled', true).order('display_order', { ascending: true }),
-      ])
+      const res = await fetch('/api/bazar/public-listings', { cache: 'no-store' })
+      const payload = await res.json().catch(() => null)
 
-      if (areaRows && areaRows.length > 0) {
-        const options = areaRows.map((r: any) => r.area_name).filter(Boolean)
-        setAreaOptions(options)
+      if (!res.ok || !payload?.ok) {
+        setProfiles([])
+        setSellers({})
+        setProducts([])
+        setAreaOptions([])
+        setLoading(false)
+        return
       }
 
-      const normalizedProfiles = ((mpRows || []) as any[]).map((row) => ({
-        id: row.id,
-        seller_profile_id: row.seller_profile_id,
-        is_featured: row.is_featured,
-        is_verified: row.is_verified,
-        area_text: row.area_text,
-        community_text: row.community_text,
-        categoryNames: (row.marketplace_profile_categories || []).map((entry: any) => (Array.isArray(entry.marketplace_categories) ? entry.marketplace_categories[0]?.category_name : entry.marketplace_categories?.category_name)).filter(Boolean),
-      })) as MarketplaceProfile[]
-
-      const sellerIds = normalizedProfiles.map((p) => p.seller_profile_id)
-      const { data: sellerRows } = await supabase.from('seller_profiles').select('id,store_name,shop_slug,whatsapp').in('id', sellerIds)
-      const sellerMap: Record<string, Seller> = {}
-      ;(sellerRows || []).forEach((row: any) => { sellerMap[String(row.id)] = row as Seller })
-
-      const { data: productRows } = await supabase.from('products').select('*').in('seller_profile_id', sellerIds).eq('is_active', true).order('created_at', { ascending: false })
-      const productCards = ((productRows || []) as any[]).map((p) => {
-        const profile = normalizedProfiles.find((mp) => mp.seller_profile_id === p.seller_profile_id)
-        const seller = sellerMap[String(p.seller_profile_id)]
-        const image = p.product_image_url || p.image_1 || p.image_2 || p.image_url || null
-        const listingTypeRaw = String(p.listing_type || '').trim().toLowerCase()
-        const listingType: ListingType = listingTypeRaw === 'service' || listingTypeRaw === 'services'
-          ? 'service'
-          : listingTypeRaw === 'shop' || listingTypeRaw === 'product'
-            ? 'shop'
-            : 'food'
-        return { id: p.id, name: p.name, price: Number(p.price || 0), seller_profile_id: p.seller_profile_id, image, sellerName: seller?.store_name || 'Local Seller', shopSlug: seller?.shop_slug || null, areaText: profile?.area_text || null, communityText: profile?.community_text || null, categoryLabel: profile?.categoryNames?.[0] || null, isFeatured: Boolean(profile?.is_featured), isVerified: Boolean(profile?.is_verified), listingType } as ProductCard
-      })
-
-      setProfiles(normalizedProfiles)
-      setSellers(sellerMap)
-      setProducts(productCards.filter((card) => card.sellerName && card.sellerName !== 'Local Seller'))
+      setProfiles((payload.profiles || []) as MarketplaceProfile[])
+      setSellers((payload.sellers || {}) as Record<string, Seller>)
+      setProducts((payload.products || []) as ProductCard[])
+      setAreaOptions((payload.areaOptions || []) as string[])
       setLoading(false)
     }
     load()
   }, [])
+
+
 
   const displayedProducts = useMemo(() => {
     const byTab = products.filter((p) => {
