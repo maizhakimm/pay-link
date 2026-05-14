@@ -64,6 +64,7 @@ export default function ExplorePage() {
   const [debugMode, setDebugMode] = useState(false)
   const [debugHref, setDebugHref] = useState('')
   const [isMobileUa, setIsMobileUa] = useState(false)
+  const [apiDebug, setApiDebug] = useState<Record<string, unknown> | null>(null)
 
   useEffect(() => {
     const syncTabFromUrl = () => {
@@ -119,7 +120,8 @@ export default function ExplorePage() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const res = await fetch('/api/bazar/public-listings', { cache: 'no-store' })
+      const debugSuffix = debugMode ? '?debug=1' : ''
+      const res = await fetch(`/api/bazar/public-listings${debugSuffix}`, { cache: 'no-store' })
       const payload = await res.json().catch(() => null)
 
       if (!res.ok || !payload?.ok) {
@@ -127,6 +129,7 @@ export default function ExplorePage() {
         setSellers({})
         setProducts([])
         setAreaOptions([])
+        setApiDebug(null)
         setLoading(false)
         return
       }
@@ -135,10 +138,11 @@ export default function ExplorePage() {
       setSellers((payload.sellers || {}) as Record<string, Seller>)
       setProducts((payload.products || []) as ProductCard[])
       setAreaOptions((payload.areaOptions || []) as string[])
+      setApiDebug(debugMode ? ((payload.debug || null) as Record<string, unknown> | null) : null)
       setLoading(false)
     }
     load()
-  }, [])
+  }, [debugMode])
 
 
 
@@ -266,6 +270,13 @@ export default function ExplorePage() {
             <p>area: {area || '-'}</p>
             <p>query: {query || '-'}</p>
             <p>isFoodTab: {isFoodTab ? 'true' : 'false'}</p>
+
+            <p>api.marketplaceProfilesRawCount: {String(apiDebug?.marketplaceProfilesRawCount ?? '-')}</p>
+            <p>api.marketplaceProfilesAfterFilter: {String(apiDebug?.marketplaceProfilesAfterFilter ?? '-')}</p>
+            <p>api.distinctStatusesFound: {Array.isArray(apiDebug?.distinctStatusesFound) ? (apiDebug?.distinctStatusesFound as unknown[]).join(', ') : '-'}</p>
+            <p>api.visibilityValuesFound: {Array.isArray(apiDebug?.visibilityValuesFound) ? (apiDebug?.visibilityValuesFound as unknown[]).join(', ') : '-'}</p>
+            <p>api.rawProductsCountBeforeVisibilityFilter: {String(apiDebug?.rawProductsCountBeforeVisibilityFilter ?? '-')}</p>
+            <p>api.sanitizedProductsCount: {String(apiDebug?.sanitizedProductsCount ?? '-')}</p>
             <div className="mt-2">
               <p className="font-semibold">products (first 5)</p>
               {(products.slice(0, 5)).map((p) => (

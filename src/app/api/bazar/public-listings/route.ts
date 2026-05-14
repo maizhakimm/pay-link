@@ -67,6 +67,8 @@ export async function GET(req: Request) {
     sellerMap[String(row.id)] = { store_name: row.store_name || null, shop_slug: row.shop_slug || null }
   })
 
+  const rawProductsCountBeforeVisibilityFilter = ((productRows || []) as any[]).length
+
   const products = ((productRows || []) as any[])
     .map((p) => {
       const profile = profiles.find((mp) => mp.seller_profile_id === p.seller_profile_id)
@@ -112,6 +114,8 @@ export async function GET(req: Request) {
       marketplaceProfilesAfterFilter: mpRows.length,
       distinctStatusesFound: Array.from(new Set(raw.map((row) => String(row.status || '').toLowerCase()))),
       visibilityValuesFound: Array.from(new Set(raw.map((row) => String(Boolean(row.is_marketplace_visible))))),
+      rawProductsCountBeforeVisibilityFilter,
+      sanitizedProductsCount: products.length,
     }
   }
 
