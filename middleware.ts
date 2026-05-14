@@ -2,40 +2,39 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const { pathname, search, hostname } = request.nextUrl
+  const { pathname, search } = request.nextUrl
+  const hostname = request.nextUrl.hostname.toLowerCase()
 
-  if (hostname === 'bazarlink.my' || hostname === 'www.bazarlink.my') {
-    if (pathname === '/' || pathname === '') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/bazar'
-      return NextResponse.rewrite(url)
-    }
+  const isBazarHost = hostname === 'bazarlink.my' || hostname === 'www.bazarlink.my'
+  const isBayarHost = hostname === 'bayarlink.my' || hostname === 'www.bayarlink.my'
+
+  // Bazar domain: keep root URL, internally serve /bazar
+  if (isBazarHost && (pathname === '/' || pathname === '')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/bazar'
+    return NextResponse.rewrite(url)
   }
 
-  if ((hostname === 'bayarlink.my' || hostname === 'www.bayarlink.my') && (pathname === '/bazar' || pathname.startsWith('/explore'))) {
+  // Bayar domain should not host bazar paths; send to canonical Bazar host root.
+  if (isBayarHost && (pathname === '/bazar' || pathname.startsWith('/explore'))) {
     const url = request.nextUrl.clone()
     url.protocol = 'https:'
     url.hostname = 'www.bazarlink.my'
-    url.pathname = '/bazar'
+    url.pathname = '/'
     url.search = ''
     return NextResponse.redirect(url, 308)
   }
 
-  // 1) Paksa semua traffic ke www.bayarlink.my
+  // Canonicalize bayar apex to www for non-bazar pages.
   if (hostname === 'bayarlink.my') {
     const url = request.nextUrl.clone()
+    url.protocol = 'https:'
     url.hostname = 'www.bayarlink.my'
     return NextResponse.redirect(url, 308)
   }
 
-  const isAdminRoute =
-    pathname === '/admin' ||
-    pathname.startsWith('/admin/')
-
-  const isDashboardRoute =
-    pathname === '/dashboard' ||
-    pathname.startsWith('/dashboard/')
-
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
+  const isDashboardRoute = pathname === '/dashboard' || pathname.startsWith('/dashboard/')
   const isProtectedRoute = isAdminRoute || isDashboardRoute
 
   if (!isProtectedRoute) {
