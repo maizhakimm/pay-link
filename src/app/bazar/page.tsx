@@ -39,20 +39,6 @@ const CHIP_MATCHERS: Record<string, string[]> = {
   kek: ['kek', 'cake'],
 }
 
-const DEMO_PRODUCTS: ProductCard[] = [
-  { id: 'demo-1', name: 'Nasi Lemak Ayam Crispy', price: 12, seller_profile_id: '', image: null, sellerName: 'Dana Home Cook', shopSlug: 'dana-store', areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Nasi Lemak', isFeatured: true, isVerified: true, listingType: 'shop', isDemo: true },
-  { id: 'demo-2', name: 'Burger Homemade', price: 14, seller_profile_id: '', image: null, sellerName: 'Kak Yan Kitchen', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Burger', isFeatured: false, isVerified: true, listingType: 'shop', isDemo: true },
-  { id: 'demo-3', name: 'Kuih Seri Muka', price: 8, seller_profile_id: '', image: null, sellerName: 'Auntie Rina Bakes', shopSlug: null, areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Kuih Muih', isFeatured: true, isVerified: false, listingType: 'shop', isDemo: true },
-  { id: 'demo-4', name: 'Roti Canai Frozen', price: 10, seller_profile_id: '', image: null, sellerName: 'Dapur Azizah', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Bakery', isFeatured: false, isVerified: false, listingType: 'shop', isDemo: true },
-  { id: 'demo-5', name: 'Brownies Kedut', price: 15, seller_profile_id: '', image: null, sellerName: 'Auntie Rina Bakes', shopSlug: null, areaText: 'Shah Alam', communityText: 'Seksyen 7', categoryLabel: 'Dessert', isFeatured: false, isVerified: false, listingType: 'shop', isDemo: true },
-  { id: 'demo-6', name: 'Teh Ais Kaw', price: 4, seller_profile_id: '', image: null, sellerName: 'Kak Yan Kitchen', shopSlug: null, areaText: 'Setia Alam', communityText: 'Kota Kemuning', categoryLabel: 'Drinks', isFeatured: false, isVerified: false, listingType: 'shop', isDemo: true },
-]
-
-const DEMO_SELLERS = [
-  { id: 'demo-s1', store_name: 'Dana Home Cook', area_text: 'Shah Alam', community_text: 'Seksyen 7' },
-  { id: 'demo-s2', store_name: 'Kak Yan Kitchen', area_text: 'Setia Alam', community_text: 'Kota Kemuning' },
-]
-
 const DELIVERY_BADGES = ['Self-pickup / Delivery', 'Delivery', 'Self-pickup']
 
 export default function ExplorePage() {
@@ -191,19 +177,9 @@ export default function ExplorePage() {
   }, [products, query, selectedChip, area, requestedTab, isFoodTab])
 
   const sellerCards = useMemo(() => {
-    // Keep published + visible marketplace scope from the query above.
-    const realSellers = profiles
+    return profiles
       .map((p) => ({ ...p, seller: sellers[p.seller_profile_id], isDemo: false }))
       .filter((row) => row.seller)
-    if (realSellers.length >= 4) return realSellers
-    const fillers = DEMO_SELLERS.slice(0, 4 - realSellers.length).map((item) => ({
-      id: item.id,
-      seller: { store_name: item.store_name },
-      area_text: item.area_text,
-      community_text: item.community_text,
-      isDemo: true,
-    }))
-    return [...realSellers, ...fillers]
   }, [profiles, sellers])
 
   const exploreContextQuery = useMemo(() => {
@@ -338,6 +314,11 @@ export default function ExplorePage() {
             <h2 className="text-lg font-bold text-slate-800">BAZAR Seller</h2>
             <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">📍 {area || 'Semua Kawasan'}</button>
           </div>
+          {sellerCards.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              Tiada seller marketplace aktif buat masa ini.
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sellerCards.map((item: any) => (
               <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
