@@ -179,6 +179,13 @@ export default function DashboardMarketplacePage() {
   const completedCount = checklist.filter((item) => item.done).length
   const progressPercent = Math.round((completedCount / checklist.length) * 100)
   const canSubmit = completedCount >= 5 && Boolean(profile)
+  const statusLabel = useMemo(() => {
+    if (!profile) return 'Draft'
+    if (profile.status === 'pending_review') return 'Submitted for Review'
+    if (profile.status === 'published') return 'Approved'
+    if (profile.status === 'hidden' || profile.status === 'rejected' || profile.status === 'suspended') return 'Hidden / Not Approved Yet'
+    return 'Draft'
+  }, [profile])
 
   function updateProfileField<K extends keyof MarketplaceProfile>(key: K, value: MarketplaceProfile[K]) {
     setProfile((prev) => (prev ? { ...prev, [key]: value } : prev))
@@ -299,7 +306,9 @@ export default function DashboardMarketplacePage() {
           <>
             <Card title="1) Intro">
               <p className="text-sm text-slate-600">Welcome{seller?.store_name ? `, ${seller.store_name}` : ''}! Complete the sections below and submit when ready.</p>
-              <p className="mt-2 text-xs text-slate-500">Current status: <span className="font-semibold">{profile.status}</span></p>
+              <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2">
+                <p className="text-sm font-semibold text-blue-900">Status Bazar: {statusLabel}</p>
+              </div>
             </Card>
 
             <Card title="2) Branding">
@@ -319,16 +328,22 @@ export default function DashboardMarketplacePage() {
                 </select>
               </Field>
               <Field label="Taman / Apartment / Kawasan (optional)">
-                <select className={inputCls} value={profile.community_id || ''} onChange={(e) => updateProfileField('community_id', e.target.value || null)}>
-                  <option value="">Pilih taman / apartment / kawasan</option>
-                  {filteredCommunities.map((community) => <option key={community.id} value={community.id}>{community.community_name}</option>)}
-                </select>
+                {filteredCommunities.length > 0 ? (
+                  <select className={inputCls} value={profile.community_id || ''} onChange={(e) => updateProfileField('community_id', e.target.value || null)}>
+                    <option value="">Pilih taman / apartment / kawasan</option>
+                    {filteredCommunities.map((community) => <option key={community.id} value={community.id}>{community.community_name}</option>)}
+                  </select>
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500">Tiada pilihan kawasan tersedia sekarang. Gunakan ruangan teks di bawah.</p>
+                )}
               </Field>
-              <Field label="Area text">
+              <Field label="Area liputan jualan">
                 <input className={inputCls} value={profile.area_text || ''} onChange={(e) => updateProfileField('area_text', e.target.value)} placeholder="Contoh: Sekitar Shah Alam & Setia Alam" />
+                <p className="mt-1 text-xs text-slate-500">Contoh: Klang Valley / Shah Alam / Selangor</p>
               </Field>
-              <Field label="Taman / Apartment / Kawasan text">
+              <Field label="Lokasi / kawasan anda">
                 <input className={inputCls} value={profile.community_text || ''} onChange={(e) => updateProfileField('community_text', e.target.value)} placeholder="Contoh: Seksyen 7, Seksyen 9" />
+                <p className="mt-1 text-xs text-slate-500">Contoh: Seksyen 7 / Setia Alam / Puncak Alam</p>
               </Field>
             </Card>
 
