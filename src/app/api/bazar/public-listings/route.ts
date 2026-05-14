@@ -3,7 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 
 type ListingType = 'food' | 'service' | 'shop'
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const debug = searchParams.get('debug') === '1'
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -13,12 +15,10 @@ export async function GET() {
 
   const supabase = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-  const [{ data: mpRows, error: mpError }, { data: areaRows, error: areaError }] = await Promise.all([
+  const [{ data: mpRowsRaw, error: mpError }, { data: areaRows, error: areaError }] = await Promise.all([
     supabase
       .from('marketplace_profiles')
-      .select('id,seller_profile_id,is_featured,is_verified,area_text,community_text,marketplace_profile_categories(category_id,marketplace_categories(category_name))')
-      .eq('status', 'published')
-      .eq('is_marketplace_visible', true)
+      .select('id,seller_profile_id,status,is_marketplace_visible,is_featured,is_verified,area_text,community_text,marketplace_profile_categories(category_id,marketplace_categories(category_name))')
       .order('is_featured', { ascending: false })
       .order('is_verified', { ascending: false })
       .order('created_at', { ascending: false }),
@@ -29,7 +29,13 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: mpError?.message || areaError?.message || 'Failed to load marketplace data' }, { status: 500 })
   }
 
-  const profiles = ((mpRows || []) as any[]).map((row) => ({
+  const mpRows = ((mpRowsRaw || []) as any[]).filter((row) => {
+    const status = String(row.status || '').toLowerCase()
+    const visible = Boolean(row.is_marketplace_visible)
+    return visible && (status === 'published' || status === 'approved')
+  })
+
+  const profiles = mpRows.map((row) => ({
     id: row.id,
     seller_profile_id: row.seller_profile_id,
     is_featured: Boolean(row.is_featured),
@@ -91,11 +97,23 @@ export async function GET() {
     })
     .filter(Boolean)
 
-  return NextResponse.json({
+  const response: Record<string, unknown> = {
     ok: true,
     profiles,
     sellers: sellerMap,
     products,
     areaOptions: (areaRows || []).map((r: any) => r.area_name).filter(Boolean),
-  })
+  }
+
+  if (debug) {
+    const raw = (mpRowsRaw || []) as any[]
+    response.debug = {
+      marketplaceProfilesRawCount: raw.length,
+      marketplaceProfilesAfterFilter: mpRows.length,
+      distinctStatusesFound: Array.from(new Set(raw.map((row) => String(row.status || '').toLowerCase()))),
+      visibilityValuesFound: Array.from(new Set(raw.map((row) => String(Boolean(row.is_marketplace_visible))))),
+    }
+  }
+
+  return NextResponse.json(response)
 }
