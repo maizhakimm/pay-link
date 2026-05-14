@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 import BazarBottomNav from './components/BazarBottomNav'
@@ -66,6 +67,7 @@ export default function ExplorePage() {
   const [isMobileUa, setIsMobileUa] = useState(false)
   const [apiDebug, setApiDebug] = useState<Record<string, unknown> | null>(null)
   const [openingShopKey, setOpeningShopKey] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     const syncTabFromUrl = () => {
@@ -234,9 +236,13 @@ export default function ExplorePage() {
   }
 
 
-  function handleViewShopClick(key: string) {
-    if (!key) return
+  function handleViewShopClick(key: string, href: string) {
+    if (!key || !href) return
+    if (openingShopKey === key) return
     setOpeningShopKey(key)
+    window.setTimeout(() => {
+      router.push(href)
+    }, 120)
     window.setTimeout(() => {
       setOpeningShopKey((current) => (current === key ? null : current))
     }, 8000)
@@ -338,7 +344,7 @@ export default function ExplorePage() {
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {displayedProducts.map((item) => (
-              <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
+              <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
                 {item.image ? <img src={item.image} alt={item.name} className="h-24 w-full rounded-xl object-cover" /> : <div className="flex h-24 w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700">{item.name.slice(0, 2).toUpperCase()}</div>}
                 <div className="mt-2 flex items-start justify-between gap-2">
                   <h3 className="line-clamp-2 text-sm font-bold text-slate-900">{item.name}</h3>
@@ -350,7 +356,7 @@ export default function ExplorePage() {
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
                   <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
                 </div>
-                <div className="mt-2">{item.shopSlug ? <Link href={`/s/${encodeURIComponent(item.shopSlug)}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`} onClick={(e) => { const key = `product:${item.id}`; if (openingShopKey === key) { e.preventDefault(); return } handleViewShopClick(key) }} aria-disabled={openingShopKey === `product:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `product:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `product:${item.id}` ? 'Opening...' : item.isDemo ? 'Order Now' : 'View Shop'}</Link> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>}</div>
+                <div className="mt-2">{item.shopSlug ? <button type="button" onClick={(e) => { e.stopPropagation(); handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} disabled={openingShopKey === `product:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `product:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `product:${item.id}` ? 'Opening...' : item.isDemo ? 'Order Now' : 'View Shop'}</button> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>}</div>
               </article>
             ))}
           </div>
@@ -374,7 +380,7 @@ export default function ExplorePage() {
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sellerCards.map((item: any) => (
-              <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <article key={item.id} onClick={() => { if (!item.seller?.shop_slug) return; handleViewShopClick(`seller:${item.id}`, `/s/${encodeURIComponent(item.seller.shop_slug || "")}`) }} className={`rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition ${item.seller?.shop_slug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-50 text-[10px] font-bold text-rose-700">
@@ -393,7 +399,7 @@ export default function ExplorePage() {
                 </div>
                 <div className="mt-2">
                   {item.seller?.shop_slug ? (
-                    <Link href={`/s/${encodeURIComponent(item.seller.shop_slug)}`} onClick={(e) => { const key = `seller:${item.id}`; if (openingShopKey === key) { e.preventDefault(); return } handleViewShopClick(key) }} aria-disabled={openingShopKey === `seller:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `seller:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `seller:${item.id}` ? 'Opening...' : 'View Shop'}</Link>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleViewShopClick(`seller:${item.id}`, `/s/${encodeURIComponent(item.seller.shop_slug || "")}`) }} disabled={openingShopKey === `seller:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `seller:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `seller:${item.id}` ? 'Opening...' : 'View Shop'}</button>
                   ) : (
                     <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">View Shop</span>
                   )}
