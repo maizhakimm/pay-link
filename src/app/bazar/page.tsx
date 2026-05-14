@@ -71,7 +71,7 @@ export default function ExplorePage() {
       const tab = new URLSearchParams(window.location.search).get('tab')
       if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'nearby') {
         setRequestedTab(tab)
-        if (tab === 'food') setSelectedChip('all')
+        setSelectedChip('all')
         return
       }
       setRequestedTab('home')
@@ -168,9 +168,6 @@ export default function ExplorePage() {
     const shouldApplyAreaFilter = requestedTab === 'nearby' || Boolean(area)
     const byArea = byChip.filter((p) => !shouldApplyAreaFilter || !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
 
-    const shouldFallbackFoodChip = requestedTab === 'food' && selectedChip !== 'all' && byArea.length === 0 && bySearch.length > 0
-    const finalProducts = shouldFallbackFoodChip ? bySearch : byArea
-
     if (process.env.NODE_ENV !== 'production') {
       console.info('[bazar] product filter summary', {
         requestedTab,
@@ -179,13 +176,13 @@ export default function ExplorePage() {
         bySearch: bySearch.length,
         byChip: byChip.length,
         byArea: byArea.length,
-        final: finalProducts.length,
+        final: byArea.length,
         selectedChip,
         area,
       })
     }
 
-    return finalProducts
+    return byArea
   }, [products, query, selectedChip, area, requestedTab, isFoodTab])
 
   const sellerCards = useMemo(() => {
@@ -320,7 +317,7 @@ export default function ExplorePage() {
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
               <p>
                 {requestedTab === 'home' ? 'Belum ada listing di kawasan ini.' : null}
-                {requestedTab === 'food' ? 'Belum ada makanan di kawasan ini.' : null}
+                {requestedTab === 'food' ? (selectedChip !== 'all' ? 'Belum ada item untuk kategori ini.' : 'Belum ada makanan di kawasan ini.') : null}
                 {requestedTab === 'services' ? 'Belum ada servis di kawasan ini.' : null}
                 {requestedTab === 'shop' ? 'Belum ada produk di kawasan ini.' : null}
                 {requestedTab === 'nearby' ? 'Belum ada seller berhampiran kawasan ini.' : null}
