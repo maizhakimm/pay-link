@@ -62,6 +62,9 @@ export default function ExplorePage() {
   const nearbyRef = useRef<HTMLDivElement>(null)
   const sellerRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const [debugMode, setDebugMode] = useState(false)
+  const [debugHref, setDebugHref] = useState('')
+  const [isMobileUa, setIsMobileUa] = useState(false)
 
   useEffect(() => {
     const syncTabFromUrl = () => {
@@ -97,6 +100,23 @@ export default function ExplorePage() {
     }
   }, [])
 
+
+  useEffect(() => {
+    const syncDebugFromUrl = () => {
+      const params = new URLSearchParams(window.location.search)
+      const enabled = params.get('debug') === '1'
+      setDebugMode(enabled)
+      if (!enabled) return
+      const href = window.location.href
+      const ua = navigator.userAgent || ''
+      setDebugHref(href)
+      setIsMobileUa(/Android|iPhone|iPad|iPod|Mobile/i.test(ua))
+    }
+
+    syncDebugFromUrl()
+    window.addEventListener('popstate', syncDebugFromUrl)
+    return () => window.removeEventListener('popstate', syncDebugFromUrl)
+  }, [])
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -265,6 +285,33 @@ export default function ExplorePage() {
             <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-sky-200/70 bg-white/70 px-3 py-1 text-xs font-semibold text-sky-700 shadow-sm backdrop-blur">📍 {area || 'Semua Kawasan'}</button>
           </div>
         </header>
+
+        {debugMode ? (
+          <section className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-slate-800">
+            <p className="font-bold">Debug Mode (debug=1)</p>
+            <p>href: {debugHref}</p>
+            <p>mobileUA: {isMobileUa ? 'yes' : 'no'}</p>
+            <p>requestedTab: {requestedTab}</p>
+            <p>products.length: {products.length}</p>
+            <p>displayedProducts.length: {displayedProducts.length}</p>
+            <p>selectedChip: {selectedChip}</p>
+            <p>area: {area || '-'}</p>
+            <p>query: {query || '-'}</p>
+            <p>isFoodTab: {isFoodTab ? 'true' : 'false'}</p>
+            <div className="mt-2">
+              <p className="font-semibold">products (first 5)</p>
+              {(products.slice(0, 5)).map((p) => (
+                <p key={`all-${p.id}`}>• {p.name} | seller: {p.sellerName} | shopSlug: {p.shopSlug ? 'yes' : 'no'} | type: {p.listingType} | area: {p.areaText || '-'} | community: {p.communityText || '-'}</p>
+              ))}
+            </div>
+            <div className="mt-2">
+              <p className="font-semibold">displayedProducts (first 5)</p>
+              {(displayedProducts.slice(0, 5)).map((p) => (
+                <p key={`display-${p.id}`}>• {p.name} | seller: {p.sellerName} | shopSlug: {p.shopSlug ? 'yes' : 'no'} | type: {p.listingType} | area: {p.areaText || '-'} | community: {p.communityText || '-'}</p>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {requestedTab === 'home' ? (
           <section className="mt-5">
