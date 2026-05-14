@@ -68,9 +68,11 @@ export default function ExplorePage() {
       const tab = new URLSearchParams(window.location.search).get('tab')
       if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'nearby') {
         setRequestedTab(tab)
+        if (tab === 'food') setSelectedChip('all')
         return
       }
       setRequestedTab('home')
+      setSelectedChip('all')
     }
 
     syncTabFromUrl()
