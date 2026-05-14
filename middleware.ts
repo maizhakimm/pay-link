@@ -4,6 +4,23 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const { pathname, search, hostname } = request.nextUrl
 
+  if (hostname === 'bazarlink.my' || hostname === 'www.bazarlink.my') {
+    if (pathname === '/' || pathname === '') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/bazar'
+      return NextResponse.rewrite(url)
+    }
+  }
+
+  if ((hostname === 'bayarlink.my' || hostname === 'www.bayarlink.my') && (pathname === '/bazar' || pathname.startsWith('/explore'))) {
+    const url = request.nextUrl.clone()
+    url.protocol = 'https:'
+    url.hostname = 'www.bazarlink.my'
+    url.pathname = '/bazar'
+    url.search = ''
+    return NextResponse.redirect(url, 308)
+  }
+
   // 1) Paksa semua traffic ke www.bayarlink.my
   if (hostname === 'bayarlink.my') {
     const url = request.nextUrl.clone()
