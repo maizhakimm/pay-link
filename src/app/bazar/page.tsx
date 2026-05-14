@@ -65,6 +65,7 @@ export default function ExplorePage() {
   const [debugHref, setDebugHref] = useState('')
   const [isMobileUa, setIsMobileUa] = useState(false)
   const [apiDebug, setApiDebug] = useState<Record<string, unknown> | null>(null)
+  const [openingShopKey, setOpeningShopKey] = useState<string | null>(null)
 
   useEffect(() => {
     const syncTabFromUrl = () => {
@@ -232,6 +233,15 @@ export default function ExplorePage() {
     setShowInstallSheet(true)
   }
 
+
+  function handleViewShopClick(key: string) {
+    if (!key) return
+    setOpeningShopKey(key)
+    window.setTimeout(() => {
+      setOpeningShopKey((current) => (current === key ? null : current))
+    }, 8000)
+  }
+
   return (
     <main className="min-h-screen bg-white pb-32">
       <div className="mx-auto max-w-6xl px-4 py-5">
@@ -340,7 +350,7 @@ export default function ExplorePage() {
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
                   <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
                 </div>
-                <div className="mt-2">{item.shopSlug ? <Link href={`/s/${encodeURIComponent(item.shopSlug)}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`} className="inline-flex rounded-lg bg-[#2563EB] px-2.5 py-1.5 text-[11px] font-bold text-white">{item.isDemo ? 'Order Now' : 'View Shop'}</Link> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>}</div>
+                <div className="mt-2">{item.shopSlug ? <Link href={`/s/${encodeURIComponent(item.shopSlug)}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`} onClick={(e) => { const key = `product:${item.id}`; if (openingShopKey === key) { e.preventDefault(); return } handleViewShopClick(key) }} aria-disabled={openingShopKey === `product:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `product:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `product:${item.id}` ? 'Opening...' : item.isDemo ? 'Order Now' : 'View Shop'}</Link> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>}</div>
               </article>
             ))}
           </div>
@@ -383,7 +393,7 @@ export default function ExplorePage() {
                 </div>
                 <div className="mt-2">
                   {item.seller?.shop_slug ? (
-                    <Link href={`/s/${encodeURIComponent(item.seller.shop_slug)}`} className="inline-flex rounded-lg bg-[#2563EB] px-2.5 py-1.5 text-[11px] font-bold text-white">View Shop</Link>
+                    <Link href={`/s/${encodeURIComponent(item.seller.shop_slug)}`} onClick={(e) => { const key = `seller:${item.id}`; if (openingShopKey === key) { e.preventDefault(); return } handleViewShopClick(key) }} aria-disabled={openingShopKey === `seller:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `seller:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `seller:${item.id}` ? 'Opening...' : 'View Shop'}</Link>
                   ) : (
                     <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">View Shop</span>
                   )}
