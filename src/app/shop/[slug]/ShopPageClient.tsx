@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import ShopPayButton from './ShopPayButton'
 
@@ -1133,6 +1134,9 @@ export default function ShopPageClient({
             alt="BayarLink"
             style={logo}
           />
+          <Link href="/bazar" style={backToBazarLink}>
+            ← Bazar
+          </Link>
         </div>
 
         <div style={heroCard}>
@@ -1928,13 +1932,28 @@ const container: React.CSSProperties = {
 
 const logoWrap: React.CSSProperties = {
   display: 'flex',
-  justifyContent: 'center',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
   marginBottom: 12,
 }
 
 const logo: React.CSSProperties = {
   height: 20,
   width: 'auto',
+}
+
+const backToBazarLink: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  borderRadius: 999,
+  border: '1px solid #dbeafe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  fontWeight: 700,
+  fontSize: 12,
+  padding: '7px 12px',
+  textDecoration: 'none',
 }
 
 const heroCard: React.CSSProperties = {
