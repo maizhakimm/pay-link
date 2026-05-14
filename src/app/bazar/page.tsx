@@ -175,7 +175,25 @@ export default function ExplorePage() {
     })
     const shouldApplyAreaFilter = requestedTab === 'nearby' || Boolean(area)
     const byArea = byChip.filter((p) => !shouldApplyAreaFilter || !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
-    return byArea
+
+    const shouldFallbackFoodChip = requestedTab === 'food' && selectedChip !== 'all' && byArea.length === 0 && bySearch.length > 0
+    const finalProducts = shouldFallbackFoodChip ? bySearch : byArea
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('[bazar] product filter summary', {
+        requestedTab,
+        products: products.length,
+        byTab: byTab.length,
+        bySearch: bySearch.length,
+        byChip: byChip.length,
+        byArea: byArea.length,
+        final: finalProducts.length,
+        selectedChip,
+        area,
+      })
+    }
+
+    return finalProducts
   }, [products, query, selectedChip, area, requestedTab, isFoodTab])
 
   const sellerCards = useMemo(() => {
