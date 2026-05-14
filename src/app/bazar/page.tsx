@@ -142,12 +142,12 @@ export default function ExplorePage() {
       const sellerIds = normalizedProfiles.map((p) => p.seller_profile_id)
       const { data: sellerRows } = await supabase.from('seller_profiles').select('id,store_name,shop_slug,whatsapp').in('id', sellerIds)
       const sellerMap: Record<string, Seller> = {}
-      ;(sellerRows || []).forEach((row: any) => { sellerMap[row.id] = row as Seller })
+      ;(sellerRows || []).forEach((row: any) => { sellerMap[String(row.id)] = row as Seller })
 
       const { data: productRows } = await supabase.from('products').select('*').in('seller_profile_id', sellerIds).eq('is_active', true).order('created_at', { ascending: false })
       const productCards = ((productRows || []) as any[]).map((p) => {
         const profile = normalizedProfiles.find((mp) => mp.seller_profile_id === p.seller_profile_id)
-        const seller = sellerMap[p.seller_profile_id]
+        const seller = sellerMap[String(p.seller_profile_id)]
         const image = p.product_image_url || p.image_1 || p.image_2 || p.image_url || null
         const listingTypeRaw = String(p.listing_type || '').trim().toLowerCase()
         const listingType: ListingType = listingTypeRaw === 'service' || listingTypeRaw === 'services'
@@ -160,7 +160,7 @@ export default function ExplorePage() {
 
       setProfiles(normalizedProfiles)
       setSellers(sellerMap)
-      setProducts(productCards)
+      setProducts(productCards.filter((card) => card.sellerName && card.sellerName !== 'Local Seller'))
       setLoading(false)
     }
     load()
@@ -270,6 +270,18 @@ export default function ExplorePage() {
           </div>
         </header>
 
+        {requestedTab === 'home' ? (
+          <section className="mt-5">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <Link href="/bazar" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Semua</Link>
+              <Link href="/bazar?tab=food" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Food</Link>
+              <Link href="/bazar?tab=services" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Services</Link>
+              <Link href="/bazar?tab=shop" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Shop</Link>
+              <Link href="/bazar?tab=nearby" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Nearby</Link>
+            </div>
+          </section>
+        ) : null}
+
         {isFoodTab ? (
           <section ref={categoriesRef} className="mt-5">
             <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -313,6 +325,12 @@ export default function ExplorePage() {
               </article>
             ))}
           </div>
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
+          <p className="text-sm font-semibold text-slate-800">Jual di BazarLink</p>
+          <p className="mt-1 text-xs text-slate-600">Buka tapak digital percuma sepanjang Beta.</p>
+          <Link href="/login" className="mt-3 inline-flex rounded-xl bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white">Daftar Seller</Link>
         </section>
 
         <section ref={sellerRef} className="mt-7">
