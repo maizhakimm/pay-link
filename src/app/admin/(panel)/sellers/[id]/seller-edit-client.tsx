@@ -299,6 +299,11 @@ type MarketplaceProfile = {
   is_marketplace_visible: boolean | null
   is_featured: boolean | null
   is_verified: boolean | null
+  area_text?: string | null
+  community_text?: string | null
+  tagline?: string | null
+  marketplace_description?: string | null
+  category_names?: string[]
 } | null
 
 export default function SellerEditClient({ seller, marketplaceProfile }: { seller: SellerForm; marketplaceProfile: MarketplaceProfile }) {
@@ -662,7 +667,7 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Textarea
-            label="Business Address"
+            label="Business Address (rekod dalaman / alamat umum)"
             value={form.business_address}
             onChange={(v) => handleChange("business_address", v)}
             placeholder="Alamat perniagaan"
@@ -676,6 +681,7 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
             rows={4}
           />
         </div>
+        <p className="mt-3 text-xs text-slate-500">Untuk pickup/delivery, gunakan Pickup Address di bahagian Delivery.</p>
       </SectionCard>
 
       <SectionCard
@@ -804,12 +810,13 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
               />
               <div className="md:col-span-2">
                 <Textarea
-                  label="Pickup Address"
+                  label="Pickup Address / Lokasi Kedai"
                   value={form.pickup_address}
                   onChange={(v) => handleChange("pickup_address", v)}
                   placeholder="Alamat pickup / lokasi kedai"
                   rows={3}
                 />
+                <p className="mt-2 text-xs text-slate-500">Alamat ini digunakan untuk pickup dan distance-based delivery.</p>
               </div>
             </div>
           ) : null}
@@ -956,6 +963,11 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
             <p><span className="font-semibold">Visible:</span> {marketplaceState?.is_marketplace_visible ? "Yes" : "No"}</p>
             <p><span className="font-semibold">Featured:</span> {marketplaceState?.is_featured ? "Yes" : "No"}</p>
             <p><span className="font-semibold">Verified:</span> {marketplaceState?.is_verified ? "Yes" : "No"}</p>
+            <p><span className="font-semibold">Area:</span> {marketplaceState?.area_text || "-"}</p>
+            <p><span className="font-semibold">Community:</span> {marketplaceState?.community_text || "-"}</p>
+            <p><span className="font-semibold">Tagline:</span> {marketplaceState?.tagline || "-"}</p>
+            <p><span className="font-semibold">Description:</span> {marketplaceState?.marketplace_description || "-"}</p>
+            <p><span className="font-semibold">Categories:</span> {marketplaceState?.category_names?.length ? marketplaceState.category_names.join(", ") : "-"}</p>
           </div>
           <div className="flex flex-wrap content-start gap-2">
             <button onClick={() => handleMarketplaceAction("approve")} disabled={!marketplaceState?.id || marketplaceActionLoading} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">Approve / Publish</button>
@@ -970,24 +982,13 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
         title="Shop & Share"
         subtitle="Tetapan slug, branding, dan marketing share."
       >
+        <p className="mb-3 text-xs text-slate-500">Shop Slug digunakan untuk link kedai: /s/[shop_slug]</p>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <Input
             label="Shop Slug"
             value={form.shop_slug}
             onChange={(v) => handleChange("shop_slug", v)}
             placeholder="contoh: dana-store"
-          />
-          <Input
-            label="Slug"
-            value={form.slug}
-            onChange={(v) => handleChange("slug", v)}
-            placeholder="Optional"
-          />
-          <Input
-            label="Store Slug"
-            value={form.store_slug}
-            onChange={(v) => handleChange("store_slug", v)}
-            placeholder="Optional"
           />
           <Input
             label="Share Image Mode"
@@ -1008,6 +1009,7 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
             placeholder="Profile image URL"
           />
         </div>
+        <p className="mt-3 text-xs text-slate-500">Share fields digunakan untuk preview link WhatsApp/social.</p>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Input
