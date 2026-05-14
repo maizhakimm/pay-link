@@ -1024,8 +1024,14 @@ export default function SellerEditClient({ seller, marketplaceProfile, marketpla
           </div>
         </div>
         <div className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-2">
-          <Input label="Area Text" value={marketplaceState?.area_text || ""} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), area_text: v }))} />
-          <Input label="Community Text" value={marketplaceState?.community_text || ""} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), community_text: v }))} />
+          <div>
+            <Input label="Area liputan jualan" value={marketplaceState?.area_text || ""} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), area_text: v }))} />
+            <p className="mt-1 text-xs text-slate-500">Contoh: Klang Valley / Shah Alam / Selangor</p>
+          </div>
+          <div>
+            <Input label="Lokasi / kawasan anda" value={marketplaceState?.community_text || ""} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), community_text: v }))} />
+            <p className="mt-1 text-xs text-slate-500">Contoh: Seksyen 7 / Setia Alam / Puncak Alam</p>
+          </div>
           <Input label="Tagline" value={marketplaceState?.tagline || ""} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), tagline: v }))} />
           <Input label="Status" value={marketplaceState?.status || "draft"} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), status: v }))} />
           <div className="md:col-span-2">

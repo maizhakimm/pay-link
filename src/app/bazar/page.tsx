@@ -19,6 +19,7 @@ const FOOD_CHIPS = [
   { key: 'goreng', label: '🍗 Goreng' },
   { key: 'drinks', label: '🥤 Drinks' },
   { key: 'dessert', label: '🍰 Dessert' },
+  { key: 'kek', label: '🎂 Kek' },
   { key: 'bakery', label: '🥐 Bakery' },
   { key: 'mee', label: '🍜 Mee' },
   { key: 'lunch', label: '🍱 Lunch' },
@@ -35,6 +36,7 @@ const CHIP_MATCHERS: Record<string, string[]> = {
   mee: ['mee', 'mi', 'noodle'],
   lunch: ['lunch', 'tengah hari'],
   kuih: ['kuih'],
+  kek: ['kek', 'cake'],
 }
 
 const DEMO_PRODUCTS: ProductCard[] = [
@@ -58,8 +60,8 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [selectedChip, setSelectedChip] = useState('all')
-  const [area, setArea] = useState('Shah Alam')
-  const [areaOptions, setAreaOptions] = useState<string[]>(['Shah Alam'])
+  const [area, setArea] = useState('')
+  const [areaOptions, setAreaOptions] = useState<string[]>([])
   const [showAreaPicker, setShowAreaPicker] = useState(false)
   const [showInstallSheet, setShowInstallSheet] = useState(false)
   const [showIOSInstallSheet, setShowIOSInstallSheet] = useState(false)
@@ -182,7 +184,8 @@ export default function ExplorePage() {
       const haystack = [p.name, p.categoryLabel || ''].join(' ').toLowerCase()
       return keywords.some((kw) => haystack.includes(kw))
     })
-    const byArea = byChip.filter((p) => !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
+    const shouldApplyAreaFilter = requestedTab === 'nearby' || Boolean(area)
+    const byArea = byChip.filter((p) => !shouldApplyAreaFilter || !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
     return byArea
   }, [products, query, selectedChip, area, requestedTab, isFoodTab])
 
@@ -262,7 +265,7 @@ export default function ExplorePage() {
             </button>
           </div>
           <div ref={nearbyRef} className="mt-3 flex justify-center">
-            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-sky-200/70 bg-white/70 px-3 py-1 text-xs font-semibold text-sky-700 shadow-sm backdrop-blur">📍 {area}</button>
+            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-sky-200/70 bg-white/70 px-3 py-1 text-xs font-semibold text-sky-700 shadow-sm backdrop-blur">📍 {area || 'Semua Kawasan'}</button>
           </div>
         </header>
 
@@ -314,7 +317,7 @@ export default function ExplorePage() {
         <section ref={sellerRef} className="mt-7">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-slate-800">BAZAR Seller</h2>
-            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">📍 {area}</button>
+            <button onClick={() => setShowAreaPicker(true)} className="inline-flex items-center rounded-full border border-blue-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur">📍 {area || 'Semua Kawasan'}</button>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sellerCards.map((item: any) => (
@@ -360,7 +363,10 @@ export default function ExplorePage() {
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowAreaPicker(false)}>
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold">Pilih kawasan</h3><button onClick={() => setShowAreaPicker(false)} className="rounded-lg border px-2 py-1 text-xs">Tutup</button></div>
-            <div className="space-y-2">{areaOptions.map((item) => <button key={item} onClick={() => { setArea(item); setShowAreaPicker(false) }} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === item ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>{item}</button>)}</div>
+            <div className="space-y-2">
+              <button onClick={() => { setArea(''); setShowAreaPicker(false) }} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === '' ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>Semua Kawasan</button>
+              {areaOptions.map((item) => <button key={item} onClick={() => { setArea(item); setShowAreaPicker(false) }} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === item ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>{item}</button>)}
+            </div>
           </div>
         </div>
       ) : null}

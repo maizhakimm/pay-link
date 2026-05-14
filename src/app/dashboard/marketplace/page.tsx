@@ -337,11 +337,13 @@ export default function DashboardMarketplacePage() {
                   <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-500">Tiada pilihan kawasan tersedia sekarang. Gunakan ruangan teks di bawah.</p>
                 )}
               </Field>
-              <Field label="Area text">
+              <Field label="Area liputan jualan">
                 <input className={inputCls} value={profile.area_text || ''} onChange={(e) => updateProfileField('area_text', e.target.value)} placeholder="Contoh: Sekitar Shah Alam & Setia Alam" />
+                <p className="mt-1 text-xs text-slate-500">Contoh: Klang Valley / Shah Alam / Selangor</p>
               </Field>
-              <Field label="Taman / Apartment / Kawasan text">
+              <Field label="Lokasi / kawasan anda">
                 <input className={inputCls} value={profile.community_text || ''} onChange={(e) => updateProfileField('community_text', e.target.value)} placeholder="Contoh: Seksyen 7, Seksyen 9" />
+                <p className="mt-1 text-xs text-slate-500">Contoh: Seksyen 7 / Setia Alam / Puncak Alam</p>
               </Field>
             </Card>
 
