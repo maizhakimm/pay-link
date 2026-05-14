@@ -149,11 +149,12 @@ export default function ExplorePage() {
         const profile = normalizedProfiles.find((mp) => mp.seller_profile_id === p.seller_profile_id)
         const seller = sellerMap[p.seller_profile_id]
         const image = p.product_image_url || p.image_1 || p.image_2 || p.image_url || null
-        const listingType: ListingType = p.listing_type === 'food'
-          ? 'food'
-          : p.listing_type === 'service' || p.listing_type === 'services'
-            ? 'service'
-            : 'shop'
+        const listingTypeRaw = String(p.listing_type || '').trim().toLowerCase()
+        const listingType: ListingType = listingTypeRaw === 'service' || listingTypeRaw === 'services'
+          ? 'service'
+          : listingTypeRaw === 'shop' || listingTypeRaw === 'product'
+            ? 'shop'
+            : 'food'
         return { id: p.id, name: p.name, price: Number(p.price || 0), seller_profile_id: p.seller_profile_id, image, sellerName: seller?.store_name || 'Local Seller', shopSlug: seller?.shop_slug || null, areaText: profile?.area_text || null, communityText: profile?.community_text || null, categoryLabel: profile?.categoryNames?.[0] || null, isFeatured: Boolean(profile?.is_featured), isVerified: Boolean(profile?.is_verified), listingType } as ProductCard
       })
 
