@@ -231,7 +231,7 @@ export default function ExplorePage() {
       if (choiceResult?.outcome) setDeferredPrompt(null)
       return
     }
-    setInstallInstruction('Untuk tambah BayarLink ke phone, buka menu browser dan pilih Add to Home Screen.')
+    setInstallInstruction('Untuk tambah BazarLink ke phone, buka menu browser dan pilih Add to Home Screen.')
     setShowInstallSheet(true)
   }
 
@@ -434,7 +434,7 @@ export default function ExplorePage() {
       {showInstallSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowInstallSheet(false)}>
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Add BayarLink launcher icon di Device?</h3>
+            <h3 className="text-base font-bold text-slate-900">Add BazarLink launcher icon di Device?</h3>
             <p className="mt-1 text-sm text-slate-600">{installInstruction || 'Buka dan akses BayarLink akan jadi lebih mudah.'}</p>
             <div className="mt-5 flex gap-2">
               <button onClick={() => setShowInstallSheet(false)} className="rounded-xl bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white">Ya, add launcher di device</button>
@@ -447,7 +447,7 @@ export default function ExplorePage() {
       {showIOSInstallSheet ? (
         <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setShowIOSInstallSheet(false)}>
           <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900">Add BayarLink ke iPhone?</h3>
+            <h3 className="text-base font-bold text-slate-900">Add BazarLink ke iPhone?</h3>
             <p className="mt-1 text-sm text-slate-600">Untuk akses lebih mudah, tekan butang Share di Safari dan pilih ‘Add to Home Screen’.</p>
             <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
               <p>1. Tekan ikon <span className="font-semibold">Share</span> ⎋</p>
