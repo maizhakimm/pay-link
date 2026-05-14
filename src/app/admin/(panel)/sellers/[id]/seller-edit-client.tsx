@@ -25,6 +25,13 @@ const MALAYSIAN_BANKS = [
   "RHB Bank",
   "Standard Chartered",
   "UOB Bank",
+  "Boost Bank",
+  "GXBank",
+  "Ryt Bank",
+  "AEON Bank",
+  "BigPay",
+  "TNG Digital",
+  "Wise",
 ]
 
 const DELIVERY_MODES = [
@@ -304,9 +311,12 @@ type MarketplaceProfile = {
   tagline?: string | null
   marketplace_description?: string | null
   category_names?: string[]
+  category_ids?: string[]
 } | null
 
-export default function SellerEditClient({ seller, marketplaceProfile }: { seller: SellerForm; marketplaceProfile: MarketplaceProfile }) {
+type MarketplaceCategoryOption = { id: string; category_name: string }
+
+export default function SellerEditClient({ seller, marketplaceProfile, marketplaceCategories }: { seller: SellerForm; marketplaceProfile: MarketplaceProfile; marketplaceCategories: MarketplaceCategoryOption[] }) {
   const [form, setForm] = useState<SellerForm>({
     ...seller,
     operating_days: normalizeOperatingDays(seller.operating_days),
@@ -314,6 +324,7 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
   const [loading, setLoading] = useState(false)
   const [marketplaceState, setMarketplaceState] = useState<MarketplaceProfile>(marketplaceProfile)
   const [marketplaceActionLoading, setMarketplaceActionLoading] = useState(false)
+  const [marketplaceSaving, setMarketplaceSaving] = useState(false)
 
   function handleChange<K extends keyof SellerForm>(key: K, value: SellerForm[K]) {
     setForm((prev) => ({
@@ -568,6 +579,39 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
       alert(err instanceof Error ? err.message : "Unexpected error")
     } finally {
       setMarketplaceActionLoading(false)
+    }
+  }
+
+  async function handleMarketplaceSetupSave() {
+    setMarketplaceSaving(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error("Admin session missing. Please login again.")
+      const res = await fetch(`/api/admin/marketplace/sellers/${form.id}/setup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          profileId: marketplaceState?.id || null,
+          area_text: marketplaceState?.area_text || null,
+          community_text: marketplaceState?.community_text || null,
+          tagline: marketplaceState?.tagline || null,
+          marketplace_description: marketplaceState?.marketplace_description || null,
+          category_ids: marketplaceState?.category_ids || [],
+          is_marketplace_visible: Boolean(marketplaceState?.is_marketplace_visible),
+          status: marketplaceState?.status || "draft",
+          is_featured: Boolean(marketplaceState?.is_featured),
+          is_verified: Boolean(marketplaceState?.is_verified),
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error || "Failed to save marketplace setup")
+      setMarketplaceState((prev) => prev ? { ...prev, id: json.profileId, category_names: json.categoryNames || prev.category_names } : prev)
+      alert("Marketplace setup saved.")
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unexpected error")
+    } finally {
+      setMarketplaceSaving(false)
     }
   }
 
@@ -957,6 +1001,9 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
         title="Marketplace"
         subtitle="Review and publish controls using existing marketplace moderation flow."
       >
+        {!marketplaceState?.id ? (
+          <p className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">Seller belum lengkap setup Bazar.</p>
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
             <p><span className="font-semibold">Status:</span> {marketplaceState?.status || "draft"}</p>
@@ -974,6 +1021,28 @@ export default function SellerEditClient({ seller, marketplaceProfile }: { selle
             <button onClick={() => handleMarketplaceAction("reject")} disabled={!marketplaceState?.id || marketplaceActionLoading} className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">Reject / Hide</button>
             <button onClick={() => handleMarketplaceAction("feature")} disabled={!marketplaceState?.id || marketplaceActionLoading} className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-60">{marketplaceState?.is_featured ? "Unfeature" : "Feature"}</button>
             <button onClick={() => handleMarketplaceAction("verify")} disabled={!marketplaceState?.id || marketplaceActionLoading} className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-60">{marketplaceState?.is_verified ? "Unverify" : "Verify"}</button>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-2">
+          <Input label="Area Text" value={marketplaceState?.area_text || ""} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), area_text: v }))} />
+          <Input label="Community Text" value={marketplaceState?.community_text || ""} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), community_text: v }))} />
+          <Input label="Tagline" value={marketplaceState?.tagline || ""} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), tagline: v }))} />
+          <Input label="Status" value={marketplaceState?.status || "draft"} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), status: v }))} />
+          <div className="md:col-span-2">
+            <Textarea label="Marketplace Description" value={marketplaceState?.marketplace_description || ""} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), marketplace_description: v }))} rows={3} />
+          </div>
+          <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Marketplace Categories</label>
+            <div className="flex flex-wrap gap-2">
+              {marketplaceCategories.map((category) => {
+                const checked = Boolean(marketplaceState?.category_ids?.includes(category.id))
+                return <label key={category.id} className={`rounded-xl border px-3 py-2 text-xs ${checked ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-700"}`}><input type="checkbox" className="mr-2" checked={checked} onChange={() => setMarketplaceState((prev) => { const current = prev?.category_ids || []; const next = current.includes(category.id) ? current.filter((id) => id !== category.id) : [...current, category.id]; return { ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), category_ids: next } })} />{category.category_name}</label>
+              })}
+            </div>
+          </div>
+          <div className="md:col-span-2 flex gap-4">
+            <Toggle label="Visible in Marketplace" checked={Boolean(marketplaceState?.is_marketplace_visible)} onChange={(v) => setMarketplaceState((prev) => ({ ...(prev || { id: "", seller_profile_id: form.id, status: "draft", is_marketplace_visible: false, is_featured: false, is_verified: false }), is_marketplace_visible: v }))} />
+            <button onClick={handleMarketplaceSetupSave} disabled={marketplaceSaving} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{marketplaceSaving ? "Saving..." : "Save Marketplace Setup"}</button>
           </div>
         </div>
       </SectionCard>

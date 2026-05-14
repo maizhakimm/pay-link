@@ -25,10 +25,16 @@ export default async function Page({
     .limit(1)
     .maybeSingle()
   let marketplaceCategoryNames: string[] = []
+  let marketplaceCategoryIds: string[] = []
+  const { data: allMarketplaceCategories } = await supabase
+    .from("marketplace_categories")
+    .select("id,category_name")
+    .eq("is_enabled", true)
+    .order("display_order", { ascending: true })
   if (marketplaceProfile?.id) {
     const { data: categoryRows } = await supabase
       .from("marketplace_profile_categories")
-      .select("marketplace_categories(category_name)")
+      .select("category_id,marketplace_categories(category_name)")
       .eq("marketplace_profile_id", marketplaceProfile.id)
     marketplaceCategoryNames = (categoryRows || [])
       .map((row: any) =>
@@ -37,6 +43,7 @@ export default async function Page({
           : row.marketplace_categories?.category_name
       )
       .filter(Boolean)
+    marketplaceCategoryIds = (categoryRows || []).map((row: any) => row.category_id).filter(Boolean)
   }
 
   if (error || !data) {
@@ -63,5 +70,5 @@ export default async function Page({
     )
   }
 
-  return <SellerEditClient seller={data} marketplaceProfile={marketplaceProfile ? { ...marketplaceProfile, category_names: marketplaceCategoryNames } : null} />
+  return <SellerEditClient seller={data} marketplaceProfile={marketplaceProfile ? { ...marketplaceProfile, category_names: marketplaceCategoryNames, category_ids: marketplaceCategoryIds } : null} marketplaceCategories={allMarketplaceCategories || []} />
 }
