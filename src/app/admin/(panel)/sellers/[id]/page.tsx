@@ -17,6 +17,34 @@ export default async function Page({
     .select("*")
     .eq("id", params.id)
     .single()
+  const { data: marketplaceProfile } = await supabase
+    .from("marketplace_profiles")
+    .select("id,seller_profile_id,status,is_marketplace_visible,is_featured,is_verified,area_text,community_text,tagline,marketplace_description")
+    .eq("seller_profile_id", params.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  let marketplaceCategoryNames: string[] = []
+  let marketplaceCategoryIds: string[] = []
+  const { data: allMarketplaceCategories } = await supabase
+    .from("marketplace_categories")
+    .select("id,category_name")
+    .eq("is_enabled", true)
+    .order("display_order", { ascending: true })
+  if (marketplaceProfile?.id) {
+    const { data: categoryRows } = await supabase
+      .from("marketplace_profile_categories")
+      .select("category_id,marketplace_categories(category_name)")
+      .eq("marketplace_profile_id", marketplaceProfile.id)
+    marketplaceCategoryNames = (categoryRows || [])
+      .map((row: any) =>
+        Array.isArray(row.marketplace_categories)
+          ? row.marketplace_categories[0]?.category_name
+          : row.marketplace_categories?.category_name
+      )
+      .filter(Boolean)
+    marketplaceCategoryIds = (categoryRows || []).map((row: any) => row.category_id).filter(Boolean)
+  }
 
   if (error || !data) {
     return (
@@ -42,5 +70,5 @@ export default async function Page({
     )
   }
 
-  return <SellerEditClient seller={data} />
+  return <SellerEditClient seller={data} marketplaceProfile={marketplaceProfile ? { ...marketplaceProfile, category_names: marketplaceCategoryNames, category_ids: marketplaceCategoryIds } : null} marketplaceCategories={allMarketplaceCategories || []} />
 }

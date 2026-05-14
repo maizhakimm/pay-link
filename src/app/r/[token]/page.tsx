@@ -13,6 +13,13 @@ type Props = {
   params: { token: string }
 }
 
+function formatDate(value?: string | null) {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return d.toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
 export default async function ReceiptPage({ params }: Props) {
   const token = params.token
 
@@ -26,7 +33,7 @@ export default async function ReceiptPage({ params }: Props) {
 
   const { data: seller } = await supabase
     .from('seller_profiles')
-    .select('store_name, profile_image')
+    .select('store_name, profile_image, business_address, pickup_address')
     .eq('id', order.seller_profile_id)
     .single()
 
@@ -35,10 +42,22 @@ export default async function ReceiptPage({ params }: Props) {
     .select('*')
     .eq('order_id', order.id)
 
+  const deliveryInfo = order.delivery_info && typeof order.delivery_info === 'object' ? order.delivery_info as any : null
+  const fulfillmentMethod = String(deliveryInfo?.fulfillment_method || '').toLowerCase()
+  const isPickup = fulfillmentMethod === 'pickup'
+  const isDelivery = fulfillmentMethod === 'delivery'
+
+  const deliveryAddress = deliveryInfo?.resolved_address || deliveryInfo?.address?.resolved_address || deliveryInfo?.address?.raw_full_address || order.buyer_address || '-'
+  const deliveryNote = deliveryInfo?.address?.delivery_note || '-'
+  const pickupAddress = deliveryInfo?.seller_pickup_address || seller?.pickup_address || seller?.business_address || '-'
+
+  const subtotal = Number(order.subtotal || 0)
+  const deliveryFee = Number(deliveryInfo?.delivery_fee ?? order.delivery_fee ?? 0)
+  const totalPaid = Number(order.total_amount || order.amount || 0)
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 flex justify-center">
       <div className="w-full max-w-md bg-white rounded-2xl shadow p-5 space-y-5">
-
         <div className="text-center">
           {seller?.profile_image && (
             <img
@@ -48,93 +67,69 @@ export default async function ReceiptPage({ params }: Props) {
             />
           )}
 
-          <p className="text-lg font-bold text-gray-900">
-            {seller?.store_name}
-          </p>
-
-          <h1 className="text-xl font-semibold">
-            Payment Successful
-          </h1>
+          <p className="text-lg font-bold text-gray-900">{seller?.store_name}</p>
+          <h1 className="text-xl font-semibold">Payment Successful</h1>
         </div>
 
         <div className="border rounded-xl p-4 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span>Order No</span>
-            <span className="font-medium">{order.order_number}</span>
-          </div>
+          <div className="flex justify-between"><span>Order No</span><span className="font-medium">{order.order_number}</span></div>
+          <div className="flex justify-between"><span>Store</span><span className="font-medium">{seller?.store_name}</span></div>
+          <div className="flex justify-between"><span>Order Time</span><span className="font-medium">{formatDate(order.created_at)}</span></div>
+          <div className="flex justify-between"><span>Payment Time</span><span className="font-medium">{formatDate(order.paid_at || order.updated_at)}</span></div>
+        </div>
 
-          <div className="flex justify-between">
-            <span>Store</span>
-            <span className="font-medium">{seller?.store_name}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span>Total</span>
-            <span className="font-semibold">
-              RM {Number(order.total_amount || 0).toFixed(2)}
-            </span>
-          </div>
-
-          <div className="flex justify-between">
-            <span>Payment</span>
-            <span className="text-green-600 font-medium">
-              {order.payment_status}
-            </span>
+        <div className="border rounded-xl p-4 text-sm">
+          <h2 className="font-medium mb-2">Delivery / Pickup</h2>
+          <div className="space-y-2">
+            <div className="flex justify-between"><span>Fulfillment</span><span className="font-medium">{isPickup ? 'Self Pickup' : isDelivery ? 'Delivery' : 'Unknown'}</span></div>
+            {isDelivery ? (
+              <>
+                <div><p className="text-xs text-gray-500">Delivery Address</p><p className="font-medium">{deliveryAddress}</p></div>
+                <div><p className="text-xs text-gray-500">Delivery Note</p><p className="font-medium">{deliveryNote}</p></div>
+              </>
+            ) : null}
+            {isPickup ? (
+              <div><p className="text-xs text-gray-500">Pickup Location</p><p className="font-medium">{pickupAddress}</p></div>
+            ) : null}
           </div>
         </div>
 
         <div className="border rounded-xl p-4 text-sm">
           <h2 className="font-medium mb-2">Items</h2>
-
           <div className="space-y-2">
-            {items?.length ? (
-              items.map((item, i) => (
-                <div key={i} className="flex justify-between gap-3">
-                  <span>
-                    {item.product_name} x{item.quantity}
-                  </span>
-                  <span className="font-medium whitespace-nowrap">
-                    RM {Number(item.line_total || 0).toFixed(2)}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-400">No item details available.</p>
-            )}
+            {items?.length ? items.map((item, i) => (
+              <div key={i} className="flex justify-between gap-3"><span>{item.product_name} x{item.quantity}</span><span className="font-medium whitespace-nowrap">RM {Number(item.line_total || 0).toFixed(2)}</span></div>
+            )) : <p className="text-gray-400">No item details available.</p>}
           </div>
+        </div>
+
+        <div className="border rounded-xl p-4 text-sm space-y-2">
+          <h2 className="font-medium mb-1">Amount Breakdown</h2>
+          <div className="flex justify-between"><span>Items Subtotal</span><span className="font-medium">RM {subtotal.toFixed(2)}</span></div>
+          <div className="flex justify-between"><span>Delivery Fee</span><span className="font-medium">RM {deliveryFee.toFixed(2)}</span></div>
+          <div className="flex justify-between border-t pt-2"><span>Total Paid</span><span className="font-semibold">RM {totalPaid.toFixed(2)}</span></div>
+        </div>
+
+        <div className="border rounded-xl p-4 text-sm space-y-2">
+          <h2 className="font-medium mb-1">Payment Info</h2>
+          <div className="flex justify-between"><span>Payment Method</span><span className="font-medium">{order.payment_channel || order.payment_method || '-'}</span></div>
+          <div className="flex justify-between"><span>Payment Status</span><span className="text-green-600 font-medium">{order.payment_status || '-'}</span></div>
         </div>
 
         <div className="border rounded-xl p-4 text-center">
           <p className="text-sm text-gray-500">Status Order</p>
-
           <p className="font-semibold">
-            {order.fulfillment_status === 'pending' && (
-              <span className="text-yellow-600">Menunggu pengesahan</span>
-            )}
-
-            {order.fulfillment_status === 'processing' && (
-              <span className="text-blue-600">Sedang disediakan</span>
-            )}
-
-            {order.fulfillment_status === 'completed' && (
-              <span className="text-green-600">Selesai</span>
-            )}
-
-            {order.fulfillment_status === 'cancelled' && (
-              <span className="text-red-600">Dibatalkan</span>
-            )}
+            {order.fulfillment_status === 'pending' && <span className="text-yellow-600">Menunggu pengesahan</span>}
+            {order.fulfillment_status === 'processing' && <span className="text-blue-600">Sedang disediakan</span>}
+            {order.fulfillment_status === 'completed' && <span className="text-green-600">Selesai</span>}
+            {order.fulfillment_status === 'cancelled' && <span className="text-red-600">Dibatalkan</span>}
           </p>
         </div>
 
         <div className="border-t pt-4 text-center">
           <p className="text-xs text-gray-400 mb-2">Powered by</p>
-          <img
-            src="/BayarLink-Logo-Shop-Page.svg"
-            alt="BayarLink"
-            className="h-4 mx-auto"
-          />
+          <img src="/BayarLink-Logo-Shop-Page.svg" alt="BayarLink" className="h-4 mx-auto" />
         </div>
-
       </div>
     </div>
   )
