@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import ShopPayButton from './ShopPayButton'
 
@@ -138,6 +139,7 @@ type ProductRow = {
   stock_quantity?: number
   sold_out?: boolean
   menu_category_id?: string | null
+  listing_type?: 'food' | 'shop' | 'service' | null
 }
 
 type GalleryState = {
@@ -562,7 +564,7 @@ export default function ShopPageClient({
     currentIndex: 0,
   })
 
-  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
 
   useEffect(() => {
     function handleResize() {
@@ -618,7 +620,6 @@ export default function ShopPageClient({
   const productRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null)
   const selectedProductId = searchParams.get('product')
-  const cameFromExplore = ['explore','bazar'].includes(searchParams.get('from') || '')
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
@@ -1119,8 +1120,6 @@ export default function ShopPageClient({
     minimumOrderValue,
   ])
 
-  if (isDesktop === null) return null
-
   const sellerName = seller.store_name || 'Shop'
 
   return (
@@ -1132,6 +1131,9 @@ export default function ShopPageClient({
             alt="BayarLink"
             style={logo}
           />
+          <Link href="/bazar" style={backToBazarLink}>
+            ← Bazar
+          </Link>
         </div>
 
         <div style={heroCard}>
@@ -1286,16 +1288,6 @@ export default function ShopPageClient({
         ) : null}
 
         <div ref={productListRef}>
-          {cameFromExplore ? (
-            <div style={exploreBackWrap}>
-              <a
-                href={`/bazar?${new URLSearchParams(Array.from(searchParams.entries()).filter(([key]) => ['area', 'category', 'q'].includes(key))).toString()}`}
-                style={exploreBackButton}
-              >
-                ← BAZAR
-              </a>
-            </div>
-          ) : null}
           {visibleProducts.length === 0 ? (
             <div style={emptyCard}>
               <p style={{ margin: 0, color: '#64748b' }}>
@@ -1317,6 +1309,7 @@ export default function ShopPageClient({
                   0
                 )
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
+                const isServiceListing = product.listing_type === 'service'
                 const allImages = getProductImages(product)
 
                 return (
@@ -1341,36 +1334,29 @@ export default function ShopPageClient({
                           {product.description || 'Tiada deskripsi.'}
                         </div>
 
-                        <div style={qtyWrap}>
-                          <div style={qtyRow}>
-                            <button
-                              type="button"
-                              onClick={() => decrease(product.id)}
-                              style={qtyBtn}
-                            >
-                              -
-                            </button>
-
-                            <span style={qtyValue}>{qty}</span>
-
-                            <button
-                              type="button"
-                              onClick={() => increase(product)}
-                              style={{
-                                ...qtyBtn,
-                                opacity: disableAddButton ? 0.4 : 1,
-                                cursor: disableAddButton ? 'not-allowed' : 'pointer',
-                              }}
-                              disabled={disableAddButton}
-                            >
-                              +
-                            </button>
+                        {isServiceListing ? (
+                          <div style={qtyWrap}>
+                            <a href={seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}` : '#'} style={{ ...qtyBtn, display: 'inline-flex', width: '100%', justifyContent: 'center', textDecoration: 'none' }}>
+                              Hubungi Seller
+                            </a>
                           </div>
-
-                          {!isShopOpen ? (
-                            <div style={qtyHintClosed}>Ordering unavailable</div>
-                          ) : null}
-                        </div>
+                        ) : (
+                          <div style={qtyWrap}>
+                            <div style={qtyRow}>
+                              <button type="button" onClick={() => decrease(product.id)} style={qtyBtn}>-</button>
+                              <span style={qtyValue}>{qty}</span>
+                              <button
+                                type="button"
+                                onClick={() => increase(product)}
+                                style={{ ...qtyBtn, opacity: disableAddButton ? 0.4 : 1, cursor: disableAddButton ? 'not-allowed' : 'pointer' }}
+                                disabled={disableAddButton}
+                              >
+                                +
+                              </button>
+                            </div>
+                            {!isShopOpen ? <div style={qtyHintClosed}>Ordering unavailable</div> : null}
+                          </div>
+                        )}
                       </div>
 
                       <button
@@ -1848,31 +1834,6 @@ const heroMobile: React.CSSProperties = {
   width: '100%',
 }
 
-const exploreBackWrap: React.CSSProperties = {
-  position: 'sticky',
-  top: 72,
-  zIndex: 30,
-  display: 'flex',
-  justifyContent: 'flex-end',
-  marginBottom: 10,
-  pointerEvents: 'none',
-}
-
-const exploreBackButton: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  background: '#DD0894',
-  color: '#ffffff',
-  padding: '8px 12px',
-  borderRadius: 9999,
-  fontSize: 12,
-  fontWeight: 700,
-  textDecoration: 'none',
-  boxShadow: '0 10px 22px rgba(221, 8, 148, 0.28)',
-  pointerEvents: 'auto',
-}
-
 const highlightedProductCard: React.CSSProperties = {
   border: '1px solid #2563eb',
   boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.16)',
@@ -1933,13 +1894,28 @@ const container: React.CSSProperties = {
 
 const logoWrap: React.CSSProperties = {
   display: 'flex',
-  justifyContent: 'center',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
   marginBottom: 12,
 }
 
 const logo: React.CSSProperties = {
   height: 20,
   width: 'auto',
+}
+
+const backToBazarLink: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  borderRadius: 999,
+  border: '1px solid #dbeafe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+  fontWeight: 700,
+  fontSize: 12,
+  padding: '7px 12px',
+  textDecoration: 'none',
 }
 
 const heroCard: React.CSSProperties = {

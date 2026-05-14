@@ -25,6 +25,12 @@ type SellerProfile = {
   share_poster_url: string | null
   created_at: string | null
 }
+type MarketplaceProfile = {
+  id: string
+  seller_profile_id: string
+  status: string | null
+  is_marketplace_visible: boolean | null
+}
 
 function toNumber(value: number | string | null | undefined) {
   const num = Number(value || 0)
@@ -122,6 +128,7 @@ export default async function AdminSellersPage() {
 
   const productCountsMap = new Map<string, number>()
   const paidOrdersMap = new Map<string, number>()
+  const marketplaceMap = new Map<string, MarketplaceProfile>()
 
   if (sellerIds.length > 0) {
     const { data: products } = await supabase
@@ -143,6 +150,15 @@ export default async function AdminSellersPage() {
     for (const row of paidOrders || []) {
       const id = row.seller_profile_id as string
       paidOrdersMap.set(id, (paidOrdersMap.get(id) || 0) + 1)
+    }
+
+    const { data: marketplaceRows } = await supabase
+      .from("marketplace_profiles")
+      .select("id,seller_profile_id,status,is_marketplace_visible")
+      .in("seller_profile_id", sellerIds)
+
+    for (const row of marketplaceRows || []) {
+      marketplaceMap.set(row.seller_profile_id as string, row as MarketplaceProfile)
     }
   }
 
@@ -230,7 +246,7 @@ export default async function AdminSellersPage() {
                             href={`/admin/sellers/${seller.id}`}
                             className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            Edit
+                            Manage Seller
                           </Link>
 
                           <Link
@@ -260,9 +276,27 @@ export default async function AdminSellersPage() {
                               target="_blank"
                               className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                             >
-                              Open Store
+                              Open Shop
                             </a>
                           ) : null}
+                          <a
+                            href={`/bazar?seller=${seller.id}`}
+                            target="_blank"
+                            className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Open Marketplace
+                          </a>
+                          <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">
+                            {(() => {
+                              const marketplace = marketplaceMap.get(seller.id)
+                              if (!marketplace) return "Marketplace: Hidden"
+                              const status = (marketplace.status || "").toLowerCase()
+                              if (status === "draft") return "Marketplace: Draft"
+                              if (status === "pending_review") return "Marketplace: Submitted"
+                              if (status === "published") return "Marketplace: Published"
+                              return "Marketplace: Hidden"
+                            })()}
+                          </span>
                         </div>
                       </td>
                     </tr>
