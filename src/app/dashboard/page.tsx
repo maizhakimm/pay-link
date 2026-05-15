@@ -1,7 +1,8 @@
 'use client'
 
 import Layout from '../../components/Layout'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
 type DeliveryMode =
@@ -224,6 +225,10 @@ export default function DashboardPage() {
   const [dailyNote, setDailyNote] = useState('')
   const [copied, setCopied] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
+
+  const router = useRouter()
+  const hasNavigatedRef = useRef(false)
 
   const loadDashboard = useCallback(async () => {
     setLoading(true)
@@ -236,7 +241,11 @@ export default function DashboardPage() {
 } = await supabase.auth.getUser()
 
 if (authError || !user) {
-  window.location.replace('/login')
+  if (!hasNavigatedRef.current) {
+    hasNavigatedRef.current = true
+    setIsRedirecting(true)
+    router.replace('/login')
+  }
   return
 }
 
@@ -253,7 +262,11 @@ if (authError || !user) {
       }
 
       if (!sellerData) {
-        window.location.replace('/dashboard/onboarding')
+        if (!hasNavigatedRef.current) {
+          hasNavigatedRef.current = true
+          setIsRedirecting(true)
+          router.replace('/dashboard/onboarding')
+        }
         return
       }
 
@@ -283,7 +296,11 @@ if (authError || !user) {
         hasAtLeastOneActiveProduct
 
       if (!isOnboardingComplete) {
-        window.location.href = '/dashboard/onboarding'
+        if (!hasNavigatedRef.current) {
+          hasNavigatedRef.current = true
+          setIsRedirecting(true)
+          router.replace('/dashboard/onboarding')
+        }
         return
       }
 
@@ -322,7 +339,7 @@ if (authError || !user) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [router])
 
   useEffect(() => {
     loadDashboard()
@@ -510,7 +527,7 @@ if (authError || !user) {
     window.open(url, '_blank')
   }
 
-  if (loading) {
+  if (loading || isRedirecting) {
     return <Layout>Loading...</Layout>
   }
 
