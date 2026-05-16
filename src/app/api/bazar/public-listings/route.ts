@@ -60,7 +60,7 @@ export async function GET(req: Request) {
   if (sellerIds.length) {
     const withListingType = await supabase
       .from('products')
-      .select('id,name,price,seller_profile_id,product_image_url,image_1,image_2,listing_type,is_active,created_at')
+      .select('id,name,description,price,seller_profile_id,product_image_url,image_1,image_2,image_3,image_4,image_5,listing_type,is_active,created_at')
       .in('seller_profile_id', sellerIds)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -69,7 +69,7 @@ export async function GET(req: Request) {
       listingTypeColumnAvailable = false
       const withoutListingType = await supabase
         .from('products')
-        .select('id,name,price,seller_profile_id,product_image_url,image_1,image_2,is_active,created_at')
+        .select('id,name,description,price,seller_profile_id,product_image_url,image_1,image_2,image_3,image_4,image_5,is_active,created_at')
         .in('seller_profile_id', sellerIds)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
@@ -109,9 +109,15 @@ export async function GET(req: Request) {
       return {
         id: p.id,
         name: p.name,
+        description: p.description || null,
         price: Number(p.price || 0),
         seller_profile_id: p.seller_profile_id,
         image: p.product_image_url || p.image_1 || p.image_2 || null,
+        image_1: p.image_1 || null,
+        image_2: p.image_2 || null,
+        image_3: p.image_3 || null,
+        image_4: p.image_4 || null,
+        image_5: p.image_5 || null,
         sellerName: seller.store_name,
         shopSlug: seller.shop_slug,
         sellerWhatsapp: seller.whatsapp,

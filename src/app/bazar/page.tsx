@@ -10,7 +10,7 @@ type Seller = { id: string; store_name: string | null; shop_slug: string | null;
 type MarketplaceProfile = { id: string; seller_profile_id: string; is_featured: boolean; is_verified: boolean; area_text: string | null; community_text: string | null; categoryNames: string[] }
 type RequestedTab = 'home' | 'food' | 'services' | 'shop' | 'community'
 type ListingType = 'food' | 'service' | 'shop' | 'advertisement'
-type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; description?: string | null; sellerName: string; shopSlug: string | null; sellerWhatsapp?: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
+type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; image_1?: string | null; image_2?: string | null; image_3?: string | null; image_4?: string | null; image_5?: string | null; description?: string | null; sellerName: string; shopSlug: string | null; sellerWhatsapp?: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
 
 const FOOD_CHIPS = [
   { key: 'all', label: '✨ Semua' },
@@ -88,6 +88,7 @@ export default function ExplorePage() {
   const [apiDebug, setApiDebug] = useState<Record<string, unknown> | null>(null)
   const [openingShopKey, setOpeningShopKey] = useState<string | null>(null)
   const [adDetailsItem, setAdDetailsItem] = useState<ProductCard | null>(null)
+  const [adDetailsIndex, setAdDetailsIndex] = useState(0)
   const router = useRouter()
 
   useEffect(() => {
@@ -403,7 +404,7 @@ export default function ExplorePage() {
                   <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">⏳ Aktif</span>
                 </div>
                 {item.image ? <img src={item.image} alt={item.name} className={`${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'mt-0 h-40 sm:h-44 lg:h-48'} w-full rounded-xl object-cover`} /> : <div className={`flex w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700 ${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'h-40 sm:h-44 lg:h-48'}`}>{item.name.slice(0, 2).toUpperCase()}</div>}
-                <p className="mt-2 line-clamp-2 text-xs text-slate-600">{item.listingType === 'advertisement' ? `${(getCleanAdDescription(item.description) || 'Tiada deskripsi.').slice(0, 100)}${(getCleanAdDescription(item.description) || '').length > 100 ? '…' : ''}` : item.sellerName}</p>
+                <p className="mt-2 line-clamp-3 whitespace-pre-line text-xs text-slate-600">{item.listingType === 'advertisement' ? `${(getCleanAdDescription(item.description) || 'Tiada deskripsi.').slice(0, 100)}${(getCleanAdDescription(item.description) || '').length > 100 ? '…' : ''}` : item.sellerName}</p>
                 <p className="text-xs text-slate-500">{item.areaText || '-'} · {item.communityText || '-'}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
@@ -415,7 +416,7 @@ export default function ExplorePage() {
                   {item.listingType === 'advertisement' ? (
                     item.sellerWhatsapp ? (
                       <div className="flex gap-2">
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setAdDetailsItem(item) }} className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">View Details</button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setAdDetailsItem(item); setAdDetailsIndex(0) }} className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">View Details</button>
                       <a
                         onClick={(e) => e.stopPropagation()}
                         href={`https://wa.me/${item.sellerWhatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${item.name}". Masih available?`)}`}
@@ -523,7 +524,27 @@ export default function ExplorePage() {
               <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs">📍 {adDetailsItem.areaText || '-'}</span>
               <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs">⏳ Aktif</span>
             </div>
-            {adDetailsItem.image ? <img src={adDetailsItem.image} alt={adDetailsItem.name} className="mb-3 h-56 w-full rounded-xl object-cover" /> : null}
+            {(() => {
+              const allImages = [adDetailsItem.image_1, adDetailsItem.image_2, adDetailsItem.image_3, adDetailsItem.image_4, adDetailsItem.image_5, adDetailsItem.image].filter(Boolean) as string[]
+              const images = Array.from(new Set(allImages))
+              const currentImage = images[adDetailsIndex] || null
+              return (
+                <>
+                  {currentImage ? (
+                    <div className="mb-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                      <img src={currentImage} alt={adDetailsItem.name} className="h-64 w-full object-contain" />
+                    </div>
+                  ) : null}
+                  {images.length > 1 ? (
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <button type="button" onClick={() => setAdDetailsIndex((prev) => (prev - 1 + images.length) % images.length)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">‹ Previous</button>
+                      <span className="text-xs font-semibold text-slate-500">{adDetailsIndex + 1} / {images.length}</span>
+                      <button type="button" onClick={() => setAdDetailsIndex((prev) => (prev + 1) % images.length)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">Next ›</button>
+                    </div>
+                  ) : null}
+                </>
+              )
+            })()}
             <p className="whitespace-pre-line text-sm text-slate-700">{getCleanAdDescription(adDetailsItem.description) || 'Tiada deskripsi.'}</p>
             {adDetailsItem.sellerWhatsapp ? (
               <a

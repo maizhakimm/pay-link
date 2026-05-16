@@ -152,6 +152,7 @@ type GalleryState = {
 type AdDetailsModalState = {
   isOpen: boolean
   product: ProductRow | null
+  currentIndex: number
 }
 
 type CartAddon = {
@@ -602,7 +603,7 @@ export default function ShopPageClient({
   })
 
   const [isDesktop, setIsDesktop] = useState(false)
-  const [adDetailsModal, setAdDetailsModal] = useState<AdDetailsModalState>({ isOpen: false, product: null })
+  const [adDetailsModal, setAdDetailsModal] = useState<AdDetailsModalState>({ isOpen: false, product: null, currentIndex: 0 })
 
   useEffect(() => {
     function handleResize() {
@@ -634,14 +635,14 @@ export default function ShopPageClient({
       window.visualViewport?.removeEventListener('resize', setAppViewportHeight)
       window.visualViewport?.removeEventListener('scroll', setAppViewportHeight)
     }
-  }, [, adDetailsModal.isOpen])
+  }, [])
 
   function openAdDetailsModal(product: ProductRow) {
-    setAdDetailsModal({ isOpen: true, product })
+    setAdDetailsModal({ isOpen: true, product, currentIndex: 0 })
   }
 
   function closeAdDetailsModal() {
-    setAdDetailsModal({ isOpen: false, product: null })
+    setAdDetailsModal({ isOpen: false, product: null, currentIndex: 0 })
   }
 
   const [addonModal, setAddonModal] = useState<{
@@ -1512,6 +1513,8 @@ export default function ShopPageClient({
                               listingType === 'advertisement'
                                 ? '#475569'
                                 : productDesc.color,
+                            whiteSpace:
+                              listingType === 'advertisement' ? 'pre-line' : productDesc.whiteSpace,
                           }}
                         >
                           {listingType === 'advertisement'
@@ -1890,7 +1893,8 @@ export default function ShopPageClient({
               {(() => {
                 const adMeta = parseAdMeta(adDetailsModal.product.description)
                 const cleanDescription = getAdvertisementCleanDescription(adDetailsModal.product.description) || 'Tiada deskripsi.'
-                const image = getFirstImage(adDetailsModal.product)
+                const images = getProductImages(adDetailsModal.product).map((img) => getImageUrl(img))
+                const currentImage = images[adDetailsModal.currentIndex] || ''
                 const leadWhatsapp = seller?.whatsapp?.replace(/\D/g, '') || ''
                 return (
                   <>
@@ -1899,8 +1903,19 @@ export default function ShopPageClient({
                       {adMeta?.location ? <span style={metaBadge}>📍 {adMeta.location}</span> : null}
                       {adMeta?.expiry ? <span style={metaBadge}>⏳ {adMeta.expiry}</span> : null}
                     </div>
-                    {image ? <img src={getImageUrl(image)} alt={adDetailsModal.product.name} style={{ width: '100%', maxHeight: 320, objectFit: 'cover', borderRadius: 14 }} /> : null}
-                    <div style={productDesc}>{cleanDescription}</div>
+                    {currentImage ? (
+                      <div style={{ borderRadius: 14, overflow: 'hidden', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                        <img src={currentImage} alt={adDetailsModal.product.name} style={{ width: '100%', height: 280, objectFit: 'contain' }} />
+                      </div>
+                    ) : null}
+                    {images.length > 1 ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <button type="button" onClick={() => setAdDetailsModal((prev) => ({ ...prev, currentIndex: (prev.currentIndex - 1 + images.length) % images.length }))} style={secondaryBtn}>‹ Previous</button>
+                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{adDetailsModal.currentIndex + 1} / {images.length}</div>
+                        <button type="button" onClick={() => setAdDetailsModal((prev) => ({ ...prev, currentIndex: (prev.currentIndex + 1) % images.length }))} style={secondaryBtn}>Next ›</button>
+                      </div>
+                    ) : null}
+                    <div style={{ ...productDesc, whiteSpace: 'pre-line' }}>{cleanDescription}</div>
                     <a
                       href={leadWhatsapp ? `https://wa.me/${leadWhatsapp}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${adDetailsModal.product.name}". Masih available?`)}` : '#'}
                       style={{ ...primaryBtn, width: '100%', textAlign: 'center', textDecoration: 'none' }}
