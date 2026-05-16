@@ -139,7 +139,7 @@ type ProductRow = {
   stock_quantity?: number
   sold_out?: boolean
   menu_category_id?: string | null
-  listing_type?: 'food' | 'shop' | 'service' | null
+  listing_type?: 'food' | 'shop' | 'service' | 'advertisement' | null
 }
 
 type GalleryState = {
@@ -619,7 +619,34 @@ export default function ShopPageClient({
   const productListRef = useRef<HTMLDivElement | null>(null)
   const productRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState<'food' | 'shop' | 'service' | 'advertisement'>('food')
   const selectedProductId = searchParams.get('product')
+
+  const sectionCounts = useMemo(() => {
+    const counts = { food: 0, shop: 0, service: 0, advertisement: 0 }
+    for (const product of products) {
+      const type = (product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+      if (type in counts) counts[type] += 1
+      else counts.food += 1
+    }
+    return counts
+  }, [products])
+
+  const availableSections = useMemo(() => {
+    return (['food', 'shop', 'service', 'advertisement'] as const).filter((key) => sectionCounts[key] > 0)
+  }, [sectionCounts])
+
+  useEffect(() => {
+    const defaultSection =
+      sectionCounts.food > 0
+        ? 'food'
+        : sectionCounts.shop > 0
+          ? 'shop'
+          : sectionCounts.service > 0
+            ? 'service'
+            : 'advertisement'
+    setActiveSection(defaultSection)
+  }, [sectionCounts.food, sectionCounts.shop, sectionCounts.service, sectionCounts.advertisement])
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
@@ -876,13 +903,15 @@ export default function ShopPageClient({
     const counts = new Map<string, number>()
 
     for (const product of products) {
+      const type = (product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+      if (type !== activeSection) continue
       const categoryId = product.menu_category_id || ''
       if (!categoryId) continue
       counts.set(categoryId, (counts.get(categoryId) || 0) + 1)
     }
 
     return counts
-  }, [products])
+  }, [products, activeSection])
 
   const visibleCategories = useMemo(() => {
     return [...categories]
@@ -1035,13 +1064,16 @@ export default function ShopPageClient({
   }
 
   const visibleProducts = useMemo(() => {
-    if (!hasCategoryFeature) return products
-    if (activeCategoryId === 'all') return products
+    const bySection = products.filter((product) => {
+      const type = (product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+      return type === activeSection
+    })
 
-    return products.filter(
-      (product) => (product.menu_category_id || '') === activeCategoryId
-    )
-  }, [products, hasCategoryFeature, activeCategoryId])
+    if (!hasCategoryFeature || activeSection === 'advertisement') return bySection
+    if (activeCategoryId === 'all') return bySection
+
+    return bySection.filter((product) => (product.menu_category_id || '') === activeCategoryId)
+  }, [products, hasCategoryFeature, activeCategoryId, activeSection])
 
   const cartItems = cart
 
@@ -1248,7 +1280,39 @@ export default function ShopPageClient({
           )}
         </div>
 
-        {hasCategoryFeature ? (
+        {availableSections.length > 1 ? (
+          <div style={stickyTabWrap}>
+            <div style={tabShell}>
+              <div style={tabScroller}>
+                {availableSections.map((section) => {
+                  const label =
+                    section === 'food'
+                      ? 'Menu'
+                      : section === 'shop'
+                        ? 'Shop'
+                        : section === 'service'
+                          ? 'Services'
+                          : 'Iklan'
+                  return (
+                    <button
+                      key={section}
+                      type="button"
+                      onClick={() => setActiveSection(section)}
+                      style={{
+                        ...tabButton,
+                        ...(activeSection === section ? activeTabButton : inactiveTabButton),
+                      }}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {hasCategoryFeature && activeSection !== 'advertisement' ? (
           <div style={stickyTabWrap}>
             <div style={tabShell}>
               <div style={tabScroller}>
@@ -1309,7 +1373,8 @@ export default function ShopPageClient({
                   0
                 )
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
-                const isServiceListing = product.listing_type === 'service'
+                const listingType = (product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+                const isLeadListing = listingType === 'service' || listingType === 'advertisement'
                 const allImages = getProductImages(product)
 
                 return (
@@ -1334,10 +1399,10 @@ export default function ShopPageClient({
                           {product.description || 'Tiada deskripsi.'}
                         </div>
 
-                        {isServiceListing ? (
+                        {isLeadListing ? (
                           <div style={qtyWrap}>
-                            <a href={seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}` : '#'} style={{ ...qtyBtn, display: 'inline-flex', width: '100%', justifyContent: 'center', textDecoration: 'none' }}>
-                              Hubungi Seller
+                            <a href={seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(listingType === 'advertisement' ? `Hi, saya berminat dengan iklan \"${product.name}\". Masih available?` : `Hi, saya berminat dengan servis \"${product.name}\". Boleh saya dapatkan quotation?`)}` : '#'} style={{ ...qtyBtn, display: 'inline-flex', width: '100%', justifyContent: 'center', textDecoration: 'none' }}>
+                              {listingType === 'advertisement' ? 'Contact Seller' : 'Request Quote / WhatsApp'}
                             </a>
                           </div>
                         ) : (
@@ -1399,6 +1464,7 @@ export default function ShopPageClient({
           )}
         </div>
 
+        {activeSection === 'food' || activeSection === 'shop' ? (
         <div style={checkoutCard}>
           <div style={checkoutHeader}>
             <div>
@@ -1570,6 +1636,7 @@ export default function ShopPageClient({
             </>
           )}
         </div>
+        ) : null}
       </div>
 
       {gallery.isOpen ? (
