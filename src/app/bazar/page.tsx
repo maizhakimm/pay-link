@@ -151,7 +151,8 @@ export default function ExplorePage() {
 
   const displayedProducts = useMemo(() => {
     const byTab = products.filter((p) => {
-      if (requestedTab === 'home' || requestedTab === 'community') return true
+      if (requestedTab === 'home') return true
+      if (requestedTab === 'community') return false
       if (requestedTab === 'food') return p.listingType === 'food'
       if (requestedTab === 'services') return p.listingType === 'service'
       return p.listingType === 'shop'
@@ -168,7 +169,7 @@ export default function ExplorePage() {
       const haystack = [p.name, p.categoryLabel || ''].join(' ').toLowerCase()
       return keywords.some((kw) => haystack.includes(kw))
     })
-    const shouldApplyAreaFilter = requestedTab === 'community' || Boolean(area)
+    const shouldApplyAreaFilter = Boolean(area)
     const byArea = byChip.filter((p) => !shouldApplyAreaFilter || !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
 
     if (process.env.NODE_ENV !== 'production') {
@@ -336,7 +337,12 @@ export default function ExplorePage() {
                 {requestedTab === 'food' ? (selectedChip !== 'all' ? 'Belum ada item untuk kategori ini.' : 'Belum ada makanan di kawasan ini.') : null}
                 {requestedTab === 'services' ? 'Belum ada servis di kawasan ini.' : null}
                 {requestedTab === 'shop' ? 'Belum ada produk di kawasan ini.' : null}
-                {requestedTab === 'community' ? 'Listing komuniti akan dipaparkan di sini tidak lama lagi.' : null}
+                {requestedTab === 'community' ? (
+                  <span>
+                    <strong className="block text-slate-700">Komuniti akan datang</strong>
+                    Ruangan iklan komuniti seperti kerja kosong, bilik sewa, barang preloved, kenderaan dan promosi setempat akan dibuka tidak lama lagi.
+                  </span>
+                ) : null}
               </p>
               {requestedTab === 'services' ? <p className="mt-1">Jadi antara service provider pertama di BazarLink.</p> : null}
               {requestedTab === 'shop' ? <p className="mt-1">Jadi antara seller pertama di BazarLink.</p> : null}
