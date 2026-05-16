@@ -320,100 +320,104 @@ export default function ProductsPage() {
   const loadProductsPage = useCallback(async () => {
     setLoading(true)
     setError('')
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+      if (userError || !user) {
+        if (userError) console.error('[dashboard/products] getUser error:', userError)
+        setError('Unable to load user session.')
+        return
+      }
 
-    if (userError || !user) {
-      setError('Unable to load user session.')
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('seller_profiles')
+        .select('id, store_name, shop_slug')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (sellerError || !sellerData) {
+        if (sellerError) console.error('[dashboard/products] seller_profiles error:', sellerError)
+        setError('Seller profile not found. Please complete your settings first.')
+        return
+      }
+
+      if (!sellerData.shop_slug) {
+        setError('Shop URL not found. Please complete your settings first.')
+        return
+      }
+
+      setSellerProfile(sellerData as SellerProfileRow)
+
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('menu_categories')
+        .select('*')
+        .eq('seller_profile_id', sellerData.id)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+
+      if (categoryError) {
+        console.error('[dashboard/products] menu_categories error:', categoryError)
+        setError(categoryError.message)
+        return
+      }
+
+      setCategories((categoryData || []) as MenuCategoryRow[])
+
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('seller_profile_id', sellerData.id)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+
+      if (productError) {
+        console.error('[dashboard/products] products error:', productError)
+        setError(productError.message)
+        return
+      }
+
+      setProducts((productData || []) as ProductRow[])
+
+      const { data: groupData, error: groupError } = await supabase
+        .from('product_addon_groups')
+        .select('*')
+        .eq('seller_profile_id', sellerData.id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+
+      if (groupError) {
+        console.error('[dashboard/products] product_addon_groups error:', groupError)
+        setError(groupError.message)
+        return
+      }
+
+      setAddonGroups((groupData || []) as ProductAddonGroupRow[])
+
+      const { data: optionData, error: optionError } = await supabase
+        .from('product_addon_options')
+        .select('*')
+        .eq('seller_profile_id', sellerData.id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+
+      if (optionError) {
+        console.error('[dashboard/products] product_addon_options error:', optionError)
+        setError(optionError.message)
+        return
+      }
+
+      setAddonOptions((optionData || []) as ProductAddonOptionRow[])
+    } catch (e) {
+      console.error('[dashboard/products] unexpected load error:', e)
+      setError(e instanceof Error ? e.message : 'Failed to load listings page.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    const { data: sellerData, error: sellerError } = await supabase
-      .from('seller_profiles')
-      .select('id, store_name, shop_slug')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (sellerError || !sellerData) {
-      setError('Seller profile not found. Please complete your settings first.')
-      setLoading(false)
-      return
-    }
-
-    if (!sellerData.shop_slug) {
-      setError('Shop URL not found. Please complete your settings first.')
-      setLoading(false)
-      return
-    }
-
-    setSellerProfile(sellerData as SellerProfileRow)
-
-    const { data: categoryData, error: categoryError } = await supabase
-      .from('menu_categories')
-      .select('*')
-      .eq('seller_profile_id', sellerData.id)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false })
-
-    if (categoryError) {
-      setError(categoryError.message)
-      setLoading(false)
-      return
-    }
-
-    setCategories((categoryData || []) as MenuCategoryRow[])
-
-    const { data: productData, error: productError } = await supabase
-      .from('products')
-      .select('*')
-      .eq('seller_profile_id', sellerData.id)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false })
-
-    if (productError) {
-      setError(productError.message)
-      setLoading(false)
-      return
-    }
-
-    setProducts((productData || []) as ProductRow[])
-
-    const { data: groupData, error: groupError } = await supabase
-      .from('product_addon_groups')
-      .select('*')
-      .eq('seller_profile_id', sellerData.id)
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
-
-    if (groupError) {
-      setError(groupError.message)
-      setLoading(false)
-      return
-    }
-
-    setAddonGroups((groupData || []) as ProductAddonGroupRow[])
-
-    const { data: optionData, error: optionError } = await supabase
-      .from('product_addon_options')
-      .select('*')
-      .eq('seller_profile_id', sellerData.id)
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
-
-    if (optionError) {
-      setError(optionError.message)
-      setLoading(false)
-      return
-    }
-
-    setAddonOptions((optionData || []) as ProductAddonOptionRow[])
-    setLoading(false)
   }, [])
 
   useEffect(() => {

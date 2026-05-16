@@ -73,57 +73,80 @@ export default function DashboardMarketplacePage() {
       setLoading(true)
       setError(null)
       setNotice(null)
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser()
+        if (authError || !authData.user) {
+          if (authError) console.error('[dashboard/marketplace] getUser error:', authError)
+          setError('Please login to access marketplace setup.')
+          return
+        }
 
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (authError || !authData.user) {
-        setError('Please login to access marketplace setup.')
-        setLoading(false)
-        return
-      }
+        const userId = authData.user.id
 
-      const userId = authData.user.id
+        const { data: sellerRow, error: sellerError } = await supabase
+          .from('seller_profiles')
+          .select('id,user_id,store_name')
+          .eq('user_id', userId)
+          .maybeSingle()
 
-      const { data: sellerRow, error: sellerError } = await supabase
-        .from('seller_profiles')
-        .select('id,user_id,store_name')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (sellerError || !sellerRow) {
-        setError('Seller profile not found. Please complete onboarding first.')
-        setLoading(false)
-        return
-      }
+        if (sellerError || !sellerRow) {
+          if (sellerError) console.error('[dashboard/marketplace] seller_profiles error:', sellerError)
+          setError('Seller profile not found. Please complete onboarding first.')
+          return
+        }
 
       setSeller(sellerRow as SellerProfile)
 
-      const sellerId = (sellerRow as SellerProfile).id
+        const sellerId = (sellerRow as SellerProfile).id
 
-      const [{ count: listingsCount }, categoriesRes, areasRes, communitiesRes] = await Promise.all([
-        supabase
+        let listingsCount = 0
+        const listingsWithType = await supabase
           .from('products')
           .select('id', { count: 'exact', head: true })
           .eq('seller_profile_id', sellerId)
           .eq('is_active', true)
-          .in('listing_type', ['food', 'shop', 'service']),
-        supabase
-          .from('marketplace_categories')
-          .select('id,category_name,category_key')
-          .eq('is_enabled', true)
-          .order('display_order', { ascending: true }),
-        supabase
-          .from('marketplace_areas')
-          .select('id,area_name,area_key')
-          .eq('is_enabled', true)
-          .order('display_order', { ascending: true }),
-        supabase
-          .from('marketplace_communities')
-          .select('id,area_id,community_name,community_key')
-          .eq('is_enabled', true)
-          .order('display_order', { ascending: true }),
-      ])
+          .in('listing_type', ['food', 'shop', 'service'])
 
-      setActiveListingCount(listingsCount || 0)
+        if (
+          listingsWithType.error &&
+          /column\s+products\.listing_type\s+does not exist/i.test(
+            listingsWithType.error.message || ''
+          )
+        ) {
+          console.error('[dashboard/marketplace] listing_type missing, fallback count:', listingsWithType.error)
+          const listingsFallback = await supabase
+            .from('products')
+            .select('id', { count: 'exact', head: true })
+            .eq('seller_profile_id', sellerId)
+            .eq('is_active', true)
+          listingsCount = listingsFallback.count || 0
+        } else if (listingsWithType.error) {
+          console.error('[dashboard/marketplace] listings count error:', listingsWithType.error)
+          setError(listingsWithType.error.message)
+          return
+        } else {
+          listingsCount = listingsWithType.count || 0
+        }
+
+        const [categoriesRes, areasRes, communitiesRes] = await Promise.all([
+          supabase
+            .from('marketplace_categories')
+            .select('id,category_name,category_key')
+            .eq('is_enabled', true)
+            .order('display_order', { ascending: true }),
+        supabase
+            .from('marketplace_areas')
+            .select('id,area_name,area_key')
+            .eq('is_enabled', true)
+            .order('display_order', { ascending: true }),
+          supabase
+            .from('marketplace_communities')
+            .select('id,area_id,community_name,community_key')
+            .eq('is_enabled', true)
+            .order('display_order', { ascending: true }),
+        ])
+
+        setActiveListingCount(listingsCount || 0)
       const rawCategories = (categoriesRes.data || []) as Category[]
       const normalizedCategories = rawCategories.map((category) => {
         const categoryKey = LEGACY_CATEGORY_KEY_MAP[category.category_key] || category.category_key
@@ -183,7 +206,12 @@ export default function DashboardMarketplacePage() {
         .eq('marketplace_profile_id', mp.id)
 
       setSelectedCategoryIds((selectedCats || []).map((row) => row.category_id as string))
-      setLoading(false)
+      } catch (e) {
+        console.error('[dashboard/marketplace] unexpected init error:', e)
+        setError(e instanceof Error ? e.message : 'Failed to initialize marketplace setup.')
+      } finally {
+        setLoading(false)
+      }
     }
 
     init()
