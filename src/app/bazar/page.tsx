@@ -8,7 +8,7 @@ import BazarBottomNav from './components/BazarBottomNav'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
 type MarketplaceProfile = { id: string; seller_profile_id: string; is_featured: boolean; is_verified: boolean; area_text: string | null; community_text: string | null; categoryNames: string[] }
-type RequestedTab = 'home' | 'food' | 'services' | 'shop' | 'nearby'
+type RequestedTab = 'home' | 'food' | 'services' | 'shop' | 'community'
 type ListingType = 'food' | 'service' | 'shop'
 type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
 
@@ -72,7 +72,7 @@ export default function ExplorePage() {
   useEffect(() => {
     const syncTabFromUrl = () => {
       const tab = new URLSearchParams(window.location.search).get('tab')
-      if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'nearby') {
+      if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'community') {
         setRequestedTab(tab)
         setSelectedChip('all')
         return
@@ -151,7 +151,7 @@ export default function ExplorePage() {
 
   const displayedProducts = useMemo(() => {
     const byTab = products.filter((p) => {
-      if (requestedTab === 'home' || requestedTab === 'nearby') return true
+      if (requestedTab === 'home' || requestedTab === 'community') return true
       if (requestedTab === 'food') return p.listingType === 'food'
       if (requestedTab === 'services') return p.listingType === 'service'
       return p.listingType === 'shop'
@@ -168,7 +168,7 @@ export default function ExplorePage() {
       const haystack = [p.name, p.categoryLabel || ''].join(' ').toLowerCase()
       return keywords.some((kw) => haystack.includes(kw))
     })
-    const shouldApplyAreaFilter = requestedTab === 'nearby' || Boolean(area)
+    const shouldApplyAreaFilter = requestedTab === 'community' || Boolean(area)
     const byArea = byChip.filter((p) => !shouldApplyAreaFilter || !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
 
     if (process.env.NODE_ENV !== 'production') {
@@ -312,7 +312,7 @@ export default function ExplorePage() {
               <Link href="/bazar?tab=food" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Food</Link>
               <Link href="/bazar?tab=services" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Services</Link>
               <Link href="/bazar?tab=shop" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Shop</Link>
-              <Link href="/bazar?tab=nearby" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Nearby</Link>
+              <Link href="/bazar?tab=community" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Komuniti</Link>
             </div>
           </section>
         ) : null}
@@ -336,7 +336,7 @@ export default function ExplorePage() {
                 {requestedTab === 'food' ? (selectedChip !== 'all' ? 'Belum ada item untuk kategori ini.' : 'Belum ada makanan di kawasan ini.') : null}
                 {requestedTab === 'services' ? 'Belum ada servis di kawasan ini.' : null}
                 {requestedTab === 'shop' ? 'Belum ada produk di kawasan ini.' : null}
-                {requestedTab === 'nearby' ? 'Belum ada seller berhampiran kawasan ini.' : null}
+                {requestedTab === 'community' ? 'Listing komuniti akan dipaparkan di sini tidak lama lagi.' : null}
               </p>
               {requestedTab === 'services' ? <p className="mt-1">Jadi antara service provider pertama di BazarLink.</p> : null}
               {requestedTab === 'shop' ? <p className="mt-1">Jadi antara seller pertama di BazarLink.</p> : null}
@@ -345,7 +345,7 @@ export default function ExplorePage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {displayedProducts.map((item) => (
               <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
-                {item.image ? <img src={item.image} alt={item.name} className="h-24 w-full rounded-xl object-cover" /> : <div className="flex h-24 w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700">{item.name.slice(0, 2).toUpperCase()}</div>}
+                {item.image ? <img src={item.image} alt={item.name} className="h-40 w-full rounded-xl object-cover sm:h-44 lg:h-48" /> : <div className="flex h-40 w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700 sm:h-44 lg:h-48">{item.name.slice(0, 2).toUpperCase()}</div>}
                 <div className="mt-2 flex items-start justify-between gap-2">
                   <h3 className="line-clamp-2 text-sm font-bold text-slate-900">{item.name}</h3>
                 </div>
