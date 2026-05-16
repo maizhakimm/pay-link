@@ -1385,6 +1385,11 @@ export default function ShopPageClient({
                     ? parseAdMeta(product.description)
                     : null
                 const allImages = getProductImages(product)
+                const leadWhatsapp = seller?.whatsapp?.replace(/\D/g, '') || ''
+                const leadMessage =
+                  listingType === 'advertisement'
+                    ? `Hi, saya berminat dengan iklan "${product.name}". Masih available?`
+                    : `Hi, saya berminat dengan servis "${product.name}". Boleh saya dapatkan quotation?`
 
                 return (
                   <div
@@ -1424,18 +1429,6 @@ export default function ShopPageClient({
                           </div>
                         ) : null}
 
-                        <div
-                          style={{
-                            ...productDesc,
-                            marginTop: listingType === 'advertisement' ? 10 : 8,
-                            color:
-                              listingType === 'advertisement'
-                                ? '#475569'
-                                : productDesc.color,
-                          }}
-                        >
-                          {product.description || 'Tiada deskripsi.'}
-                        </div>
                         {listingType === 'advertisement' ? (
                           <div style={metaBadgeWrap}>
                             {adMeta?.category ? <span style={metaBadge}>{adMeta.category}</span> : null}
@@ -1444,16 +1437,59 @@ export default function ShopPageClient({
                           </div>
                         ) : null}
 
+                        {listingType === 'advertisement' ? (
+                          <button
+                            type="button"
+                            onClick={() => openGallery(product, 0)}
+                            style={{
+                              ...productImageButton,
+                              width: '100%',
+                              cursor: image ? 'pointer' : 'default',
+                              marginTop: 12,
+                            }}
+                            disabled={!image}
+                            aria-label={`View images for ${product.name}`}
+                          >
+                            <div
+                              style={{
+                                ...productImageWrap,
+                                width: '100%',
+                                height: isDesktop ? 210 : 190,
+                                borderRadius: 16,
+                              }}
+                            >
+                              {image ? (
+                                <img
+                                  src={getImageUrl(image)}
+                                  alt={product.name}
+                                  style={productImage}
+                                />
+                              ) : (
+                                <div style={productImagePlaceholder}>No image</div>
+                              )}
+                            </div>
+                          </button>
+                        ) : null}
+
+                        <div
+                          style={{
+                            ...productDesc,
+                            marginTop: listingType === 'advertisement' ? 12 : 8,
+                            color:
+                              listingType === 'advertisement'
+                                ? '#475569'
+                                : productDesc.color,
+                          }}
+                        >
+                          {product.description || 'Tiada deskripsi.'}
+                        </div>
+
                         {isLeadListing ? (
                           <div style={qtyWrap}>
                             <a
                               href={
-                                seller?.whatsapp
-                                  ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(
-                                      listingType === 'advertisement'
-                                        ? `Hi, saya berminat dengan iklan \"${product.name}\". Masih available?`
-                                        : `Hi, saya berminat dengan servis \"${product.name}\". Boleh saya dapatkan quotation?`
-                                    )}`
+                                leadWhatsapp
+                                  ? `https://wa.me/${leadWhatsapp}?text=${encodeURIComponent(leadMessage)}`
                                   : '#'
                               }
                               style={{
@@ -1508,6 +1544,7 @@ export default function ShopPageClient({
                               ? '100%'
                               : undefined,
                           cursor: image ? 'pointer' : 'default',
+                          display: listingType === 'advertisement' ? 'none' : 'block',
                         }}
                         disabled={!image}
                         aria-label={`View images for ${product.name}`}

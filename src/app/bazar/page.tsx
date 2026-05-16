@@ -350,13 +350,18 @@ export default function ExplorePage() {
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {displayedProducts.map((item) => (
-              <article key={item.id} onClick={() => { if (item.listingType === 'advertisement' || !item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition ${item.listingType !== 'advertisement' && item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
-                {item.image ? <img src={item.image} alt={item.name} className="h-40 w-full rounded-xl object-cover sm:h-44 lg:h-48" /> : <div className="flex h-40 w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700 sm:h-44 lg:h-48">{item.name.slice(0, 2).toUpperCase()}</div>}
+              <article key={item.id} onClick={() => { if (item.listingType === 'advertisement' || !item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border bg-white shadow-sm transition ${item.listingType === 'advertisement' ? 'border-rose-200 p-3.5' : 'border-slate-200 p-2.5'} ${item.listingType !== 'advertisement' && item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
                 <div className="mt-2 flex items-start justify-between gap-2">
-                  <h3 className="line-clamp-2 text-sm font-bold text-slate-900">{item.name}</h3>
+                  <h3 className={`${item.listingType === 'advertisement' ? 'line-clamp-2 text-base' : 'line-clamp-2 text-sm'} font-bold text-slate-900`}>{item.name}</h3>
                 </div>
                 <p className="mt-1 text-sm font-extrabold text-rose-700">RM {item.price.toFixed(2)}</p>
-                <p className="truncate text-xs text-slate-600">{item.sellerName}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {item.categoryLabel ? <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">{item.categoryLabel}</span> : null}
+                  <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">📍 {item.areaText || '-'}</span>
+                  <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">⏳ Aktif</span>
+                </div>
+                {item.image ? <img src={item.image} alt={item.name} className={`${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'mt-0 h-40 sm:h-44 lg:h-48'} w-full rounded-xl object-cover`} /> : <div className={`flex w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700 ${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'h-40 sm:h-44 lg:h-48'}`}>{item.name.slice(0, 2).toUpperCase()}</div>}
+                <p className="mt-2 truncate text-xs text-slate-600">{item.sellerName}</p>
                 <p className="text-xs text-slate-500">{item.areaText || '-'} · {item.communityText || '-'}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
@@ -366,10 +371,10 @@ export default function ExplorePage() {
                   {item.listingType === 'advertisement' ? (
                     item.sellerWhatsapp ? (
                       <a
-                        href={`https://wa.me/${item.sellerWhatsapp.replace(/[^\d]/g, '')}`}
+                        href={`https://wa.me/${item.sellerWhatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${item.name}". Masih available?`)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white"
+                        className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white"
                       >
                         Contact Seller
                       </a>
