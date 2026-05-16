@@ -30,6 +30,28 @@ type Community = { id: string; area_id: string; community_name: string; communit
 
 type ChecklistItem = { label: string; done: boolean }
 
+const BAZAR_CATEGORY_OPTIONS = [
+  { key: 'food_drinks', label: 'Food & Drinks' },
+  { key: 'products_shop', label: 'Products / Shop' },
+  { key: 'services', label: 'Services' },
+  { key: 'catering', label: 'Catering' },
+  { key: 'home_business', label: 'Home Business' },
+  { key: 'beauty_health', label: 'Beauty & Health' },
+  { key: 'fashion', label: 'Fashion' },
+  { key: 'digital_design', label: 'Digital / Design' },
+  { key: 'repair_maintenance', label: 'Repair / Maintenance' },
+  { key: 'community', label: 'Community' },
+] as const
+
+const LEGACY_CATEGORY_KEY_MAP: Record<string, string> = {
+  breakfast: 'food_drinks',
+  lunch: 'food_drinks',
+  dinner: 'food_drinks',
+  dessert: 'food_drinks',
+  bakery: 'food_drinks',
+  drinks: 'food_drinks',
+}
+
 export default function DashboardMarketplacePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -39,7 +61,7 @@ export default function DashboardMarketplacePage() {
 
   const [seller, setSeller] = useState<SellerProfile | null>(null)
   const [profile, setProfile] = useState<MarketplaceProfile | null>(null)
-  const [productCount, setProductCount] = useState(0)
+  const [activeListingCount, setActiveListingCount] = useState(0)
 
   const [categories, setCategories] = useState<Category[]>([])
   const [areas, setAreas] = useState<Area[]>([])
@@ -77,12 +99,13 @@ export default function DashboardMarketplacePage() {
 
       const sellerId = (sellerRow as SellerProfile).id
 
-      const [{ count: productsCount }, categoriesRes, areasRes, communitiesRes] = await Promise.all([
+      const [{ count: listingsCount }, categoriesRes, areasRes, communitiesRes] = await Promise.all([
         supabase
           .from('products')
           .select('id', { count: 'exact', head: true })
           .eq('seller_profile_id', sellerId)
-          .eq('is_active', true),
+          .eq('is_active', true)
+          .in('listing_type', ['food', 'shop', 'service']),
         supabase
           .from('marketplace_categories')
           .select('id,category_name,category_key')
@@ -100,8 +123,18 @@ export default function DashboardMarketplacePage() {
           .order('display_order', { ascending: true }),
       ])
 
-      setProductCount(productsCount || 0)
-      setCategories((categoriesRes.data || []) as Category[])
+      setActiveListingCount(listingsCount || 0)
+      const rawCategories = (categoriesRes.data || []) as Category[]
+      const normalizedCategories = rawCategories.map((category) => {
+        const categoryKey = LEGACY_CATEGORY_KEY_MAP[category.category_key] || category.category_key
+        const matched = BAZAR_CATEGORY_OPTIONS.find((item) => item.key === categoryKey)
+        return {
+          ...category,
+          category_key: categoryKey,
+          category_name: matched?.label || category.category_name,
+        }
+      })
+      setCategories(normalizedCategories)
       setAreas((areasRes.data || []) as Area[])
       setCommunities((communitiesRes.data || []) as Community[])
 
@@ -168,13 +201,13 @@ export default function DashboardMarketplacePage() {
 
     return [
       { label: 'Shop profile exists', done: Boolean(seller) },
-      { label: 'At least 3 products', done: productCount >= 3 },
+      { label: 'At least 1 active listing', done: activeListingCount >= 1 },
       { label: 'Tagline added', done: taglineDone },
       { label: 'Description added', done: descriptionDone },
       { label: 'Area/community added', done: areaCommunityDone },
       { label: 'At least 1 category selected', done: selectedCategoryIds.length > 0 },
     ]
-  }, [profile, productCount, selectedCategoryIds.length, seller])
+  }, [activeListingCount, profile, selectedCategoryIds.length, seller])
 
   const completedCount = checklist.filter((item) => item.done).length
   const progressPercent = Math.round((completedCount / checklist.length) * 100)
