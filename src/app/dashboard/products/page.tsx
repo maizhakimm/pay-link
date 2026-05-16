@@ -1110,10 +1110,36 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
     <Layout>
       <div className="mb-6">
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-          Products
+          Listings
         </h1>
         <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
-          Add, edit, and manage products easily from your phone.
+          Add, edit, and manage your listings easily from your phone.
+        </p>
+      </div>
+
+      <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          Listing Categories (Phase 1)
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { title: 'Food', desc: 'Cart + payment + add-ons' },
+            { title: 'Product / Item', desc: 'Shop items & simple commerce' },
+            { title: 'Services', desc: 'Lead-based (WhatsApp / quote)' },
+            { title: 'Advertisement', desc: 'Community & classified listing' },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3"
+            >
+              <p className="text-sm font-extrabold text-slate-900">{item.title}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Current create/edit flow below remains stable for existing products while we roll out
+          multi-listing behavior in phases.
         </p>
       </div>
 

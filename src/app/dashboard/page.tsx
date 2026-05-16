@@ -285,15 +285,10 @@ if (authError || !user) {
       const hasStoreName = Boolean(sellerData.store_name?.trim())
       const hasShopSlug = Boolean(sellerData.shop_slug?.trim())
       const hasWhatsapp = Boolean(sellerData.whatsapp?.trim())
-      const hasDeliveryMode = Boolean(sellerData.delivery_mode)
-      const hasAtLeastOneActiveProduct = activeProducts.length > 0
-
       const isOnboardingComplete =
         hasStoreName &&
         hasShopSlug &&
-        hasWhatsapp &&
-        hasDeliveryMode &&
-        hasAtLeastOneActiveProduct
+        hasWhatsapp
 
       if (!isOnboardingComplete) {
         if (!hasNavigatedRef.current) {

@@ -2,6 +2,7 @@
 
 import Layout from '../../../components/Layout'
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
 const MALAYSIAN_BANKS = [
@@ -292,6 +293,7 @@ function getImageUrl(path?: string | null) {
 }
 
 export default function OnboardingPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
   const [savingStep, setSavingStep] = useState(false)
@@ -654,8 +656,6 @@ export default function OnboardingPage() {
       const hasStoreName = Boolean(existingStoreName && existingStoreName !== 'My Store')
       const hasWhatsapp = Boolean(seller.whatsapp?.trim())
       const hasShopSlug = Boolean(existingSlug?.trim())
-      const hasOperatingDays = Boolean(seller.operating_days)
-      const hasDeliveryMode = Boolean(seller.delivery_mode)
       const hasBank = Boolean(
         seller.bank_name?.trim() &&
           seller.account_number?.trim() &&
@@ -664,10 +664,8 @@ export default function OnboardingPage() {
 
       if (!hasStoreName || !hasWhatsapp || !hasShopSlug) {
         setStep(1)
-      } else if (!hasOperatingDays) {
+      } else if (!seller.operating_days) {
         setStep(2)
-      } else if (!hasDeliveryMode) {
-        setStep(3)
       } else if (!hasBank) {
         setStep(4)
       } else {
@@ -966,7 +964,7 @@ export default function OnboardingPage() {
 
       if (error) throw new Error(error.message)
 
-      setStep(3)
+      setStep(4)
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to save operating hours.'
@@ -1123,11 +1121,15 @@ export default function OnboardingPage() {
 
   function handleBack() {
     if (step <= 1) return
+    if (step === 4) {
+      setStep(2)
+      return
+    }
     setStep((prev) => prev - 1)
   }
 
   function goToDashboard() {
-    window.location.href = '/dashboard'
+    router.replace('/dashboard')
   }
 
   function goToProducts() {
@@ -1984,14 +1986,14 @@ export default function OnboardingPage() {
                 Setup asas selesai
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Kedai hampir ready. Langkah seterusnya, tambah produk pertama supaya customer boleh mula order.
+                Kedai hampir ready. Anda boleh terus masuk dashboard, tambah listing bila-bila masa, dan setup delivery kemudian di Settings.
               </p>
             </div>
 
             <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
               <p className="text-sm font-bold text-blue-900">Next step</p>
               <p className="mt-1 text-sm text-blue-800">
-                Produk tidak dimasukkan dalam onboarding supaya seller boleh setup dengan lebih lengkap di Product Page.
+                Onboarding fokus maklumat asas sahaja. Delivery dan fulfilment boleh dikonfigurasikan kemudian di Settings mengikut jenis listing anda.
               </p>
             </div>
 
