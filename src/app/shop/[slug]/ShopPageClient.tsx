@@ -549,6 +549,25 @@ function parseAdMeta(description?: string | null) {
   }
 }
 
+function getAdvertisementCleanDescription(description?: string | null) {
+  if (!description) return ''
+  return description
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => {
+      const normalized = line.toLowerCase()
+      return (
+        normalized &&
+        !normalized.startsWith('ad category:') &&
+        !normalized.startsWith('location:') &&
+        !normalized.startsWith('contact:') &&
+        !normalized.startsWith('expiry date:')
+      )
+    })
+    .join('\n')
+    .trim()
+}
+
 export default function ShopPageClient({
   seller,
   products,
@@ -1481,7 +1500,10 @@ export default function ShopPageClient({
                                 : productDesc.color,
                           }}
                         >
-                          {product.description || 'Tiada deskripsi.'}
+                          {listingType === 'advertisement'
+                            ? getAdvertisementCleanDescription(product.description) ||
+                              'Tiada deskripsi.'
+                            : product.description || 'Tiada deskripsi.'}
                         </div>
 
                         {isLeadListing ? (

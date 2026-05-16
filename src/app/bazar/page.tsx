@@ -10,7 +10,7 @@ type Seller = { id: string; store_name: string | null; shop_slug: string | null;
 type MarketplaceProfile = { id: string; seller_profile_id: string; is_featured: boolean; is_verified: boolean; area_text: string | null; community_text: string | null; categoryNames: string[] }
 type RequestedTab = 'home' | 'food' | 'services' | 'shop' | 'community'
 type ListingType = 'food' | 'service' | 'shop' | 'advertisement'
-type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; sellerWhatsapp?: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
+type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; description?: string | null; sellerName: string; shopSlug: string | null; sellerWhatsapp?: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
 
 const FOOD_CHIPS = [
   { key: 'all', label: '✨ Semua' },
@@ -40,6 +40,26 @@ const CHIP_MATCHERS: Record<string, string[]> = {
 }
 
 const DELIVERY_BADGES = ['Self-pickup / Delivery', 'Delivery', 'Self-pickup']
+
+const AD_CATEGORY_LABEL_MAP: Record<string, string> = {
+  job_vacancy: 'Job Vacancy',
+  room_house_rental: 'Room / House Rental',
+  property: 'Property',
+  vehicle: 'Vehicle',
+  second_hand_item: 'Second-hand Item',
+  community_promotion: 'Community Promotion',
+  business_promo: 'Business Promo',
+  other: 'Other',
+}
+
+function parseAdCategoryFromDescription(description?: string | null) {
+  if (!description) return null
+  const match = description.match(/Ad Category\s*:\s*(.+)/i)
+  if (!match?.[1]) return null
+  const raw = match[1].trim()
+  const key = raw.toLowerCase().replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '')
+  return AD_CATEGORY_LABEL_MAP[key] || raw
+}
 
 export default function ExplorePage() {
   const [requestedTab, setRequestedTab] = useState<RequestedTab>('home')
@@ -356,7 +376,15 @@ export default function ExplorePage() {
                 </div>
                 <p className="mt-1 text-sm font-extrabold text-rose-700">RM {item.price.toFixed(2)}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {item.categoryLabel ? <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">{item.categoryLabel}</span> : null}
+                  {(item.listingType === 'advertisement'
+                    ? (parseAdCategoryFromDescription(item.description) || 'Komuniti')
+                    : item.categoryLabel) ? (
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                      {item.listingType === 'advertisement'
+                        ? (parseAdCategoryFromDescription(item.description) || 'Komuniti')
+                        : item.categoryLabel}
+                    </span>
+                  ) : null}
                   <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">📍 {item.areaText || '-'}</span>
                   <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">⏳ Aktif</span>
                 </div>
@@ -365,7 +393,9 @@ export default function ExplorePage() {
                 <p className="text-xs text-slate-500">{item.areaText || '-'} · {item.communityText || '-'}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
+                  {(item.listingType === 'food' || item.listingType === 'shop') ? (
+                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
+                  ) : null}
                 </div>
                 <div className="mt-2">
                   {item.listingType === 'advertisement' ? (
