@@ -42,6 +42,7 @@ type MenuCategoryRow = {
   name: string
   sort_order: number
   is_active: boolean
+  listing_type?: ListingSelectorType | null
   created_at?: string
   updated_at?: string
 }
@@ -240,6 +241,17 @@ export default function ProductsPage() {
   const filteredProducts = useMemo(() => {
     return products.filter((product) => (product.listing_type || 'food') === selectedListingType)
   }, [products, selectedListingType])
+  const filteredCategories = useMemo(() => {
+    if (selectedListingType === 'advertisement') return []
+
+    return categories.filter((category) => {
+      const categoryType = category.listing_type
+      if (selectedListingType === 'food') {
+        return !categoryType || categoryType === 'food'
+      }
+      return categoryType === selectedListingType
+    })
+  }, [categories, selectedListingType])
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, MenuCategoryRow>()
@@ -405,10 +417,10 @@ export default function ProductsPage() {
   }, [loadProductsPage])
 
   useEffect(() => {
-    if (!newCategorySortOrder && categories.length > 0) {
-      setNewCategorySortOrder(String(categories.length + 1))
+    if (!newCategorySortOrder && filteredCategories.length > 0) {
+      setNewCategorySortOrder(String(filteredCategories.length + 1))
     }
-  }, [categories.length, newCategorySortOrder])
+  }, [filteredCategories.length, newCategorySortOrder])
 
   function appendCreateImages(files: FileList | null) {
     if (!files) return
@@ -485,6 +497,10 @@ export default function ProductsPage() {
       alert('Seller profile not ready yet.')
       return
     }
+    if (selectedListingType === 'advertisement') {
+      alert('Ad categories are coming soon.')
+      return
+    }
 
     if (!newCategoryName.trim()) {
       alert('Please enter category name.')
@@ -496,8 +512,8 @@ export default function ProductsPage() {
     const trimmedSortOrder = newCategorySortOrder.trim()
 
     const nextSortOrder =
-      categories.length > 0
-        ? Math.max(...categories.map((item) => Number(item.sort_order || 0))) + 1
+      filteredCategories.length > 0
+        ? Math.max(...filteredCategories.map((item) => Number(item.sort_order || 0))) + 1
         : 1
 
     const safeSortOrder =
@@ -514,6 +530,7 @@ export default function ProductsPage() {
         name: newCategoryName.trim(),
         sort_order: safeSortOrder,
         is_active: true,
+        listing_type: selectedListingType,
       })
       .select('*')
       .single()
@@ -1219,15 +1236,23 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           </h2>
 
           <div className="grid gap-3">
-            <label className="text-sm font-bold text-slate-600">
-              New Category Name
-            </label>
-            <input
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="Example: Burger"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-            />
+            {selectedListingType === 'advertisement' ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Ad categories are coming soon for advertisement listings.
+              </div>
+            ) : (
+              <>
+                <label className="text-sm font-bold text-slate-600">
+                  New Category Name
+                </label>
+                <input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder={isFood ? 'Example: Burger' : isShop ? 'Example: Fashion' : 'Example: Aircond Service'}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                />
+              </>
+            )}
 
             <label className="text-sm font-bold text-slate-600">
               Sort Order
@@ -1243,19 +1268,19 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
 
             <button
               onClick={handleCreateCategory}
-              disabled={savingCategory}
+              disabled={savingCategory || selectedListingType === 'advertisement'}
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-900 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {savingCategory ? 'Saving category...' : '+ Add Category'}
             </button>
 
-            {categories.length > 0 ? (
+            {filteredCategories.length > 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="mb-2 text-sm font-bold text-slate-700">
                   Existing Categories
                 </div>
                 <div className="grid gap-3">
-                  {categories.map((category) => {
+                  {filteredCategories.map((category) => {
                     const isEditing = editingCategoryId === category.id
 
                     return (
@@ -1332,13 +1357,28 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               {LISTING_META[selectedListingType].createLabel}
             </h2>
 
-            {LISTING_META[selectedListingType].comingSoon ? (
+            {selectedListingType === 'advertisement' ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                Advertisement listing creation is coming soon. For now, use WhatsApp listing flow.
+                <p className="font-bold">Advertisement listings are coming soon.</p>
+                <p className="mt-2">Examples:</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  <li>job vacancy</li>
+                  <li>room rental</li>
+                  <li>second-hand item</li>
+                  <li>vehicle</li>
+                  <li>property</li>
+                  <li>community promotion</li>
+                </ul>
+                <button
+                  type="button"
+                  disabled
+                  className="mt-4 rounded-xl border border-amber-300 bg-amber-100 px-4 py-2 text-sm font-bold text-amber-900 opacity-80"
+                >
+                  Coming soon
+                </button>
               </div>
-            ) : null}
-
-            <div className={`grid gap-3 ${LISTING_META[selectedListingType].comingSoon ? 'opacity-60' : ''}`}>
+            ) : (
+            <div className="grid gap-3">
               <label className="text-sm font-bold text-slate-600">
                 {isService ? 'Service Title' : 'Product Name'}
               </label>
@@ -1364,7 +1404,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
               >
                 <option value="">No category</option>
-                {categories
+                {filteredCategories
                   .filter((category) => category.is_active)
                   .map((category) => (
                     <option key={category.id} value={category.id}>
@@ -1527,7 +1567,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
 
               <button
                 onClick={handleCreateProduct}
-                disabled={saving || LISTING_META[selectedListingType].comingSoon}
+                disabled={saving}
                 className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {saving ? 'Saving...' : LISTING_META[selectedListingType].createLabel}
@@ -1542,6 +1582,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               </div>
               ) : null}
             </div>
+            )}
           </div>
         </section>
 
