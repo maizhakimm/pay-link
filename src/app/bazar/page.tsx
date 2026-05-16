@@ -9,8 +9,8 @@ import BazarBottomNav from './components/BazarBottomNav'
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
 type MarketplaceProfile = { id: string; seller_profile_id: string; is_featured: boolean; is_verified: boolean; area_text: string | null; community_text: string | null; categoryNames: string[] }
 type RequestedTab = 'home' | 'food' | 'services' | 'shop' | 'community'
-type ListingType = 'food' | 'service' | 'shop'
-type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
+type ListingType = 'food' | 'service' | 'shop' | 'advertisement'
+type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; sellerWhatsapp?: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
 
 const FOOD_CHIPS = [
   { key: 'all', label: '✨ Semua' },
@@ -152,7 +152,7 @@ export default function ExplorePage() {
   const displayedProducts = useMemo(() => {
     const byTab = products.filter((p) => {
       if (requestedTab === 'home') return true
-      if (requestedTab === 'community') return false
+      if (requestedTab === 'community') return p.listingType === 'advertisement'
       if (requestedTab === 'food') return p.listingType === 'food'
       if (requestedTab === 'services') return p.listingType === 'service'
       return p.listingType === 'shop'
@@ -350,7 +350,7 @@ export default function ExplorePage() {
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {displayedProducts.map((item) => (
-              <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
+              <article key={item.id} onClick={() => { if (item.listingType === 'advertisement' || !item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition ${item.listingType !== 'advertisement' && item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
                 {item.image ? <img src={item.image} alt={item.name} className="h-40 w-full rounded-xl object-cover sm:h-44 lg:h-48" /> : <div className="flex h-40 w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700 sm:h-44 lg:h-48">{item.name.slice(0, 2).toUpperCase()}</div>}
                 <div className="mt-2 flex items-start justify-between gap-2">
                   <h3 className="line-clamp-2 text-sm font-bold text-slate-900">{item.name}</h3>
@@ -362,7 +362,26 @@ export default function ExplorePage() {
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
                   <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
                 </div>
-                <div className="mt-2">{item.shopSlug ? <button type="button" onClick={(e) => { e.stopPropagation(); handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} disabled={openingShopKey === `product:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `product:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `product:${item.id}` ? 'Opening...' : item.isDemo ? 'Order Now' : 'View Shop'}</button> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>}</div>
+                <div className="mt-2">
+                  {item.listingType === 'advertisement' ? (
+                    item.sellerWhatsapp ? (
+                      <a
+                        href={`https://wa.me/${item.sellerWhatsapp.replace(/[^\d]/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white"
+                      >
+                        Contact Seller
+                      </a>
+                    ) : (
+                      <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">Contact Seller</span>
+                    )
+                  ) : item.shopSlug ? (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} disabled={openingShopKey === `product:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `product:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `product:${item.id}` ? 'Opening...' : item.isDemo ? 'Order Now' : 'View Shop'}</button>
+                  ) : (
+                    <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>
+                  )}
+                </div>
               </article>
             ))}
           </div>

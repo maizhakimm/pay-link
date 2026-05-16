@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-type ListingType = 'food' | 'service' | 'shop'
+type ListingType = 'food' | 'service' | 'shop' | 'advertisement'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
   const sellerIds = profiles.map((p) => p.seller_profile_id)
 
   const { data: sellerRows, error: sellerError } = sellerIds.length
-    ? await supabase.from('seller_profiles').select('id,store_name,shop_slug').in('id', sellerIds)
+    ? await supabase.from('seller_profiles').select('id,store_name,shop_slug,whatsapp').in('id', sellerIds)
     : ({ data: [], error: null } as any)
 
   let listingTypeColumnAvailable = true
@@ -85,9 +85,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: sellerError?.message || productError?.message || 'Failed to load seller/product data' }, { status: 500 })
   }
 
-  const sellerMap: Record<string, { store_name: string | null; shop_slug: string | null }> = {}
+  const sellerMap: Record<string, { store_name: string | null; shop_slug: string | null; whatsapp: string | null }> = {}
   ;(sellerRows || []).forEach((row: any) => {
-    sellerMap[String(row.id)] = { store_name: row.store_name || null, shop_slug: row.shop_slug || null }
+    sellerMap[String(row.id)] = { store_name: row.store_name || null, shop_slug: row.shop_slug || null, whatsapp: row.whatsapp || null }
   })
 
   const rawProductsCountBeforeVisibilityFilter = productRows.length
@@ -98,7 +98,9 @@ export async function GET(req: Request) {
       const seller = sellerMap[String(p.seller_profile_id)]
       if (!seller?.store_name) return null
       const listingTypeRaw = listingTypeColumnAvailable ? String(p.listing_type || '').trim().toLowerCase() : 'food'
-      const listingType: ListingType = listingTypeRaw === 'service' || listingTypeRaw === 'services'
+      const listingType: ListingType = listingTypeRaw === 'advertisement' || listingTypeRaw === 'community'
+        ? 'advertisement'
+        : listingTypeRaw === 'service' || listingTypeRaw === 'services'
         ? 'service'
         : listingTypeRaw === 'shop' || listingTypeRaw === 'product'
           ? 'shop'
@@ -112,6 +114,7 @@ export async function GET(req: Request) {
         image: p.product_image_url || p.image_1 || p.image_2 || null,
         sellerName: seller.store_name,
         shopSlug: seller.shop_slug,
+        sellerWhatsapp: seller.whatsapp,
         areaText: profile?.area_text || null,
         communityText: profile?.community_text || null,
         categoryLabel: profile?.categoryNames?.[0] || null,

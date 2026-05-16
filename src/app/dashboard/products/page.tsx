@@ -4,7 +4,7 @@ import Layout from '../../../components/Layout'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
-type PersistableListingType = 'food' | 'shop' | 'service'
+type PersistableListingType = 'food' | 'shop' | 'service' | 'advertisement'
 type ListingSelectorType = PersistableListingType | 'advertisement'
 
 type ProductRow = {
@@ -154,6 +154,10 @@ export default function ProductsPage() {
   const [shippingFee, setShippingFee] = useState('')
   const [serviceArea, setServiceArea] = useState('')
   const [serviceWhatsapp, setServiceWhatsapp] = useState('')
+  const [adCategory, setAdCategory] = useState('Job Vacancy')
+  const [adLocation, setAdLocation] = useState('')
+  const [adContact, setAdContact] = useState('')
+  const [adExpiryDate, setAdExpiryDate] = useState('')
   const [menuCategoryId, setMenuCategoryId] = useState('')
   const [selectedListingType, setSelectedListingType] =
     useState<ListingSelectorType>('food')
@@ -230,13 +234,13 @@ export default function ProductsPage() {
       label: 'Advertisement',
       createLabel: 'Create Advertisement',
       yourLabel: 'Your Advertisements',
-      desc: 'WhatsApp listing coming soon',
-      comingSoon: true,
+      desc: 'Community classified listings',
     },
   }
   const isFood = selectedListingType === 'food'
   const isShop = selectedListingType === 'shop'
   const isService = selectedListingType === 'service'
+  const isAd = selectedListingType === 'advertisement'
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => (product.listing_type || 'food') === selectedListingType)
@@ -497,10 +501,6 @@ export default function ProductsPage() {
       alert('Seller profile not ready yet.')
       return
     }
-    if (selectedListingType === 'advertisement') {
-      alert('Ad categories are coming soon.')
-      return
-    }
 
     if (!newCategoryName.trim()) {
       alert('Please enter category name.')
@@ -613,10 +613,6 @@ export default function ProductsPage() {
       alert('Seller profile not ready yet.')
       return
     }
-    if (selectedListingType === 'advertisement') {
-      alert('Advertisement listing creation is coming soon.')
-      return
-    }
     const persistableListingType: PersistableListingType = selectedListingType
 
     if (!name.trim()) {
@@ -678,12 +674,23 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       const { error: insertError } = await supabase.from('products').insert({
         name: name.trim(),
         slug: finalSlug,
-        description: description.trim() || null,
+        description:
+          persistableListingType === 'advertisement'
+            ? [
+                description.trim(),
+                `Ad Category: ${adCategory}`,
+                adLocation.trim() ? `Location: ${adLocation.trim()}` : '',
+                adContact.trim() ? `Contact: ${adContact.trim()}` : '',
+                adExpiryDate ? `Expiry Date: ${adExpiryDate}` : '',
+              ]
+                .filter(Boolean)
+                .join('\n')
+            : description.trim() || null,
         price: Number(price || 0),
         is_active: true,
-        track_stock: trackStock,
-        stock_quantity: safeStock,
-        sold_out: computedSoldOut,
+        track_stock: persistableListingType === 'advertisement' ? false : trackStock,
+        stock_quantity: persistableListingType === 'advertisement' ? 0 : safeStock,
+        sold_out: persistableListingType === 'advertisement' ? false : computedSoldOut,
         store_name: sellerProfile.store_name || null,
         seller_profile_id: sellerProfile.id,
         menu_category_id: menuCategoryId || null,
@@ -776,10 +783,6 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       return
     }
 
-    if (selectedListingType === 'advertisement') {
-      alert('Advertisement listing edit/save is coming soon.')
-      return
-    }
     const persistableListingType: PersistableListingType = selectedListingType
 
     if (!editingName.trim() || !editingPrice.trim()) {
@@ -1357,30 +1360,9 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               {LISTING_META[selectedListingType].createLabel}
             </h2>
 
-            {selectedListingType === 'advertisement' ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                <p className="font-bold">Advertisement listings are coming soon.</p>
-                <p className="mt-2">Examples:</p>
-                <ul className="mt-1 list-disc space-y-1 pl-5">
-                  <li>job vacancy</li>
-                  <li>room rental</li>
-                  <li>second-hand item</li>
-                  <li>vehicle</li>
-                  <li>property</li>
-                  <li>community promotion</li>
-                </ul>
-                <button
-                  type="button"
-                  disabled
-                  className="mt-4 rounded-xl border border-amber-300 bg-amber-100 px-4 py-2 text-sm font-bold text-amber-900 opacity-80"
-                >
-                  Coming soon
-                </button>
-              </div>
-            ) : (
             <div className="grid gap-3">
               <label className="text-sm font-bold text-slate-600">
-                {isService ? 'Service Title' : 'Product Name'}
+                {isService ? 'Service Title' : isAd ? 'Ad Title' : 'Product Name'}
               </label>
               <input
                 value={name}
@@ -1390,14 +1372,27 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                     ? 'Example: Aircond Service Rumah'
                     : isShop
                       ? 'Example: Wireless Earbuds'
+                      : isAd
+                        ? 'Example: Room for Rent at Seksyen 7'
                       : 'Example: Nasi Lemak Ayam'
                 }
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
               />
 
               <label className="text-sm font-bold text-slate-600">
-                {isFood ? 'Menu Category' : isShop ? 'Product Category' : 'Service Category'}
+                {isFood ? 'Menu Category' : isShop ? 'Product Category' : isService ? 'Service Category' : 'Ad Category'}
               </label>
+              {isAd ? (
+                <select
+                  value={adCategory}
+                  onChange={(e) => setAdCategory(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                >
+                  {['Job Vacancy','Room / House Rental','Property','Vehicle','Second-hand Item','Community Promotion','Business Promo','Other'].map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              ) : (
               <select
                 value={menuCategoryId}
                 onChange={(e) => setMenuCategoryId(e.target.value)}
@@ -1412,9 +1407,10 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                     </option>
                   ))}
               </select>
+              )}
 
               <label className="text-sm font-bold text-slate-600">
-                {isService ? 'Service Description' : 'Description'}
+                {isService ? 'Service Description' : isAd ? 'Ad Description' : 'Description'}
               </label>
               <textarea
                 value={description}
@@ -1422,6 +1418,8 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                 placeholder={
                   isService
                     ? 'Explain service scope, process, and what customer will get.'
+                    : isAd
+                      ? 'Describe the ad details clearly.'
                     : 'Short product description'
                 }
                 rows={4}
@@ -1429,16 +1427,16 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               />
 
               <label className="text-sm font-bold text-slate-600">
-                {isService ? 'Starting Price (Optional)' : 'Price (RM)'}
+                {isService ? 'Starting Price (Optional)' : isAd ? 'Price / Salary / Rent (Optional)' : 'Price (RM)'}
               </label>
               <input
                 value={price}
                 onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
-                placeholder={isService ? 'Optional (e.g. 80.00)' : '0.00'}
+                placeholder={isService || isAd ? 'Optional (e.g. 80.00)' : '0.00'}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
               />
 
-              {!isService ? (
+              {!isService && !isAd ? (
               <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
                 <input
                   type="checkbox"
@@ -1449,10 +1447,10 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               </label>
               ) : null}
 
-              {!isService ? (
+              {!isService && !isAd ? (
               <label className="text-sm font-bold text-slate-600">Stock Quantity</label>
               ) : null}
-              {!isService ? (
+              {!isService && !isAd ? (
               <input
                 value={stockQuantity}
                 onChange={(e) => setStockQuantity(e.target.value.replace(/[^\d]/g, ''))}
@@ -1467,7 +1465,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               />
               ) : null}
 
-              {!isService ? (
+              {!isService && !isAd ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
                 <strong className="text-slate-900">Stock note:</strong>
                 <div className="mt-1">
@@ -1520,6 +1518,17 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                   <p className="text-xs text-slate-500">
                     Service leads are WhatsApp/quotation based. Advanced quotation fields will come in next phase.
                   </p>
+                </div>
+              ) : null}
+              {isAd ? (
+                <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="text-sm font-bold text-slate-700">Location / Area</label>
+                  <input value={adLocation} onChange={(e) => setAdLocation(e.target.value)} placeholder="Example: Shah Alam" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+                  <label className="text-sm font-bold text-slate-700">WhatsApp / Contact Number</label>
+                  <input value={adContact} onChange={(e) => setAdContact(e.target.value)} placeholder="Example: 0123456789" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+                  <label className="text-sm font-bold text-slate-700">Expiry Date (Optional)</label>
+                  <input type="date" value={adExpiryDate} onChange={(e) => setAdExpiryDate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+                  <p className="text-xs text-slate-500">Community ads are lead-based. Customers contact you via WhatsApp.</p>
                 </div>
               ) : null}
 
@@ -1582,7 +1591,6 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               </div>
               ) : null}
             </div>
-            )}
           </div>
         </section>
 
@@ -1603,7 +1611,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                   ? 'No products/items yet.'
                   : isService
                     ? 'No services yet.'
-                    : 'Advertisement listings coming soon.'}
+                    : 'No advertisements yet.'}
             </p>
           ) : (
             <div className="grid gap-4">
