@@ -24,8 +24,9 @@ type ProductRow = {
   image_4?: string | null
   image_5?: string | null
   menu_category_id?: string | null
-  listing_type?: 'food' | 'shop' | 'service' | null
+  listing_type?: 'food' | 'shop' | 'service' | 'advertisement' | null
 }
+type ListingType = 'food' | 'shop' | 'service' | 'advertisement'
 
 type SellerProfileRow = {
   id: string
@@ -147,7 +148,7 @@ export default function ProductsPage() {
   const [trackStock, setTrackStock] = useState(true)
   const [stockQuantity, setStockQuantity] = useState('0')
   const [menuCategoryId, setMenuCategoryId] = useState('')
-  const [listingType, setListingType] = useState<'food' | 'shop' | 'service'>('food')
+  const [selectedListingType, setSelectedListingType] = useState<ListingType>('food')
 
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategorySortOrder, setNewCategorySortOrder] = useState('0')
@@ -163,7 +164,6 @@ export default function ProductsPage() {
   const [editingExistingImages, setEditingExistingImages] = useState<string[]>([])
   const [editingNewImages, setEditingNewImages] = useState<File[]>([])
   const [editingMenuCategoryId, setEditingMenuCategoryId] = useState('')
-  const [editingListingType, setEditingListingType] = useState<'food' | 'shop' | 'service'>('food')
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [editingCategoryName, setEditingCategoryName] = useState('')
   const [editingCategorySortOrder, setEditingCategorySortOrder] = useState('0')
@@ -195,6 +195,41 @@ export default function ProductsPage() {
   const generatedSlug = useMemo(() => {
     return createSlug(name)
   }, [name])
+
+  const LISTING_META: Record<
+    ListingType,
+    { label: string; createLabel: string; yourLabel: string; desc: string; comingSoon?: boolean }
+  > = {
+    food: {
+      label: 'Food',
+      createLabel: 'Create Food Item',
+      yourLabel: 'Your Food Items',
+      desc: 'Cart + payment + add-ons',
+    },
+    shop: {
+      label: 'Product / Item',
+      createLabel: 'Create Product / Item',
+      yourLabel: 'Your Products / Items',
+      desc: 'Shop items & simple commerce',
+    },
+    service: {
+      label: 'Services',
+      createLabel: 'Create Service',
+      yourLabel: 'Your Services',
+      desc: 'Lead-based (WhatsApp / quote)',
+    },
+    advertisement: {
+      label: 'Advertisement',
+      createLabel: 'Create Advertisement',
+      yourLabel: 'Your Advertisements',
+      desc: 'WhatsApp listing coming soon',
+      comingSoon: true,
+    },
+  }
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => (product.listing_type || 'food') === selectedListingType)
+  }, [products, selectedListingType])
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, MenuCategoryRow>()
@@ -551,6 +586,10 @@ export default function ProductsPage() {
       alert('Seller profile not ready yet.')
       return
     }
+    if (selectedListingType === 'advertisement') {
+      alert('Advertisement listing creation is coming soon.')
+      return
+    }
 
     if (!name.trim() || !price.trim()) {
       alert('Sila isi nama produk dan harga.')
@@ -611,7 +650,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
         store_name: sellerProfile.store_name || null,
         seller_profile_id: sellerProfile.id,
         menu_category_id: menuCategoryId || null,
-        listing_type: listingType,
+        listing_type: selectedListingType === 'advertisement' ? 'food' : selectedListingType,
         sort_order: nextSortOrder, // ✅ TAMBAH NI
         image_1: uploadedUrls[0] || null,
         image_2: uploadedUrls[1] || null,
@@ -633,7 +672,6 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       setTrackStock(true)
       setStockQuantity('0')
       setMenuCategoryId('')
-      setListingType('food')
       await loadProductsPage()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Image upload failed'
@@ -654,7 +692,6 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
     setEditingExistingImages(getProductImages(product))
     setEditingNewImages([])
     setEditingMenuCategoryId(product.menu_category_id || '')
-    setEditingListingType((product.listing_type as any) || 'food')
 
     setEditingAddonGroupId(null)
     setAddonGroupName('')
@@ -681,7 +718,6 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
     setEditingExistingImages([])
     setEditingNewImages([])
     setEditingMenuCategoryId('')
-    setEditingListingType('food')
 
     setEditingAddonGroupId(null)
     setAddonGroupName('')
@@ -745,7 +781,8 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           stock_quantity: safeStock,
           sold_out: computedSoldOut,
           menu_category_id: editingMenuCategoryId || null,
-          listing_type: editingListingType,
+          listing_type:
+            selectedListingType === 'advertisement' ? 'food' : selectedListingType,
           image_1: finalImages[0] || null,
           image_2: finalImages[1] || null,
           image_3: finalImages[2] || null,
@@ -1121,21 +1158,28 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
           Listing Categories (Phase 1)
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { title: 'Food', desc: 'Cart + payment + add-ons' },
-            { title: 'Product / Item', desc: 'Shop items & simple commerce' },
-            { title: 'Services', desc: 'Lead-based (WhatsApp / quote)' },
-            { title: 'Advertisement', desc: 'Community & classified listing' },
-          ].map((item) => (
-            <div
-              key={item.title}
-              className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3"
-            >
-              <p className="text-sm font-extrabold text-slate-900">{item.title}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">{item.desc}</p>
-            </div>
-          ))}
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0">
+          {(Object.keys(LISTING_META) as ListingType[]).map((type) => {
+            const isActive = selectedListingType === type
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setSelectedListingType(type)}
+                className={[
+                  'min-w-[130px] rounded-xl border px-3 py-2 text-left transition sm:min-w-0',
+                  isActive
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-slate-50 text-slate-700',
+                ].join(' ')}
+              >
+                <p className="text-xs font-extrabold sm:text-sm">{LISTING_META[type].label}</p>
+                <p className={`mt-0.5 text-[11px] leading-4 ${isActive ? 'text-slate-200' : 'text-slate-500'}`}>
+                  {LISTING_META[type].desc}
+                </p>
+              </button>
+            )
+          })}
         </div>
         <p className="mt-3 text-xs text-slate-500">
           Current create/edit flow below remains stable for existing products while we roll out
@@ -1259,11 +1303,17 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           </div>
 
           <div className="mt-6 border-t border-slate-100 pt-6">
-            <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
-              Create Product
+          <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
+              {LISTING_META[selectedListingType].createLabel}
             </h2>
 
-            <div className="grid gap-3">
+            {LISTING_META[selectedListingType].comingSoon ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Advertisement listing creation is coming soon. For now, use WhatsApp listing flow.
+              </div>
+            ) : null}
+
+            <div className={`grid gap-3 ${LISTING_META[selectedListingType].comingSoon ? 'opacity-60' : ''}`}>
               <label className="text-sm font-bold text-slate-600">Product Name</label>
               <input
                 value={name}
@@ -1289,12 +1339,6 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               </select>
 
               <label className="text-sm font-bold text-slate-600">Description</label>
-              <label className="text-sm font-bold text-slate-600">Jenis listing</label>
-              <select value={listingType} onChange={(e) => setListingType(e.target.value as 'food' | 'shop' | 'service')} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400">
-                <option value="food">Food / Makanan</option>
-                <option value="shop">Product / Barang</option>
-                <option value="service">Service / Servis</option>
-              </select>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -1385,10 +1429,10 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
 
               <button
                 onClick={handleCreateProduct}
-                disabled={saving}
+                disabled={saving || LISTING_META[selectedListingType].comingSoon}
                 className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {saving ? 'Saving...' : 'Create Product'}
+                {saving ? 'Saving...' : LISTING_META[selectedListingType].createLabel}
               </button>
 
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
@@ -1403,18 +1447,18 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
-            Your Products
+            {LISTING_META[selectedListingType].yourLabel}
           </h2>
 
           {loading ? (
             <p className="text-sm text-slate-500">Loading products...</p>
           ) : error ? (
             <p className="text-sm text-red-700">{error}</p>
-          ) : products.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <p className="text-sm text-slate-500">No products yet.</p>
           ) : (
             <div className="grid gap-4">
-              {products.map((product) => {
+              {filteredProducts.map((product) => {
                 const link = buildProductLink(product.slug)
                 const images = getProductImages(product)
                 const thumb = images[0]
@@ -1463,12 +1507,9 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                           className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                         />
 
-                        <label className="text-sm font-bold text-slate-600">Jenis listing</label>
-                        <select value={editingListingType} onChange={(e) => setEditingListingType(e.target.value as 'food' | 'shop' | 'service')} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400">
-                          <option value="food">Food / Makanan</option>
-                          <option value="shop">Product / Barang</option>
-                          <option value="service">Service / Servis</option>
-                        </select>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+                          Listing Type: {LISTING_META[selectedListingType].label}
+                        </div>
 
                         <input
                           value={editingPrice}
