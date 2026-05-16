@@ -4,6 +4,9 @@ import Layout from '../../../components/Layout'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
+type PersistableListingType = 'food' | 'shop' | 'service'
+type ListingSelectorType = PersistableListingType | 'advertisement'
+
 type ProductRow = {
   id: string
   name: string
@@ -24,9 +27,8 @@ type ProductRow = {
   image_4?: string | null
   image_5?: string | null
   menu_category_id?: string | null
-  listing_type?: 'food' | 'shop' | 'service' | 'advertisement' | null
+  listing_type?: PersistableListingType | null
 }
-type ListingType = 'food' | 'shop' | 'service' | 'advertisement'
 
 type SellerProfileRow = {
   id: string
@@ -148,7 +150,8 @@ export default function ProductsPage() {
   const [trackStock, setTrackStock] = useState(true)
   const [stockQuantity, setStockQuantity] = useState('0')
   const [menuCategoryId, setMenuCategoryId] = useState('')
-  const [selectedListingType, setSelectedListingType] = useState<ListingType>('food')
+  const [selectedListingType, setSelectedListingType] =
+    useState<ListingSelectorType>('food')
 
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategorySortOrder, setNewCategorySortOrder] = useState('0')
@@ -197,7 +200,7 @@ export default function ProductsPage() {
   }, [name])
 
   const LISTING_META: Record<
-    ListingType,
+    ListingSelectorType,
     { label: string; createLabel: string; yourLabel: string; desc: string; comingSoon?: boolean }
   > = {
     food: {
@@ -590,6 +593,7 @@ export default function ProductsPage() {
       alert('Advertisement listing creation is coming soon.')
       return
     }
+    const persistableListingType: PersistableListingType = selectedListingType
 
     if (!name.trim() || !price.trim()) {
       alert('Sila isi nama produk dan harga.')
@@ -650,7 +654,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
         store_name: sellerProfile.store_name || null,
         seller_profile_id: sellerProfile.id,
         menu_category_id: menuCategoryId || null,
-        listing_type: selectedListingType === 'advertisement' ? 'food' : selectedListingType,
+        listing_type: persistableListingType,
         sort_order: nextSortOrder, // ✅ TAMBAH NI
         image_1: uploadedUrls[0] || null,
         image_2: uploadedUrls[1] || null,
@@ -739,6 +743,12 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       return
     }
 
+    if (selectedListingType === 'advertisement') {
+      alert('Advertisement listing edit/save is coming soon.')
+      return
+    }
+    const persistableListingType: PersistableListingType = selectedListingType
+
     if (!editingName.trim() || !editingPrice.trim()) {
       alert('Please fill in product name and price.')
       return
@@ -781,8 +791,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           stock_quantity: safeStock,
           sold_out: computedSoldOut,
           menu_category_id: editingMenuCategoryId || null,
-          listing_type:
-            selectedListingType === 'advertisement' ? 'food' : selectedListingType,
+          listing_type: persistableListingType,
           image_1: finalImages[0] || null,
           image_2: finalImages[1] || null,
           image_3: finalImages[2] || null,
@@ -1159,7 +1168,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           Listing Categories (Phase 1)
         </p>
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0">
-          {(Object.keys(LISTING_META) as ListingType[]).map((type) => {
+          {(Object.keys(LISTING_META) as ListingSelectorType[]).map((type) => {
             const isActive = selectedListingType === type
             return (
               <button
