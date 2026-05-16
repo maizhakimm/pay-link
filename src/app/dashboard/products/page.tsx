@@ -149,6 +149,10 @@ export default function ProductsPage() {
   const [productImages, setProductImages] = useState<File[]>([])
   const [trackStock, setTrackStock] = useState(true)
   const [stockQuantity, setStockQuantity] = useState('0')
+  const [shippingMethod, setShippingMethod] = useState<'courier' | 'self_pickup' | 'local_delivery'>('courier')
+  const [shippingFee, setShippingFee] = useState('')
+  const [serviceArea, setServiceArea] = useState('')
+  const [serviceWhatsapp, setServiceWhatsapp] = useState('')
   const [menuCategoryId, setMenuCategoryId] = useState('')
   const [selectedListingType, setSelectedListingType] =
     useState<ListingSelectorType>('food')
@@ -229,6 +233,9 @@ export default function ProductsPage() {
       comingSoon: true,
     },
   }
+  const isFood = selectedListingType === 'food'
+  const isShop = selectedListingType === 'shop'
+  const isService = selectedListingType === 'service'
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => (product.listing_type || 'food') === selectedListingType)
@@ -595,7 +602,16 @@ export default function ProductsPage() {
     }
     const persistableListingType: PersistableListingType = selectedListingType
 
-    if (!name.trim() || !price.trim()) {
+    if (!name.trim()) {
+      alert(
+        selectedListingType === 'service'
+          ? 'Sila isi tajuk servis.'
+          : 'Sila isi nama produk dan harga.'
+      )
+      return
+    }
+
+    if (selectedListingType !== 'service' && !price.trim()) {
       alert('Sila isi nama produk dan harga.')
       return
     }
@@ -646,7 +662,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
         name: name.trim(),
         slug: finalSlug,
         description: description.trim() || null,
-        price: Number(price),
+        price: Number(price || 0),
         is_active: true,
         track_stock: trackStock,
         stock_quantity: safeStock,
@@ -1199,7 +1215,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
-            Menu Categories
+            {isFood ? 'Menu Categories' : isShop ? 'Product Categories' : isService ? 'Service Categories' : 'Ad Categories'}
           </h2>
 
           <div className="grid gap-3">
@@ -1323,15 +1339,25 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
             ) : null}
 
             <div className={`grid gap-3 ${LISTING_META[selectedListingType].comingSoon ? 'opacity-60' : ''}`}>
-              <label className="text-sm font-bold text-slate-600">Product Name</label>
+              <label className="text-sm font-bold text-slate-600">
+                {isService ? 'Service Title' : 'Product Name'}
+              </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Example: Nasi Lemak Ayam"
+                placeholder={
+                  isService
+                    ? 'Example: Aircond Service Rumah'
+                    : isShop
+                      ? 'Example: Wireless Earbuds'
+                      : 'Example: Nasi Lemak Ayam'
+                }
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
               />
 
-              <label className="text-sm font-bold text-slate-600">Menu Category</label>
+              <label className="text-sm font-bold text-slate-600">
+                {isFood ? 'Menu Category' : isShop ? 'Product Category' : 'Service Category'}
+              </label>
               <select
                 value={menuCategoryId}
                 onChange={(e) => setMenuCategoryId(e.target.value)}
@@ -1347,23 +1373,32 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                   ))}
               </select>
 
-              <label className="text-sm font-bold text-slate-600">Description</label>
+              <label className="text-sm font-bold text-slate-600">
+                {isService ? 'Service Description' : 'Description'}
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Short product description"
+                placeholder={
+                  isService
+                    ? 'Explain service scope, process, and what customer will get.'
+                    : 'Short product description'
+                }
                 rows={4}
                 className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
               />
 
-              <label className="text-sm font-bold text-slate-600">Price (RM)</label>
+              <label className="text-sm font-bold text-slate-600">
+                {isService ? 'Starting Price (Optional)' : 'Price (RM)'}
+              </label>
               <input
                 value={price}
                 onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
-                placeholder="0.00"
+                placeholder={isService ? 'Optional (e.g. 80.00)' : '0.00'}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
               />
 
+              {!isService ? (
               <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
                 <input
                   type="checkbox"
@@ -1372,8 +1407,12 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                 />
                 <span>Track Stock Quantity</span>
               </label>
+              ) : null}
 
+              {!isService ? (
               <label className="text-sm font-bold text-slate-600">Stock Quantity</label>
+              ) : null}
+              {!isService ? (
               <input
                 value={stockQuantity}
                 onChange={(e) => setStockQuantity(e.target.value.replace(/[^\d]/g, ''))}
@@ -1386,13 +1425,63 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                     : 'border-slate-200 bg-slate-100 text-slate-400',
                 ].join(' ')}
               />
+              ) : null}
 
+              {!isService ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
                 <strong className="text-slate-900">Stock note:</strong>
                 <div className="mt-1">
                   If stock tracking is on and quantity is 0, the product will become sold out automatically.
                 </div>
               </div>
+              ) : null}
+
+              {isShop ? (
+                <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="text-sm font-bold text-slate-700">Shipping Method (MVP)</label>
+                  <select
+                    value={shippingMethod}
+                    onChange={(e) => setShippingMethod(e.target.value as 'courier' | 'self_pickup' | 'local_delivery')}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="courier">Courier</option>
+                    <option value="self_pickup">Self Pickup</option>
+                    <option value="local_delivery">Local Delivery</option>
+                  </select>
+                  <label className="text-sm font-bold text-slate-700">Shipping Fee (Optional)</label>
+                  <input
+                    value={shippingFee}
+                    onChange={(e) => setShippingFee(e.target.value.replace(/[^\d.]/g, ''))}
+                    placeholder="e.g. 5.00"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Shipping fields are UI MVP for now. Full shipping persistence will be added in later phase.
+                  </p>
+                </div>
+              ) : null}
+
+              {isService ? (
+                <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="text-sm font-bold text-slate-700">Service Area / Location</label>
+                  <input
+                    value={serviceArea}
+                    onChange={(e) => setServiceArea(e.target.value)}
+                    placeholder="Example: Shah Alam, Subang, Klang"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <label className="text-sm font-bold text-slate-700">WhatsApp CTA / Contact</label>
+                  <input
+                    value={serviceWhatsapp}
+                    onChange={(e) => setServiceWhatsapp(e.target.value)}
+                    placeholder="Example: 0123456789"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Service leads are WhatsApp/quotation based. Advanced quotation fields will come in next phase.
+                  </p>
+                </div>
+              ) : null}
 
               <label className="text-sm font-bold text-slate-600">
                 Upload Product Images (Max 5)
@@ -1444,12 +1533,14 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                 {saving ? 'Saving...' : LISTING_META[selectedListingType].createLabel}
               </button>
 
+              {isFood ? (
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
                 <strong>Add-on tip:</strong>
                 <div className="mt-1">
                   Create the product first, then tap <strong>Edit</strong> on that product to add add-on groups and options.
                 </div>
               </div>
+              ) : null}
             </div>
           </div>
         </section>
@@ -1464,7 +1555,15 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           ) : error ? (
             <p className="text-sm text-red-700">{error}</p>
           ) : filteredProducts.length === 0 ? (
-            <p className="text-sm text-slate-500">No products yet.</p>
+            <p className="text-sm text-slate-500">
+              {isFood
+                ? 'No food items yet.'
+                : isShop
+                  ? 'No products/items yet.'
+                  : isService
+                    ? 'No services yet.'
+                    : 'Advertisement listings coming soon.'}
+            </p>
           ) : (
             <div className="grid gap-4">
               {filteredProducts.map((product) => {
