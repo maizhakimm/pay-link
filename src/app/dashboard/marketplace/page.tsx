@@ -58,6 +58,7 @@ export default function DashboardMarketplacePage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [loadTimedOut, setLoadTimedOut] = useState(false)
 
   const [seller, setSeller] = useState<SellerProfile | null>(null)
   const [profile, setProfile] = useState<MarketplaceProfile | null>(null)
@@ -70,11 +71,14 @@ export default function DashboardMarketplacePage() {
 
   useEffect(() => {
     async function init() {
+      console.log('[dashboard/marketplace] loading start')
       setLoading(true)
+      setLoadTimedOut(false)
       setError(null)
       setNotice(null)
       try {
         const { data: authData, error: authError } = await supabase.auth.getUser()
+        console.log('[dashboard/marketplace] auth user:', authData.user?.id || null, 'error:', authError?.message || null)
         if (authError || !authData.user) {
           if (authError) console.error('[dashboard/marketplace] getUser error:', authError)
           setError('Please login to access marketplace setup.')
@@ -94,6 +98,7 @@ export default function DashboardMarketplacePage() {
           setError('Seller profile not found. Please complete onboarding first.')
           return
         }
+        console.log('[dashboard/marketplace] seller profile result:', sellerRow?.id || null)
 
       setSeller(sellerRow as SellerProfile)
 
@@ -210,12 +215,23 @@ export default function DashboardMarketplacePage() {
         console.error('[dashboard/marketplace] unexpected init error:', e)
         setError(e instanceof Error ? e.message : 'Failed to initialize marketplace setup.')
       } finally {
+        console.log('[dashboard/marketplace] loading end')
         setLoading(false)
       }
     }
 
     init()
   }, [])
+
+  useEffect(() => {
+    if (!loading) return
+    const timer = window.setTimeout(() => {
+      setLoadTimedOut(true)
+      setLoading(false)
+      setError('BAZAR setup loading timeout (8s). Please retry. Database update required if issue persists.')
+    }, 8000)
+    return () => window.clearTimeout(timer)
+  }, [loading])
 
   const filteredCommunities = useMemo(() => {
     if (!profile?.area_id) return communities
@@ -360,7 +376,7 @@ export default function DashboardMarketplacePage() {
         </section>
 
         {loading ? <Card><p className="text-sm text-slate-500">Loading BAZAR setup...</p></Card> : null}
-        {error ? <Card><p className="text-sm font-semibold text-red-600">{error}</p></Card> : null}
+        {error ? <Card><p className="text-sm font-semibold text-red-600">{error}</p><button onClick={() => window.location.reload()} className="mt-3 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-sm font-semibold text-red-700">Retry</button>{loadTimedOut ? <p className="mt-2 text-xs text-red-600">Tip: check products.listing_type migration.</p> : null}</Card> : null}
         {notice ? <Card><p className="text-sm font-semibold text-emerald-700">{notice}</p></Card> : null}
 
         {!loading && profile ? (

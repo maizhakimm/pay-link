@@ -143,6 +143,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [loadTimedOut, setLoadTimedOut] = useState(false)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -318,7 +319,9 @@ export default function ProductsPage() {
   )
 
   const loadProductsPage = useCallback(async () => {
+    console.log('[dashboard/products] loading start')
     setLoading(true)
+    setLoadTimedOut(false)
     setError('')
     try {
       const {
@@ -331,6 +334,7 @@ export default function ProductsPage() {
         setError('Unable to load user session.')
         return
       }
+      console.log('[dashboard/products] auth user:', user.id)
 
       const { data: sellerData, error: sellerError } = await supabase
         .from('seller_profiles')
@@ -343,6 +347,7 @@ export default function ProductsPage() {
         setError('Seller profile not found. Please complete your settings first.')
         return
       }
+      console.log('[dashboard/products] seller profile result:', sellerData?.id || null)
 
       if (!sellerData.shop_slug) {
         setError('Shop URL not found. Please complete your settings first.')
@@ -416,6 +421,7 @@ export default function ProductsPage() {
       console.error('[dashboard/products] unexpected load error:', e)
       setError(e instanceof Error ? e.message : 'Failed to load listings page.')
     } finally {
+      console.log('[dashboard/products] loading end')
       setLoading(false)
     }
   }, [])
@@ -423,6 +429,16 @@ export default function ProductsPage() {
   useEffect(() => {
     loadProductsPage()
   }, [loadProductsPage])
+
+  useEffect(() => {
+    if (!loading) return
+    const timer = window.setTimeout(() => {
+      setLoadTimedOut(true)
+      setLoading(false)
+      setError('Listings loading timeout (8s). Please retry. Database update required if issue persists.')
+    }, 8000)
+    return () => window.clearTimeout(timer)
+  }, [loading])
 
   useEffect(() => {
     if (!newCategorySortOrder && filteredCategories.length > 0) {
@@ -1606,7 +1622,11 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           {loading ? (
             <p className="text-sm text-slate-500">Loading products...</p>
           ) : error ? (
-            <p className="text-sm text-red-700">{error}</p>
+            <div>
+              <p className="text-sm text-red-700">{error}</p>
+              <button onClick={loadProductsPage} className="mt-2 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-sm font-semibold text-red-700">Retry</button>
+              {loadTimedOut ? <p className="mt-1 text-xs text-red-600">Tip: check listing_type/menu_categories migrations.</p> : null}
+            </div>
           ) : filteredProducts.length === 0 ? (
             <p className="text-sm text-slate-500">
               {isFood
