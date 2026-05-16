@@ -87,6 +87,7 @@ export default function ExplorePage() {
   const [isMobileUa, setIsMobileUa] = useState(false)
   const [apiDebug, setApiDebug] = useState<Record<string, unknown> | null>(null)
   const [openingShopKey, setOpeningShopKey] = useState<string | null>(null)
+  const [adDetailsItem, setAdDetailsItem] = useState<ProductCard | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -269,6 +270,19 @@ export default function ExplorePage() {
     }, 8000)
   }
 
+  function getCleanAdDescription(description?: string | null) {
+    if (!description) return ''
+    return description
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => {
+        const n = line.toLowerCase()
+        return n && !n.startsWith('ad category:') && !n.startsWith('location:') && !n.startsWith('contact:') && !n.startsWith('expiry date:')
+      })
+      .join('\n')
+      .trim()
+  }
+
   return (
     <main className="min-h-screen bg-white pb-32">
       <div className="mx-auto max-w-6xl px-4 py-5">
@@ -370,7 +384,7 @@ export default function ExplorePage() {
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {displayedProducts.map((item) => (
-              <article key={item.id} onClick={() => { if (item.listingType === 'advertisement' || !item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border bg-white shadow-sm transition ${item.listingType === 'advertisement' ? 'border-rose-200 p-3.5' : 'border-slate-200 p-2.5'} ${item.listingType !== 'advertisement' && item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
+              <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border bg-white shadow-sm transition ${item.listingType === 'advertisement' ? 'border-rose-200 p-3.5' : 'border-slate-200 p-2.5'} ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
                 <div className="mt-2 flex items-start justify-between gap-2">
                   <h3 className={`${item.listingType === 'advertisement' ? 'line-clamp-2 text-base' : 'line-clamp-2 text-sm'} font-bold text-slate-900`}>{item.name}</h3>
                 </div>
@@ -389,7 +403,7 @@ export default function ExplorePage() {
                   <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">⏳ Aktif</span>
                 </div>
                 {item.image ? <img src={item.image} alt={item.name} className={`${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'mt-0 h-40 sm:h-44 lg:h-48'} w-full rounded-xl object-cover`} /> : <div className={`flex w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700 ${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'h-40 sm:h-44 lg:h-48'}`}>{item.name.slice(0, 2).toUpperCase()}</div>}
-                <p className="mt-2 truncate text-xs text-slate-600">{item.sellerName}</p>
+                <p className="mt-2 line-clamp-2 text-xs text-slate-600">{item.listingType === 'advertisement' ? `${(getCleanAdDescription(item.description) || 'Tiada deskripsi.').slice(0, 100)}${(getCleanAdDescription(item.description) || '').length > 100 ? '…' : ''}` : item.sellerName}</p>
                 <p className="text-xs text-slate-500">{item.areaText || '-'} · {item.communityText || '-'}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
@@ -400,14 +414,18 @@ export default function ExplorePage() {
                 <div className="mt-2">
                   {item.listingType === 'advertisement' ? (
                     item.sellerWhatsapp ? (
+                      <div className="flex gap-2">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setAdDetailsItem(item) }} className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">View Details</button>
                       <a
+                        onClick={(e) => e.stopPropagation()}
                         href={`https://wa.me/${item.sellerWhatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${item.name}". Masih available?`)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white"
+                        className="inline-flex flex-1 justify-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white"
                       >
                         Contact Seller
                       </a>
+                      </div>
                     ) : (
                       <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">Contact Seller</span>
                     )
@@ -486,6 +504,37 @@ export default function ExplorePage() {
               <button onClick={() => { setArea(''); setShowAreaPicker(false) }} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === '' ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>Semua Kawasan</button>
               {areaOptions.map((item) => <button key={item} onClick={() => { setArea(item); setShowAreaPicker(false) }} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === item ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>{item}</button>)}
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {adDetailsItem ? (
+        <div className="fixed inset-0 z-50 bg-black/40 p-4" onClick={() => setAdDetailsItem(null)}>
+          <div className="mx-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{adDetailsItem.name}</h3>
+                <p className="text-sm font-extrabold text-rose-700">RM {adDetailsItem.price.toFixed(2)}</p>
+              </div>
+              <button type="button" onClick={() => setAdDetailsItem(null)} className="rounded-lg border border-slate-200 px-2 py-1 text-sm">✕</button>
+            </div>
+            <div className="mb-3 flex flex-wrap gap-2">
+              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs">{parseAdCategoryFromDescription(adDetailsItem.description) || 'Komuniti'}</span>
+              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs">📍 {adDetailsItem.areaText || '-'}</span>
+              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs">⏳ Aktif</span>
+            </div>
+            {adDetailsItem.image ? <img src={adDetailsItem.image} alt={adDetailsItem.name} className="mb-3 h-56 w-full rounded-xl object-cover" /> : null}
+            <p className="whitespace-pre-line text-sm text-slate-700">{getCleanAdDescription(adDetailsItem.description) || 'Tiada deskripsi.'}</p>
+            {adDetailsItem.sellerWhatsapp ? (
+              <a
+                href={`https://wa.me/${adDetailsItem.sellerWhatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${adDetailsItem.name}". Masih available?`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex w-full justify-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white"
+              >
+                Contact Seller
+              </a>
+            ) : null}
           </div>
         </div>
       ) : null}

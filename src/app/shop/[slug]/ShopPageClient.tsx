@@ -149,6 +149,11 @@ type GalleryState = {
   currentIndex: number
 }
 
+type AdDetailsModalState = {
+  isOpen: boolean
+  product: ProductRow | null
+}
+
 type CartAddon = {
   group_id: string
   group_name: string
@@ -597,6 +602,7 @@ export default function ShopPageClient({
   })
 
   const [isDesktop, setIsDesktop] = useState(false)
+  const [adDetailsModal, setAdDetailsModal] = useState<AdDetailsModalState>({ isOpen: false, product: null })
 
   useEffect(() => {
     function handleResize() {
@@ -628,7 +634,15 @@ export default function ShopPageClient({
       window.visualViewport?.removeEventListener('resize', setAppViewportHeight)
       window.visualViewport?.removeEventListener('scroll', setAppViewportHeight)
     }
-  }, [])
+  }, [, adDetailsModal.isOpen])
+
+  function openAdDetailsModal(product: ProductRow) {
+    setAdDetailsModal({ isOpen: true, product })
+  }
+
+  function closeAdDetailsModal() {
+    setAdDetailsModal({ isOpen: false, product: null })
+  }
 
   const [addonModal, setAddonModal] = useState<{
     product: ProductRow | null
@@ -685,7 +699,7 @@ export default function ShopPageClient({
   const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
 
   useEffect(() => {
-    const shouldLockScroll = gallery.isOpen || addonModal.isOpen
+    const shouldLockScroll = gallery.isOpen || addonModal.isOpen || adDetailsModal.isOpen
     const previousBodyOverflow = document.body.style.overflow
     const previousHtmlOverflow = document.documentElement.style.overflow
 
@@ -1501,10 +1515,14 @@ export default function ShopPageClient({
                           }}
                         >
                           {listingType === 'advertisement'
-                            ? getAdvertisementCleanDescription(product.description) ||
-                              'Tiada deskripsi.'
+                            ? `${(getAdvertisementCleanDescription(product.description) || 'Tiada deskripsi.').slice(0, 140)}${(getAdvertisementCleanDescription(product.description) || '').length > 140 ? '…' : ''}`
                             : product.description || 'Tiada deskripsi.'}
                         </div>
+                        {listingType === 'advertisement' ? (
+                          <button type="button" onClick={() => openAdDetailsModal(product)} style={{ ...secondaryBtn, width: '100%', marginTop: 10 }}>
+                            View Details
+                          </button>
+                        ) : null}
 
                         {isLeadListing ? (
                           <div style={qtyWrap}>
@@ -1851,6 +1869,48 @@ export default function ShopPageClient({
                 ))}
               </div>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {adDetailsModal.isOpen && adDetailsModal.product ? (
+        <div style={modalOverlay} onClick={closeAdDetailsModal}>
+          <div
+            style={isDesktop ? modalDialogDesktop : modalDialogMobile}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={modalHeader}>
+              <div>
+                <div style={modalTitle}>{adDetailsModal.product.name}</div>
+                <div style={modalSubtitle}>RM {adDetailsModal.product.price.toFixed(2)}</div>
+              </div>
+              <button type="button" onClick={closeAdDetailsModal} style={modalCloseBtn}>✕</button>
+            </div>
+            <div style={modalContent}>
+              {(() => {
+                const adMeta = parseAdMeta(adDetailsModal.product.description)
+                const cleanDescription = getAdvertisementCleanDescription(adDetailsModal.product.description) || 'Tiada deskripsi.'
+                const image = getFirstImage(adDetailsModal.product)
+                const leadWhatsapp = seller?.whatsapp?.replace(/\D/g, '') || ''
+                return (
+                  <>
+                    <div style={metaBadgeWrap}>
+                      {adMeta?.category ? <span style={metaBadge}>{adMeta.category}</span> : null}
+                      {adMeta?.location ? <span style={metaBadge}>📍 {adMeta.location}</span> : null}
+                      {adMeta?.expiry ? <span style={metaBadge}>⏳ {adMeta.expiry}</span> : null}
+                    </div>
+                    {image ? <img src={getImageUrl(image)} alt={adDetailsModal.product.name} style={{ width: '100%', maxHeight: 320, objectFit: 'cover', borderRadius: 14 }} /> : null}
+                    <div style={productDesc}>{cleanDescription}</div>
+                    <a
+                      href={leadWhatsapp ? `https://wa.me/${leadWhatsapp}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${adDetailsModal.product.name}". Masih available?`)}` : '#'}
+                      style={{ ...primaryBtn, width: '100%', textAlign: 'center', textDecoration: 'none' }}
+                    >
+                      Contact Seller
+                    </a>
+                  </>
+                )
+              })()}
+            </div>
           </div>
         </div>
       ) : null}
