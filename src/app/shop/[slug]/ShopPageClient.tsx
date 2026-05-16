@@ -536,6 +536,19 @@ function getMinimumOrderDefaultMessage(
   return `Minimum order ${minimumOrderValue} pcs. Boleh campur-campur.`
 }
 
+function parseAdMeta(description?: string | null) {
+  const text = String(description || '')
+  const lines = text.split('\n').map((line) => line.trim())
+  const find = (prefix: string) =>
+    lines.find((line) => line.toLowerCase().startsWith(prefix.toLowerCase() + ':'))?.split(':').slice(1).join(':').trim() || ''
+  return {
+    category: find('Ad Category'),
+    location: find('Location'),
+    contact: find('Contact'),
+    expiry: find('Expiry Date'),
+  }
+}
+
 export default function ShopPageClient({
   seller,
   products,
@@ -1214,6 +1227,18 @@ export default function ShopPageClient({
               {seller.shop_description?.trim() && (
                 <p style={shopDescriptionMobile}>{seller.shop_description}</p>
               )}
+              {availableSections.length > 1 ? (
+                <div style={sectionChipWrap}>
+                  {availableSections.map((section) => {
+                    const label = section === 'food' ? 'Menu' : section === 'shop' ? 'Shop' : section === 'service' ? 'Services' : 'Iklan'
+                    return (
+                      <button key={section} type="button" onClick={() => setActiveSection(section)} style={{ ...sectionChipBtn, ...(activeSection === section ? sectionChipBtnActive : sectionChipBtnInactive) }}>
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
 
               {hasMinimumOrderRule ? (
                 <div style={minimumOrderHeroBox}>
@@ -1269,6 +1294,18 @@ export default function ShopPageClient({
                 {seller.shop_description?.trim() && (
                   <p style={shopDescription}>{seller.shop_description}</p>
                 )}
+                {availableSections.length > 1 ? (
+                  <div style={sectionChipWrap}>
+                    {availableSections.map((section) => {
+                      const label = section === 'food' ? 'Menu' : section === 'shop' ? 'Shop' : section === 'service' ? 'Services' : 'Iklan'
+                      return (
+                        <button key={section} type="button" onClick={() => setActiveSection(section)} style={{ ...sectionChipBtn, ...(activeSection === section ? sectionChipBtnActive : sectionChipBtnInactive) }}>
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
 
                 {hasMinimumOrderRule ? (
                   <div style={minimumOrderHeroBoxDesktop}>
@@ -1279,38 +1316,6 @@ export default function ShopPageClient({
             </div>
           )}
         </div>
-
-        {availableSections.length > 1 ? (
-          <div style={stickyTabWrap}>
-            <div style={tabShell}>
-              <div style={tabScroller}>
-                {availableSections.map((section) => {
-                  const label =
-                    section === 'food'
-                      ? 'Menu'
-                      : section === 'shop'
-                        ? 'Shop'
-                        : section === 'service'
-                          ? 'Services'
-                          : 'Iklan'
-                  return (
-                    <button
-                      key={section}
-                      type="button"
-                      onClick={() => setActiveSection(section)}
-                      style={{
-                        ...tabButton,
-                        ...(activeSection === section ? activeTabButton : inactiveTabButton),
-                      }}
-                    >
-                      {label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        ) : null}
 
         {hasCategoryFeature && activeSection !== 'advertisement' ? (
           <div style={stickyTabWrap}>
@@ -1375,17 +1380,41 @@ export default function ShopPageClient({
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
                 const listingType = (product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
                 const isLeadListing = listingType === 'service' || listingType === 'advertisement'
+                const adMeta =
+                  listingType === 'advertisement'
+                    ? parseAdMeta(product.description)
+                    : null
                 const allImages = getProductImages(product)
 
                 return (
                   <div
                     key={product.id}
                     ref={(el) => { productRefs.current[product.id] = el }}
-                    style={{ ...productCard, ...(highlightedProductId === product.id ? highlightedProductCard : {}) }}
+                    style={{ ...productCard, ...(listingType === 'advertisement' ? adCard : listingType === 'service' ? serviceCard : {}), ...(highlightedProductId === product.id ? highlightedProductCard : {}) }}
                   >
-                    <div style={productContent}>
+                    <div
+                      style={{
+                        ...productContent,
+                        gridTemplateColumns:
+                          listingType === 'advertisement'
+                            ? isDesktop
+                              ? 'minmax(0, 1fr) 180px'
+                              : '1fr'
+                            : listingType === 'service' && !isDesktop
+                            ? '1fr'
+                            : productContent.gridTemplateColumns,
+                      }}
+                    >
                       <div style={productInfo}>
-                        <div style={productName}>{product.name}</div>
+                        <div
+                          style={{
+                            ...productName,
+                            fontSize: listingType === 'advertisement' ? 20 : 16,
+                            lineHeight: listingType === 'advertisement' ? 1.3 : 1.2,
+                          }}
+                        >
+                          {product.name}
+                        </div>
 
                         <div style={productPrice}>RM {product.price.toFixed(2)}</div>
 
@@ -1395,14 +1424,59 @@ export default function ShopPageClient({
                           </div>
                         ) : null}
 
-                        <div style={productDesc}>
+                        <div
+                          style={{
+                            ...productDesc,
+                            marginTop: listingType === 'advertisement' ? 10 : 8,
+                            color:
+                              listingType === 'advertisement'
+                                ? '#475569'
+                                : productDesc.color,
+                          }}
+                        >
                           {product.description || 'Tiada deskripsi.'}
                         </div>
+                        {listingType === 'advertisement' ? (
+                          <div style={metaBadgeWrap}>
+                            {adMeta?.category ? <span style={metaBadge}>{adMeta.category}</span> : null}
+                            {adMeta?.location ? <span style={metaBadge}>📍 {adMeta.location}</span> : null}
+                            {adMeta?.expiry ? <span style={metaBadge}>⏳ {adMeta.expiry}</span> : null}
+                          </div>
+                        ) : null}
 
                         {isLeadListing ? (
                           <div style={qtyWrap}>
-                            <a href={seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(listingType === 'advertisement' ? `Hi, saya berminat dengan iklan \"${product.name}\". Masih available?` : `Hi, saya berminat dengan servis \"${product.name}\". Boleh saya dapatkan quotation?`)}` : '#'} style={{ ...qtyBtn, display: 'inline-flex', width: '100%', justifyContent: 'center', textDecoration: 'none' }}>
-                              {listingType === 'advertisement' ? 'Contact Seller' : 'Request Quote / WhatsApp'}
+                            <a
+                              href={
+                                seller?.whatsapp
+                                  ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(
+                                      listingType === 'advertisement'
+                                        ? `Hi, saya berminat dengan iklan \"${product.name}\". Masih available?`
+                                        : `Hi, saya berminat dengan servis \"${product.name}\". Boleh saya dapatkan quotation?`
+                                    )}`
+                                  : '#'
+                              }
+                              style={{
+                                ...qtyBtn,
+                                display: 'inline-flex',
+                                width: '100%',
+                                height: 'auto',
+                                justifyContent: 'center',
+                                textDecoration: 'none',
+                                borderRadius: 12,
+                                padding: listingType === 'advertisement' ? '12px 14px' : '10px 14px',
+                                fontSize: 14,
+                                fontWeight: 800,
+                                background:
+                                  listingType === 'advertisement' ? '#0f172a' : '#16a34a',
+                                borderColor:
+                                  listingType === 'advertisement' ? '#0f172a' : '#15803d',
+                                color: '#fff',
+                              }}
+                            >
+                              {listingType === 'advertisement'
+                                ? 'Contact Seller'
+                                : 'WhatsApp / Request Quote'}
                             </a>
                           </div>
                         ) : (
@@ -1429,12 +1503,29 @@ export default function ShopPageClient({
                         onClick={() => openGallery(product, 0)}
                         style={{
                           ...productImageButton,
+                          width:
+                            listingType === 'advertisement' && !isDesktop
+                              ? '100%'
+                              : undefined,
                           cursor: image ? 'pointer' : 'default',
                         }}
                         disabled={!image}
                         aria-label={`View images for ${product.name}`}
                       >
-                        <div style={productImageWrap}>
+                        <div
+                          style={{
+                            ...productImageWrap,
+                            width:
+                              listingType === 'advertisement'
+                                ? isDesktop
+                                  ? 180
+                                  : '100%'
+                                : listingType === 'service' && !isDesktop
+                                ? '100%'
+                                : productImageWrap.width,
+                            height: listingType === 'advertisement' ? 150 : 120,
+                          }}
+                        >
                           {image ? (
                             <img
                               src={getImageUrl(image)}
@@ -1976,9 +2067,9 @@ const backToBazarLink: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   borderRadius: 999,
-  border: '1px solid #dbeafe',
-  background: '#eff6ff',
-  color: '#1d4ed8',
+  border: '1px solid #f9a8d4',
+  background: 'linear-gradient(135deg, #fff1f7 0%, #ffe4ef 100%)',
+  color: '#be185d',
   fontWeight: 700,
   fontSize: 12,
   padding: '7px 12px',
@@ -2039,8 +2130,41 @@ const shopDescription: React.CSSProperties = {
   margin: '10px 0 0',
   color: '#475569',
   fontSize: 14,
-  lineHeight: 1.3,
+  lineHeight: 1.5,
   maxWidth: 720,
+}
+
+const sectionChipWrap: React.CSSProperties = {
+  display: 'flex',
+  gap: 8,
+  overflowX: 'auto',
+  paddingBottom: 2,
+  marginTop: 12,
+  WebkitOverflowScrolling: 'touch',
+}
+
+const sectionChipBtn: React.CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#334155',
+  fontWeight: 700,
+  fontSize: 13,
+  padding: '8px 14px',
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+}
+
+const sectionChipBtnActive: React.CSSProperties = {
+  borderColor: '#0f172a',
+  background: '#0f172a',
+  color: '#fff',
+}
+
+const sectionChipBtnInactive: React.CSSProperties = {
+  borderColor: '#cbd5e1',
+  background: '#fff',
+  color: '#334155',
 }
 
 const statusInlineWrap: React.CSSProperties = {
@@ -2159,10 +2283,39 @@ const productCard: React.CSSProperties = {
   boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
 }
 
+const adCard: React.CSSProperties = {
+  padding: 18,
+  borderColor: '#fbcfe8',
+  background: '#fff9fc',
+}
+
+const serviceCard: React.CSSProperties = {
+  padding: 18,
+  borderColor: '#bfdbfe',
+  background: '#f8fbff',
+}
+
+const metaBadgeWrap: React.CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+  marginTop: 10,
+}
+
+const metaBadge: React.CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid #e2e8f0',
+  background: '#fff',
+  color: '#334155',
+  fontSize: 12,
+  fontWeight: 700,
+  padding: '6px 10px',
+}
+
 const productContent: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1fr 120px',
-  gap: 14,
+  gridTemplateColumns: 'minmax(0, 1fr) 132px',
+  gap: 16,
   alignItems: 'start',
 }
 
@@ -2195,7 +2348,7 @@ const productDesc: React.CSSProperties = {
   marginTop: 8,
   color: '#64748b',
   fontSize: 14,
-  lineHeight: 1.3,
+  lineHeight: 1.5,
   whiteSpace: 'normal',
   wordBreak: 'break-word',
 }
