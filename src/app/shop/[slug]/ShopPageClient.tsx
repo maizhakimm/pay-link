@@ -574,6 +574,15 @@ function getAdvertisementCleanDescription(description?: string | null) {
     .trim()
 }
 
+function normalizeWhatsappNumber(input?: string | null) {
+  const digits = String(input || '').replace(/\D/g, '')
+  if (!digits) return ''
+  if (digits.startsWith('60')) return digits
+  if (digits.startsWith('0')) return `6${digits}`
+  if (digits.length >= 9) return `60${digits}`
+  return ''
+}
+
 export default function ShopPageClient({
   seller,
   products,
@@ -713,7 +722,7 @@ export default function ShopPageClient({
       document.body.style.overflow = previousBodyOverflow
       document.documentElement.style.overflow = previousHtmlOverflow
     }
-  }, [gallery.isOpen, addonModal.isOpen])
+  }, [gallery.isOpen, addonModal.isOpen, adDetailsModal.isOpen])
 
   function getProductAddonGroups(productId: string) {
     return productAddons[productId] || []
@@ -1420,7 +1429,7 @@ export default function ShopPageClient({
                     : null
                 const isServiceListing = listingType === 'service'
                 const allImages = getProductImages(product)
-                const leadWhatsapp = seller?.whatsapp?.replace(/\D/g, '') || ''
+                const leadWhatsapp = normalizeWhatsappNumber(seller?.whatsapp)
                 const leadMessage =
                   listingType === 'advertisement'
                     ? `Hi, saya berminat dengan iklan "${product.name}". Masih available?`
@@ -1897,7 +1906,7 @@ export default function ShopPageClient({
                 const cleanDescription = getAdvertisementCleanDescription(adDetailsModal.product.description) || 'Tiada deskripsi.'
                 const images = getProductImages(adDetailsModal.product).map((img) => getImageUrl(img))
                 const currentImage = images[adDetailsModal.currentIndex] || ''
-                const leadWhatsapp = seller?.whatsapp?.replace(/\D/g, '') || ''
+                const leadWhatsapp = normalizeWhatsappNumber(seller?.whatsapp)
                 const modalListingType = (adDetailsModal.product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
                 const isServiceModal = modalListingType === 'service'
                 return (
@@ -1910,9 +1919,11 @@ export default function ShopPageClient({
                       </div>
                     ) : null}
                     {currentImage ? (
-                      <div style={{ borderRadius: 14, overflow: 'hidden', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                        <img src={currentImage} alt={adDetailsModal.product.name} style={{ width: '100%', height: 280, objectFit: isServiceModal ? 'cover' : 'contain' }} />
-                      </div>
+                      <button type="button" onClick={() => openGallery(adDetailsModal.product!, adDetailsModal.currentIndex)} style={{ ...productImageButton, width: '100%' }}>
+                        <div style={{ borderRadius: 14, overflow: 'hidden', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                          <img src={currentImage} alt={adDetailsModal.product.name} style={{ width: '100%', height: 280, objectFit: 'contain' }} />
+                        </div>
+                      </button>
                     ) : null}
                     {images.length > 1 ? (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -2887,7 +2898,7 @@ const modalOverlay: React.CSSProperties = {
   inset: 0,
   background: 'rgba(15, 23, 42, 0.62)',
   display: 'flex',
-  alignItems: 'flex-end',
+  alignItems: 'center',
   justifyContent: 'center',
   paddingTop: 'max(12px, env(safe-area-inset-top))',
   paddingRight: 12,

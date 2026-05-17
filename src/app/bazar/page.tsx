@@ -89,6 +89,7 @@ export default function ExplorePage() {
   const [openingShopKey, setOpeningShopKey] = useState<string | null>(null)
   const [adDetailsItem, setAdDetailsItem] = useState<ProductCard | null>(null)
   const [adDetailsIndex, setAdDetailsIndex] = useState(0)
+  const [adLightboxOpen, setAdLightboxOpen] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -284,6 +285,15 @@ export default function ExplorePage() {
       .trim()
   }
 
+  function normalizeWhatsappNumber(input?: string | null) {
+    const digits = String(input || '').replace(/\D/g, '')
+    if (!digits) return ''
+    if (digits.startsWith('60')) return digits
+    if (digits.startsWith('0')) return `6${digits}`
+    if (digits.length >= 9) return `60${digits}`
+    return ''
+  }
+
   return (
     <main className="min-h-screen bg-white pb-32">
       <div className="mx-auto max-w-6xl px-4 py-5">
@@ -419,7 +429,7 @@ export default function ExplorePage() {
                       <button type="button" onClick={(e) => { e.stopPropagation(); setAdDetailsItem(item); setAdDetailsIndex(0) }} className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">View Details</button>
                       <a
                         onClick={(e) => e.stopPropagation()}
-                        href={`https://wa.me/${item.sellerWhatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${item.name}". Masih available?`)}`}
+                        href={normalizeWhatsappNumber(item.sellerWhatsapp) ? `https://wa.me/${normalizeWhatsappNumber(item.sellerWhatsapp)}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${item.name}". Masih available?`)}` : '#'}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex flex-1 justify-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white"
@@ -511,7 +521,7 @@ export default function ExplorePage() {
 
       {adDetailsItem ? (
         <div className="fixed inset-0 z-50 bg-black/40 p-4" onClick={() => setAdDetailsItem(null)}>
-          <div className="mx-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="mx-auto mt-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 sm:mt-10" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">{adDetailsItem.name}</h3>
@@ -532,7 +542,9 @@ export default function ExplorePage() {
                 <>
                   {currentImage ? (
                     <div className="mb-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                      <img src={currentImage} alt={adDetailsItem.name} className="h-64 w-full object-contain" />
+                      <button type="button" onClick={() => setAdLightboxOpen(true)} className="w-full">
+                        <img src={currentImage} alt={adDetailsItem.name} className="h-64 w-full object-contain" />
+                      </button>
                     </div>
                   ) : null}
                   {images.length > 1 ? (
@@ -548,7 +560,7 @@ export default function ExplorePage() {
             <p className="whitespace-pre-line text-sm text-slate-700">{getCleanAdDescription(adDetailsItem.description) || 'Tiada deskripsi.'}</p>
             {adDetailsItem.sellerWhatsapp ? (
               <a
-                href={`https://wa.me/${adDetailsItem.sellerWhatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${adDetailsItem.name}". Masih available?`)}`}
+                href={normalizeWhatsappNumber(adDetailsItem.sellerWhatsapp) ? `https://wa.me/${normalizeWhatsappNumber(adDetailsItem.sellerWhatsapp)}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${adDetailsItem.name}". Masih available?`)}` : '#'}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-4 inline-flex w-full justify-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white"
@@ -556,6 +568,25 @@ export default function ExplorePage() {
                 Contact Seller
               </a>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {adDetailsItem && adLightboxOpen ? (
+        <div className="fixed inset-0 z-[60] bg-black/90 p-4" onClick={() => setAdLightboxOpen(false)}>
+          <div className="mx-auto flex h-full w-full max-w-4xl flex-col justify-center" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const allImages = [adDetailsItem.image_1, adDetailsItem.image_2, adDetailsItem.image_3, adDetailsItem.image_4, adDetailsItem.image_5, adDetailsItem.image].filter(Boolean) as string[]
+              const images = Array.from(new Set(allImages))
+              const currentImage = images[adDetailsIndex] || null
+              return (
+                <>
+                  <button type="button" onClick={() => setAdLightboxOpen(false)} className="mb-3 ml-auto rounded-lg border border-white/40 px-3 py-1 text-sm text-white">✕ Close</button>
+                  {currentImage ? <img src={currentImage} alt={adDetailsItem.name} className="max-h-[75vh] w-full rounded-xl object-contain" /> : null}
+                  {images.length > 1 ? <div className="mt-3 flex items-center justify-between"><button type="button" onClick={() => setAdDetailsIndex((prev) => (prev - 1 + images.length) % images.length)} className="rounded-lg border border-white/40 px-3 py-1.5 text-xs font-bold text-white">‹ Previous</button><span className="text-xs font-semibold text-white">{adDetailsIndex + 1} / {images.length}</span><button type="button" onClick={() => setAdDetailsIndex((prev) => (prev + 1) % images.length)} className="rounded-lg border border-white/40 px-3 py-1.5 text-xs font-bold text-white">Next ›</button></div> : null}
+                </>
+              )
+            })()}
           </div>
         </div>
       ) : null}
