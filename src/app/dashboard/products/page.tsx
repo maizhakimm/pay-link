@@ -75,6 +75,9 @@ type ProductAddonOptionRow = {
   updated_at?: string
 }
 
+
+const SERVICE_CATEGORY_OPTIONS = ['Printing','Design','Catering','Repair','Aircond','Cleaning','Tailor / Jahit','Massage / Urut','Tutor','Runner','Event','Beauty','IT / Computer','Photography','Home Service']
+const AD_CATEGORY_OPTIONS = ['Jawatan Kosong','Bilik / Rumah Sewa','Property','Vehicle','Preloved','Computer / Gadget','Business Promo','Event Komuniti','Lost & Found','Education','Others']
 function createSlug(value: string) {
   return value
     .toLowerCase()
@@ -247,9 +250,7 @@ export default function ProductsPage() {
     return products.filter((product) => (product.listing_type || 'food') === selectedListingType)
   }, [products, selectedListingType])
   const filteredCategories = useMemo(() => {
-    if (selectedListingType === 'advertisement') return []
-
-    return categories.filter((category) => {
+        return categories.filter((category) => {
       const categoryType = category.listing_type
       if (selectedListingType === 'food') {
         return !categoryType || categoryType === 'food'
@@ -1259,23 +1260,26 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           </h2>
 
           <div className="grid gap-3">
-            {selectedListingType === 'advertisement' ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                Ad categories are coming soon for advertisement listings.
-              </div>
-            ) : (
-              <>
-                <label className="text-sm font-bold text-slate-600">
-                  New Category Name
-                </label>
-                <input
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder={isFood ? 'Example: Burger' : isShop ? 'Example: Fashion' : 'Example: Aircond Service'}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-                />
-              </>
-            )}
+            <>
+              <label className="text-sm font-bold text-slate-600">
+                New Category Name
+              </label>
+              <input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder={isFood ? 'Example: Burger' : isShop ? 'Example: Fashion' : isService ? 'Example: Aircond Service' : 'Example: Jawatan Kosong'}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+              />
+              {(isService || isAd) ? (
+                <div className="flex flex-wrap gap-2">
+                  {(isService ? SERVICE_CATEGORY_OPTIONS : AD_CATEGORY_OPTIONS).map((seed) => (
+                    <button key={seed} type="button" onClick={() => setNewCategoryName(seed)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                      {seed}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
 
             <label className="text-sm font-bold text-slate-600">
               Sort Order
@@ -1291,7 +1295,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
 
             <button
               onClick={handleCreateCategory}
-              disabled={savingCategory || selectedListingType === 'advertisement'}
+              disabled={savingCategory}
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-900 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {savingCategory ? 'Saving category...' : '+ Add Category'}
@@ -1408,7 +1412,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                   onChange={(e) => setAdCategory(e.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
                 >
-                  {['Job Vacancy','Room / House Rental','Property','Vehicle','Second-hand Item','Community Promotion','Business Promo','Other'].map((item) => (
+                  {AD_CATEGORY_OPTIONS.map((item) => (
                     <option key={item} value={item}>{item}</option>
                   ))}
                 </select>

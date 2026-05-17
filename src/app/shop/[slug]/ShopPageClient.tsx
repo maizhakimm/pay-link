@@ -118,6 +118,7 @@ type SellerProfile = {
 type MenuCategory = {
   id: string
   name: string
+  listing_type?: 'food' | 'shop' | 'service' | 'advertisement' | null
   sort_order?: number | null
   is_active?: boolean | null
 }
@@ -194,6 +195,13 @@ const DAY_LABELS_MY: Record<DayKey, string> = {
   friday: 'Jumaat',
   saturday: 'Sabtu',
 }
+
+const SERVICE_FALLBACK_CATEGORIES = [
+  'Printing','Design','Catering','Repair','Aircond','Cleaning','Tailor / Jahit','Massage / Urut','Tutor','Runner','Event','Beauty','IT / Computer','Photography','Home Service',
+]
+const AD_FALLBACK_CATEGORIES = [
+  'Jawatan Kosong','Bilik / Rumah Sewa','Property','Vehicle','Preloved','Computer / Gadget','Business Promo','Event Komuniti','Lost & Found','Education','Others',
+]
 
 function getImageUrl(path?: string | null) {
   if (!path) return ''
@@ -970,15 +978,26 @@ export default function ShopPageClient({
   }, [products, activeSection])
 
   const visibleCategories = useMemo(() => {
-    return [...categories]
+    const base = [...categories]
       .filter((item) => item && item.id && item.name)
+      .filter((item) => {
+        const t = item.listing_type
+        if (activeSection === 'food') return !t || t === 'food'
+        return t === activeSection
+      })
       .filter((item) => (categoryCounts.get(item.id) || 0) > 0)
       .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
-  }, [categories, categoryCounts])
+    if (base.length > 0) return base
+    const fallback =
+      activeSection === 'service'
+        ? SERVICE_FALLBACK_CATEGORIES
+        : activeSection === 'advertisement'
+        ? AD_FALLBACK_CATEGORIES
+        : []
+    return fallback.map((name, index) => ({ id: `fallback-${activeSection}-${index}`, name, listing_type: activeSection }))
+  }, [categories, categoryCounts, activeSection])
 
-  const hasCategoryFeature =
-    visibleCategories.length > 0 &&
-    products.some((product) => product.menu_category_id)
+  const hasCategoryFeature = visibleCategories.length > 0
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
 
@@ -1125,11 +1144,17 @@ export default function ShopPageClient({
       return type === activeSection
     })
 
-    if (!hasCategoryFeature || activeSection === 'advertisement') return bySection
+    if (!hasCategoryFeature) return bySection
     if (activeCategoryId === 'all') return bySection
-
+    if (activeCategoryId.startsWith('fallback-')) {
+      return bySection.filter((product) => {
+        const text = `${product.name} ${product.description || ''}`.toLowerCase()
+        const category = visibleCategories.find((c) => c.id === activeCategoryId)?.name.toLowerCase() || ''
+        return category ? text.includes(category.split(' ')[0].toLowerCase()) : true
+      })
+    }
     return bySection.filter((product) => (product.menu_category_id || '') === activeCategoryId)
-  }, [products, hasCategoryFeature, activeCategoryId, activeSection])
+  }, [products, hasCategoryFeature, activeCategoryId, activeSection, visibleCategories])
 
   const cartItems = cart
 
@@ -1360,7 +1385,7 @@ export default function ShopPageClient({
           )}
         </div>
 
-        {hasCategoryFeature && activeSection !== 'advertisement' ? (
+        {hasCategoryFeature ? (
           <div style={stickyTabWrap}>
             <div style={tabShell}>
               <div style={tabScroller}>
