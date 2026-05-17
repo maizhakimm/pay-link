@@ -25,6 +25,8 @@ const FOOD_CHIPS = [
   { key: 'lunch', label: '🍱 Lunch' },
   { key: 'kuih', label: '🍪 Kuih' },
 ]
+const SERVICE_CHIPS = ['all','printing','design','catering','repair','aircond','cleaning','tailor / jahit','massage / urut','tutor','runner','event','beauty','it / computer','photography','home service']
+const COMMUNITY_CHIPS = ['all','jawatan kosong','bilik / rumah sewa','property','vehicle','preloved','computer / gadget','business promo','event komuniti','lost & found','education','others']
 
 const CHIP_MATCHERS: Record<string, string[]> = {
   nasi: ['nasi', 'lemak', 'rice'],
@@ -42,14 +44,15 @@ const CHIP_MATCHERS: Record<string, string[]> = {
 const DELIVERY_BADGES = ['Self-pickup / Delivery', 'Delivery', 'Self-pickup']
 
 const AD_CATEGORY_LABEL_MAP: Record<string, string> = {
-  job_vacancy: 'Job Vacancy',
-  room_house_rental: 'Room / House Rental',
+  job_vacancy: 'Jawatan Kosong',
+  room_house_rental: 'Bilik / Rumah Sewa',
   property: 'Property',
   vehicle: 'Vehicle',
-  second_hand_item: 'Second-hand Item',
-  community_promotion: 'Community Promotion',
+  second_hand_item: 'Preloved',
+  community_promotion: 'Event Komuniti',
   business_promo: 'Business Promo',
-  other: 'Other',
+  education: 'Education',
+  other: 'Others',
 }
 
 function parseAdCategoryFromDescription(description?: string | null) {
@@ -77,6 +80,9 @@ export default function ExplorePage() {
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
   const isFoodTab = requestedTab === 'food'
+  const isServiceTab = requestedTab === 'services'
+  const isCommunityTab = requestedTab === 'community'
+  const isShopTab = requestedTab === 'shop'
 
   const categoriesRef = useRef<HTMLDivElement>(null)
   const nearbyRef = useRef<HTMLDivElement>(null)
@@ -186,11 +192,19 @@ export default function ExplorePage() {
       return [p.name, p.sellerName, p.categoryLabel || '', p.areaText || '', p.communityText || ''].join(' ').toLowerCase().includes(q)
     })
     const byChip = bySearch.filter((p) => {
-      if (!isFoodTab) return true
       if (selectedChip === 'all') return true
-      const keywords = CHIP_MATCHERS[selectedChip] || [selectedChip]
-      const haystack = [p.name, p.categoryLabel || ''].join(' ').toLowerCase()
-      return keywords.some((kw) => haystack.includes(kw))
+      const haystack = [p.name, p.description || '', p.categoryLabel || ''].join(' ').toLowerCase()
+      if (isFoodTab) {
+        const keywords = CHIP_MATCHERS[selectedChip] || [selectedChip]
+        return keywords.some((kw) => haystack.includes(kw))
+      }
+      if (isServiceTab) return haystack.includes(selectedChip.toLowerCase())
+      if (isCommunityTab) {
+        const adCategory = (parseAdCategoryFromDescription(p.description) || '').toLowerCase()
+        return adCategory.includes(selectedChip.toLowerCase())
+      }
+      if (isShopTab) return (p.categoryLabel || '').toLowerCase().includes(selectedChip.toLowerCase())
+      return true
     })
     const shouldApplyAreaFilter = Boolean(area)
     const byArea = byChip.filter((p) => !shouldApplyAreaFilter || !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
@@ -210,7 +224,16 @@ export default function ExplorePage() {
     }
 
     return byArea
-  }, [products, query, selectedChip, area, requestedTab, isFoodTab])
+  }, [products, query, selectedChip, area, requestedTab, isFoodTab, isServiceTab, isCommunityTab, isShopTab])
+
+  const shopChips = useMemo(() => {
+    const set = new Set<string>()
+    products.filter((p) => p.listingType === 'shop').forEach((p) => {
+      const label = (p.categoryLabel || '').trim()
+      if (label) set.add(label)
+    })
+    return ['all', ...Array.from(set)]
+  }, [products])
 
   const sellerCards = useMemo(() => {
     return profiles
@@ -368,6 +391,33 @@ export default function ExplorePage() {
             <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {FOOD_CHIPS.map((chip) => (
                 <button key={chip.key} onClick={() => setSelectedChip(chip.key)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip.key ? 'bg-[#DD0894] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip.label}</button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {isServiceTab ? (
+          <section className="mt-5">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {SERVICE_CHIPS.map((chip) => (
+                <button key={chip} onClick={() => setSelectedChip(chip)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip ? 'bg-[#0f172a] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip === 'all' ? 'All' : chip}</button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {isCommunityTab ? (
+          <section className="mt-5">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {COMMUNITY_CHIPS.map((chip) => (
+                <button key={chip} onClick={() => setSelectedChip(chip)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip ? 'bg-[#0f172a] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip === 'all' ? 'All' : chip}</button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {isShopTab && shopChips.length > 1 ? (
+          <section className="mt-5">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {shopChips.map((chip) => (
+                <button key={chip} onClick={() => setSelectedChip(chip)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip ? 'bg-[#0f172a] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip === 'all' ? 'All' : chip}</button>
               ))}
             </div>
           </section>
