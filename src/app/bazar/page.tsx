@@ -449,9 +449,9 @@ export default function ExplorePage() {
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {displayedProducts.map((item) => (
-              <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border bg-white shadow-sm transition ${item.listingType === 'advertisement' ? 'border-rose-200 p-3.5' : 'border-slate-200 p-2.5'} ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
+              <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border bg-white shadow-sm transition ${(item.listingType === 'advertisement' || item.listingType === 'service') ? 'flex h-full flex-col' : ''} ${item.listingType === 'advertisement' ? 'border-rose-200 p-3.5' : 'border-slate-200 p-2.5'} ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
                 <div className="mt-2 flex items-start justify-between gap-2">
-                  <h3 className={`${item.listingType === 'advertisement' ? 'line-clamp-2 text-base' : 'line-clamp-2 text-sm'} font-bold text-slate-900`}>{item.name}</h3>
+                  <h3 className={`${(item.listingType === 'advertisement' || item.listingType === 'service') ? 'line-clamp-2 text-base leading-6 min-h-12' : 'line-clamp-2 text-sm'} font-bold text-slate-900`}>{item.name}</h3>
                 </div>
                 {(item.listingType === 'advertisement' || item.listingType === 'service') ? null : <p className="mt-1 text-sm font-extrabold text-rose-700">RM {item.price.toFixed(2)}</p>}
                 {(item.listingType === 'advertisement' || item.listingType === 'service') ? null : (
@@ -470,12 +470,11 @@ export default function ExplorePage() {
                     <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
                   ) : null}
                 </div>
-                <div className="mt-2">
+                <div className={`mt-2 ${(item.listingType === 'advertisement' || item.listingType === 'service') ? 'mt-auto pt-2' : ''}`}>
                   {item.listingType === 'advertisement' || item.listingType === 'service' ? (
                     (
-                      <div className="flex gap-2">
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setAdDetailsItem(item); setAdDetailsIndex(0) }} className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">View Details</button>
-                      <span className="inline-flex flex-1 justify-center rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-500">View Details</span>
+                      <div className="flex">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setAdDetailsItem(item); setAdDetailsIndex(0) }} className="inline-flex w-full justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">View Details</button>
                       </div>
                     )
                   ) : item.shopSlug ? (
