@@ -1264,21 +1264,36 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               <label className="text-sm font-bold text-slate-600">
                 New Category Name
               </label>
-              <input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder={isFood ? 'Example: Burger' : isShop ? 'Example: Fashion' : isService ? 'Example: Aircond Service' : 'Example: Jawatan Kosong'}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-              />
-              {(isService || isAd) ? (
-                <div className="flex flex-wrap gap-2">
-                  {(isService ? SERVICE_CATEGORY_OPTIONS : AD_CATEGORY_OPTIONS).map((seed) => (
-                    <button key={seed} type="button" onClick={() => setNewCategoryName(seed)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                      {seed}
-                    </button>
+              {isService ? (
+                <select
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                >
+                  <option value="">Select service category</option>
+                  {[...SERVICE_CATEGORY_OPTIONS, 'Others'].map((item) => (
+                    <option key={item} value={item}>{item}</option>
                   ))}
-                </div>
-              ) : null}
+                </select>
+              ) : isAd ? (
+                <select
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                >
+                  <option value="">Select ad category</option>
+                  {AD_CATEGORY_OPTIONS.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder={isFood ? 'Example: Burger' : 'Example: Fashion'}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                />
+              )}
             </>
 
             <label className="text-sm font-bold text-slate-600">
