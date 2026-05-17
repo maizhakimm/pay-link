@@ -99,6 +99,10 @@ export default function ExplorePage() {
   const router = useRouter()
 
   useEffect(() => {
+    document.title = 'BazarLink - Marketplace Komuniti Setempat'
+  }, [])
+
+  useEffect(() => {
     const syncTabFromUrl = () => {
       const tab = new URLSearchParams(window.location.search).get('tab')
       if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'community') {
@@ -445,55 +449,38 @@ export default function ExplorePage() {
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {displayedProducts.map((item) => (
-              <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border bg-white shadow-sm transition ${item.listingType === 'advertisement' ? 'border-rose-200 p-3.5' : 'border-slate-200 p-2.5'} ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
+              <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border bg-white shadow-sm transition flex h-full flex-col ${item.listingType === 'advertisement' ? 'border-rose-200 p-3.5' : 'border-slate-200 p-2.5'} ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
                 <div className="mt-2 flex items-start justify-between gap-2">
-                  <h3 className={`${item.listingType === 'advertisement' ? 'line-clamp-2 text-base' : 'line-clamp-2 text-sm'} font-bold text-slate-900`}>{item.name}</h3>
+                  <h3 className={`${(item.listingType === 'advertisement' || item.listingType === 'service') ? 'line-clamp-2 text-base leading-6 min-h-12' : 'line-clamp-2 text-sm'} font-bold text-slate-900`}>{item.name}</h3>
                 </div>
-                <p className="mt-1 text-sm font-extrabold text-rose-700">RM {item.price.toFixed(2)}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {(item.listingType === 'advertisement'
-                    ? (parseAdCategoryFromDescription(item.description) || 'Komuniti')
-                    : item.categoryLabel) ? (
-                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                      {item.listingType === 'advertisement'
-                        ? (parseAdCategoryFromDescription(item.description) || 'Komuniti')
-                        : item.categoryLabel}
-                    </span>
-                  ) : null}
-                  <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">📍 {item.areaText || '-'}</span>
-                  <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">⏳ Aktif</span>
-                </div>
+                {(item.listingType === 'advertisement' || item.listingType === 'service') ? null : <p className="mt-1 text-sm font-extrabold text-rose-700">RM {item.price.toFixed(2)}</p>}
+                {(item.listingType === 'advertisement' || item.listingType === 'service') ? null : (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {item.categoryLabel ? <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">{item.categoryLabel}</span> : null}
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">📍 {item.areaText || '-'}</span>
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">⏳ Aktif</span>
+                  </div>
+                )}
                 {item.image ? <img src={item.image} alt={item.name} className={`${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'mt-0 h-40 sm:h-44 lg:h-48'} w-full rounded-xl object-cover`} /> : <div className={`flex w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700 ${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'h-40 sm:h-44 lg:h-48'}`}>{item.name.slice(0, 2).toUpperCase()}</div>}
-                <p className="mt-2 line-clamp-3 whitespace-pre-line text-xs text-slate-600">{item.listingType === 'advertisement' ? `${(getCleanAdDescription(item.description) || 'Tiada deskripsi.').slice(0, 100)}${(getCleanAdDescription(item.description) || '').length > 100 ? '…' : ''}` : item.sellerName}</p>
-                <p className="text-xs text-slate-500">{item.areaText || '-'} · {item.communityText || '-'}</p>
+                <p className="mt-2 line-clamp-3 whitespace-pre-line text-xs text-slate-600">{(item.listingType === 'advertisement' || item.listingType === 'service') ? item.sellerName : `${(getCleanAdDescription(item.description) || 'Tiada deskripsi.').slice(0, 100)}${(getCleanAdDescription(item.description) || '').length > 100 ? '…' : ''}`}</p>
+                <p className="text-xs text-slate-500">{item.areaText || item.communityText || '-'}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
                   {(item.listingType === 'food' || item.listingType === 'shop') ? (
                     <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
                   ) : null}
                 </div>
-                <div className="mt-2">
-                  {item.listingType === 'advertisement' ? (
-                    item.sellerWhatsapp ? (
-                      <div className="flex gap-2">
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setAdDetailsItem(item); setAdDetailsIndex(0) }} className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">View Details</button>
-                      <a
-                        onClick={(e) => e.stopPropagation()}
-                        href={normalizeWhatsappNumber(item.sellerWhatsapp) ? `https://wa.me/${normalizeWhatsappNumber(item.sellerWhatsapp)}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${item.name}". Masih available?`)}` : '#'}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex flex-1 justify-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white"
-                      >
-                        Contact Seller
-                      </a>
+                <div className="mt-auto pt-2">
+                  {item.listingType === 'advertisement' || item.listingType === 'service' ? (
+                    (
+                      <div className="flex">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setAdDetailsItem(item); setAdDetailsIndex(0) }} className="inline-flex w-full justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">View Details</button>
                       </div>
-                    ) : (
-                      <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">Contact Seller</span>
                     )
                   ) : item.shopSlug ? (
-                    <button type="button" onClick={(e) => { e.stopPropagation(); handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} disabled={openingShopKey === `product:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `product:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `product:${item.id}` ? 'Opening...' : item.isDemo ? 'Order Now' : 'View Shop'}</button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} disabled={openingShopKey === `product:${item.id}`} className={`inline-flex w-full justify-center rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `product:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `product:${item.id}` ? 'Opening...' : item.isDemo ? 'Order Now' : 'View Seller'}</button>
                   ) : (
-                    <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>
+                    <span className="inline-flex w-full justify-center rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Seller'}</span>
                   )}
                 </div>
               </article>
@@ -575,7 +562,8 @@ export default function ExplorePage() {
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">{adDetailsItem.name}</h3>
-                <p className="text-sm font-extrabold text-rose-700">RM {adDetailsItem.price.toFixed(2)}</p>
+                <p className="text-sm font-extrabold text-rose-700">{adDetailsItem.listingType === 'service' ? `Starting from RM ${adDetailsItem.price.toFixed(2)}` : `RM ${adDetailsItem.price.toFixed(2)}`}</p>
+                <p className="text-xs text-slate-500">{adDetailsItem.sellerName}</p>
               </div>
               <button type="button" onClick={() => setAdDetailsItem(null)} className="rounded-lg border border-slate-200 px-2 py-1 text-sm">✕</button>
             </div>
@@ -608,16 +596,19 @@ export default function ExplorePage() {
               )
             })()}
             <p className="whitespace-pre-line text-sm text-slate-700">{getCleanAdDescription(adDetailsItem.description) || 'Tiada deskripsi.'}</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
             {adDetailsItem.sellerWhatsapp ? (
               <a
-                href={normalizeWhatsappNumber(adDetailsItem.sellerWhatsapp) ? `https://wa.me/${normalizeWhatsappNumber(adDetailsItem.sellerWhatsapp)}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${adDetailsItem.name}". Masih available?`)}` : '#'}
+                href={normalizeWhatsappNumber(adDetailsItem.sellerWhatsapp) ? `https://wa.me/${normalizeWhatsappNumber(adDetailsItem.sellerWhatsapp)}?text=${encodeURIComponent(adDetailsItem.listingType === 'service' ? `Hi, saya berminat dengan servis "${adDetailsItem.name}". Boleh saya dapatkan quotation?` : `Hi, saya berminat dengan iklan "${adDetailsItem.name}". Masih available?`)}` : '#'}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-4 inline-flex w-full justify-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white"
+                className="inline-flex w-full justify-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white"
               >
-                Contact Seller
+                {adDetailsItem.listingType === 'service' ? 'Request Quote' : 'Contact Seller'}
               </a>
             ) : null}
+            <button type="button" onClick={() => { if (!adDetailsItem.shopSlug) return; handleViewShopClick(`product:${adDetailsItem.id}`, `/s/${encodeURIComponent(adDetailsItem.shopSlug || "")}`) }} className="inline-flex w-full justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700">View Seller</button>
+            </div>
           </div>
         </div>
       ) : null}
