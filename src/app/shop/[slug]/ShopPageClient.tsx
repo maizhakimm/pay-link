@@ -1418,6 +1418,7 @@ export default function ShopPageClient({
                   listingType === 'advertisement'
                     ? parseAdMeta(product.description)
                     : null
+                const isServiceListing = listingType === 'service'
                 const allImages = getProductImages(product)
                 const leadWhatsapp = seller?.whatsapp?.replace(/\D/g, '') || ''
                 const leadMessage =
@@ -1439,7 +1440,7 @@ export default function ShopPageClient({
                             ? isDesktop
                               ? 'minmax(0, 1fr) 180px'
                               : '1fr'
-                            : listingType === 'service' && !isDesktop
+                            : listingType === 'service'
                             ? '1fr'
                             : productContent.gridTemplateColumns,
                       }}
@@ -1455,9 +1456,9 @@ export default function ShopPageClient({
                           {product.name}
                         </div>
 
-                        <div style={productPrice}>RM {product.price.toFixed(2)}</div>
+                        <div style={productPrice}>{isServiceListing ? `Starting from RM ${product.price.toFixed(2)}` : `RM ${product.price.toFixed(2)}`}</div>
 
-                        {product.track_stock ? (
+                        {product.track_stock && !isLeadListing ? (
                           <div style={stockText}>
                             Stock: {product.stock_quantity ?? 0}
                           </div>
@@ -1471,7 +1472,7 @@ export default function ShopPageClient({
                           </div>
                         ) : null}
 
-                        {listingType === 'advertisement' ? (
+                        {listingType === 'advertisement' || isServiceListing ? (
                           <button
                             type="button"
                             onClick={() => openGallery(product, 0)}
@@ -1488,15 +1489,16 @@ export default function ShopPageClient({
                               style={{
                                 ...productImageWrap,
                                 width: '100%',
-                                height: isDesktop ? 210 : 190,
+                                height: isDesktop ? 230 : 210,
                                 borderRadius: 16,
+                                background: isServiceListing ? '#f8fafc' : productImageWrap.background,
                               }}
                             >
                               {image ? (
                                 <img
                                   src={getImageUrl(image)}
                                   alt={product.name}
-                                  style={productImage}
+                                  style={{ ...productImage, objectFit: isServiceListing ? 'cover' : productImage.objectFit }}
                                 />
                               ) : (
                                 <div style={productImagePlaceholder}>No image</div>
@@ -1521,7 +1523,7 @@ export default function ShopPageClient({
                             ? `${(getAdvertisementCleanDescription(product.description) || 'Tiada deskripsi.').slice(0, 140)}${(getAdvertisementCleanDescription(product.description) || '').length > 140 ? '…' : ''}`
                             : product.description || 'Tiada deskripsi.'}
                         </div>
-                        {listingType === 'advertisement' ? (
+                        {listingType === 'advertisement' || isServiceListing ? (
                           <button type="button" onClick={() => openAdDetailsModal(product)} style={{ ...secondaryBtn, width: '100%', marginTop: 10 }}>
                             View Details
                           </button>
@@ -1587,7 +1589,7 @@ export default function ShopPageClient({
                               ? '100%'
                               : undefined,
                           cursor: image ? 'pointer' : 'default',
-                          display: listingType === 'advertisement' ? 'none' : 'block',
+                          display: listingType === 'advertisement' || isServiceListing ? 'none' : 'block',
                         }}
                         disabled={!image}
                         aria-label={`View images for ${product.name}`}
@@ -1616,7 +1618,7 @@ export default function ShopPageClient({
                             <div style={productImagePlaceholder}>No image</div>
                           )}
 
-                          {product.sold_out ? (
+                          {product.sold_out && !isLeadListing ? (
                             <div style={soldOutBadge}>Sold Out</div>
                           ) : null}
 
@@ -1896,16 +1898,20 @@ export default function ShopPageClient({
                 const images = getProductImages(adDetailsModal.product).map((img) => getImageUrl(img))
                 const currentImage = images[adDetailsModal.currentIndex] || ''
                 const leadWhatsapp = seller?.whatsapp?.replace(/\D/g, '') || ''
+                const modalListingType = (adDetailsModal.product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+                const isServiceModal = modalListingType === 'service'
                 return (
                   <>
-                    <div style={metaBadgeWrap}>
-                      {adMeta?.category ? <span style={metaBadge}>{adMeta.category}</span> : null}
-                      {adMeta?.location ? <span style={metaBadge}>📍 {adMeta.location}</span> : null}
-                      {adMeta?.expiry ? <span style={metaBadge}>⏳ {adMeta.expiry}</span> : null}
-                    </div>
+                    {!isServiceModal ? (
+                      <div style={metaBadgeWrap}>
+                        {adMeta?.category ? <span style={metaBadge}>{adMeta.category}</span> : null}
+                        {adMeta?.location ? <span style={metaBadge}>📍 {adMeta.location}</span> : null}
+                        {adMeta?.expiry ? <span style={metaBadge}>⏳ {adMeta.expiry}</span> : null}
+                      </div>
+                    ) : null}
                     {currentImage ? (
                       <div style={{ borderRadius: 14, overflow: 'hidden', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                        <img src={currentImage} alt={adDetailsModal.product.name} style={{ width: '100%', height: 280, objectFit: 'contain' }} />
+                        <img src={currentImage} alt={adDetailsModal.product.name} style={{ width: '100%', height: 280, objectFit: isServiceModal ? 'cover' : 'contain' }} />
                       </div>
                     ) : null}
                     {images.length > 1 ? (
@@ -1917,10 +1923,10 @@ export default function ShopPageClient({
                     ) : null}
                     <div style={{ ...productDesc, whiteSpace: 'pre-line' }}>{cleanDescription}</div>
                     <a
-                      href={leadWhatsapp ? `https://wa.me/${leadWhatsapp}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${adDetailsModal.product.name}". Masih available?`)}` : '#'}
+                      href={leadWhatsapp ? `https://wa.me/${leadWhatsapp}?text=${encodeURIComponent(isServiceModal ? `Hi, saya berminat dengan servis "${adDetailsModal.product.name}". Boleh saya dapatkan quotation?` : `Hi, saya berminat dengan iklan "${adDetailsModal.product.name}". Masih available?`)}` : '#'}
                       style={{ ...primaryBtn, width: '100%', textAlign: 'center', textDecoration: 'none' }}
                     >
-                      Contact Seller
+                      {isServiceModal ? 'WhatsApp / Request Quote' : 'Contact Seller'}
                     </a>
                   </>
                 )
