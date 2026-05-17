@@ -88,6 +88,12 @@ function createSlug(value: string) {
     .slice(0, 60)
 }
 
+function getNormalizedListingType(value?: string | null): PersistableListingType {
+  const v = String(value || '').trim().toLowerCase()
+  if (v === 'shop' || v === 'service' || v === 'advertisement') return v
+  return 'food'
+}
+
 async function generateUniqueProductSlug(
   base: string,
   sellerProfileId: string,
@@ -263,6 +269,19 @@ export default function ProductsPage() {
     const map = new Map<string, MenuCategoryRow>()
     categories.forEach((category) => map.set(category.id, category))
     return map
+  }, [categories])
+  const categoriesByListingType = useMemo(() => {
+    const grouped: Record<PersistableListingType, MenuCategoryRow[]> = {
+      food: [],
+      shop: [],
+      service: [],
+      advertisement: [],
+    }
+    categories.forEach((category) => {
+      const type = getNormalizedListingType(category.listing_type)
+      grouped[type].push(category)
+    })
+    return grouped
   }, [categories])
 
   const groupsByProductId = useMemo(() => {
@@ -804,7 +823,9 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       return
     }
 
-    const persistableListingType: PersistableListingType = selectedListingType
+    const persistableListingType: PersistableListingType = getNormalizedListingType(
+      product.listing_type || selectedListingType
+    )
 
     if (!editingName.trim() || !editingPrice.trim()) {
       alert('Please fill in product name and price.')
@@ -1659,12 +1680,28 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           ) : (
             <div className="grid gap-4">
               {filteredProducts.map((product) => {
+                const productListingType = getNormalizedListingType(
+                  product.listing_type || selectedListingType
+                )
                 const link = buildProductLink(product.slug)
                 const images = getProductImages(product)
                 const thumb = images[0]
                 const categoryName = product.menu_category_id
                   ? categoryMap.get(product.menu_category_id)?.name || 'Unknown category'
                   : 'No category'
+                const editCategories = categoriesByListingType[productListingType].filter(
+                  (category) => category.is_active
+                )
+                const selectedEditCategory = editingMenuCategoryId
+                  ? categoryMap.get(editingMenuCategoryId)
+                  : null
+                const selectedEditCategoryType = getNormalizedListingType(
+                  selectedEditCategory?.listing_type
+                )
+                const invalidEditCategory =
+                  Boolean(editingMenuCategoryId) &&
+                  (!selectedEditCategory ||
+                    selectedEditCategoryType !== productListingType)
                 const productGroups = groupsByProductId.get(product.id) || []
 
                 return (
@@ -1682,22 +1719,32 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                         />
 
                         <label className="text-sm font-bold text-slate-600">
-                          Menu Category
+                          {productListingType === 'food'
+                            ? 'Menu Category'
+                            : productListingType === 'shop'
+                            ? 'Product Category'
+                            : productListingType === 'service'
+                            ? 'Service Category'
+                            : 'Ad Category'}
                         </label>
                         <select
-                          value={editingMenuCategoryId}
+                          value={invalidEditCategory ? '' : editingMenuCategoryId}
                           onChange={(e) => setEditingMenuCategoryId(e.target.value)}
                           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
                         >
                           <option value="">No category</option>
-                          {categories
-                            .filter((category) => category.is_active)
+                          {editCategories
                             .map((category) => (
                               <option key={category.id} value={category.id}>
                                 {category.name}
                               </option>
                             ))}
                         </select>
+                        {invalidEditCategory ? (
+                          <p className="text-xs text-amber-700">
+                            Current category does not match this listing type. Please choose a valid category.
+                          </p>
+                        ) : null}
 
                         <textarea
                           value={editingDescription}
@@ -1708,7 +1755,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                         />
 
                         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-                          Listing Type: {LISTING_META[selectedListingType].label}
+                          Listing Type: {LISTING_META[productListingType].label}
                         </div>
 
                         <input
