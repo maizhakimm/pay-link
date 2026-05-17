@@ -1862,6 +1862,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                           </div>
                         )}
 
+                        {productListingType === 'food' ? (
                         <div className="mt-2 rounded-3xl border border-violet-200 bg-violet-50 p-4">
                           <div className="mb-3 text-lg font-extrabold text-slate-900">
                             Add-on Groups
@@ -2166,6 +2167,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                             </div>
                           )}
                         </div>
+                        ) : null}
 
                         <div className="grid grid-cols-2 gap-2">
                           <button
