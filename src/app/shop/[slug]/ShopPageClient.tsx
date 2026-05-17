@@ -1528,11 +1528,15 @@ export default function ShopPageClient({
                               listingType === 'advertisement' ? 'pre-line' : productDesc.whiteSpace,
                           }}
                         >
-                          {listingType === 'advertisement'
-                            ? `${(getAdvertisementCleanDescription(product.description) || 'Tiada deskripsi.').slice(0, 140)}${(getAdvertisementCleanDescription(product.description) || '').length > 140 ? '…' : ''}`
+                          {isLeadListing
+                            ? `${((listingType === 'advertisement'
+                                ? getAdvertisementCleanDescription(product.description)
+                                : product.description) || 'Tiada deskripsi.').slice(0, 140)}${((listingType === 'advertisement'
+                                ? getAdvertisementCleanDescription(product.description)
+                                : product.description) || '').length > 140 ? '…' : ''}`
                             : product.description || 'Tiada deskripsi.'}
                         </div>
-                        {listingType === 'advertisement' || isServiceListing ? (
+                        {isLeadListing ? (
                           <button type="button" onClick={() => openAdDetailsModal(product)} style={{ ...secondaryBtn, width: '100%', marginTop: 10 }}>
                             View Details
                           </button>
@@ -1566,7 +1570,7 @@ export default function ShopPageClient({
                             >
                               {listingType === 'advertisement'
                                 ? 'Contact Seller'
-                                : 'WhatsApp / Request Quote'}
+                                : 'Request Quote'}
                             </a>
                           </div>
                         ) : (
