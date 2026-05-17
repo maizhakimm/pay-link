@@ -7,6 +7,31 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+const CATEGORY_LABEL_MAP: Record<string, string> = {
+  food_drinks: "Food & Drinks",
+  products_shop: "Products / Shop",
+  services: "Services",
+  catering: "Catering",
+  home_business: "Home Business",
+  beauty_health: "Beauty & Health",
+  fashion: "Fashion",
+  digital_design: "Digital / Design",
+  repair_maintenance: "Repair / Maintenance",
+  community: "Community",
+}
+
+const LEGACY_CATEGORY_KEY_MAP: Record<string, string> = {
+  breakfast: "food_drinks",
+  lunch: "food_drinks",
+  dinner: "food_drinks",
+  dessert: "food_drinks",
+  bakery: "food_drinks",
+  drinks: "food_drinks",
+  frozen_food: "food_drinks",
+  kuih_muih: "food_drinks",
+  snacks: "food_drinks",
+}
+
 export default async function Page({
   params,
 }: {
@@ -28,7 +53,7 @@ export default async function Page({
   let marketplaceCategoryIds: string[] = []
   const { data: allMarketplaceCategories } = await supabase
     .from("marketplace_categories")
-    .select("id,category_name")
+    .select("id,category_name,category_key")
     .eq("is_enabled", true)
     .order("display_order", { ascending: true })
   if (marketplaceProfile?.id) {
@@ -37,11 +62,13 @@ export default async function Page({
       .select("category_id,marketplace_categories(category_name)")
       .eq("marketplace_profile_id", marketplaceProfile.id)
     marketplaceCategoryNames = (categoryRows || [])
-      .map((row: any) =>
-        Array.isArray(row.marketplace_categories)
-          ? row.marketplace_categories[0]?.category_name
-          : row.marketplace_categories?.category_name
-      )
+      .map((row: any) => {
+        const category = Array.isArray(row.marketplace_categories)
+          ? row.marketplace_categories[0]
+          : row.marketplace_categories
+        const key = LEGACY_CATEGORY_KEY_MAP[category?.category_key] || category?.category_key
+        return CATEGORY_LABEL_MAP[key] || category?.category_name
+      })
       .filter(Boolean)
     marketplaceCategoryIds = (categoryRows || []).map((row: any) => row.category_id).filter(Boolean)
   }
@@ -70,5 +97,13 @@ export default async function Page({
     )
   }
 
-  return <SellerEditClient seller={data} marketplaceProfile={marketplaceProfile ? { ...marketplaceProfile, category_names: marketplaceCategoryNames, category_ids: marketplaceCategoryIds } : null} marketplaceCategories={allMarketplaceCategories || []} />
+  const normalizedCategories = (allMarketplaceCategories || []).map((category: any) => {
+    const key = LEGACY_CATEGORY_KEY_MAP[category.category_key] || category.category_key
+    return {
+      ...category,
+      category_name: CATEGORY_LABEL_MAP[key] || category.category_name,
+    }
+  })
+
+  return <SellerEditClient seller={data} marketplaceProfile={marketplaceProfile ? { ...marketplaceProfile, category_names: marketplaceCategoryNames, category_ids: marketplaceCategoryIds } : null} marketplaceCategories={normalizedCategories} />
 }

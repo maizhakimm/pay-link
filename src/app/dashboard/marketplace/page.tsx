@@ -30,16 +30,39 @@ type Community = { id: string; area_id: string; community_name: string; communit
 
 type ChecklistItem = { label: string; done: boolean }
 
+const BAZAR_CATEGORY_OPTIONS = [
+  { key: 'food_drinks', label: 'Food & Drinks' },
+  { key: 'products_shop', label: 'Products / Shop' },
+  { key: 'services', label: 'Services' },
+  { key: 'catering', label: 'Catering' },
+  { key: 'home_business', label: 'Home Business' },
+  { key: 'beauty_health', label: 'Beauty & Health' },
+  { key: 'fashion', label: 'Fashion' },
+  { key: 'digital_design', label: 'Digital / Design' },
+  { key: 'repair_maintenance', label: 'Repair / Maintenance' },
+  { key: 'community', label: 'Community' },
+] as const
+
+const LEGACY_CATEGORY_KEY_MAP: Record<string, string> = {
+  breakfast: 'food_drinks',
+  lunch: 'food_drinks',
+  dinner: 'food_drinks',
+  dessert: 'food_drinks',
+  bakery: 'food_drinks',
+  drinks: 'food_drinks',
+}
+
 export default function DashboardMarketplacePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [loadTimedOut, setLoadTimedOut] = useState(false)
 
   const [seller, setSeller] = useState<SellerProfile | null>(null)
   const [profile, setProfile] = useState<MarketplaceProfile | null>(null)
-  const [productCount, setProductCount] = useState(0)
+  const [activeListingCount, setActiveListingCount] = useState(0)
 
   const [categories, setCategories] = useState<Category[]>([])
   const [areas, setAreas] = useState<Area[]>([])
@@ -48,60 +71,98 @@ export default function DashboardMarketplacePage() {
 
   useEffect(() => {
     async function init() {
+      console.log('[dashboard/marketplace] loading start')
       setLoading(true)
+      setLoadTimedOut(false)
       setError(null)
       setNotice(null)
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser()
+        console.log('[dashboard/marketplace] auth user:', authData.user?.id || null, 'error:', authError?.message || null)
+        if (authError || !authData.user) {
+          if (authError) console.error('[dashboard/marketplace] getUser error:', authError)
+          setError('Please login to access marketplace setup.')
+          return
+        }
 
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (authError || !authData.user) {
-        setError('Please login to access marketplace setup.')
-        setLoading(false)
-        return
-      }
+        const userId = authData.user.id
 
-      const userId = authData.user.id
+        const { data: sellerRow, error: sellerError } = await supabase
+          .from('seller_profiles')
+          .select('id,user_id,store_name')
+          .eq('user_id', userId)
+          .maybeSingle()
 
-      const { data: sellerRow, error: sellerError } = await supabase
-        .from('seller_profiles')
-        .select('id,user_id,store_name')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (sellerError || !sellerRow) {
-        setError('Seller profile not found. Please complete onboarding first.')
-        setLoading(false)
-        return
-      }
+        if (sellerError || !sellerRow) {
+          if (sellerError) console.error('[dashboard/marketplace] seller_profiles error:', sellerError)
+          setError('Seller profile not found. Please complete onboarding first.')
+          return
+        }
+        console.log('[dashboard/marketplace] seller profile result:', sellerRow?.id || null)
 
       setSeller(sellerRow as SellerProfile)
 
-      const sellerId = (sellerRow as SellerProfile).id
+        const sellerId = (sellerRow as SellerProfile).id
 
-      const [{ count: productsCount }, categoriesRes, areasRes, communitiesRes] = await Promise.all([
-        supabase
+        let listingsCount = 0
+        const listingsWithType = await supabase
           .from('products')
           .select('id', { count: 'exact', head: true })
           .eq('seller_profile_id', sellerId)
-          .eq('is_active', true),
-        supabase
-          .from('marketplace_categories')
-          .select('id,category_name,category_key')
-          .eq('is_enabled', true)
-          .order('display_order', { ascending: true }),
-        supabase
-          .from('marketplace_areas')
-          .select('id,area_name,area_key')
-          .eq('is_enabled', true)
-          .order('display_order', { ascending: true }),
-        supabase
-          .from('marketplace_communities')
-          .select('id,area_id,community_name,community_key')
-          .eq('is_enabled', true)
-          .order('display_order', { ascending: true }),
-      ])
+          .eq('is_active', true)
+          .in('listing_type', ['food', 'shop', 'service'])
 
-      setProductCount(productsCount || 0)
-      setCategories((categoriesRes.data || []) as Category[])
+        if (
+          listingsWithType.error &&
+          /column\s+products\.listing_type\s+does not exist/i.test(
+            listingsWithType.error.message || ''
+          )
+        ) {
+          console.error('[dashboard/marketplace] listing_type missing, fallback count:', listingsWithType.error)
+          const listingsFallback = await supabase
+            .from('products')
+            .select('id', { count: 'exact', head: true })
+            .eq('seller_profile_id', sellerId)
+            .eq('is_active', true)
+          listingsCount = listingsFallback.count || 0
+        } else if (listingsWithType.error) {
+          console.error('[dashboard/marketplace] listings count error:', listingsWithType.error)
+          setError(listingsWithType.error.message)
+          return
+        } else {
+          listingsCount = listingsWithType.count || 0
+        }
+
+        const [categoriesRes, areasRes, communitiesRes] = await Promise.all([
+          supabase
+            .from('marketplace_categories')
+            .select('id,category_name,category_key')
+            .eq('is_enabled', true)
+            .order('display_order', { ascending: true }),
+        supabase
+            .from('marketplace_areas')
+            .select('id,area_name,area_key')
+            .eq('is_enabled', true)
+            .order('display_order', { ascending: true }),
+          supabase
+            .from('marketplace_communities')
+            .select('id,area_id,community_name,community_key')
+            .eq('is_enabled', true)
+            .order('display_order', { ascending: true }),
+        ])
+
+        setActiveListingCount(listingsCount || 0)
+      const rawCategories = (categoriesRes.data || []) as Category[]
+      const normalizedCategories = rawCategories.map((category) => {
+        const categoryKey = LEGACY_CATEGORY_KEY_MAP[category.category_key] || category.category_key
+        const matched = BAZAR_CATEGORY_OPTIONS.find((item) => item.key === categoryKey)
+        return {
+          ...category,
+          category_key: categoryKey,
+          category_name: matched?.label || category.category_name,
+        }
+      })
+      setCategories(normalizedCategories)
       setAreas((areasRes.data || []) as Area[])
       setCommunities((communitiesRes.data || []) as Community[])
 
@@ -150,11 +211,27 @@ export default function DashboardMarketplacePage() {
         .eq('marketplace_profile_id', mp.id)
 
       setSelectedCategoryIds((selectedCats || []).map((row) => row.category_id as string))
-      setLoading(false)
+      } catch (e) {
+        console.error('[dashboard/marketplace] unexpected init error:', e)
+        setError(e instanceof Error ? e.message : 'Failed to initialize marketplace setup.')
+      } finally {
+        console.log('[dashboard/marketplace] loading end')
+        setLoading(false)
+      }
     }
 
     init()
   }, [])
+
+  useEffect(() => {
+    if (!loading) return
+    const timer = window.setTimeout(() => {
+      setLoadTimedOut(true)
+      setLoading(false)
+      setError('BAZAR setup loading timeout (8s). Please retry. Database update required if issue persists.')
+    }, 8000)
+    return () => window.clearTimeout(timer)
+  }, [loading])
 
   const filteredCommunities = useMemo(() => {
     if (!profile?.area_id) return communities
@@ -168,13 +245,13 @@ export default function DashboardMarketplacePage() {
 
     return [
       { label: 'Shop profile exists', done: Boolean(seller) },
-      { label: 'At least 3 products', done: productCount >= 3 },
+      { label: 'At least 1 active listing', done: activeListingCount >= 1 },
       { label: 'Tagline added', done: taglineDone },
       { label: 'Description added', done: descriptionDone },
       { label: 'Area/community added', done: areaCommunityDone },
       { label: 'At least 1 category selected', done: selectedCategoryIds.length > 0 },
     ]
-  }, [profile, productCount, selectedCategoryIds.length, seller])
+  }, [activeListingCount, profile, selectedCategoryIds.length, seller])
 
   const completedCount = checklist.filter((item) => item.done).length
   const progressPercent = Math.round((completedCount / checklist.length) * 100)
@@ -299,7 +376,7 @@ export default function DashboardMarketplacePage() {
         </section>
 
         {loading ? <Card><p className="text-sm text-slate-500">Loading BAZAR setup...</p></Card> : null}
-        {error ? <Card><p className="text-sm font-semibold text-red-600">{error}</p></Card> : null}
+        {error ? <Card><p className="text-sm font-semibold text-red-600">{error}</p><button onClick={() => window.location.reload()} className="mt-3 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-sm font-semibold text-red-700">Retry</button>{loadTimedOut ? <p className="mt-2 text-xs text-red-600">Tip: check products.listing_type migration.</p> : null}</Card> : null}
         {notice ? <Card><p className="text-sm font-semibold text-emerald-700">{notice}</p></Card> : null}
 
         {!loading && profile ? (

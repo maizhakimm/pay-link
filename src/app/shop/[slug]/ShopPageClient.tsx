@@ -118,6 +118,7 @@ type SellerProfile = {
 type MenuCategory = {
   id: string
   name: string
+  listing_type?: 'food' | 'shop' | 'service' | 'advertisement' | null
   sort_order?: number | null
   is_active?: boolean | null
 }
@@ -139,13 +140,19 @@ type ProductRow = {
   stock_quantity?: number
   sold_out?: boolean
   menu_category_id?: string | null
-  listing_type?: 'food' | 'shop' | 'service' | null
+  listing_type?: 'food' | 'shop' | 'service' | 'advertisement' | null
 }
 
 type GalleryState = {
   isOpen: boolean
   images: string[]
   productName: string
+  currentIndex: number
+}
+
+type AdDetailsModalState = {
+  isOpen: boolean
+  product: ProductRow | null
   currentIndex: number
 }
 
@@ -188,6 +195,13 @@ const DAY_LABELS_MY: Record<DayKey, string> = {
   friday: 'Jumaat',
   saturday: 'Sabtu',
 }
+
+const SERVICE_FALLBACK_CATEGORIES = [
+  'Printing','Design','Catering','Repair','Aircond','Cleaning','Tailor / Jahit','Massage / Urut','Tutor','Runner','Event','Beauty','IT / Computer','Photography','Home Service',
+]
+const AD_FALLBACK_CATEGORIES = [
+  'Jawatan Kosong','Bilik / Rumah Sewa','Property','Vehicle','Preloved','Computer / Gadget','Business Promo','Event Komuniti','Lost & Found','Education','Others',
+]
 
 function getImageUrl(path?: string | null) {
   if (!path) return ''
@@ -536,6 +550,47 @@ function getMinimumOrderDefaultMessage(
   return `Minimum order ${minimumOrderValue} pcs. Boleh campur-campur.`
 }
 
+function parseAdMeta(description?: string | null) {
+  const text = String(description || '')
+  const lines = text.split('\n').map((line) => line.trim())
+  const find = (prefix: string) =>
+    lines.find((line) => line.toLowerCase().startsWith(prefix.toLowerCase() + ':'))?.split(':').slice(1).join(':').trim() || ''
+  return {
+    category: find('Ad Category'),
+    location: find('Location'),
+    contact: find('Contact'),
+    expiry: find('Expiry Date'),
+  }
+}
+
+function getAdvertisementCleanDescription(description?: string | null) {
+  if (!description) return ''
+  return description
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => {
+      const normalized = line.toLowerCase()
+      return (
+        normalized &&
+        !normalized.startsWith('ad category:') &&
+        !normalized.startsWith('location:') &&
+        !normalized.startsWith('contact:') &&
+        !normalized.startsWith('expiry date:')
+      )
+    })
+    .join('\n')
+    .trim()
+}
+
+function normalizeWhatsappNumber(input?: string | null) {
+  const digits = String(input || '').replace(/\D/g, '')
+  if (!digits) return ''
+  if (digits.startsWith('60')) return digits
+  if (digits.startsWith('0')) return `6${digits}`
+  if (digits.length >= 9) return `60${digits}`
+  return ''
+}
+
 export default function ShopPageClient({
   seller,
   products,
@@ -565,6 +620,7 @@ export default function ShopPageClient({
   })
 
   const [isDesktop, setIsDesktop] = useState(false)
+  const [adDetailsModal, setAdDetailsModal] = useState<AdDetailsModalState>({ isOpen: false, product: null, currentIndex: 0 })
 
   useEffect(() => {
     function handleResize() {
@@ -598,6 +654,14 @@ export default function ShopPageClient({
     }
   }, [])
 
+  function openAdDetailsModal(product: ProductRow) {
+    setAdDetailsModal({ isOpen: true, product, currentIndex: 0 })
+  }
+
+  function closeAdDetailsModal() {
+    setAdDetailsModal({ isOpen: false, product: null, currentIndex: 0 })
+  }
+
   const [addonModal, setAddonModal] = useState<{
     product: ProductRow | null
     groups: ProductAddonGroup[]
@@ -619,14 +683,41 @@ export default function ShopPageClient({
   const productListRef = useRef<HTMLDivElement | null>(null)
   const productRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState<'food' | 'shop' | 'service' | 'advertisement'>('food')
   const selectedProductId = searchParams.get('product')
+
+  const sectionCounts = useMemo(() => {
+    const counts = { food: 0, shop: 0, service: 0, advertisement: 0 }
+    for (const product of products) {
+      const type = (product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+      if (type in counts) counts[type] += 1
+      else counts.food += 1
+    }
+    return counts
+  }, [products])
+
+  const availableSections = useMemo(() => {
+    return (['food', 'shop', 'service', 'advertisement'] as const).filter((key) => sectionCounts[key] > 0)
+  }, [sectionCounts])
+
+  useEffect(() => {
+    const defaultSection =
+      sectionCounts.food > 0
+        ? 'food'
+        : sectionCounts.shop > 0
+          ? 'shop'
+          : sectionCounts.service > 0
+            ? 'service'
+            : 'advertisement'
+    setActiveSection(defaultSection)
+  }, [sectionCounts.food, sectionCounts.shop, sectionCounts.service, sectionCounts.advertisement])
 
   const availability = useMemo(() => getShopAvailability(seller), [seller])
   const isShopOpen = availability.isOpen
   const deliverySummary = useMemo(() => getDeliverySummary(seller), [seller])
 
   useEffect(() => {
-    const shouldLockScroll = gallery.isOpen || addonModal.isOpen
+    const shouldLockScroll = gallery.isOpen || addonModal.isOpen || adDetailsModal.isOpen
     const previousBodyOverflow = document.body.style.overflow
     const previousHtmlOverflow = document.documentElement.style.overflow
 
@@ -639,7 +730,7 @@ export default function ShopPageClient({
       document.body.style.overflow = previousBodyOverflow
       document.documentElement.style.overflow = previousHtmlOverflow
     }
-  }, [gallery.isOpen, addonModal.isOpen])
+  }, [gallery.isOpen, addonModal.isOpen, adDetailsModal.isOpen])
 
   function getProductAddonGroups(productId: string) {
     return productAddons[productId] || []
@@ -876,24 +967,37 @@ export default function ShopPageClient({
     const counts = new Map<string, number>()
 
     for (const product of products) {
+      const type = (product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+      if (type !== activeSection) continue
       const categoryId = product.menu_category_id || ''
       if (!categoryId) continue
       counts.set(categoryId, (counts.get(categoryId) || 0) + 1)
     }
 
     return counts
-  }, [products])
+  }, [products, activeSection])
 
   const visibleCategories = useMemo(() => {
-    return [...categories]
+    const base = [...categories]
       .filter((item) => item && item.id && item.name)
+      .filter((item) => {
+        const t = item.listing_type
+        if (activeSection === 'food') return !t || t === 'food'
+        return t === activeSection
+      })
       .filter((item) => (categoryCounts.get(item.id) || 0) > 0)
       .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
-  }, [categories, categoryCounts])
+    if (base.length > 0) return base
+    const fallback =
+      activeSection === 'service'
+        ? SERVICE_FALLBACK_CATEGORIES
+        : activeSection === 'advertisement'
+        ? AD_FALLBACK_CATEGORIES
+        : []
+    return fallback.map((name, index) => ({ id: `fallback-${activeSection}-${index}`, name, listing_type: activeSection }))
+  }, [categories, categoryCounts, activeSection])
 
-  const hasCategoryFeature =
-    visibleCategories.length > 0 &&
-    products.some((product) => product.menu_category_id)
+  const hasCategoryFeature = visibleCategories.length > 0
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
 
@@ -1035,13 +1139,22 @@ export default function ShopPageClient({
   }
 
   const visibleProducts = useMemo(() => {
-    if (!hasCategoryFeature) return products
-    if (activeCategoryId === 'all') return products
+    const bySection = products.filter((product) => {
+      const type = (product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+      return type === activeSection
+    })
 
-    return products.filter(
-      (product) => (product.menu_category_id || '') === activeCategoryId
-    )
-  }, [products, hasCategoryFeature, activeCategoryId])
+    if (!hasCategoryFeature) return bySection
+    if (activeCategoryId === 'all') return bySection
+    if (activeCategoryId.startsWith('fallback-')) {
+      return bySection.filter((product) => {
+        const text = `${product.name} ${product.description || ''}`.toLowerCase()
+        const category = visibleCategories.find((c) => c.id === activeCategoryId)?.name.toLowerCase() || ''
+        return category ? text.includes(category.split(' ')[0].toLowerCase()) : true
+      })
+    }
+    return bySection.filter((product) => (product.menu_category_id || '') === activeCategoryId)
+  }, [products, hasCategoryFeature, activeCategoryId, activeSection, visibleCategories])
 
   const cartItems = cart
 
@@ -1182,6 +1295,18 @@ export default function ShopPageClient({
               {seller.shop_description?.trim() && (
                 <p style={shopDescriptionMobile}>{seller.shop_description}</p>
               )}
+              {availableSections.length > 1 ? (
+                <div style={sectionChipWrap}>
+                  {availableSections.map((section) => {
+                    const label = section === 'food' ? 'Menu' : section === 'shop' ? 'Shop' : section === 'service' ? 'Services' : 'Iklan'
+                    return (
+                      <button key={section} type="button" onClick={() => setActiveSection(section)} style={{ ...sectionChipBtn, ...(activeSection === section ? sectionChipBtnActive : sectionChipBtnInactive) }}>
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
 
               {hasMinimumOrderRule ? (
                 <div style={minimumOrderHeroBox}>
@@ -1237,6 +1362,18 @@ export default function ShopPageClient({
                 {seller.shop_description?.trim() && (
                   <p style={shopDescription}>{seller.shop_description}</p>
                 )}
+                {availableSections.length > 1 ? (
+                  <div style={sectionChipWrap}>
+                    {availableSections.map((section) => {
+                      const label = section === 'food' ? 'Menu' : section === 'shop' ? 'Shop' : section === 'service' ? 'Services' : 'Iklan'
+                      return (
+                        <button key={section} type="button" onClick={() => setActiveSection(section)} style={{ ...sectionChipBtn, ...(activeSection === section ? sectionChipBtnActive : sectionChipBtnInactive) }}>
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
 
                 {hasMinimumOrderRule ? (
                   <div style={minimumOrderHeroBoxDesktop}>
@@ -1309,35 +1446,156 @@ export default function ShopPageClient({
                   0
                 )
                 const disableAddButton = !isShopOpen || Boolean(product.sold_out)
-                const isServiceListing = product.listing_type === 'service'
+                const listingType = (product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+                const isLeadListing = listingType === 'service' || listingType === 'advertisement'
+                const adMeta =
+                  listingType === 'advertisement'
+                    ? parseAdMeta(product.description)
+                    : null
+                const isServiceListing = listingType === 'service'
                 const allImages = getProductImages(product)
+                const leadWhatsapp = normalizeWhatsappNumber(seller?.whatsapp)
+                const leadMessage =
+                  listingType === 'advertisement'
+                    ? `Hi, saya berminat dengan iklan "${product.name}". Masih available?`
+                    : `Hi, saya berminat dengan servis "${product.name}". Boleh saya dapatkan quotation?`
 
                 return (
                   <div
                     key={product.id}
                     ref={(el) => { productRefs.current[product.id] = el }}
-                    style={{ ...productCard, ...(highlightedProductId === product.id ? highlightedProductCard : {}) }}
+                    style={{ ...productCard, ...(listingType === 'advertisement' ? adCard : listingType === 'service' ? serviceCard : {}), ...(highlightedProductId === product.id ? highlightedProductCard : {}) }}
                   >
-                    <div style={productContent}>
+                    <div
+                      style={{
+                        ...productContent,
+                        gridTemplateColumns:
+                          listingType === 'advertisement'
+                            ? isDesktop
+                              ? 'minmax(0, 1fr) 180px'
+                              : '1fr'
+                            : listingType === 'service'
+                            ? '1fr'
+                            : productContent.gridTemplateColumns,
+                      }}
+                    >
                       <div style={productInfo}>
-                        <div style={productName}>{product.name}</div>
+                        <div
+                          style={{
+                            ...productName,
+                            fontSize: listingType === 'advertisement' ? 20 : 16,
+                            lineHeight: listingType === 'advertisement' ? 1.3 : 1.2,
+                          }}
+                        >
+                          {product.name}
+                        </div>
 
-                        <div style={productPrice}>RM {product.price.toFixed(2)}</div>
+                        <div style={productPrice}>{isServiceListing ? `Starting from RM ${product.price.toFixed(2)}` : `RM ${product.price.toFixed(2)}`}</div>
 
-                        {product.track_stock ? (
+                        {product.track_stock && !isLeadListing ? (
                           <div style={stockText}>
                             Stock: {product.stock_quantity ?? 0}
                           </div>
                         ) : null}
 
-                        <div style={productDesc}>
-                          {product.description || 'Tiada deskripsi.'}
-                        </div>
+                        {listingType === 'advertisement' ? (
+                          <div style={metaBadgeWrap}>
+                            {adMeta?.category ? <span style={metaBadge}>{adMeta.category}</span> : null}
+                            {adMeta?.location ? <span style={metaBadge}>📍 {adMeta.location}</span> : null}
+                            {adMeta?.expiry ? <span style={metaBadge}>⏳ {adMeta.expiry}</span> : null}
+                          </div>
+                        ) : null}
 
-                        {isServiceListing ? (
+                        {listingType === 'advertisement' || isServiceListing ? (
+                          <button
+                            type="button"
+                            onClick={() => openGallery(product, 0)}
+                            style={{
+                              ...productImageButton,
+                              width: '100%',
+                              cursor: image ? 'pointer' : 'default',
+                              marginTop: 12,
+                            }}
+                            disabled={!image}
+                            aria-label={`View images for ${product.name}`}
+                          >
+                            <div
+                              style={{
+                                ...productImageWrap,
+                                width: '100%',
+                                height: isDesktop ? 230 : 210,
+                                borderRadius: 16,
+                                background: isServiceListing ? '#f8fafc' : productImageWrap.background,
+                              }}
+                            >
+                              {image ? (
+                                <img
+                                  src={getImageUrl(image)}
+                                  alt={product.name}
+                                  style={{ ...productImage, objectFit: isServiceListing ? 'cover' : productImage.objectFit }}
+                                />
+                              ) : (
+                                <div style={productImagePlaceholder}>No image</div>
+                              )}
+                            </div>
+                          </button>
+                        ) : null}
+
+                        <div
+                          style={{
+                            ...productDesc,
+                            marginTop: listingType === 'advertisement' ? 12 : 8,
+                            color:
+                              listingType === 'advertisement'
+                                ? '#475569'
+                                : productDesc.color,
+                            whiteSpace:
+                              listingType === 'advertisement' ? 'pre-line' : productDesc.whiteSpace,
+                          }}
+                        >
+                          {isLeadListing
+                            ? `${((listingType === 'advertisement'
+                                ? getAdvertisementCleanDescription(product.description)
+                                : product.description) || 'Tiada deskripsi.').slice(0, 140)}${((listingType === 'advertisement'
+                                ? getAdvertisementCleanDescription(product.description)
+                                : product.description) || '').length > 140 ? '…' : ''}`
+                            : product.description || 'Tiada deskripsi.'}
+                        </div>
+                        {isLeadListing ? (
+                          <button type="button" onClick={() => openAdDetailsModal(product)} style={{ ...secondaryBtn, width: '100%', marginTop: 10 }}>
+                            View Details
+                          </button>
+                        ) : null}
+
+                        {isLeadListing ? (
                           <div style={qtyWrap}>
-                            <a href={seller?.whatsapp ? `https://wa.me/${seller.whatsapp.replace(/\D/g, '')}` : '#'} style={{ ...qtyBtn, display: 'inline-flex', width: '100%', justifyContent: 'center', textDecoration: 'none' }}>
-                              Hubungi Seller
+                            <a
+                              href={
+                                leadWhatsapp
+                                  ? `https://wa.me/${leadWhatsapp}?text=${encodeURIComponent(leadMessage)}`
+                                  : '#'
+                              }
+                              style={{
+                                ...qtyBtn,
+                                display: 'inline-flex',
+                                width: '100%',
+                                height: 'auto',
+                                justifyContent: 'center',
+                                textDecoration: 'none',
+                                borderRadius: 12,
+                                padding: listingType === 'advertisement' ? '12px 14px' : '10px 14px',
+                                fontSize: 14,
+                                fontWeight: 800,
+                                background:
+                                  listingType === 'advertisement' ? '#0f172a' : '#16a34a',
+                                borderColor:
+                                  listingType === 'advertisement' ? '#0f172a' : '#15803d',
+                                color: '#fff',
+                              }}
+                            >
+                              {listingType === 'advertisement'
+                                ? 'Contact Seller'
+                                : 'Request Quote'}
                             </a>
                           </div>
                         ) : (
@@ -1364,12 +1622,30 @@ export default function ShopPageClient({
                         onClick={() => openGallery(product, 0)}
                         style={{
                           ...productImageButton,
+                          width:
+                            listingType === 'advertisement' && !isDesktop
+                              ? '100%'
+                              : undefined,
                           cursor: image ? 'pointer' : 'default',
+                          display: listingType === 'advertisement' || isServiceListing ? 'none' : 'block',
                         }}
                         disabled={!image}
                         aria-label={`View images for ${product.name}`}
                       >
-                        <div style={productImageWrap}>
+                        <div
+                          style={{
+                            ...productImageWrap,
+                            width:
+                              listingType === 'advertisement'
+                                ? isDesktop
+                                  ? 180
+                                  : '100%'
+                                : listingType === 'service' && !isDesktop
+                                ? '100%'
+                                : productImageWrap.width,
+                            height: listingType === 'advertisement' ? 150 : 120,
+                          }}
+                        >
                           {image ? (
                             <img
                               src={getImageUrl(image)}
@@ -1380,7 +1656,7 @@ export default function ShopPageClient({
                             <div style={productImagePlaceholder}>No image</div>
                           )}
 
-                          {product.sold_out ? (
+                          {product.sold_out && !isLeadListing ? (
                             <div style={soldOutBadge}>Sold Out</div>
                           ) : null}
 
@@ -1399,6 +1675,7 @@ export default function ShopPageClient({
           )}
         </div>
 
+        {activeSection === 'food' || activeSection === 'shop' ? (
         <div style={checkoutCard}>
           <div style={checkoutHeader}>
             <div>
@@ -1570,6 +1847,7 @@ export default function ShopPageClient({
             </>
           )}
         </div>
+        ) : null}
       </div>
 
       {gallery.isOpen ? (
@@ -1634,6 +1912,66 @@ export default function ShopPageClient({
                 ))}
               </div>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {adDetailsModal.isOpen && adDetailsModal.product ? (
+        <div style={modalOverlay} onClick={closeAdDetailsModal}>
+          <div
+            style={isDesktop ? modalDialogDesktop : modalDialogMobile}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={modalHeader}>
+              <div>
+                <div style={modalTitle}>{adDetailsModal.product.name}</div>
+                <div style={modalSubtitle}>RM {adDetailsModal.product.price.toFixed(2)}</div>
+              </div>
+              <button type="button" onClick={closeAdDetailsModal} style={modalCloseBtn}>✕</button>
+            </div>
+            <div style={modalContent}>
+              {(() => {
+                const adMeta = parseAdMeta(adDetailsModal.product.description)
+                const cleanDescription = getAdvertisementCleanDescription(adDetailsModal.product.description) || 'Tiada deskripsi.'
+                const images = getProductImages(adDetailsModal.product).map((img) => getImageUrl(img))
+                const currentImage = images[adDetailsModal.currentIndex] || ''
+                const leadWhatsapp = normalizeWhatsappNumber(seller?.whatsapp)
+                const modalListingType = (adDetailsModal.product.listing_type || 'food') as 'food' | 'shop' | 'service' | 'advertisement'
+                const isServiceModal = modalListingType === 'service'
+                return (
+                  <>
+                    {!isServiceModal ? (
+                      <div style={metaBadgeWrap}>
+                        {adMeta?.category ? <span style={metaBadge}>{adMeta.category}</span> : null}
+                        {adMeta?.location ? <span style={metaBadge}>📍 {adMeta.location}</span> : null}
+                        {adMeta?.expiry ? <span style={metaBadge}>⏳ {adMeta.expiry}</span> : null}
+                      </div>
+                    ) : null}
+                    {currentImage ? (
+                      <button type="button" onClick={() => openGallery(adDetailsModal.product!, adDetailsModal.currentIndex)} style={{ ...productImageButton, width: '100%' }}>
+                        <div style={{ borderRadius: 14, overflow: 'hidden', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                          <img src={currentImage} alt={adDetailsModal.product.name} style={{ width: '100%', height: 280, objectFit: 'contain' }} />
+                        </div>
+                      </button>
+                    ) : null}
+                    {images.length > 1 ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <button type="button" onClick={() => setAdDetailsModal((prev) => ({ ...prev, currentIndex: (prev.currentIndex - 1 + images.length) % images.length }))} style={secondaryBtn}>‹ Previous</button>
+                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{adDetailsModal.currentIndex + 1} / {images.length}</div>
+                        <button type="button" onClick={() => setAdDetailsModal((prev) => ({ ...prev, currentIndex: (prev.currentIndex + 1) % images.length }))} style={secondaryBtn}>Next ›</button>
+                      </div>
+                    ) : null}
+                    <div style={{ ...productDesc, whiteSpace: 'pre-line' }}>{cleanDescription}</div>
+                    <a
+                      href={leadWhatsapp ? `https://wa.me/${leadWhatsapp}?text=${encodeURIComponent(isServiceModal ? `Hi, saya berminat dengan servis "${adDetailsModal.product.name}". Boleh saya dapatkan quotation?` : `Hi, saya berminat dengan iklan "${adDetailsModal.product.name}". Masih available?`)}` : '#'}
+                      style={{ ...primaryBtn, width: '100%', textAlign: 'center', textDecoration: 'none' }}
+                    >
+                      {isServiceModal ? 'WhatsApp / Request Quote' : 'Contact Seller'}
+                    </a>
+                  </>
+                )
+              })()}
+            </div>
           </div>
         </div>
       ) : null}
@@ -1909,9 +2247,9 @@ const backToBazarLink: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   borderRadius: 999,
-  border: '1px solid #dbeafe',
-  background: '#eff6ff',
-  color: '#1d4ed8',
+  border: '1px solid #f9a8d4',
+  background: 'linear-gradient(135deg, #fff1f7 0%, #ffe4ef 100%)',
+  color: '#be185d',
   fontWeight: 700,
   fontSize: 12,
   padding: '7px 12px',
@@ -1972,8 +2310,41 @@ const shopDescription: React.CSSProperties = {
   margin: '10px 0 0',
   color: '#475569',
   fontSize: 14,
-  lineHeight: 1.3,
+  lineHeight: 1.5,
   maxWidth: 720,
+}
+
+const sectionChipWrap: React.CSSProperties = {
+  display: 'flex',
+  gap: 8,
+  overflowX: 'auto',
+  paddingBottom: 2,
+  marginTop: 12,
+  WebkitOverflowScrolling: 'touch',
+}
+
+const sectionChipBtn: React.CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid #cbd5e1',
+  background: '#fff',
+  color: '#334155',
+  fontWeight: 700,
+  fontSize: 13,
+  padding: '8px 14px',
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+}
+
+const sectionChipBtnActive: React.CSSProperties = {
+  borderColor: '#0f172a',
+  background: '#0f172a',
+  color: '#fff',
+}
+
+const sectionChipBtnInactive: React.CSSProperties = {
+  borderColor: '#cbd5e1',
+  background: '#fff',
+  color: '#334155',
 }
 
 const statusInlineWrap: React.CSSProperties = {
@@ -2092,10 +2463,39 @@ const productCard: React.CSSProperties = {
   boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
 }
 
+const adCard: React.CSSProperties = {
+  padding: 18,
+  borderColor: '#fbcfe8',
+  background: '#fff9fc',
+}
+
+const serviceCard: React.CSSProperties = {
+  padding: 18,
+  borderColor: '#bfdbfe',
+  background: '#f8fbff',
+}
+
+const metaBadgeWrap: React.CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+  marginTop: 10,
+}
+
+const metaBadge: React.CSSProperties = {
+  borderRadius: 999,
+  border: '1px solid #e2e8f0',
+  background: '#fff',
+  color: '#334155',
+  fontSize: 12,
+  fontWeight: 700,
+  padding: '6px 10px',
+}
+
 const productContent: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1fr 120px',
-  gap: 14,
+  gridTemplateColumns: 'minmax(0, 1fr) 132px',
+  gap: 16,
   alignItems: 'start',
 }
 
@@ -2128,7 +2528,7 @@ const productDesc: React.CSSProperties = {
   marginTop: 8,
   color: '#64748b',
   fontSize: 14,
-  lineHeight: 1.3,
+  lineHeight: 1.5,
   whiteSpace: 'normal',
   wordBreak: 'break-word',
 }
@@ -2527,7 +2927,7 @@ const modalOverlay: React.CSSProperties = {
   inset: 0,
   background: 'rgba(15, 23, 42, 0.62)',
   display: 'flex',
-  alignItems: 'flex-end',
+  alignItems: 'center',
   justifyContent: 'center',
   paddingTop: 'max(12px, env(safe-area-inset-top))',
   paddingRight: 12,

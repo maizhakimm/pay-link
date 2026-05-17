@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-type ListingType = 'food' | 'service' | 'shop'
+type ListingType = 'food' | 'service' | 'shop' | 'advertisement'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
   const sellerIds = profiles.map((p) => p.seller_profile_id)
 
   const { data: sellerRows, error: sellerError } = sellerIds.length
-    ? await supabase.from('seller_profiles').select('id,store_name,shop_slug').in('id', sellerIds)
+    ? await supabase.from('seller_profiles').select('id,store_name,shop_slug,whatsapp').in('id', sellerIds)
     : ({ data: [], error: null } as any)
 
   let listingTypeColumnAvailable = true
@@ -60,7 +60,7 @@ export async function GET(req: Request) {
   if (sellerIds.length) {
     const withListingType = await supabase
       .from('products')
-      .select('id,name,price,seller_profile_id,product_image_url,image_1,image_2,listing_type,is_active,created_at')
+      .select('id,name,description,price,seller_profile_id,product_image_url,image_1,image_2,image_3,image_4,image_5,listing_type,is_active,created_at')
       .in('seller_profile_id', sellerIds)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -69,7 +69,7 @@ export async function GET(req: Request) {
       listingTypeColumnAvailable = false
       const withoutListingType = await supabase
         .from('products')
-        .select('id,name,price,seller_profile_id,product_image_url,image_1,image_2,is_active,created_at')
+        .select('id,name,description,price,seller_profile_id,product_image_url,image_1,image_2,image_3,image_4,image_5,is_active,created_at')
         .in('seller_profile_id', sellerIds)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
@@ -85,9 +85,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: sellerError?.message || productError?.message || 'Failed to load seller/product data' }, { status: 500 })
   }
 
-  const sellerMap: Record<string, { store_name: string | null; shop_slug: string | null }> = {}
+  const sellerMap: Record<string, { store_name: string | null; shop_slug: string | null; whatsapp: string | null }> = {}
   ;(sellerRows || []).forEach((row: any) => {
-    sellerMap[String(row.id)] = { store_name: row.store_name || null, shop_slug: row.shop_slug || null }
+    sellerMap[String(row.id)] = { store_name: row.store_name || null, shop_slug: row.shop_slug || null, whatsapp: row.whatsapp || null }
   })
 
   const rawProductsCountBeforeVisibilityFilter = productRows.length
@@ -98,7 +98,9 @@ export async function GET(req: Request) {
       const seller = sellerMap[String(p.seller_profile_id)]
       if (!seller?.store_name) return null
       const listingTypeRaw = listingTypeColumnAvailable ? String(p.listing_type || '').trim().toLowerCase() : 'food'
-      const listingType: ListingType = listingTypeRaw === 'service' || listingTypeRaw === 'services'
+      const listingType: ListingType = listingTypeRaw === 'advertisement' || listingTypeRaw === 'community'
+        ? 'advertisement'
+        : listingTypeRaw === 'service' || listingTypeRaw === 'services'
         ? 'service'
         : listingTypeRaw === 'shop' || listingTypeRaw === 'product'
           ? 'shop'
@@ -107,11 +109,18 @@ export async function GET(req: Request) {
       return {
         id: p.id,
         name: p.name,
+        description: p.description || null,
         price: Number(p.price || 0),
         seller_profile_id: p.seller_profile_id,
         image: p.product_image_url || p.image_1 || p.image_2 || null,
+        image_1: p.image_1 || null,
+        image_2: p.image_2 || null,
+        image_3: p.image_3 || null,
+        image_4: p.image_4 || null,
+        image_5: p.image_5 || null,
         sellerName: seller.store_name,
         shopSlug: seller.shop_slug,
+        sellerWhatsapp: seller.whatsapp,
         areaText: profile?.area_text || null,
         communityText: profile?.community_text || null,
         categoryLabel: profile?.categoryNames?.[0] || null,
