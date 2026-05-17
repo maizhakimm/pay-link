@@ -226,12 +226,15 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [loadTimedOut, setLoadTimedOut] = useState(false)
 
   const router = useRouter()
   const hasNavigatedRef = useRef(false)
 
   const loadDashboard = useCallback(async () => {
+    console.log('[dashboard] loading start')
     setLoading(true)
+    setLoadTimedOut(false)
     setPageError('')
 
     try {
@@ -239,6 +242,7 @@ export default function DashboardPage() {
   data: { user },
   error: authError,
 } = await supabase.auth.getUser()
+console.log('[dashboard] auth result user:', user?.id || null, 'error:', authError?.message || null)
 
 if (authError || !user) {
   if (!hasNavigatedRef.current) {
@@ -258,8 +262,10 @@ if (authError || !user) {
         .maybeSingle()
 
       if (sellerError) {
+        console.error('[dashboard] seller_profiles error:', sellerError)
         throw new Error(sellerError.message)
       }
+      console.log('[dashboard] seller profile result:', sellerData?.id || null)
 
       if (!sellerData) {
         if (!hasNavigatedRef.current) {
@@ -276,6 +282,7 @@ if (authError || !user) {
         .eq('seller_profile_id', sellerData.id)
 
       if (productError) {
+        console.error('[dashboard] products error:', productError)
         throw new Error(productError.message)
       }
 
@@ -285,15 +292,10 @@ if (authError || !user) {
       const hasStoreName = Boolean(sellerData.store_name?.trim())
       const hasShopSlug = Boolean(sellerData.shop_slug?.trim())
       const hasWhatsapp = Boolean(sellerData.whatsapp?.trim())
-      const hasDeliveryMode = Boolean(sellerData.delivery_mode)
-      const hasAtLeastOneActiveProduct = activeProducts.length > 0
-
       const isOnboardingComplete =
         hasStoreName &&
         hasShopSlug &&
-        hasWhatsapp &&
-        hasDeliveryMode &&
-        hasAtLeastOneActiveProduct
+        hasWhatsapp
 
       if (!isOnboardingComplete) {
         if (!hasNavigatedRef.current) {
@@ -317,6 +319,7 @@ if (authError || !user) {
         .order('created_at', { ascending: true })
 
       if (categoryError) {
+        console.error('[dashboard] menu_categories error:', categoryError)
         throw new Error(categoryError.message)
       }
 
@@ -327,16 +330,19 @@ if (authError || !user) {
         .order('created_at', { ascending: false })
 
       if (orderError) {
+        console.error('[dashboard] orders error:', orderError)
         throw new Error(orderError.message)
       }
 
       setCategories(categoryData || [])
       setOrders(orderData || [])
     } catch (error) {
+      console.error('[dashboard] unexpected load error:', error)
       const message =
         error instanceof Error ? error.message : 'Failed to load dashboard.'
       setPageError(message)
     } finally {
+      console.log('[dashboard] loading end')
       setLoading(false)
     }
   }, [router])
@@ -344,6 +350,16 @@ if (authError || !user) {
   useEffect(() => {
     loadDashboard()
   }, [loadDashboard])
+
+  useEffect(() => {
+    if (!loading) return
+    const timer = window.setTimeout(() => {
+      setLoadTimedOut(true)
+      setLoading(false)
+      setPageError('Dashboard loading timeout (8s). Please retry. If this persists, database update required.')
+    }, 8000)
+    return () => window.clearTimeout(timer)
+  }, [loading])
 
   const activeProducts = useMemo(() => {
     return products.filter((p) => p.is_active)
@@ -536,6 +552,16 @@ if (authError || !user) {
       <Layout>
         <div className="rounded-3xl border border-red-200 bg-red-50 p-5 shadow-sm">
           <p className="text-sm font-medium text-red-700">{pageError}</p>
+          <button
+            type="button"
+            onClick={loadDashboard}
+            className="mt-3 rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700"
+          >
+            Retry
+          </button>
+          {loadTimedOut ? (
+            <p className="mt-2 text-xs text-red-600">Tip: check seller profile data and recent database migrations.</p>
+          ) : null}
         </div>
       </Layout>
     )

@@ -8,9 +8,9 @@ import BazarBottomNav from './components/BazarBottomNav'
 
 type Seller = { id: string; store_name: string | null; shop_slug: string | null; whatsapp: string | null }
 type MarketplaceProfile = { id: string; seller_profile_id: string; is_featured: boolean; is_verified: boolean; area_text: string | null; community_text: string | null; categoryNames: string[] }
-type RequestedTab = 'home' | 'food' | 'services' | 'shop' | 'nearby'
-type ListingType = 'food' | 'service' | 'shop'
-type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; sellerName: string; shopSlug: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
+type RequestedTab = 'home' | 'food' | 'services' | 'shop' | 'community'
+type ListingType = 'food' | 'service' | 'shop' | 'advertisement'
+type ProductCard = { id: string; name: string; price: number; seller_profile_id: string; image: string | null; image_1?: string | null; image_2?: string | null; image_3?: string | null; image_4?: string | null; image_5?: string | null; description?: string | null; sellerName: string; shopSlug: string | null; sellerWhatsapp?: string | null; areaText: string | null; communityText: string | null; categoryLabel: string | null; isFeatured: boolean; isVerified: boolean; listingType: ListingType; isDemo?: boolean }
 
 const FOOD_CHIPS = [
   { key: 'all', label: '✨ Semua' },
@@ -25,6 +25,8 @@ const FOOD_CHIPS = [
   { key: 'lunch', label: '🍱 Lunch' },
   { key: 'kuih', label: '🍪 Kuih' },
 ]
+const SERVICE_CHIPS = ['all','printing','design','catering','repair','aircond','cleaning','tailor / jahit','massage / urut','tutor','runner','event','beauty','it / computer','photography','home service']
+const COMMUNITY_CHIPS = ['all','jawatan kosong','bilik / rumah sewa','property','vehicle','preloved','computer / gadget','business promo','event komuniti','lost & found','education','others']
 
 const CHIP_MATCHERS: Record<string, string[]> = {
   nasi: ['nasi', 'lemak', 'rice'],
@@ -40,6 +42,27 @@ const CHIP_MATCHERS: Record<string, string[]> = {
 }
 
 const DELIVERY_BADGES = ['Self-pickup / Delivery', 'Delivery', 'Self-pickup']
+
+const AD_CATEGORY_LABEL_MAP: Record<string, string> = {
+  job_vacancy: 'Jawatan Kosong',
+  room_house_rental: 'Bilik / Rumah Sewa',
+  property: 'Property',
+  vehicle: 'Vehicle',
+  second_hand_item: 'Preloved',
+  community_promotion: 'Event Komuniti',
+  business_promo: 'Business Promo',
+  education: 'Education',
+  other: 'Others',
+}
+
+function parseAdCategoryFromDescription(description?: string | null) {
+  if (!description) return null
+  const match = description.match(/Ad Category\s*:\s*(.+)/i)
+  if (!match?.[1]) return null
+  const raw = match[1].trim()
+  const key = raw.toLowerCase().replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '')
+  return AD_CATEGORY_LABEL_MAP[key] || raw
+}
 
 export default function ExplorePage() {
   const [requestedTab, setRequestedTab] = useState<RequestedTab>('home')
@@ -57,6 +80,9 @@ export default function ExplorePage() {
   const [sellers, setSellers] = useState<Record<string, Seller>>({})
   const [products, setProducts] = useState<ProductCard[]>([])
   const isFoodTab = requestedTab === 'food'
+  const isServiceTab = requestedTab === 'services'
+  const isCommunityTab = requestedTab === 'community'
+  const isShopTab = requestedTab === 'shop'
 
   const categoriesRef = useRef<HTMLDivElement>(null)
   const nearbyRef = useRef<HTMLDivElement>(null)
@@ -67,12 +93,15 @@ export default function ExplorePage() {
   const [isMobileUa, setIsMobileUa] = useState(false)
   const [apiDebug, setApiDebug] = useState<Record<string, unknown> | null>(null)
   const [openingShopKey, setOpeningShopKey] = useState<string | null>(null)
+  const [adDetailsItem, setAdDetailsItem] = useState<ProductCard | null>(null)
+  const [adDetailsIndex, setAdDetailsIndex] = useState(0)
+  const [adLightboxOpen, setAdLightboxOpen] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     const syncTabFromUrl = () => {
       const tab = new URLSearchParams(window.location.search).get('tab')
-      if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'nearby') {
+      if (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'community') {
         setRequestedTab(tab)
         setSelectedChip('all')
         return
@@ -151,7 +180,8 @@ export default function ExplorePage() {
 
   const displayedProducts = useMemo(() => {
     const byTab = products.filter((p) => {
-      if (requestedTab === 'home' || requestedTab === 'nearby') return true
+      if (requestedTab === 'home') return true
+      if (requestedTab === 'community') return p.listingType === 'advertisement'
       if (requestedTab === 'food') return p.listingType === 'food'
       if (requestedTab === 'services') return p.listingType === 'service'
       return p.listingType === 'shop'
@@ -162,13 +192,21 @@ export default function ExplorePage() {
       return [p.name, p.sellerName, p.categoryLabel || '', p.areaText || '', p.communityText || ''].join(' ').toLowerCase().includes(q)
     })
     const byChip = bySearch.filter((p) => {
-      if (!isFoodTab) return true
       if (selectedChip === 'all') return true
-      const keywords = CHIP_MATCHERS[selectedChip] || [selectedChip]
-      const haystack = [p.name, p.categoryLabel || ''].join(' ').toLowerCase()
-      return keywords.some((kw) => haystack.includes(kw))
+      const haystack = [p.name, p.description || '', p.categoryLabel || ''].join(' ').toLowerCase()
+      if (isFoodTab) {
+        const keywords = CHIP_MATCHERS[selectedChip] || [selectedChip]
+        return keywords.some((kw) => haystack.includes(kw))
+      }
+      if (isServiceTab) return haystack.includes(selectedChip.toLowerCase())
+      if (isCommunityTab) {
+        const adCategory = (parseAdCategoryFromDescription(p.description) || '').toLowerCase()
+        return adCategory.includes(selectedChip.toLowerCase())
+      }
+      if (isShopTab) return (p.categoryLabel || '').toLowerCase().includes(selectedChip.toLowerCase())
+      return true
     })
-    const shouldApplyAreaFilter = requestedTab === 'nearby' || Boolean(area)
+    const shouldApplyAreaFilter = Boolean(area)
     const byArea = byChip.filter((p) => !shouldApplyAreaFilter || !area || (p.areaText || '').toLowerCase().includes(area.toLowerCase()))
 
     if (process.env.NODE_ENV !== 'production') {
@@ -186,7 +224,16 @@ export default function ExplorePage() {
     }
 
     return byArea
-  }, [products, query, selectedChip, area, requestedTab, isFoodTab])
+  }, [products, query, selectedChip, area, requestedTab, isFoodTab, isServiceTab, isCommunityTab, isShopTab])
+
+  const shopChips = useMemo(() => {
+    const set = new Set<string>()
+    products.filter((p) => p.listingType === 'shop').forEach((p) => {
+      const label = (p.categoryLabel || '').trim()
+      if (label) set.add(label)
+    })
+    return ['all', ...Array.from(set)]
+  }, [products])
 
   const sellerCards = useMemo(() => {
     return profiles
@@ -246,6 +293,28 @@ export default function ExplorePage() {
     window.setTimeout(() => {
       setOpeningShopKey((current) => (current === key ? null : current))
     }, 8000)
+  }
+
+  function getCleanAdDescription(description?: string | null) {
+    if (!description) return ''
+    return description
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => {
+        const n = line.toLowerCase()
+        return n && !n.startsWith('ad category:') && !n.startsWith('location:') && !n.startsWith('contact:') && !n.startsWith('expiry date:')
+      })
+      .join('\n')
+      .trim()
+  }
+
+  function normalizeWhatsappNumber(input?: string | null) {
+    const digits = String(input || '').replace(/\D/g, '')
+    if (!digits) return ''
+    if (digits.startsWith('60')) return digits
+    if (digits.startsWith('0')) return `6${digits}`
+    if (digits.length >= 9) return `60${digits}`
+    return ''
   }
 
   return (
@@ -312,7 +381,7 @@ export default function ExplorePage() {
               <Link href="/bazar?tab=food" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Food</Link>
               <Link href="/bazar?tab=services" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Services</Link>
               <Link href="/bazar?tab=shop" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Shop</Link>
-              <Link href="/bazar?tab=nearby" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Nearby</Link>
+              <Link href="/bazar?tab=community" className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700">Komuniti</Link>
             </div>
           </section>
         ) : null}
@@ -322,6 +391,33 @@ export default function ExplorePage() {
             <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {FOOD_CHIPS.map((chip) => (
                 <button key={chip.key} onClick={() => setSelectedChip(chip.key)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip.key ? 'bg-[#DD0894] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip.label}</button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {isServiceTab ? (
+          <section className="mt-5">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {SERVICE_CHIPS.map((chip) => (
+                <button key={chip} onClick={() => setSelectedChip(chip)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip ? 'bg-[#0f172a] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip === 'all' ? 'All' : chip}</button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {isCommunityTab ? (
+          <section className="mt-5">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {COMMUNITY_CHIPS.map((chip) => (
+                <button key={chip} onClick={() => setSelectedChip(chip)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip ? 'bg-[#0f172a] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip === 'all' ? 'All' : chip}</button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {isShopTab && shopChips.length > 1 ? (
+          <section className="mt-5">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {shopChips.map((chip) => (
+                <button key={chip} onClick={() => setSelectedChip(chip)} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold ${selectedChip === chip ? 'bg-[#0f172a] text-white' : 'bg-white border border-slate-200 text-slate-700'}`}>{chip === 'all' ? 'All' : chip}</button>
               ))}
             </div>
           </section>
@@ -336,7 +432,12 @@ export default function ExplorePage() {
                 {requestedTab === 'food' ? (selectedChip !== 'all' ? 'Belum ada item untuk kategori ini.' : 'Belum ada makanan di kawasan ini.') : null}
                 {requestedTab === 'services' ? 'Belum ada servis di kawasan ini.' : null}
                 {requestedTab === 'shop' ? 'Belum ada produk di kawasan ini.' : null}
-                {requestedTab === 'nearby' ? 'Belum ada seller berhampiran kawasan ini.' : null}
+                {requestedTab === 'community' ? (
+                  <span>
+                    <strong className="block text-slate-700">Komuniti akan datang</strong>
+                    Ruangan iklan komuniti seperti kerja kosong, bilik sewa, barang preloved, kenderaan dan promosi setempat akan dibuka tidak lama lagi.
+                  </span>
+                ) : null}
               </p>
               {requestedTab === 'services' ? <p className="mt-1">Jadi antara service provider pertama di BazarLink.</p> : null}
               {requestedTab === 'shop' ? <p className="mt-1">Jadi antara seller pertama di BazarLink.</p> : null}
@@ -344,19 +445,57 @@ export default function ExplorePage() {
           ) : null}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {displayedProducts.map((item) => (
-              <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
-                {item.image ? <img src={item.image} alt={item.name} className="h-24 w-full rounded-xl object-cover" /> : <div className="flex h-24 w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700">{item.name.slice(0, 2).toUpperCase()}</div>}
+              <article key={item.id} onClick={() => { if (!item.shopSlug) return; handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} className={`rounded-2xl border bg-white shadow-sm transition ${item.listingType === 'advertisement' ? 'border-rose-200 p-3.5' : 'border-slate-200 p-2.5'} ${item.shopSlug ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}>
                 <div className="mt-2 flex items-start justify-between gap-2">
-                  <h3 className="line-clamp-2 text-sm font-bold text-slate-900">{item.name}</h3>
+                  <h3 className={`${item.listingType === 'advertisement' ? 'line-clamp-2 text-base' : 'line-clamp-2 text-sm'} font-bold text-slate-900`}>{item.name}</h3>
                 </div>
                 <p className="mt-1 text-sm font-extrabold text-rose-700">RM {item.price.toFixed(2)}</p>
-                <p className="truncate text-xs text-slate-600">{item.sellerName}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {(item.listingType === 'advertisement'
+                    ? (parseAdCategoryFromDescription(item.description) || 'Komuniti')
+                    : item.categoryLabel) ? (
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                      {item.listingType === 'advertisement'
+                        ? (parseAdCategoryFromDescription(item.description) || 'Komuniti')
+                        : item.categoryLabel}
+                    </span>
+                  ) : null}
+                  <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">📍 {item.areaText || '-'}</span>
+                  <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">⏳ Aktif</span>
+                </div>
+                {item.image ? <img src={item.image} alt={item.name} className={`${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'mt-0 h-40 sm:h-44 lg:h-48'} w-full rounded-xl object-cover`} /> : <div className={`flex w-full items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-rose-100 text-lg font-bold text-orange-700 ${item.listingType === 'advertisement' ? 'mt-3 h-44 sm:h-48' : 'h-40 sm:h-44 lg:h-48'}`}>{item.name.slice(0, 2).toUpperCase()}</div>}
+                <p className="mt-2 line-clamp-3 whitespace-pre-line text-xs text-slate-600">{item.listingType === 'advertisement' ? `${(getCleanAdDescription(item.description) || 'Tiada deskripsi.').slice(0, 100)}${(getCleanAdDescription(item.description) || '').length > 100 ? '…' : ''}` : item.sellerName}</p>
                 <p className="text-xs text-slate-500">{item.areaText || '-'} · {item.communityText || '-'}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {item.isFeatured ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Featured</span> : null}
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
+                  {(item.listingType === 'food' || item.listingType === 'shop') ? (
+                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{getDeliveryBadge(item.seller_profile_id || item.sellerName || item.id)}</span>
+                  ) : null}
                 </div>
-                <div className="mt-2">{item.shopSlug ? <button type="button" onClick={(e) => { e.stopPropagation(); handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} disabled={openingShopKey === `product:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `product:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `product:${item.id}` ? 'Opening...' : item.isDemo ? 'Order Now' : 'View Shop'}</button> : <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>}</div>
+                <div className="mt-2">
+                  {item.listingType === 'advertisement' ? (
+                    item.sellerWhatsapp ? (
+                      <div className="flex gap-2">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setAdDetailsItem(item); setAdDetailsIndex(0) }} className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">View Details</button>
+                      <a
+                        onClick={(e) => e.stopPropagation()}
+                        href={normalizeWhatsappNumber(item.sellerWhatsapp) ? `https://wa.me/${normalizeWhatsappNumber(item.sellerWhatsapp)}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${item.name}". Masih available?`)}` : '#'}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex flex-1 justify-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white"
+                      >
+                        Contact Seller
+                      </a>
+                      </div>
+                    ) : (
+                      <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">Contact Seller</span>
+                    )
+                  ) : item.shopSlug ? (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleViewShopClick(`product:${item.id}`, `/s/${encodeURIComponent(item.shopSlug || "")}?${(() => { const p = new URLSearchParams(exploreContextQuery); p.set('product', item.id); return p.toString() })()}`) }} disabled={openingShopKey === `product:${item.id}`} className={`inline-flex rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white ${openingShopKey === `product:${item.id}` ? 'cursor-wait bg-blue-400' : 'bg-[#2563EB]'}`}>{openingShopKey === `product:${item.id}` ? 'Opening...' : item.isDemo ? 'Order Now' : 'View Shop'}</button>
+                  ) : (
+                    <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-400">{item.isDemo ? 'Order Now' : 'View Shop'}</span>
+                  )}
+                </div>
               </article>
             ))}
           </div>
@@ -426,6 +565,78 @@ export default function ExplorePage() {
               <button onClick={() => { setArea(''); setShowAreaPicker(false) }} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === '' ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>Semua Kawasan</button>
               {areaOptions.map((item) => <button key={item} onClick={() => { setArea(item); setShowAreaPicker(false) }} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${area === item ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>{item}</button>)}
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {adDetailsItem ? (
+        <div className="fixed inset-0 z-50 bg-black/40 p-4" onClick={() => setAdDetailsItem(null)}>
+          <div className="mx-auto mt-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 sm:mt-10" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{adDetailsItem.name}</h3>
+                <p className="text-sm font-extrabold text-rose-700">RM {adDetailsItem.price.toFixed(2)}</p>
+              </div>
+              <button type="button" onClick={() => setAdDetailsItem(null)} className="rounded-lg border border-slate-200 px-2 py-1 text-sm">✕</button>
+            </div>
+            <div className="mb-3 flex flex-wrap gap-2">
+              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs">{parseAdCategoryFromDescription(adDetailsItem.description) || 'Komuniti'}</span>
+              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs">📍 {adDetailsItem.areaText || '-'}</span>
+              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-xs">⏳ Aktif</span>
+            </div>
+            {(() => {
+              const allImages = [adDetailsItem.image_1, adDetailsItem.image_2, adDetailsItem.image_3, adDetailsItem.image_4, adDetailsItem.image_5, adDetailsItem.image].filter(Boolean) as string[]
+              const images = Array.from(new Set(allImages))
+              const currentImage = images[adDetailsIndex] || null
+              return (
+                <>
+                  {currentImage ? (
+                    <div className="mb-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                      <button type="button" onClick={() => setAdLightboxOpen(true)} className="w-full">
+                        <img src={currentImage} alt={adDetailsItem.name} className="h-64 w-full object-contain" />
+                      </button>
+                    </div>
+                  ) : null}
+                  {images.length > 1 ? (
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <button type="button" onClick={() => setAdDetailsIndex((prev) => (prev - 1 + images.length) % images.length)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">‹ Previous</button>
+                      <span className="text-xs font-semibold text-slate-500">{adDetailsIndex + 1} / {images.length}</span>
+                      <button type="button" onClick={() => setAdDetailsIndex((prev) => (prev + 1) % images.length)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">Next ›</button>
+                    </div>
+                  ) : null}
+                </>
+              )
+            })()}
+            <p className="whitespace-pre-line text-sm text-slate-700">{getCleanAdDescription(adDetailsItem.description) || 'Tiada deskripsi.'}</p>
+            {adDetailsItem.sellerWhatsapp ? (
+              <a
+                href={normalizeWhatsappNumber(adDetailsItem.sellerWhatsapp) ? `https://wa.me/${normalizeWhatsappNumber(adDetailsItem.sellerWhatsapp)}?text=${encodeURIComponent(`Hi, saya berminat dengan iklan "${adDetailsItem.name}". Masih available?`)}` : '#'}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex w-full justify-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white"
+              >
+                Contact Seller
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {adDetailsItem && adLightboxOpen ? (
+        <div className="fixed inset-0 z-[60] bg-black/90 p-4" onClick={() => setAdLightboxOpen(false)}>
+          <div className="mx-auto flex h-full w-full max-w-4xl flex-col justify-center" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const allImages = [adDetailsItem.image_1, adDetailsItem.image_2, adDetailsItem.image_3, adDetailsItem.image_4, adDetailsItem.image_5, adDetailsItem.image].filter(Boolean) as string[]
+              const images = Array.from(new Set(allImages))
+              const currentImage = images[adDetailsIndex] || null
+              return (
+                <>
+                  <button type="button" onClick={() => setAdLightboxOpen(false)} className="mb-3 ml-auto rounded-lg border border-white/40 px-3 py-1 text-sm text-white">✕ Close</button>
+                  {currentImage ? <img src={currentImage} alt={adDetailsItem.name} className="max-h-[75vh] w-full rounded-xl object-contain" /> : null}
+                  {images.length > 1 ? <div className="mt-3 flex items-center justify-between"><button type="button" onClick={() => setAdDetailsIndex((prev) => (prev - 1 + images.length) % images.length)} className="rounded-lg border border-white/40 px-3 py-1.5 text-xs font-bold text-white">‹ Previous</button><span className="text-xs font-semibold text-white">{adDetailsIndex + 1} / {images.length}</span><button type="button" onClick={() => setAdDetailsIndex((prev) => (prev + 1) % images.length)} className="rounded-lg border border-white/40 px-3 py-1.5 text-xs font-bold text-white">Next ›</button></div> : null}
+                </>
+              )
+            })()}
           </div>
         </div>
       ) : null}

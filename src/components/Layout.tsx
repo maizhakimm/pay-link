@@ -22,7 +22,7 @@ type NavIconProps = {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'home' },
-  { label: 'Products', href: '/dashboard/products', icon: 'box' },
+  { label: 'Listings', href: '/dashboard/products', icon: 'box' },
   { label: 'Orders', href: '/dashboard/orders', icon: 'receipt' },
   { label: 'BAZAR', href: '/dashboard/marketplace', icon: 'sparkles' },
   { label: 'Settings', href: '/dashboard/settings', icon: 'settings' },

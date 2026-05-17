@@ -5,6 +5,30 @@ import { supabase } from '../../../../../lib/supabase'
 import MarketplaceSubnav from '../components/MarketplaceSubnav'
 
 type CategoryRow = { id: string; category_key: string; category_name: string; is_enabled: boolean; display_order: number }
+const CATEGORY_LABEL_MAP: Record<string, string> = {
+  food_drinks: 'Food & Drinks',
+  products_shop: 'Products / Shop',
+  services: 'Services',
+  catering: 'Catering',
+  home_business: 'Home Business',
+  beauty_health: 'Beauty & Health',
+  fashion: 'Fashion',
+  digital_design: 'Digital / Design',
+  repair_maintenance: 'Repair / Maintenance',
+  community: 'Community',
+}
+
+const LEGACY_CATEGORY_KEY_MAP: Record<string, string> = {
+  breakfast: 'food_drinks',
+  lunch: 'food_drinks',
+  dinner: 'food_drinks',
+  dessert: 'food_drinks',
+  bakery: 'food_drinks',
+  drinks: 'food_drinks',
+  frozen_food: 'food_drinks',
+  kuih_muih: 'food_drinks',
+  snacks: 'food_drinks',
+}
 
 export default function MarketplaceCategoriesPage() {
   const [rows, setRows] = useState<CategoryRow[]>([])
@@ -16,7 +40,15 @@ export default function MarketplaceCategoriesPage() {
         .from('marketplace_categories')
         .select('id,category_key,category_name,is_enabled,display_order')
         .order('display_order', { ascending: true })
-      setRows(data || [])
+      const normalized = (data || []).map((row) => {
+        const key = LEGACY_CATEGORY_KEY_MAP[row.category_key] || row.category_key
+        return {
+          ...row,
+          category_key: key,
+          category_name: CATEGORY_LABEL_MAP[key] || row.category_name,
+        }
+      })
+      setRows(normalized)
       setLoading(false)
     }
     loadData()

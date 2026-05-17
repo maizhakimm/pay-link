@@ -4,6 +4,9 @@ import Layout from '../../../components/Layout'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
+type PersistableListingType = 'food' | 'shop' | 'service' | 'advertisement'
+type ListingSelectorType = PersistableListingType | 'advertisement'
+
 type ProductRow = {
   id: string
   name: string
@@ -24,7 +27,7 @@ type ProductRow = {
   image_4?: string | null
   image_5?: string | null
   menu_category_id?: string | null
-  listing_type?: 'food' | 'shop' | 'service' | null
+  listing_type?: PersistableListingType | null
 }
 
 type SellerProfileRow = {
@@ -39,6 +42,7 @@ type MenuCategoryRow = {
   name: string
   sort_order: number
   is_active: boolean
+  listing_type?: ListingSelectorType | null
   created_at?: string
   updated_at?: string
 }
@@ -71,6 +75,9 @@ type ProductAddonOptionRow = {
   updated_at?: string
 }
 
+
+const SERVICE_CATEGORY_OPTIONS = ['Printing','Design','Catering','Repair','Aircond','Cleaning','Tailor / Jahit','Massage / Urut','Tutor','Runner','Event','Beauty','IT / Computer','Photography','Home Service']
+const AD_CATEGORY_OPTIONS = ['Jawatan Kosong','Bilik / Rumah Sewa','Property','Vehicle','Preloved','Computer / Gadget','Business Promo','Event Komuniti','Lost & Found','Education','Others']
 function createSlug(value: string) {
   return value
     .toLowerCase()
@@ -79,6 +86,12 @@ function createSlug(value: string) {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .slice(0, 60)
+}
+
+function getNormalizedListingType(value?: string | null): PersistableListingType {
+  const v = String(value || '').trim().toLowerCase()
+  if (v === 'shop' || v === 'service' || v === 'advertisement') return v
+  return 'food'
 }
 
 async function generateUniqueProductSlug(
@@ -139,6 +152,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [loadTimedOut, setLoadTimedOut] = useState(false)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -146,8 +160,17 @@ export default function ProductsPage() {
   const [productImages, setProductImages] = useState<File[]>([])
   const [trackStock, setTrackStock] = useState(true)
   const [stockQuantity, setStockQuantity] = useState('0')
+  const [shippingMethod, setShippingMethod] = useState<'courier' | 'self_pickup' | 'local_delivery'>('courier')
+  const [shippingFee, setShippingFee] = useState('')
+  const [serviceArea, setServiceArea] = useState('')
+  const [serviceWhatsapp, setServiceWhatsapp] = useState('')
+  const [adCategory, setAdCategory] = useState('Job Vacancy')
+  const [adLocation, setAdLocation] = useState('')
+  const [adContact, setAdContact] = useState('')
+  const [adExpiryDate, setAdExpiryDate] = useState('')
   const [menuCategoryId, setMenuCategoryId] = useState('')
-  const [listingType, setListingType] = useState<'food' | 'shop' | 'service'>('food')
+  const [selectedListingType, setSelectedListingType] =
+    useState<ListingSelectorType>('food')
 
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategorySortOrder, setNewCategorySortOrder] = useState('0')
@@ -163,7 +186,6 @@ export default function ProductsPage() {
   const [editingExistingImages, setEditingExistingImages] = useState<string[]>([])
   const [editingNewImages, setEditingNewImages] = useState<File[]>([])
   const [editingMenuCategoryId, setEditingMenuCategoryId] = useState('')
-  const [editingListingType, setEditingListingType] = useState<'food' | 'shop' | 'service'>('food')
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [editingCategoryName, setEditingCategoryName] = useState('')
   const [editingCategorySortOrder, setEditingCategorySortOrder] = useState('0')
@@ -196,10 +218,70 @@ export default function ProductsPage() {
     return createSlug(name)
   }, [name])
 
+  const LISTING_META: Record<
+    ListingSelectorType,
+    { label: string; createLabel: string; yourLabel: string; desc: string; comingSoon?: boolean }
+  > = {
+    food: {
+      label: 'Food',
+      createLabel: 'Create Food Item',
+      yourLabel: 'Your Food Items',
+      desc: 'Cart + payment + add-ons',
+    },
+    shop: {
+      label: 'Product / Item',
+      createLabel: 'Create Product / Item',
+      yourLabel: 'Your Products / Items',
+      desc: 'Shop items & simple commerce',
+    },
+    service: {
+      label: 'Services',
+      createLabel: 'Create Service',
+      yourLabel: 'Your Services',
+      desc: 'Lead-based (WhatsApp / quote)',
+    },
+    advertisement: {
+      label: 'Advertisement',
+      createLabel: 'Create Advertisement',
+      yourLabel: 'Your Advertisements',
+      desc: 'Community classified listings',
+    },
+  }
+  const isFood = selectedListingType === 'food'
+  const isShop = selectedListingType === 'shop'
+  const isService = selectedListingType === 'service'
+  const isAd = selectedListingType === 'advertisement'
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => (product.listing_type || 'food') === selectedListingType)
+  }, [products, selectedListingType])
+  const filteredCategories = useMemo(() => {
+        return categories.filter((category) => {
+      const categoryType = category.listing_type
+      if (selectedListingType === 'food') {
+        return !categoryType || categoryType === 'food'
+      }
+      return categoryType === selectedListingType
+    })
+  }, [categories, selectedListingType])
+
   const categoryMap = useMemo(() => {
     const map = new Map<string, MenuCategoryRow>()
     categories.forEach((category) => map.set(category.id, category))
     return map
+  }, [categories])
+  const categoriesByListingType = useMemo(() => {
+    const grouped: Record<PersistableListingType, MenuCategoryRow[]> = {
+      food: [],
+      shop: [],
+      service: [],
+      advertisement: [],
+    }
+    categories.forEach((category) => {
+      const type = getNormalizedListingType(category.listing_type)
+      grouped[type].push(category)
+    })
+    return grouped
   }, [categories])
 
   const groupsByProductId = useMemo(() => {
@@ -257,102 +339,111 @@ export default function ProductsPage() {
   )
 
   const loadProductsPage = useCallback(async () => {
+    console.log('[dashboard/products] loading start')
     setLoading(true)
+    setLoadTimedOut(false)
     setError('')
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+      if (userError || !user) {
+        if (userError) console.error('[dashboard/products] getUser error:', userError)
+        setError('Unable to load user session.')
+        return
+      }
+      console.log('[dashboard/products] auth user:', user.id)
 
-    if (userError || !user) {
-      setError('Unable to load user session.')
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('seller_profiles')
+        .select('id, store_name, shop_slug')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (sellerError || !sellerData) {
+        if (sellerError) console.error('[dashboard/products] seller_profiles error:', sellerError)
+        setError('Seller profile not found. Please complete your settings first.')
+        return
+      }
+      console.log('[dashboard/products] seller profile result:', sellerData?.id || null)
+
+      if (!sellerData.shop_slug) {
+        setError('Shop URL not found. Please complete your settings first.')
+        return
+      }
+
+      setSellerProfile(sellerData as SellerProfileRow)
+
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('menu_categories')
+        .select('*')
+        .eq('seller_profile_id', sellerData.id)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+
+      if (categoryError) {
+        console.error('[dashboard/products] menu_categories error:', categoryError)
+        setError(categoryError.message)
+        return
+      }
+
+      setCategories((categoryData || []) as MenuCategoryRow[])
+
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('seller_profile_id', sellerData.id)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+
+      if (productError) {
+        console.error('[dashboard/products] products error:', productError)
+        setError(productError.message)
+        return
+      }
+
+      setProducts((productData || []) as ProductRow[])
+
+      const { data: groupData, error: groupError } = await supabase
+        .from('product_addon_groups')
+        .select('*')
+        .eq('seller_profile_id', sellerData.id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+
+      if (groupError) {
+        console.error('[dashboard/products] product_addon_groups error:', groupError)
+        setError(groupError.message)
+        return
+      }
+
+      setAddonGroups((groupData || []) as ProductAddonGroupRow[])
+
+      const { data: optionData, error: optionError } = await supabase
+        .from('product_addon_options')
+        .select('*')
+        .eq('seller_profile_id', sellerData.id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+
+      if (optionError) {
+        console.error('[dashboard/products] product_addon_options error:', optionError)
+        setError(optionError.message)
+        return
+      }
+
+      setAddonOptions((optionData || []) as ProductAddonOptionRow[])
+    } catch (e) {
+      console.error('[dashboard/products] unexpected load error:', e)
+      setError(e instanceof Error ? e.message : 'Failed to load listings page.')
+    } finally {
+      console.log('[dashboard/products] loading end')
       setLoading(false)
-      return
     }
-
-    const { data: sellerData, error: sellerError } = await supabase
-      .from('seller_profiles')
-      .select('id, store_name, shop_slug')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (sellerError || !sellerData) {
-      setError('Seller profile not found. Please complete your settings first.')
-      setLoading(false)
-      return
-    }
-
-    if (!sellerData.shop_slug) {
-      setError('Shop URL not found. Please complete your settings first.')
-      setLoading(false)
-      return
-    }
-
-    setSellerProfile(sellerData as SellerProfileRow)
-
-    const { data: categoryData, error: categoryError } = await supabase
-      .from('menu_categories')
-      .select('*')
-      .eq('seller_profile_id', sellerData.id)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false })
-
-    if (categoryError) {
-      setError(categoryError.message)
-      setLoading(false)
-      return
-    }
-
-    setCategories((categoryData || []) as MenuCategoryRow[])
-
-    const { data: productData, error: productError } = await supabase
-      .from('products')
-      .select('*')
-      .eq('seller_profile_id', sellerData.id)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: false })
-
-    if (productError) {
-      setError(productError.message)
-      setLoading(false)
-      return
-    }
-
-    setProducts((productData || []) as ProductRow[])
-
-    const { data: groupData, error: groupError } = await supabase
-      .from('product_addon_groups')
-      .select('*')
-      .eq('seller_profile_id', sellerData.id)
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
-
-    if (groupError) {
-      setError(groupError.message)
-      setLoading(false)
-      return
-    }
-
-    setAddonGroups((groupData || []) as ProductAddonGroupRow[])
-
-    const { data: optionData, error: optionError } = await supabase
-      .from('product_addon_options')
-      .select('*')
-      .eq('seller_profile_id', sellerData.id)
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
-
-    if (optionError) {
-      setError(optionError.message)
-      setLoading(false)
-      return
-    }
-
-    setAddonOptions((optionData || []) as ProductAddonOptionRow[])
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -360,10 +451,20 @@ export default function ProductsPage() {
   }, [loadProductsPage])
 
   useEffect(() => {
-    if (!newCategorySortOrder && categories.length > 0) {
-      setNewCategorySortOrder(String(categories.length + 1))
+    if (!loading) return
+    const timer = window.setTimeout(() => {
+      setLoadTimedOut(true)
+      setLoading(false)
+      setError('Listings loading timeout (8s). Please retry. Database update required if issue persists.')
+    }, 8000)
+    return () => window.clearTimeout(timer)
+  }, [loading])
+
+  useEffect(() => {
+    if (!newCategorySortOrder && filteredCategories.length > 0) {
+      setNewCategorySortOrder(String(filteredCategories.length + 1))
     }
-  }, [categories.length, newCategorySortOrder])
+  }, [filteredCategories.length, newCategorySortOrder])
 
   function appendCreateImages(files: FileList | null) {
     if (!files) return
@@ -451,8 +552,8 @@ export default function ProductsPage() {
     const trimmedSortOrder = newCategorySortOrder.trim()
 
     const nextSortOrder =
-      categories.length > 0
-        ? Math.max(...categories.map((item) => Number(item.sort_order || 0))) + 1
+      filteredCategories.length > 0
+        ? Math.max(...filteredCategories.map((item) => Number(item.sort_order || 0))) + 1
         : 1
 
     const safeSortOrder =
@@ -469,6 +570,7 @@ export default function ProductsPage() {
         name: newCategoryName.trim(),
         sort_order: safeSortOrder,
         is_active: true,
+        listing_type: selectedListingType,
       })
       .select('*')
       .single()
@@ -551,8 +653,18 @@ export default function ProductsPage() {
       alert('Seller profile not ready yet.')
       return
     }
+    const persistableListingType: PersistableListingType = selectedListingType
 
-    if (!name.trim() || !price.trim()) {
+    if (!name.trim()) {
+      alert(
+        selectedListingType === 'service'
+          ? 'Sila isi tajuk servis.'
+          : 'Sila isi nama produk dan harga.'
+      )
+      return
+    }
+
+    if (selectedListingType !== 'service' && !price.trim()) {
       alert('Sila isi nama produk dan harga.')
       return
     }
@@ -602,16 +714,27 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       const { error: insertError } = await supabase.from('products').insert({
         name: name.trim(),
         slug: finalSlug,
-        description: description.trim() || null,
-        price: Number(price),
+        description:
+          persistableListingType === 'advertisement'
+            ? [
+                description.trim(),
+                `Ad Category: ${adCategory}`,
+                adLocation.trim() ? `Location: ${adLocation.trim()}` : '',
+                adContact.trim() ? `Contact: ${adContact.trim()}` : '',
+                adExpiryDate ? `Expiry Date: ${adExpiryDate}` : '',
+              ]
+                .filter(Boolean)
+                .join('\n')
+            : description.trim() || null,
+        price: Number(price || 0),
         is_active: true,
-        track_stock: trackStock,
-        stock_quantity: safeStock,
-        sold_out: computedSoldOut,
+        track_stock: persistableListingType === 'advertisement' ? false : trackStock,
+        stock_quantity: persistableListingType === 'advertisement' ? 0 : safeStock,
+        sold_out: persistableListingType === 'advertisement' ? false : computedSoldOut,
         store_name: sellerProfile.store_name || null,
         seller_profile_id: sellerProfile.id,
         menu_category_id: menuCategoryId || null,
-        listing_type: listingType,
+        listing_type: persistableListingType,
         sort_order: nextSortOrder, // ✅ TAMBAH NI
         image_1: uploadedUrls[0] || null,
         image_2: uploadedUrls[1] || null,
@@ -633,7 +756,6 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       setTrackStock(true)
       setStockQuantity('0')
       setMenuCategoryId('')
-      setListingType('food')
       await loadProductsPage()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Image upload failed'
@@ -654,7 +776,6 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
     setEditingExistingImages(getProductImages(product))
     setEditingNewImages([])
     setEditingMenuCategoryId(product.menu_category_id || '')
-    setEditingListingType((product.listing_type as any) || 'food')
 
     setEditingAddonGroupId(null)
     setAddonGroupName('')
@@ -681,7 +802,6 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
     setEditingExistingImages([])
     setEditingNewImages([])
     setEditingMenuCategoryId('')
-    setEditingListingType('food')
 
     setEditingAddonGroupId(null)
     setAddonGroupName('')
@@ -702,6 +822,10 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
       alert('Seller profile not ready yet.')
       return
     }
+
+    const persistableListingType: PersistableListingType = getNormalizedListingType(
+      product.listing_type || selectedListingType
+    )
 
     if (!editingName.trim() || !editingPrice.trim()) {
       alert('Please fill in product name and price.')
@@ -745,7 +869,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           stock_quantity: safeStock,
           sold_out: computedSoldOut,
           menu_category_id: editingMenuCategoryId || null,
-          listing_type: editingListingType,
+          listing_type: persistableListingType,
           image_1: finalImages[0] || null,
           image_2: finalImages[1] || null,
           image_3: finalImages[2] || null,
@@ -1110,29 +1234,88 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
     <Layout>
       <div className="mb-6">
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-          Products
+          Listings
         </h1>
         <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
-          Add, edit, and manage products easily from your phone.
+          Add, edit, and manage your listings easily from your phone.
+        </p>
+      </div>
+
+      <div className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+          Listing Categories (Phase 1)
+        </p>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0">
+          {(Object.keys(LISTING_META) as ListingSelectorType[]).map((type) => {
+            const isActive = selectedListingType === type
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setSelectedListingType(type)}
+                className={[
+                  'min-w-[130px] rounded-xl border px-3 py-2 text-left transition sm:min-w-0',
+                  isActive
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-slate-50 text-slate-700',
+                ].join(' ')}
+              >
+                <p className="text-xs font-extrabold sm:text-sm">{LISTING_META[type].label}</p>
+                <p className={`mt-0.5 text-[11px] leading-4 ${isActive ? 'text-slate-200' : 'text-slate-500'}`}>
+                  {LISTING_META[type].desc}
+                </p>
+              </button>
+            )
+          })}
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Current create/edit flow below remains stable for existing products while we roll out
+          multi-listing behavior in phases.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
-            Menu Categories
+            {isFood ? 'Menu Categories' : isShop ? 'Product Categories' : isService ? 'Service Categories' : 'Ad Categories'}
           </h2>
 
           <div className="grid gap-3">
-            <label className="text-sm font-bold text-slate-600">
-              New Category Name
-            </label>
-            <input
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="Example: Burger"
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-            />
+            <>
+              <label className="text-sm font-bold text-slate-600">
+                New Category Name
+              </label>
+              {isService ? (
+                <select
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                >
+                  <option value="">Select service category</option>
+                  {[...SERVICE_CATEGORY_OPTIONS, 'Others'].map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              ) : isAd ? (
+                <select
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                >
+                  <option value="">Select ad category</option>
+                  {AD_CATEGORY_OPTIONS.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder={isFood ? 'Example: Burger' : 'Example: Fashion'}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+                />
+              )}
+            </>
 
             <label className="text-sm font-bold text-slate-600">
               Sort Order
@@ -1154,13 +1337,13 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
               {savingCategory ? 'Saving category...' : '+ Add Category'}
             </button>
 
-            {categories.length > 0 ? (
+            {filteredCategories.length > 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="mb-2 text-sm font-bold text-slate-700">
                   Existing Categories
                 </div>
                 <div className="grid gap-3">
-                  {categories.map((category) => {
+                  {filteredCategories.map((category) => {
                     const isEditing = editingCategoryId === category.id
 
                     return (
@@ -1233,27 +1416,50 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
           </div>
 
           <div className="mt-6 border-t border-slate-100 pt-6">
-            <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
-              Create Product
+          <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
+              {LISTING_META[selectedListingType].createLabel}
             </h2>
 
             <div className="grid gap-3">
-              <label className="text-sm font-bold text-slate-600">Product Name</label>
+              <label className="text-sm font-bold text-slate-600">
+                {isService ? 'Service Title' : isAd ? 'Ad Title' : 'Product Name'}
+              </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Example: Nasi Lemak Ayam"
+                placeholder={
+                  isService
+                    ? 'Example: Aircond Service Rumah'
+                    : isShop
+                      ? 'Example: Wireless Earbuds'
+                      : isAd
+                        ? 'Example: Room for Rent at Seksyen 7'
+                      : 'Example: Nasi Lemak Ayam'
+                }
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
               />
 
-              <label className="text-sm font-bold text-slate-600">Menu Category</label>
+              <label className="text-sm font-bold text-slate-600">
+                {isFood ? 'Menu Category' : isShop ? 'Product Category' : isService ? 'Service Category' : 'Ad Category'}
+              </label>
+              {isAd ? (
+                <select
+                  value={adCategory}
+                  onChange={(e) => setAdCategory(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                >
+                  {AD_CATEGORY_OPTIONS.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              ) : (
               <select
                 value={menuCategoryId}
                 onChange={(e) => setMenuCategoryId(e.target.value)}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
               >
                 <option value="">No category</option>
-                {categories
+                {filteredCategories
                   .filter((category) => category.is_active)
                   .map((category) => (
                     <option key={category.id} value={category.id}>
@@ -1261,30 +1467,36 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                     </option>
                   ))}
               </select>
+              )}
 
-              <label className="text-sm font-bold text-slate-600">Description</label>
-              <label className="text-sm font-bold text-slate-600">Jenis listing</label>
-              <select value={listingType} onChange={(e) => setListingType(e.target.value as 'food' | 'shop' | 'service')} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400">
-                <option value="food">Food / Makanan</option>
-                <option value="shop">Product / Barang</option>
-                <option value="service">Service / Servis</option>
-              </select>
+              <label className="text-sm font-bold text-slate-600">
+                {isService ? 'Service Description' : isAd ? 'Ad Description' : 'Description'}
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Short product description"
+                placeholder={
+                  isService
+                    ? 'Explain service scope, process, and what customer will get.'
+                    : isAd
+                      ? 'Describe the ad details clearly.'
+                    : 'Short product description'
+                }
                 rows={4}
                 className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
               />
 
-              <label className="text-sm font-bold text-slate-600">Price (RM)</label>
+              <label className="text-sm font-bold text-slate-600">
+                {isService ? 'Starting Price (Optional)' : isAd ? 'Price / Salary / Rent (Optional)' : 'Price (RM)'}
+              </label>
               <input
                 value={price}
                 onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
-                placeholder="0.00"
+                placeholder={isService || isAd ? 'Optional (e.g. 80.00)' : '0.00'}
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
               />
 
+              {!isService && !isAd ? (
               <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
                 <input
                   type="checkbox"
@@ -1293,8 +1505,12 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                 />
                 <span>Track Stock Quantity</span>
               </label>
+              ) : null}
 
+              {!isService && !isAd ? (
               <label className="text-sm font-bold text-slate-600">Stock Quantity</label>
+              ) : null}
+              {!isService && !isAd ? (
               <input
                 value={stockQuantity}
                 onChange={(e) => setStockQuantity(e.target.value.replace(/[^\d]/g, ''))}
@@ -1307,13 +1523,74 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                     : 'border-slate-200 bg-slate-100 text-slate-400',
                 ].join(' ')}
               />
+              ) : null}
 
+              {!isService && !isAd ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
                 <strong className="text-slate-900">Stock note:</strong>
                 <div className="mt-1">
                   If stock tracking is on and quantity is 0, the product will become sold out automatically.
                 </div>
               </div>
+              ) : null}
+
+              {isShop ? (
+                <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="text-sm font-bold text-slate-700">Shipping Method (MVP)</label>
+                  <select
+                    value={shippingMethod}
+                    onChange={(e) => setShippingMethod(e.target.value as 'courier' | 'self_pickup' | 'local_delivery')}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="courier">Courier</option>
+                    <option value="self_pickup">Self Pickup</option>
+                    <option value="local_delivery">Local Delivery</option>
+                  </select>
+                  <label className="text-sm font-bold text-slate-700">Shipping Fee (Optional)</label>
+                  <input
+                    value={shippingFee}
+                    onChange={(e) => setShippingFee(e.target.value.replace(/[^\d.]/g, ''))}
+                    placeholder="e.g. 5.00"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Shipping fields are UI MVP for now. Full shipping persistence will be added in later phase.
+                  </p>
+                </div>
+              ) : null}
+
+              {isService ? (
+                <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="text-sm font-bold text-slate-700">Service Area / Location</label>
+                  <input
+                    value={serviceArea}
+                    onChange={(e) => setServiceArea(e.target.value)}
+                    placeholder="Example: Shah Alam, Subang, Klang"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <label className="text-sm font-bold text-slate-700">WhatsApp CTA / Contact</label>
+                  <input
+                    value={serviceWhatsapp}
+                    onChange={(e) => setServiceWhatsapp(e.target.value)}
+                    placeholder="Example: 0123456789"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Service leads are WhatsApp/quotation based. Advanced quotation fields will come in next phase.
+                  </p>
+                </div>
+              ) : null}
+              {isAd ? (
+                <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="text-sm font-bold text-slate-700">Location / Area</label>
+                  <input value={adLocation} onChange={(e) => setAdLocation(e.target.value)} placeholder="Example: Shah Alam" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+                  <label className="text-sm font-bold text-slate-700">WhatsApp / Contact Number</label>
+                  <input value={adContact} onChange={(e) => setAdContact(e.target.value)} placeholder="Example: 0123456789" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+                  <label className="text-sm font-bold text-slate-700">Expiry Date (Optional)</label>
+                  <input type="date" value={adExpiryDate} onChange={(e) => setAdExpiryDate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" />
+                  <p className="text-xs text-slate-500">Community ads are lead-based. Customers contact you via WhatsApp.</p>
+                </div>
+              ) : null}
 
               <label className="text-sm font-bold text-slate-600">
                 Upload Product Images (Max 5)
@@ -1362,39 +1639,69 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                 disabled={saving}
                 className="w-full rounded-2xl bg-slate-900 px-4 py-3.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {saving ? 'Saving...' : 'Create Product'}
+                {saving ? 'Saving...' : LISTING_META[selectedListingType].createLabel}
               </button>
 
+              {isFood ? (
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
                 <strong>Add-on tip:</strong>
                 <div className="mt-1">
                   Create the product first, then tap <strong>Edit</strong> on that product to add add-on groups and options.
                 </div>
               </div>
+              ) : null}
             </div>
           </div>
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-2xl font-extrabold text-slate-900">
-            Your Products
+            {LISTING_META[selectedListingType].yourLabel}
           </h2>
 
           {loading ? (
             <p className="text-sm text-slate-500">Loading products...</p>
           ) : error ? (
-            <p className="text-sm text-red-700">{error}</p>
-          ) : products.length === 0 ? (
-            <p className="text-sm text-slate-500">No products yet.</p>
+            <div>
+              <p className="text-sm text-red-700">{error}</p>
+              <button onClick={loadProductsPage} className="mt-2 rounded-xl border border-red-300 bg-white px-3 py-1.5 text-sm font-semibold text-red-700">Retry</button>
+              {loadTimedOut ? <p className="mt-1 text-xs text-red-600">Tip: check listing_type/menu_categories migrations.</p> : null}
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              {isFood
+                ? 'No food items yet.'
+                : isShop
+                  ? 'No products/items yet.'
+                  : isService
+                    ? 'No services yet.'
+                    : 'No advertisements yet.'}
+            </p>
           ) : (
             <div className="grid gap-4">
-              {products.map((product) => {
+              {filteredProducts.map((product) => {
+                const productListingType = getNormalizedListingType(
+                  product.listing_type || selectedListingType
+                )
                 const link = buildProductLink(product.slug)
                 const images = getProductImages(product)
                 const thumb = images[0]
                 const categoryName = product.menu_category_id
                   ? categoryMap.get(product.menu_category_id)?.name || 'Unknown category'
                   : 'No category'
+                const editCategories = categoriesByListingType[productListingType].filter(
+                  (category) => category.is_active
+                )
+                const selectedEditCategory = editingMenuCategoryId
+                  ? categoryMap.get(editingMenuCategoryId)
+                  : null
+                const selectedEditCategoryType = getNormalizedListingType(
+                  selectedEditCategory?.listing_type
+                )
+                const invalidEditCategory =
+                  Boolean(editingMenuCategoryId) &&
+                  (!selectedEditCategory ||
+                    selectedEditCategoryType !== productListingType)
                 const productGroups = groupsByProductId.get(product.id) || []
 
                 return (
@@ -1412,22 +1719,32 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                         />
 
                         <label className="text-sm font-bold text-slate-600">
-                          Menu Category
+                          {productListingType === 'food'
+                            ? 'Menu Category'
+                            : productListingType === 'shop'
+                            ? 'Product Category'
+                            : productListingType === 'service'
+                            ? 'Service Category'
+                            : 'Ad Category'}
                         </label>
                         <select
-                          value={editingMenuCategoryId}
+                          value={invalidEditCategory ? '' : editingMenuCategoryId}
                           onChange={(e) => setEditingMenuCategoryId(e.target.value)}
                           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
                         >
                           <option value="">No category</option>
-                          {categories
-                            .filter((category) => category.is_active)
+                          {editCategories
                             .map((category) => (
                               <option key={category.id} value={category.id}>
                                 {category.name}
                               </option>
                             ))}
                         </select>
+                        {invalidEditCategory ? (
+                          <p className="text-xs text-amber-700">
+                            Current category does not match this listing type. Please choose a valid category.
+                          </p>
+                        ) : null}
 
                         <textarea
                           value={editingDescription}
@@ -1437,12 +1754,9 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                           className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                         />
 
-                        <label className="text-sm font-bold text-slate-600">Jenis listing</label>
-                        <select value={editingListingType} onChange={(e) => setEditingListingType(e.target.value as 'food' | 'shop' | 'service')} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400">
-                          <option value="food">Food / Makanan</option>
-                          <option value="shop">Product / Barang</option>
-                          <option value="service">Service / Servis</option>
-                        </select>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+                          Listing Type: {LISTING_META[productListingType].label}
+                        </div>
 
                         <input
                           value={editingPrice}
@@ -1548,6 +1862,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                           </div>
                         )}
 
+                        {productListingType === 'food' ? (
                         <div className="mt-2 rounded-3xl border border-violet-200 bg-violet-50 p-4">
                           <div className="mb-3 text-lg font-extrabold text-slate-900">
                             Add-on Groups
@@ -1852,6 +2167,7 @@ const nextSortOrder = (maxData?.sort_order || 0) + 1
                             </div>
                           )}
                         </div>
+                        ) : null}
 
                         <div className="grid grid-cols-2 gap-2">
                           <button

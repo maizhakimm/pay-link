@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { MapPin, ShoppingBag, Soup, Wrench } from 'lucide-react'
+import { Users, ShoppingBag, Soup, Wrench } from 'lucide-react'
 
 export default function BazarBottomNav() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const tab = searchParams.get('tab')
   const activeTab = pathname === '/bazar'
-    ? (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'nearby' ? tab : 'home')
+    ? (tab === 'food' || tab === 'services' || tab === 'shop' || tab === 'community' ? tab : 'home')
     : null
 
   return (
@@ -30,9 +30,9 @@ export default function BazarBottomNav() {
             <ShoppingBag className="h-6 w-6" strokeWidth={2} />
             <span>Shop</span>
           </Link>
-          <Link href="/bazar?tab=nearby" className={`flex min-h-[52px] w-full flex-col items-center justify-center rounded-xl px-2 py-1 ${activeTab === 'nearby' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
-            <MapPin className="h-6 w-6" strokeWidth={2} />
-            <span>Nearby</span>
+          <Link href="/bazar?tab=community" className={`flex min-h-[52px] w-full flex-col items-center justify-center rounded-xl px-2 py-1 ${activeTab === 'community' ? 'bg-[#2563EB] text-white shadow-sm' : ''}`}>
+            <Users className="h-6 w-6" strokeWidth={2} />
+            <span>Komuniti</span>
           </Link>
         </div>
       </nav>
